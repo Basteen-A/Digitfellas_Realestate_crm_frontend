@@ -22,7 +22,7 @@ const collectionMenu = [
 const CollectionWorkspace = () => {
   const user = useSelector((state) => state.auth.user);
   const [leads, setLeads] = useState([]);
-  const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [, setSelectedLeadId] = useState(null);
 
   const loadLeads = useCallback(async () => {
     try {

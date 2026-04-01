@@ -98,6 +98,7 @@ const MasterCrudPage = ({ config }) => {
 
   useEffect(() => {
     loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.page, query.limit, query.search]);
 
   const openCreate = () => {

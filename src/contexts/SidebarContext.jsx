@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
 import { storage } from '../utils/storage';
 
@@ -9,15 +9,19 @@ export const SidebarProvider = ({ children }) => {
     storage.get(STORAGE_KEYS.SIDEBAR_COLLAPSED, 'false') === 'true'
   );
 
-  const setCollapsed = (nextValue) => {
+  const setCollapsed = useCallback((nextValue) => {
     const value = Boolean(nextValue);
     setIsCollapsed(value);
     storage.set(STORAGE_KEYS.SIDEBAR_COLLAPSED, String(value));
-  };
+  }, []);
 
-  const toggle = () => {
-    setCollapsed(!isCollapsed);
-  };
+  const toggle = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      storage.set(STORAGE_KEYS.SIDEBAR_COLLAPSED, String(next));
+      return next;
+    });
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -25,7 +29,7 @@ export const SidebarProvider = ({ children }) => {
       setCollapsed,
       toggle,
     }),
-    [isCollapsed]
+    [isCollapsed, setCollapsed, toggle]
   );
 
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;

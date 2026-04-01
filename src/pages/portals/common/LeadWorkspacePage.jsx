@@ -7,13 +7,12 @@ import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { getRoleCode } from '../../../utils/permissions';
+
 import {
   getWorkspaceTitle,
   buildStageOptions,
   buildStatusOptions,
   getActionsForRole,
-  ACTION_TONE_CLASS,
   ROLE_LABELS,
 } from './workflowConfig';
 import './LeadWorkspacePage.css';
@@ -38,7 +37,7 @@ const initialNewLead = {
 
 const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const wsTitle = getWorkspaceTitle(workspaceRole);
-  const userRoleCode = getRoleCode(user);
+
 
   // ── Pipeline config from API ──
   const [workflowConfig, setWorkflowConfig] = useState(null);
@@ -199,6 +198,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadLeads(); }, [filters, workspaceRole]);
   useEffect(() => { loadLeadDetail(selectedLeadId); }, [selectedLeadId, loadLeadDetail]);
 
@@ -242,6 +242,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     if (!newLeadOpen) return;
     if (projectOptions.length && sourceOptions.length && locationOptions.length) return;
     loadCreateOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newLeadOpen]);
 
   // ── Handlers ──
@@ -253,7 +254,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     const selectedProject = projectOptions.find((p) => p.id === newLeadForm.project_id) || null;
     const selectedSource = sourceOptions.find((s) => s.id === newLeadForm.lead_source_id) || null;
     const selectedLocation = locationOptions.find((l) => l.id === newLeadForm.location_id) || null;
-    const selectedSubSource = selectedSourceSubSources.find((s) => s.id === newLeadForm.lead_sub_source_id) || null;
+
 
     try {
       await leadWorkflowApi.createLead({
@@ -408,14 +409,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     }
   };
 
-  // All users from all loaded roles (for assignment modal)
-  const allAssignableUsers = useMemo(() => {
-    const all = [];
-    Object.entries(assignableUsers).forEach(([role, users]) => {
-      users.forEach((u) => all.push({ ...u, _role: role }));
-    });
-    return all;
-  }, [assignableUsers]);
+
 
   // Loading state
   if (configLoading) {

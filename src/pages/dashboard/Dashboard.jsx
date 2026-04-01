@@ -12,7 +12,6 @@ const Dashboard = () => {
   const [adminStats, setAdminStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const roleCode = useSelector((state) => getRoleCode(state.auth.user));
-  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     const load = async () => {
