@@ -1,0 +1,130 @@
+/* ============================================================
+   RESPONSIVE BREAKPOINTS & MOBILE OVERRIDES
+   xs: 0-479  | sm: 480-767 | md: 768-1023
+   lg: 1024-1279 | xl: 1280+
+   ============================================================ */
+
+/* ── Hide/Show ── */
+@media (max-width: 767px) {
+  .hide-mobile { display: none !important; }
+}
+@media (min-width: 768px) {
+  .hide-desktop { display: none !important; }
+}
+@media (max-width: 1023px) {
+  .hide-tablet { display: none !important; }
+}
+
+/* ── Mobile (< 768px) ── */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-width: 100%;
+    --header-height: 56px;
+  }
+
+  body {
+    font-size: 13px;
+  }
+
+  .heading-xl { font-size: 24px; }
+  .heading-lg { font-size: 20px; }
+  .heading-md { font-size: 18px; }
+
+  .p-24 { padding: 16px; }
+  .p-32 { padding: 16px; }
+  .px-24 { padding-left: 12px; padding-right: 12px; }
+  .gap-24 { gap: 16px; }
+  .gap-32 { gap: 20px; }
+
+  /* Stack grids on mobile */
+  .grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Full-width modals on mobile */
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Table scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-container table {
+    min-width: 700px;
+  }
+}
+
+/* ── Tablet (768 - 1023) ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: 72px;
+  }
+
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Desktop (1024+) ── */
+@media (min-width: 1024px) {
+  .grid-responsive {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+/* ── Large Desktop (1280+) ── */
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+}
+
+/* ── Touch device optimizations ── */
+@media (hover: none) and (pointer: coarse) {
+  button, a, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .tooltip {
+    display: none !important;
+  }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Print styles ── */
+@media print {
+  .sidebar,
+  .header,
+  .modal-overlay,
+  .toast-container,
+  button[type="button"] {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

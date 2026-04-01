@@ -1,0 +1,24 @@
+.not-found {
+  min-height: 60vh;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.not-found__code {
+  font-size: 56px;
+  font-weight: 800;
+  color: #93c5fd;
+}
+
+.not-found__button {
+  margin-top: 8px;
+  justify-self: center;
+  border: 1px solid #3b82f655;
+  border-radius: var(--border-radius-md);
+  color: #bfdbfe;
+  text-decoration: none;
+  padding: 10px 14px;
+  background: #1d4ed826;
+}

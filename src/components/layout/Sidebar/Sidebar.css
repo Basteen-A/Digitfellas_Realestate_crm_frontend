@@ -1,0 +1,236 @@
+/* ============================================================ */
+/* SIDEBAR — Role-specific with profile footer                   */
+/* ============================================================ */
+
+.app-sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: var(--bg-sidebar, var(--bg-card));
+  border-right: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--transition-normal, 0.25s);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.app-sidebar--collapsed {
+  width: 60px;
+}
+
+/* ── Brand ── */
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.app-sidebar__logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple, #8B5CF6) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.app-sidebar__name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* ── Role Badge ── */
+.app-sidebar__role-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.08));
+}
+
+.app-sidebar__role-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green, #22c55e);
+  flex-shrink: 0;
+}
+
+/* ── Navigation ── */
+.app-sidebar__nav {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.app-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--border-radius-md, 8px);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast, 0.15s);
+  margin-bottom: 2px;
+}
+
+.app-sidebar__link:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.app-sidebar__link.is-active {
+  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.12));
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.app-sidebar__link--child {
+  padding: 8px 12px 8px 38px;
+  font-size: 12.5px;
+}
+
+/* ── Groups ── */
+.app-sidebar__group {
+  margin-bottom: 2px;
+}
+
+.app-sidebar__group-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  border-radius: var(--border-radius-md, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+  font-family: inherit;
+}
+
+.app-sidebar__group-button:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.app-sidebar__chevron {
+  margin-left: auto;
+  font-size: 14px;
+  transition: transform 0.2s;
+  color: var(--text-muted);
+}
+
+.app-sidebar__chevron.open {
+  transform: rotate(90deg);
+}
+
+.app-sidebar__subnav {
+  padding: 2px 0;
+}
+
+/* ── Footer / Profile ── */
+.app-sidebar__footer {
+  border-top: 1px solid var(--border-primary);
+  padding: 10px 8px;
+  margin-top: auto;
+}
+
+.app-sidebar__profile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-sidebar__profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: var(--border-radius-md, 8px);
+  text-decoration: none;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.app-sidebar__profile-link:hover {
+  background: var(--bg-card-hover);
+}
+
+.app-sidebar__profile-link.is-active {
+  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.12));
+}
+
+.app-sidebar__profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple, #8B5CF6) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.app-sidebar__profile-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-sidebar__profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-sidebar__profile-role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.app-sidebar__logout-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 6px 8px;
+  border-radius: var(--border-radius-md, 8px);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.app-sidebar__logout-btn:hover {
+  background: var(--bg-card-hover);
+}

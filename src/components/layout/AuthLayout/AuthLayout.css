@@ -1,0 +1,24 @@
+.auth-layout {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 15% 20%, #1d4ed833 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, #0891b233 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, #7c3aed2e 0%, transparent 50%),
+    var(--bg-primary);
+}
+
+.auth-layout__backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #0f172a99 0%, #0f172a 100%);
+}
+
+.auth-layout__content {
+  position: relative;
+  width: min(100%, 460px);
+  z-index: 2;
+}

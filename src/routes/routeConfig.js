@@ -1,0 +1,32 @@
+export const APP_ROUTES = {
+  LOGIN: '/login',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
+  DASHBOARD: '/dashboard',
+  TELECALLER_LEADS: '/telecaller/leads',
+  SALES_MANAGER_LEADS: '/sales-manager/leads',
+  SALES_HEAD_LEADS: '/sales-head/leads',
+  COLLECTION_LEADS: '/collection/leads',
+  PROFILE: '/profile',
+  CHANGE_PASSWORD: '/profile/change-password',
+  SUPER_ADMIN_BASE: '/super-admin',
+  NOT_FOUND: '/404',
+};
+
+export const SUPER_ADMIN_MASTER_ROUTES = [
+  { path: 'locations', label: 'Locations' },
+  { path: 'projects', label: 'Projects' },
+  { path: 'project-types', label: 'Project Types' },
+  { path: 'lead-types', label: 'Lead Types' },
+  { path: 'lead-sources', label: 'Lead Sources' },
+  { path: 'lead-sub-sources', label: 'Lead Sub-Sources' },
+  { path: 'users', label: 'Users' },
+  { path: 'user-types', label: 'User Types' },
+  { path: 'customer-types', label: 'Customer Types' },
+  { path: 'score-master', label: 'Score Master' },
+  { path: 'lead-statuses', label: 'Lead Status' },
+  { path: 'booking-statuses', label: 'Booking Status' },
+  { path: 'lead-stages', label: 'Lead Stage' },
+  { path: 'closed-lost-reasons', label: 'Closed-Lost Reasons' },
+  { path: 'booking-cancel-reasons', label: 'Booking Cancel Reasons' },
+];

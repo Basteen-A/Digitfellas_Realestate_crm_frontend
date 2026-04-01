@@ -1,0 +1,34 @@
+.main-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  background: var(--bg-primary);
+}
+
+.main-layout__right {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.main-layout__content {
+  padding: 20px;
+}
+
+@media (max-width: 900px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .main-layout .app-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: var(--z-sidebar);
+  }
+
+  .main-layout .app-sidebar--collapsed {
+    transform: translateX(-100%);
+  }
+}
