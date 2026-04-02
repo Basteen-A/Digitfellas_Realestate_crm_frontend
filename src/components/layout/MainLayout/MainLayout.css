@@ -2,6 +2,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: auto 1fr;
+  align-items: start;
   background: var(--bg-primary);
 }
 
