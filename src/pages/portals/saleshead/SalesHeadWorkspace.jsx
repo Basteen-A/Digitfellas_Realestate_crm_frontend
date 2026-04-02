@@ -5,6 +5,7 @@ import SalesHeadDashboard from './SalesHeadDashboard';
 import SalesHeadBookings from './SalesHeadBookings';
 import SalesHeadApprovals from './SalesHeadApprovals';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
+import HandoffLeadsPage from '../common/HandoffLeadsPage';
 import { salesHeadMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const SalesHeadWorkspace = () => {
@@ -24,6 +25,7 @@ const SalesHeadWorkspace = () => {
           {activeScreen === 'negotiations' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
           {activeScreen === 'bookings' && <SalesHeadBookings user={user} />}
           {activeScreen === 'approvals' && <SalesHeadApprovals user={user} />}
+          {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SH" />}
           {activeScreen === 'allleads' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
           {activeScreen === 'team' && (
             <div><div className="page-header"><div className="page-header-left"><h1>Team Performance</h1><p>Monitor your team's metrics</p></div></div>

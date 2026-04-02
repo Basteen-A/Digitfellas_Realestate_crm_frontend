@@ -30,6 +30,14 @@ const leadWorkflowApi = {
   },
 
   /**
+   * GET /leads/handoffs
+   */
+  getHandoffs: async (params = {}) => {
+    const { data } = await api.get('/leads/handoffs', { params });
+    return data;
+  },
+
+  /**
    * GET /leads/:id
    */
   getLeadById: async (leadId) => {

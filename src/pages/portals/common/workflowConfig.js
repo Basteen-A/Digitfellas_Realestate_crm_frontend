@@ -25,12 +25,13 @@ export const getWorkspaceTitle = (roleCode) => WORKSPACE_TITLES[roleCode] || WOR
  * Build stage options from the workflow config API response
  */
 export const buildStageOptions = (stages = [], roleCode = null) => {
+  const ordered = [...stages].sort((a, b) => (a.stage_order || 0) - (b.stage_order || 0));
   if (!roleCode) {
-    return stages.map((s) => ({ value: s.stage_code, label: s.stage_name }));
+    return ordered.map((s) => ({ value: s.stage_code, label: s.stage_name }));
   }
 
   // Filter stages for this role
-  const roleStages = stages.filter((s) => s.ownerRole === roleCode || s.is_terminal);
+  const roleStages = ordered.filter((s) => s.ownerRole === roleCode || s.is_terminal);
   return roleStages.map((s) => ({ value: s.stage_code, label: s.stage_name }));
 };
 
@@ -38,7 +39,14 @@ export const buildStageOptions = (stages = [], roleCode = null) => {
  * Build status options from the workflow config API response
  */
 export const buildStatusOptions = (statuses = []) =>
-  statuses.map((s) => ({ value: s.status_code, label: s.status_name }));
+  [...statuses]
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map((s) => ({
+      value: s.status_code,
+      label: s.status_name,
+      category: s.status_category || 'ACTIVE',
+      isTerminal: Boolean(s.is_terminal),
+    }));
 
 /**
  * Get role-specific actions from the workflow config

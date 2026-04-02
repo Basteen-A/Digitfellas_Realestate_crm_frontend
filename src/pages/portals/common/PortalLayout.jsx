@@ -10,6 +10,7 @@ import './PortalSidebar.css';
 const SCREEN_TITLES = {
   dashboard: 'Dashboard',
   leads: 'My Leads',
+  handoffs: 'Handoff Leads',
   followups: "Today's Follow Ups",
   pipeline: 'Pipeline Board',
   addlead: 'Add New Lead',

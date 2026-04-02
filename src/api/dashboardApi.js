@@ -31,6 +31,11 @@ const dashboardApi = {
     const { data } = await api.get('/dashboard/admin');
     return data;
   },
+
+  getCollectionStats: async () => {
+    const { data } = await api.get('/dashboard/collection');
+    return data;
+  },
 };
 
 export default dashboardApi;

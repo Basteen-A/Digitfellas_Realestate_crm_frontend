@@ -5,6 +5,8 @@ import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
+import leadTypeApi from '../../../api/leadTypeApi';
+import customerTypeApi from '../../../api/customerTypeApi';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 
@@ -21,17 +23,29 @@ const initialNewLead = {
   firstName: '',
   lastName: '',
   phone: '',
+  alternate_phone: '',
+  whatsapp_number: '',
   email: '',
   secondary_phone_1: '',
   secondary_phone_2: '',
   secondary_phone_3: '',
+  lead_type_id: '',
+  customer_type_id: '',
   lead_source_id: '',
   lead_sub_source_id: '',
   project_id: '',
   location_id: '',
+  configuration: '',
+  purpose: '',
   budgetMin: '',
   budgetMax: '',
   budgetRange: '',
+  campaign_name: '',
+  utm_source: '',
+  utm_medium: '',
+  utm_campaign: '',
+  referral_code: '',
+  note: '',
   priority: 'Medium',
 };
 
@@ -58,6 +72,8 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const [projectOptions, setProjectOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
+  const [leadTypeOptions, setLeadTypeOptions] = useState([]);
+  const [customerTypeOptions, setCustomerTypeOptions] = useState([]);
   const [subSourceMap, setSubSourceMap] = useState({});
   const [createOptionsLoading, setCreateOptionsLoading] = useState(false);
 
@@ -101,6 +117,19 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     () => subSourceMap[newLeadForm.lead_source_id] || [],
     [subSourceMap, newLeadForm.lead_source_id]
   );
+
+  const pipelineStages = useMemo(
+    () => [...(workflowConfig?.stages || [])].sort((a, b) => (a.stage_order || 0) - (b.stage_order || 0)),
+    [workflowConfig]
+  );
+
+  const handoffMap = useMemo(() => {
+    const map = {};
+    (workflowConfig?.handoffs || []).forEach((handoff) => {
+      map[handoff.triggerStageCode] = handoff;
+    });
+    return map;
+  }, [workflowConfig]);
 
   // ── Stats ──
   const computedStats = useMemo(() => {
@@ -207,14 +236,18 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     if (createOptionsLoading) return;
     setCreateOptionsLoading(true);
     try {
-      const [pResp, lResp, sResp] = await Promise.all([
+      const [pResp, lResp, sResp, ltResp, ctResp] = await Promise.all([
         projectApi.getDropdown(),
         locationApi.getDropdown(),
         leadSourceApi.getWithSubSources().catch(() => leadSourceApi.getDropdown()),
+        leadTypeApi.getDropdown().catch(() => ({ data: [] })),
+        customerTypeApi.getDropdown().catch(() => ({ data: [] })),
       ]);
       const projects = pResp.data || [];
       const locations = lResp.data || [];
       const sources = sResp.data || [];
+      const leadTypes = ltResp.data || [];
+      const customerTypes = ctResp.data || [];
       const map = {};
       sources.forEach((s) => { map[s.id] = s.subSources || []; });
 
@@ -230,6 +263,8 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       setProjectOptions(projects);
       setLocationOptions(locations);
       setSourceOptions(sources);
+      setLeadTypeOptions(leadTypes);
+      setCustomerTypeOptions(customerTypes);
       setSubSourceMap(map);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load options'));
@@ -240,7 +275,6 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
   useEffect(() => {
     if (!newLeadOpen) return;
-    if (projectOptions.length && sourceOptions.length && locationOptions.length) return;
     loadCreateOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newLeadOpen]);
@@ -251,6 +285,13 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     if (!newLeadForm.firstName || !newLeadForm.phone) { toast.error('First name and phone are required'); return; }
     if (!newLeadForm.lead_source_id) { toast.error('Lead source is required'); return; }
 
+    const budgetMin = newLeadForm.budgetMin ? Number(newLeadForm.budgetMin) : null;
+    const budgetMax = newLeadForm.budgetMax ? Number(newLeadForm.budgetMax) : null;
+    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
+      toast.error('Budget Max must be greater than or equal to Budget Min');
+      return;
+    }
+
     const selectedProject = projectOptions.find((p) => p.id === newLeadForm.project_id) || null;
     const selectedSource = sourceOptions.find((s) => s.id === newLeadForm.lead_source_id) || null;
     const selectedLocation = locationOptions.find((l) => l.id === newLeadForm.location_id) || null;
@@ -259,6 +300,8 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     try {
       await leadWorkflowApi.createLead({
         ...newLeadForm,
+        budgetMin,
+        budgetMax,
         lead_source_id: newLeadForm.lead_source_id || null,
         lead_sub_source_id: newLeadForm.lead_sub_source_id || null,
         project_id: newLeadForm.project_id || null,
@@ -298,6 +341,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       setSvDoneModalOpen(true);
       // Load SM users
       loadAssignableUsers('SM');
+      if (!projectOptions.length) loadCreateOptions();
       return;
     }
 
@@ -451,6 +495,27 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
         ))}
       </div>
 
+      {!!pipelineStages.length && (
+        <div className="lead-workspace__flow-strip">
+          {pipelineStages.map((stage) => {
+            const handoff = handoffMap[stage.stage_code];
+            return (
+              <div key={stage.id || stage.stage_code} className="flow-step-wrap">
+                <div className="flow-step" style={{ borderColor: `${stage.color_code || '#6B7280'}66` }}>
+                  <strong>{stage.stage_order}. {stage.stage_name}</strong>
+                  <small>{ROLE_LABELS[stage.ownerRole] || 'Terminal'}</small>
+                </div>
+                {handoff && (
+                  <div className="flow-handoff">
+                    ⚡ {handoff.label} ({handoff.fromRoleLabel} → {handoff.toRoleLabel})
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Toolbar ── */}
       <div className="lead-workspace__toolbar">
         <input
@@ -467,7 +532,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
         <select value={filters.statusCode} onChange={(e) => setFilters((p) => ({ ...p, statusCode: e.target.value }))}>
           <option value="">All Statuses</option>
           {statusOptions.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>{o.label} ({o.category})</option>
           ))}
         </select>
         <label className="lead-workspace__closed-toggle">
@@ -505,10 +570,10 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={7} className="lead-workspace__empty">Loading leads...</td></tr>
+                  <tr><td colSpan={8} className="lead-workspace__empty">Loading leads...</td></tr>
                 )}
                 {!loading && !leads.length && (
-                  <tr><td colSpan={7} className="lead-workspace__empty">No leads found for current filters</td></tr>
+                  <tr><td colSpan={8} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
                 {!loading && leads.map((lead) => (
                   <tr
@@ -545,6 +610,11 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                       <p className="assigned-name">{lead.assignedToUserName || <em>Unassigned</em>}</p>
                       {lead.assignedRole && (
                         <small className="assigned-role">{ROLE_LABELS[lead.assignedRole] || lead.assignedRole}</small>
+                      )}
+                      {lead.handoff?.fromUserName && (
+                        <small className="assigned-handoff">
+                          ↪ from {lead.handoff.fromUserName}
+                        </small>
                       )}
                     </td>
                     <td>{lead.nextFollowUpAt ? formatDateTime(lead.nextFollowUpAt) : '-'}</td>
@@ -620,6 +690,22 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                       </div>
                     </div>
                     <div className="lead-detail__info-item">
+                      <div className="crm-form-label">WhatsApp</div>
+                      <div className="lead-detail__info-value">{selectedLead.whatsappNumber || '-'}</div>
+                    </div>
+                    <div className="lead-detail__info-item">
+                      <div className="crm-form-label">Alternate Phone</div>
+                      <div className="lead-detail__info-value">{selectedLead.alternatePhone || '-'}</div>
+                    </div>
+                    <div className="lead-detail__info-item">
+                      <div className="crm-form-label">Purpose / Config</div>
+                      <div className="lead-detail__info-value">{selectedLead.purpose || '-'} / {selectedLead.configuration || '-'}</div>
+                    </div>
+                    <div className="lead-detail__info-item">
+                      <div className="crm-form-label">Campaign</div>
+                      <div className="lead-detail__info-value">{selectedLead.campaignName || '-'}</div>
+                    </div>
+                    <div className="lead-detail__info-item">
                       <div className="crm-form-label">Assigned To</div>
                       <div className="lead-detail__info-value" style={{ color: 'var(--accent-blue)' }}>
                         {selectedLead.assignedToUserName || 'Unassigned'}
@@ -627,6 +713,17 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                           <small style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({ROLE_LABELS[selectedLead.assignedRole] || selectedLead.assignedRole})</small>
                         )}
                       </div>
+                    </div>
+                    <div className="lead-detail__info-item">
+                      <div className="crm-form-label">Last Handoff</div>
+                      <div className="lead-detail__info-value">
+                        {selectedLead.handoff?.fromUserName
+                          ? `${selectedLead.handoff.fromUserName} → ${selectedLead.handoff.toUserName || 'Unassigned'}`
+                          : 'No handoff yet'}
+                      </div>
+                      {selectedLead.handoff?.handedOffAt && (
+                        <small>{formatDateTime(selectedLead.handoff.handedOffAt)}</small>
+                      )}
                     </div>
                     <div className="lead-detail__info-item">
                       <div className="crm-form-label">Lead Number</div>
@@ -733,7 +830,9 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                       <select className="crm-form-select" value={manualStatus} onChange={(e) => setManualStatus(e.target.value)}>
                         <option value="">Select status</option>
                         {statusOptions.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}{o.value === selectedLead.statusCode ? ' (current)' : ''}</option>
+                          <option key={o.value} value={o.value}>
+                            {o.label} ({o.category}){o.isTerminal ? ' - Terminal' : ''}{o.value === selectedLead.statusCode ? ' (current)' : ''}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -821,6 +920,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
             </div>
 
             <form className="lead-workspace__new-form" onSubmit={handleCreateLead}>
+              <div className="lead-workspace__new-form-section">Contact Information</div>
               <label>
                 First Name*
                 <input value={newLeadForm.firstName} onChange={(e) => setNewLeadForm((p) => ({ ...p, firstName: e.target.value }))} required />
@@ -832,6 +932,14 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               <label>
                 Phone*
                 <input value={newLeadForm.phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: e.target.value }))} required />
+              </label>
+              <label>
+                Alternate Phone
+                <input value={newLeadForm.alternate_phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Optional" />
+              </label>
+              <label>
+                WhatsApp Number
+                <input value={newLeadForm.whatsapp_number} onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value }))} placeholder="Optional" />
               </label>
               <label>
                 Secondary Phone 1
@@ -849,6 +957,51 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 Email
                 <input type="email" value={newLeadForm.email} onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))} />
               </label>
+
+              <div className="lead-workspace__new-form-section">Lead Classification</div>
+              <label>
+                Lead Type
+                <select value={newLeadForm.lead_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
+                  <option value="">Select lead type</option>
+                  {leadTypeOptions.map((lt) => (
+                    <option key={lt.id} value={lt.id}>{lt.type_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Customer Type
+                <select value={newLeadForm.customer_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, customer_type_id: e.target.value }))}>
+                  <option value="">Select customer type</option>
+                  {customerTypeOptions.map((ct) => (
+                    <option key={ct.id} value={ct.id}>{ct.type_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Purpose
+                <select value={newLeadForm.purpose} onChange={(e) => setNewLeadForm((p) => ({ ...p, purpose: e.target.value }))}>
+                  <option value="">Select purpose</option>
+                  <option value="Purchase">Purchase</option>
+                  <option value="Investment">Investment</option>
+                  <option value="Rental">Rental</option>
+                </select>
+              </label>
+              <label>
+                Configuration
+                <select value={newLeadForm.configuration} onChange={(e) => setNewLeadForm((p) => ({ ...p, configuration: e.target.value }))}>
+                  <option value="">Select configuration</option>
+                  <option value="1RK">1RK</option>
+                  <option value="1BHK">1BHK</option>
+                  <option value="2BHK">2BHK</option>
+                  <option value="3BHK">3BHK</option>
+                  <option value="4BHK">4BHK</option>
+                  <option value="Villa">Villa</option>
+                  <option value="Plot">Plot</option>
+                  <option value="Commercial">Commercial</option>
+                </select>
+              </label>
+
+              <div className="lead-workspace__new-form-section">Source & Project</div>
               <label>
                 Project
                 <select
@@ -900,6 +1053,8 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                   ))}
                 </select>
               </label>
+
+              <div className="lead-workspace__new-form-section">Budget & Priority</div>
               <label>
                 Budget Min
                 <input type="number" value={newLeadForm.budgetMin} onChange={(e) => setNewLeadForm((p) => ({ ...p, budgetMin: e.target.value }))} />
@@ -926,6 +1081,37 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                   <option value="High">High</option>
                   <option value="Urgent">Urgent</option>
                 </select>
+              </label>
+
+              <div className="lead-workspace__new-form-section">Campaign Tracking</div>
+              <label>
+                Campaign Name
+                <input value={newLeadForm.campaign_name} onChange={(e) => setNewLeadForm((p) => ({ ...p, campaign_name: e.target.value }))} placeholder="Optional" />
+              </label>
+              <label>
+                UTM Source
+                <input value={newLeadForm.utm_source} onChange={(e) => setNewLeadForm((p) => ({ ...p, utm_source: e.target.value }))} placeholder="Optional" />
+              </label>
+              <label>
+                UTM Medium
+                <input value={newLeadForm.utm_medium} onChange={(e) => setNewLeadForm((p) => ({ ...p, utm_medium: e.target.value }))} placeholder="Optional" />
+              </label>
+              <label>
+                UTM Campaign
+                <input value={newLeadForm.utm_campaign} onChange={(e) => setNewLeadForm((p) => ({ ...p, utm_campaign: e.target.value }))} placeholder="Optional" />
+              </label>
+              <label>
+                Referral Code
+                <input value={newLeadForm.referral_code} onChange={(e) => setNewLeadForm((p) => ({ ...p, referral_code: e.target.value }))} placeholder="Optional" />
+              </label>
+              <label className="lead-workspace__new-form-span">
+                Initial Notes
+                <textarea
+                  rows={3}
+                  value={newLeadForm.note}
+                  onChange={(e) => setNewLeadForm((p) => ({ ...p, note: e.target.value }))}
+                  placeholder="Add context, requirements, or comments"
+                />
               </label>
 
               <div className="lead-workspace__new-form-footer">
@@ -1096,9 +1282,9 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 <strong>{selectedLead?.fullName}</strong> ({selectedLead?.leadNumber})
               </p>
 
-              {closureModalAction.code?.includes('JUNK') || closureModalAction.code?.includes('SPAM') ? (
+              {closureModalAction.code?.includes('JUNK') || closureModalAction.code?.includes('WRONG_NUMBER') ? (
                 <div style={{ background: 'var(--accent-red-bg)', border: '1px solid var(--accent-red)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--accent-red)' }}>
-                  ⚠️ Warning: Marking as {closureModalAction.label.replace('Mark ', '')} will increment the junk/spam strike counter.
+                  ⚠️ Warning: Marking as {closureModalAction.label.replace('Mark ', '')} will increment the strike counter.
                   After 3 strikes, the lead will be permanently deactivated.
                   {selectedLead && <span> (Current strikes: {selectedLead.junkStrikeCount || 0}/3)</span>}
                 </div>

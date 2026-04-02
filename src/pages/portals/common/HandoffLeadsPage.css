@@ -1,0 +1,138 @@
+.handoff-leads__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.handoff-stat-card {
+  padding: 12px;
+}
+
+.handoff-stat-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.handoff-stat-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.handoff-leads__filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: center;
+}
+
+.handoff-leads__filters input,
+.handoff-leads__filters select {
+  padding: 8px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.handoff-leads__filters input {
+  flex: 1;
+}
+
+.handoff-leads__table-wrap {
+  overflow: auto;
+}
+
+.handoff-leads__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1020px;
+}
+
+.handoff-leads__table th,
+.handoff-leads__table td {
+  border-bottom: 1px solid var(--border-primary);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 12px;
+}
+
+.handoff-leads__table th {
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.handoff-lead-name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.handoff-leads__table small {
+  color: var(--text-secondary);
+}
+
+.handoff-chip {
+  display: inline-flex;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.handoff-direction {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.handoff-direction--incoming {
+  background: var(--accent-green-bg);
+  color: var(--accent-green);
+}
+
+.handoff-direction--outgoing {
+  background: var(--accent-blue-bg);
+  color: var(--accent-blue);
+}
+
+.handoff-direction--internal {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.handoff-leads__empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 24px;
+}
+
+@media (max-width: 1024px) {
+  .handoff-leads__stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .handoff-leads__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .handoff-leads__filters {
+    flex-direction: column;
+  }
+
+  .handoff-leads__filters input,
+  .handoff-leads__filters select {
+    width: 100%;
+  }
+}

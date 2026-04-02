@@ -5,6 +5,7 @@ import SalesManagerDashboard from './SalesManagerDashboard';
 import SalesManagerIncoming from './SalesManagerIncoming';
 import SalesManagerPullLead from './SalesManagerPullLead';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
+import HandoffLeadsPage from '../common/HandoffLeadsPage';
 import { salesManagerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const SalesManagerWorkspace = () => {
@@ -29,6 +30,7 @@ const SalesManagerWorkspace = () => {
             </div>
           )}
           {activeScreen === 'incoming' && <SalesManagerIncoming user={user} onNavigate={setActiveScreen} />}
+          {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SM" />}
           {activeScreen === 'pull' && <SalesManagerPullLead user={user} />}
           {activeScreen === 'push' && (
             <div>

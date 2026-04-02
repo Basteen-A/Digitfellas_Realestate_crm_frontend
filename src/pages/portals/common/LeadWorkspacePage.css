@@ -160,6 +160,50 @@
 .stat--won strong { color: var(--accent-green); }
 .stat--dropped strong { color: var(--accent-red); }
 
+.lead-workspace__flow-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  padding-bottom: 4px;
+}
+
+.flow-step-wrap {
+  min-width: 148px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flow-step {
+  border: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  border-radius: var(--border-radius-md);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flow-step strong {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.flow-step small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.flow-handoff {
+  font-size: 10px;
+  color: var(--accent-orange, #ea580c);
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px dashed rgba(234, 88, 12, 0.4);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
 /* ── Toolbar ── */
 .lead-workspace__toolbar {
   display: flex;
@@ -337,6 +381,13 @@
 .assigned-role {
   color: var(--text-secondary);
   font-size: 10px;
+}
+
+.assigned-handoff {
+  display: block;
+  color: var(--accent-orange, #ea580c);
+  font-size: 10px;
+  margin-top: 2px;
 }
 
 /* ── Detail Panel ── */
@@ -742,6 +793,26 @@
   gap: 14px;
 }
 
+.lead-workspace__new-form-section {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-primary);
+  padding-top: 12px;
+}
+
+.lead-workspace__new-form-section:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.lead-workspace__new-form-span {
+  grid-column: 1 / -1;
+}
+
 .lead-workspace__new-form label {
   font-size: 12px;
   font-weight: 600;
@@ -752,7 +823,8 @@
 }
 
 .lead-workspace__new-form input,
-.lead-workspace__new-form select {
+.lead-workspace__new-form select,
+.lead-workspace__new-form textarea {
   padding: 9px 12px;
   border-radius: var(--border-radius-md);
   border: 1px solid var(--border-input);
@@ -763,7 +835,8 @@
 }
 
 .lead-workspace__new-form input:focus,
-.lead-workspace__new-form select:focus {
+.lead-workspace__new-form select:focus,
+.lead-workspace__new-form textarea:focus {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
