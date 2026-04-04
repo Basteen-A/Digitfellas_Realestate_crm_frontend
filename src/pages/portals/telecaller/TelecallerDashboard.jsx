@@ -132,7 +132,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                       {fu.lead?.project?.project_name && <span>📍 {fu.lead.project.project_name}</span>}
                     </div>
                   </div>
-                  <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => onNavigate?.('workspace')}>📞 Call</button>
+                  <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => onNavigate?.('leads')}>📞 Call</button>
                 </div>
               );
             })}
@@ -150,10 +150,11 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
               <div className="mini-bars">
                 {stageData.map((stage) => {
                   const pct = Math.round(((parseInt(stage.count) || 0) / maxStage) * 100);
+                  const color = stage.color_code || stageColors[stage.stage_code] || '#94a3b8';
                   return (
                     <div className="mini-bar-item" key={stage.stage_code}>
                       <div className="mini-bar-val">{stage.count}</div>
-                      <div className="mini-bar" style={{ height: `${Math.max(pct, 8)}%`, background: stageColors[stage.stage_code] || stage.color_code || '#94a3b8' }}></div>
+                      <div className="mini-bar" style={{ height: `${Math.max(pct, 8)}%`, background: color }}></div>
                       <div className="mini-bar-lbl">{stage.stage_name || stage.stage_code}</div>
                     </div>
                   );

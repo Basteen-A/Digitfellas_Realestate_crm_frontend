@@ -98,7 +98,6 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const [noteDraft, setNoteDraft] = useState('');
   const [actionState, setActionState] = useState({ note: '', nextFollowUpAt: '', assignToUserId: '' });
   const [manualStatus, setManualStatus] = useState('');
-  const [manualStageAction, setManualStageAction] = useState('');
   const [manualNextFollowUpAt, setManualNextFollowUpAt] = useState('');
   const [manualUpdateSaving, setManualUpdateSaving] = useState(false);
 
@@ -162,6 +161,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       && !action.needsAssignee
       && !action.needsReason
       && !action.needsSvDetails
+      && !action.needsCustomerProfile
     ))
     .map((action) => {
       const stage = stageByCode[action.targetStageCode];
@@ -187,7 +187,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     const totalLeads = leads.length;
     const newToday = leads.filter((l) => l.createdAt && new Date(l.createdAt) >= todayStart).length;
     const todayFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) >= todayStart && new Date(l.nextFollowUpAt) < todayEnd && !l.isClosed).length;
-    const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < todayStart && !l.isClosed).length;
+    const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < now && !l.isClosed).length;
     const svScheduled = leads.filter((l) => l.stageCode && l.stageCode.includes('SV_SCHED')).length;
     const svCompleted = leads.filter((l) => l.stageCode && (l.stageCode.includes('SV_DONE') || l.stageCode.includes('SV_COMPLET'))).length;
     const missedFollowups = overdueFollowUps;
@@ -267,7 +267,6 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       const resp = await leadWorkflowApi.getLeadById(leadId);
       setSelectedLead(resp.data || null);
       setManualStatus(resp.data?.statusCode || '');
-      setManualStageAction('');
       setManualNextFollowUpAt(toDateTimeLocalValue(resp.data?.nextFollowUpAt));
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load lead details'));
@@ -394,6 +393,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
     // SH Close Won: open Customer Profile modal
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING_APPROVE') {
+      setStagePopupOpen(false);
       setCustomerProfileForm({
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
@@ -421,7 +421,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
     const payload = {
       note: actionState.note?.trim() || undefined,
-      nextFollowUpAt: actionState.nextFollowUpAt || undefined,
+      nextFollowUpAt: actionState.nextFollowUpAt ? new Date(actionState.nextFollowUpAt).toISOString() : undefined,
       assignToUserId: actionState.assignToUserId || undefined,
     };
 
@@ -449,7 +449,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'TC_SV_COMPLETED', {
         assignToUserId: svDoneForm.assignToUserId,
-        svDate: svDoneForm.svDate,
+        svDate: svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : undefined,
         svProjectId: svDoneForm.svProjectId,
         note: svDoneForm.note?.trim() || undefined,
       });
@@ -515,7 +515,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
         assignToUserId: f.assignToUserId,
         note: f.note?.trim() || 'Booking approved by Sales Head',
         customerProfile: {
-          date_of_birth: f.date_of_birth,
+          date_of_birth: f.date_of_birth ? new Date(f.date_of_birth).toISOString() : undefined,
           pan_number: f.pan_number,
           aadhar_number: f.aadhar_number,
           occupation: f.occupation,
@@ -557,6 +557,22 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   // ── Confirm stage transition from popup ──
   const handleStagePopupConfirm = async () => {
     if (!selectedLead || !stagePopupData.actionCode) return;
+
+    const popupAction = roleActions.find((a) => a.code === stagePopupData.actionCode);
+    if (popupAction?.needsCustomerProfile || popupAction?.code === 'SH_BOOKING_APPROVE') {
+      setStagePopupOpen(false);
+      setCustomerProfileForm({
+        date_of_birth: '', pan_number: '', aadhar_number: '',
+        occupation: '', current_post: '', purchase_type: '', marital_status: '',
+        current_address: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        sameAsCurrent: false, assignToUserId: '', note: stagePopupData.reason || actionState.note || '',
+      });
+      setCustomerProfileOpen(true);
+      loadAssignableUsers('COL');
+      return;
+    }
+
     if (stagePopupData.needsFollowUp && !stagePopupData.followUpAt) {
       toast.error('Follow-up date & time is required for this stage');
       return;
@@ -570,12 +586,11 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, stagePopupData.actionCode, {
         note: stagePopupData.reason.trim(),
-        nextFollowUpAt: stagePopupData.followUpAt || undefined,
+        nextFollowUpAt: stagePopupData.followUpAt ? new Date(stagePopupData.followUpAt).toISOString() : undefined,
       });
       toast.success('Stage updated successfully');
       setStagePopupOpen(false);
       setStagePopupData({ actionCode: '', stageLabel: '', followUpAt: '', reason: '', needsFollowUp: false });
-      setManualStageAction('');
       loadLeadDetail(selectedLead.id);
       loadLeads({ silent: true });
     } catch (err) {
@@ -599,7 +614,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
     const commonPayload = {
       note: noteDraft.trim() || undefined,
-      nextFollowUpAt: manualNextFollowUpAt || undefined,
+      nextFollowUpAt: manualNextFollowUpAt ? new Date(manualNextFollowUpAt).toISOString() : undefined,
     };
 
     setManualUpdateSaving(true);
@@ -942,7 +957,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                           const action = roleActions.find((a) => a.code === ac);
                           if (!action) return;
                           // Special modals (SV Done, Closure) go through handleAction
-                          if (action.code === 'TC_SV_COMPLETED' || action.needsReason) {
+                          if (action.code === 'TC_SV_COMPLETED' || action.needsReason || action.needsCustomerProfile) {
                             handleAction(action);
                           } else {
                             // All other actions go through the stage popup for follow-up + reason
@@ -1562,11 +1577,31 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
       {/* ── Customer Profile Modal (SH Close Won) ── */}
       {customerProfileOpen && (
-        <div className="lead-workspace__modal-overlay" onClick={() => setCustomerProfileOpen(false)}>
+        <div className="lead-workspace__modal lead-workspace__modal--stacked" onClick={() => setCustomerProfileOpen(false)}>
           <div className="lead-workspace__modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: '90vh', overflow: 'auto' }}>
-            <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '18px 24px', borderRadius: '12px 12px 0 0', color: '#fff' }}>
-              <h3 style={{ margin: 0, fontSize: 16 }}>🏆 Close Won — Customer Profile</h3>
-              <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.85 }}>Fill customer details before creating booking</p>
+            <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '18px 24px', borderRadius: '12px 12px 0 0', color: '#fff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16 }}>🏆 Close Won — Customer Profile</h3>
+                <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.85 }}>Fill customer details before creating booking</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCustomerProfileOpen(false)}
+                aria-label="Close customer profile modal"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.5)',
+                  background: 'rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -1680,7 +1715,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               <select value={customerProfileForm.assignToUserId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, assignToUserId: e.target.value }))} style={{ width: '100%' }}>
                 <option value="">Select Collection Manager...</option>
                 {(assignableUsers['COL'] || []).map((u) => (
-                  <option key={u.id} value={u.id}>{u.first_name} {u.last_name || ''}</option>
+                  <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}</option>
                 ))}
               </select>
 

@@ -11,7 +11,7 @@ const SalesManagerPullLead = ({ user }) => {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
-  const [pullNote, setPullNote] = useState('');
+  const [pullNotesByLead, setPullNotesByLead] = useState({});
   const [sending, setSending] = useState({});
 
   const handleSearch = async () => {
@@ -32,13 +32,18 @@ const SalesManagerPullLead = ({ user }) => {
 
   const handlePullRequest = async (lead) => {
     if (lead.assignedToId === user?.id) { toast.error('This lead is already assigned to you'); return; }
+    if (lead.assignedToRole !== 'TC') {
+      toast.error('Pull request can be sent only for Telecaller-owned leads');
+      return;
+    }
+
     setSending((p) => ({ ...p, [lead.id]: true }));
     try {
-      await leadWorkflowApi.createPullRequest(lead.id, pullNote || `Pull request from SM for ${lead.fullName}`);
+      const note = pullNotesByLead[lead.id] || `Pull request from SM for ${lead.fullName}`;
+      await leadWorkflowApi.createPullRequest(lead.id, note);
       toast.success(`Pull request sent to ${lead.assignedToName}`);
-      setPullNote('');
-      // Mark this lead as requested in the UI
-      setResults((prev) => prev.map((r) => r.id === lead.id ? { ...r, _requested: true } : r));
+      setPullNotesByLead((prev) => ({ ...prev, [lead.id]: '' }));
+      setResults((prev) => prev.map((r) => (r.id === lead.id ? { ...r, hasPendingPullRequest: true } : r)));
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to send pull request'));
     } finally {
@@ -131,7 +136,7 @@ const SalesManagerPullLead = ({ user }) => {
                   </div>
 
                   {/* Pull Request Action */}
-                  {lead._requested ? (
+                  {lead.hasPendingPullRequest ? (
                     <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-green-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-green)', fontWeight: 600 }}>
                       ✅ Pull request sent
                     </div>
@@ -139,13 +144,17 @@ const SalesManagerPullLead = ({ user }) => {
                     <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-blue-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-blue)', fontWeight: 600 }}>
                       ℹ️ This lead is already assigned to you
                     </div>
+                  ) : lead.assignedToRole !== 'TC' ? (
+                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-yellow-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-yellow)', fontWeight: 600 }}>
+                      ⚠️ Pull request allowed only for Telecaller-owned leads
+                    </div>
                   ) : (
                     <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       <input
                         className="crm-form-input"
                         placeholder="Add note (optional)..."
-                        value={pullNote}
-                        onChange={(e) => setPullNote(e.target.value)}
+                        value={pullNotesByLead[lead.id] || ''}
+                        onChange={(e) => setPullNotesByLead((prev) => ({ ...prev, [lead.id]: e.target.value }))}
                         style={{ flex: 1, minWidth: 200 }}
                       />
                       <button

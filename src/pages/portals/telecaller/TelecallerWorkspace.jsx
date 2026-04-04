@@ -31,10 +31,10 @@ const TelecallerWorkspace = () => {
             <LeadWorkspacePage user={user} workspaceRole="TC" />
           )}
           {activeScreen === 'followups' && (
-            <TelecallerFollowUps user={user} />
+            <TelecallerFollowUps user={user} onNavigate={setActiveScreen} />
           )}
           {activeScreen === 'pipeline' && (
-            <TelecallerPipeline user={user} />
+            <TelecallerPipeline user={user} onNavigate={setActiveScreen} />
           )}
           {activeScreen === 'addlead' && (
             <TelecallerAddLead user={user} onNavigate={setActiveScreen} />

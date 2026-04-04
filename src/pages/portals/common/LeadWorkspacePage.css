@@ -582,6 +582,10 @@
   overflow-y: auto;
 }
 
+.lead-workspace__modal--stacked {
+  z-index: 130;
+}
+
 .lead-workspace__modal-panel {
   background: var(--bg-card, #fff);
   border-radius: 12px;

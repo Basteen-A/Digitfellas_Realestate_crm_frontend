@@ -76,7 +76,7 @@ const telecallerSidebar = [
 const salesManagerSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
   { label: 'My Leads', path: '/sales-manager/leads', icon: '👥' },
-  { label: 'Site Visits', path: '/sales-manager/visits', icon: '🏠' },
+  { label: 'Revisits', path: '/sales-manager/visits', icon: '🔄' },
   { label: 'Incoming Leads', path: '/sales-manager/incoming', icon: '⚡' },
 ];
 
@@ -118,7 +118,7 @@ export const salesManagerMenu = [
   { label: 'Dashboard', key: 'dashboard', icon: '📊', badge: null },
   { label: 'My Leads', key: 'leads', icon: '👥', badgeColor: 'green' },
   { label: 'Handoff Leads', key: 'handoffs', icon: '🤝', badgeColor: 'purple' },
-  { label: 'Site Visits', key: 'visits', icon: '🏠', badge: null },
+  { label: 'Revisits', key: 'visits', icon: '🔄', badge: null },
   { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: '⚡', badgeColor: 'orange' },
   { label: 'Pull Lead', key: 'pull', icon: '🔍', badge: null },
