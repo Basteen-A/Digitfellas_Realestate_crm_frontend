@@ -49,6 +49,23 @@ const initialNewLead = {
   priority: 'Medium',
 };
 
+const toDateTimeLocalValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
+  const date = new Date();
+  date.setSeconds(0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return toDateTimeLocalValue(date.toISOString());
+};
+
 const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const wsTitle = getWorkspaceTitle(workspaceRole);
 
@@ -81,6 +98,13 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const [noteDraft, setNoteDraft] = useState('');
   const [actionState, setActionState] = useState({ note: '', nextFollowUpAt: '', assignToUserId: '' });
   const [manualStatus, setManualStatus] = useState('');
+  const [manualStageAction, setManualStageAction] = useState('');
+  const [manualNextFollowUpAt, setManualNextFollowUpAt] = useState('');
+  const [manualUpdateSaving, setManualUpdateSaving] = useState(false);
+
+  // ── Stage Transition Popup ──
+  const [stagePopupOpen, setStagePopupOpen] = useState(false);
+  const [stagePopupData, setStagePopupData] = useState({ actionCode: '', stageLabel: '', followUpAt: '', reason: '', needsFollowUp: false });
 
   // ── SV Done Modal ──
   const [svDoneModalOpen, setSvDoneModalOpen] = useState(false);
@@ -91,6 +115,16 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const [closureModalAction, setClosureModalAction] = useState(null);
   const [closureForm, setClosureForm] = useState({ closureReasonId: '', reason: '' });
   const [closureReasons, setClosureReasons] = useState([]);
+
+  // ── Customer Profile Modal (SH Close Won) ──
+  const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
+  const [customerProfileForm, setCustomerProfileForm] = useState({
+    date_of_birth: '', pan_number: '', aadhar_number: '',
+    occupation: '', current_post: '', purchase_type: '', marital_status: '',
+    current_address: '', current_city: '', current_state: '', current_pincode: '',
+    permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+    sameAsCurrent: false, assignToUserId: '', note: '',
+  });
 
   // ── Assignment ──
   const [assignableUsers, setAssignableUsers] = useState({});
@@ -113,39 +147,51 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     [workflowConfig, workspaceRole]
   );
 
+  const stageByCode = useMemo(() => {
+    const map = {};
+    (workflowConfig?.stages || []).forEach((stage) => {
+      map[stage.stage_code] = stage;
+    });
+    return map;
+  }, [workflowConfig]);
+
+  const stageTransitionOptions = useMemo(() => roleActions
+    .filter((action) => (
+      action.targetStageCode
+      && action.targetStageCode !== selectedLead?.stageCode
+      && !action.needsAssignee
+      && !action.needsReason
+      && !action.needsSvDetails
+    ))
+    .map((action) => {
+      const stage = stageByCode[action.targetStageCode];
+      return {
+        value: action.code,
+        actionLabel: action.label,
+        stageCode: action.targetStageCode,
+        stageLabel: stage?.stage_name || action.targetStageCode,
+        needsFollowUp: Boolean(action.needsFollowUp),
+      };
+    }), [roleActions, selectedLead?.stageCode, stageByCode]);
+
   const selectedSourceSubSources = useMemo(
     () => subSourceMap[newLeadForm.lead_source_id] || [],
     [subSourceMap, newLeadForm.lead_source_id]
   );
 
-  const pipelineStages = useMemo(
-    () => [...(workflowConfig?.stages || [])].sort((a, b) => (a.stage_order || 0) - (b.stage_order || 0)),
-    [workflowConfig]
-  );
-
-  const handoffMap = useMemo(() => {
-    const map = {};
-    (workflowConfig?.handoffs || []).forEach((handoff) => {
-      map[handoff.triggerStageCode] = handoff;
-    });
-    return map;
-  }, [workflowConfig]);
-
-  // ── Stats ──
+  // ── Stats (Telecaller KPI cards) ──
   const computedStats = useMemo(() => {
-    const open = leads.filter((l) => !l.isClosed).length;
-    const dueFollowUps = leads.filter(
-      (l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt).getTime() <= Date.now() && !l.isClosed
-    ).length;
-    const won = leads.filter((l) => l.stageCode === 'CLOSED_WON' || l.isPositive).length;
-    const dropped = leads.filter((l) => l.isClosed && !l.isPositive).length;
-
-    return [
-      { label: 'Open Leads', value: open, cls: 'stat--open' },
-      { label: 'Follow-ups Due', value: dueFollowUps, cls: 'stat--due' },
-      { label: 'Closed Won', value: won, cls: 'stat--won' },
-      { label: 'Dropped', value: dropped, cls: 'stat--dropped' },
-    ];
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 86400000);
+    const totalLeads = leads.length;
+    const newToday = leads.filter((l) => l.createdAt && new Date(l.createdAt) >= todayStart).length;
+    const todayFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) >= todayStart && new Date(l.nextFollowUpAt) < todayEnd && !l.isClosed).length;
+    const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < todayStart && !l.isClosed).length;
+    const svScheduled = leads.filter((l) => l.stageCode && l.stageCode.includes('SV_SCHED')).length;
+    const svCompleted = leads.filter((l) => l.stageCode && (l.stageCode.includes('SV_DONE') || l.stageCode.includes('SV_COMPLET'))).length;
+    const missedFollowups = overdueFollowUps;
+    return { totalLeads, newToday, todayFollowUps, overdueFollowUps, svScheduled, svCompleted, missedFollowups };
   }, [leads]);
 
   // ── Load workflow config on mount ──
@@ -221,6 +267,8 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       const resp = await leadWorkflowApi.getLeadById(leadId);
       setSelectedLead(resp.data || null);
       setManualStatus(resp.data?.statusCode || '');
+      setManualStageAction('');
+      setManualNextFollowUpAt(toDateTimeLocalValue(resp.data?.nextFollowUpAt));
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load lead details'));
       setSelectedLead(null);
@@ -339,9 +387,22 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     if (action.code === 'TC_SV_COMPLETED') {
       setSvDoneForm({ assignToUserId: '', svDate: '', svProjectId: '', note: actionState.note || '' });
       setSvDoneModalOpen(true);
-      // Load SM users
       loadAssignableUsers('SM');
       if (!projectOptions.length) loadCreateOptions();
+      return;
+    }
+
+    // SH Close Won: open Customer Profile modal
+    if (action.needsCustomerProfile || action.code === 'SH_BOOKING_APPROVE') {
+      setCustomerProfileForm({
+        date_of_birth: '', pan_number: '', aadhar_number: '',
+        occupation: '', current_post: '', purchase_type: '', marital_status: '',
+        current_address: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        sameAsCurrent: false, assignToUserId: '', note: actionState.note || '',
+      });
+      setCustomerProfileOpen(true);
+      loadAssignableUsers('COL');
       return;
     }
 
@@ -425,17 +486,134 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
     }
   };
 
-  const handleManualStatusUpdate = async () => {
-    if (!selectedLead || !manualStatus) return;
+  // ── Customer Profile Submit (SH Close Won) ──
+  const handleCustomerProfileSubmit = async () => {
+    if (!selectedLead) return;
+    const f = customerProfileForm;
+    if (!f.date_of_birth) { toast.error('Date of Birth is required'); return; }
+    if (!f.pan_number) { toast.error('PAN Number is required'); return; }
+    if (!f.aadhar_number) { toast.error('Aadhar Number is required'); return; }
+    if (!f.current_address) { toast.error('Current Address is required'); return; }
+    if (!f.occupation) { toast.error('Occupation is required'); return; }
+    if (!f.assignToUserId) { toast.error('Please select a Collection Manager'); return; }
+
+    setManualUpdateSaving(true);
     try {
-      await leadWorkflowApi.updateLeadStatus(selectedLead.id, manualStatus, {
-        note: actionState.note?.trim() || undefined,
+      const permAddr = f.sameAsCurrent ? {
+        permanent_address: f.current_address,
+        permanent_city: f.current_city,
+        permanent_state: f.current_state,
+        permanent_pincode: f.current_pincode,
+      } : {
+        permanent_address: f.permanent_address,
+        permanent_city: f.permanent_city,
+        permanent_state: f.permanent_state,
+        permanent_pincode: f.permanent_pincode,
+      };
+
+      await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING_APPROVE', {
+        assignToUserId: f.assignToUserId,
+        note: f.note?.trim() || 'Booking approved by Sales Head',
+        customerProfile: {
+          date_of_birth: f.date_of_birth,
+          pan_number: f.pan_number,
+          aadhar_number: f.aadhar_number,
+          occupation: f.occupation,
+          current_post: f.current_post,
+          purchase_type: f.purchase_type,
+          marital_status: f.marital_status,
+          current_address: f.current_address,
+          current_city: f.current_city,
+          current_state: f.current_state,
+          current_pincode: f.current_pincode,
+          ...permAddr,
+        },
       });
-      toast.success('Status updated');
+      toast.success('Booking approved! Customer profile saved. Lead returned to Sales Manager.');
+      setCustomerProfileOpen(false);
+      setSelectedLeadId(null);
+      loadLeads({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Unable to approve booking'));
+    } finally {
+      setManualUpdateSaving(false);
+    }
+  };
+
+  // ── Open the stage transition popup when user selects a stage ──
+  const openStagePopup = (actionCode) => {
+    const option = stageTransitionOptions.find((o) => o.value === actionCode);
+    if (!option) return;
+    setStagePopupData({
+      actionCode,
+      stageLabel: option.stageLabel || option.actionLabel || actionCode,
+      followUpAt: '',
+      reason: '',
+      needsFollowUp: Boolean(option.needsFollowUp),
+    });
+    setStagePopupOpen(true);
+  };
+
+  // ── Confirm stage transition from popup ──
+  const handleStagePopupConfirm = async () => {
+    if (!selectedLead || !stagePopupData.actionCode) return;
+    if (stagePopupData.needsFollowUp && !stagePopupData.followUpAt) {
+      toast.error('Follow-up date & time is required for this stage');
+      return;
+    }
+    if (!stagePopupData.reason.trim()) {
+      toast.error('Please provide a reason / note for the stage change');
+      return;
+    }
+
+    setManualUpdateSaving(true);
+    try {
+      await leadWorkflowApi.transitionLead(selectedLead.id, stagePopupData.actionCode, {
+        note: stagePopupData.reason.trim(),
+        nextFollowUpAt: stagePopupData.followUpAt || undefined,
+      });
+      toast.success('Stage updated successfully');
+      setStagePopupOpen(false);
+      setStagePopupData({ actionCode: '', stageLabel: '', followUpAt: '', reason: '', needsFollowUp: false });
+      setManualStageAction('');
       loadLeadDetail(selectedLead.id);
       loadLeads({ silent: true });
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Unable to update status'));
+      toast.error(getErrorMessage(err, 'Unable to update stage'));
+    } finally {
+      setManualUpdateSaving(false);
+    }
+  };
+
+  const handleManualStatusUpdate = async () => {
+    if (!selectedLead) return;
+
+    const statusChanged = manualStatus && manualStatus !== selectedLead.statusCode;
+    const followUpChanged = Boolean(manualNextFollowUpAt)
+      && manualNextFollowUpAt !== toDateTimeLocalValue(selectedLead.nextFollowUpAt);
+
+    if (!statusChanged && !followUpChanged && !noteDraft.trim()) {
+      toast('No changes to update');
+      return;
+    }
+
+    const commonPayload = {
+      note: noteDraft.trim() || undefined,
+      nextFollowUpAt: manualNextFollowUpAt || undefined,
+    };
+
+    setManualUpdateSaving(true);
+    try {
+      if (statusChanged || followUpChanged) {
+        await leadWorkflowApi.updateLeadStatus(selectedLead.id, manualStatus || selectedLead.statusCode, commonPayload);
+      }
+      toast.success('Lead updated successfully');
+      loadLeadDetail(selectedLead.id);
+      loadLeads({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Unable to update lead'));
+    } finally {
+      setManualUpdateSaving(false);
     }
   };
 
@@ -485,64 +663,72 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
         </div>
       </header>
 
-      {/* ── Stats ── */}
+      {/* ── Stats (5-column telecaller KPI cards) ── */}
       <div className="lead-workspace__stats">
-        {computedStats.map((card) => (
-          <article key={card.label} className={`workspace-stat-card ${card.cls}`}>
-            <p>{card.label}</p>
-            <strong>{card.value}</strong>
-          </article>
-        ))}
+        <article className="workspace-stat-card">
+          <div className="stat-card__header">
+            <div className="stat-card__label">Total Leads</div>
+            <div className="stat-card__icon" style={{ background: '#dbeafe', color: '#2563eb' }}>👥</div>
+          </div>
+          <div className="stat-card__value">{computedStats.totalLeads}</div>
+          <div className="stat-card__change change-up">↑ {computedStats.newToday} new today</div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="stat-card__header">
+            <div className="stat-card__label">Today's Follow Ups</div>
+            <div className="stat-card__icon" style={{ background: '#fef3c7', color: '#d97706' }}>📞</div>
+          </div>
+          <div className="stat-card__value" style={{ color: '#d97706' }}>{computedStats.todayFollowUps}</div>
+          <div className={`stat-card__change ${computedStats.overdueFollowUps > 0 ? 'change-down' : 'change-neutral'}`}>{computedStats.overdueFollowUps} overdue</div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="stat-card__header">
+            <div className="stat-card__label">SV Scheduled</div>
+            <div className="stat-card__icon" style={{ background: '#cffafe', color: '#0891b2' }}>🏠</div>
+          </div>
+          <div className="stat-card__value" style={{ color: '#0891b2' }}>{computedStats.svScheduled}</div>
+          <div className="stat-card__change change-neutral">Active</div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="stat-card__header">
+            <div className="stat-card__label">SV Completed</div>
+            <div className="stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}>✅</div>
+          </div>
+          <div className="stat-card__value" style={{ color: '#16a34a' }}>{computedStats.svCompleted}</div>
+          <div className="stat-card__change change-neutral">This month</div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="stat-card__header">
+            <div className="stat-card__label">Missed Followups</div>
+            <div className="stat-card__icon" style={{ background: '#fee2e2', color: '#dc2626' }}>📵</div>
+          </div>
+          <div className="stat-card__value" style={{ color: '#dc2626' }}>{computedStats.missedFollowups}</div>
+          <div className="stat-card__change change-neutral">Retry needed</div>
+        </article>
       </div>
-
-      {!!pipelineStages.length && (
-        <div className="lead-workspace__flow-strip">
-          {pipelineStages.map((stage) => {
-            const handoff = handoffMap[stage.stage_code];
-            return (
-              <div key={stage.id || stage.stage_code} className="flow-step-wrap">
-                <div className="flow-step" style={{ borderColor: `${stage.color_code || '#6B7280'}66` }}>
-                  <strong>{stage.stage_order}. {stage.stage_name}</strong>
-                  <small>{ROLE_LABELS[stage.ownerRole] || 'Terminal'}</small>
-                </div>
-                {handoff && (
-                  <div className="flow-handoff">
-                    ⚡ {handoff.label} ({handoff.fromRoleLabel} → {handoff.toRoleLabel})
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* ── Toolbar ── */}
       <div className="lead-workspace__toolbar">
-        <input
-          value={filters.search}
-          onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
-          placeholder="Search by name, phone, email, lead number..."
-        />
+        <div className="lead-workspace__toolbar-search">
+          <span className="search-icon">🔍</span>
+          <input
+            value={filters.search}
+            onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
+            placeholder="Search leads by name, phone, email..."
+          />
+        </div>
         <select value={filters.stageCode} onChange={(e) => setFilters((p) => ({ ...p, stageCode: e.target.value }))}>
           <option value="">All Stages</option>
-          {stageOptions.map((o) => (
+          {stageOptions.filter((o) => ['NEW', 'CONTACTED', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(o.value)).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
         <select value={filters.statusCode} onChange={(e) => setFilters((p) => ({ ...p, statusCode: e.target.value }))}>
           <option value="">All Statuses</option>
           {statusOptions.map((o) => (
-            <option key={o.value} value={o.value}>{o.label} ({o.category})</option>
+            <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-        <label className="lead-workspace__closed-toggle">
-          <input
-            type="checkbox"
-            checked={filters.includeClosed}
-            onChange={(e) => setFilters((p) => ({ ...p, includeClosed: e.target.checked }))}
-          />
-          <span>Include Closed</span>
-        </label>
       </div>
 
       {/* ── Main Grid ── */}
@@ -630,39 +816,29 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
           </div>
         </div>
 
-        {/* ── Detail Panel — matches revised.html modal layout ── */}
+        {/* ── Detail Panel — Corporate Standard Modal ── */}
         {selectedLead && (
-          <div className="lead-workspace__modal">
+          <div className="lead-workspace__modal" onClick={(e) => { if (e.target === e.currentTarget) setSelectedLeadId(null); }}>
             <div className="lead-workspace__modal-panel lead-workspace__modal-panel--lg">
               <div className="lead-workspace__modal-header">
-                <h2>Lead Details</h2>
-                <button type="button" onClick={() => setSelectedLeadId(null)}>×</button>
-              </div>
-              <div className="lead-workspace__detail-card" style={{ padding: 24, maxHeight: '75vh', overflowY: 'auto' }}>
-                {/* Header with name, phone, badges */}
-              <div className="lead-detail__header">
                 <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700 }}>{selectedLead.fullName}</h2>
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  <h2>{selectedLead.fullName}</h2>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary, #94a3b8)', marginTop: 2 }}>
                     {selectedLead.phone}{selectedLead.email ? ` · ${selectedLead.email}` : ''}
-                  </p>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    className="crm-badge"
-                    style={{ backgroundColor: selectedLead.stageColor + '22', color: selectedLead.stageColor }}
-                  >
+                  <span className="crm-badge" style={{ backgroundColor: selectedLead.stageColor + '22', color: selectedLead.stageColor }}>
                     <span className="crm-badge-dot" style={{ background: selectedLead.stageColor }} />
                     {selectedLead.stageLabel}
                   </span>
-                  <span
-                    className="crm-badge"
-                    style={{ backgroundColor: selectedLead.statusColor + '22', color: selectedLead.statusColor, border: `1px solid ${selectedLead.statusColor}33` }}
-                  >
+                  <span className="crm-badge" style={{ backgroundColor: selectedLead.statusColor + '22', color: selectedLead.statusColor, border: `1px solid ${selectedLead.statusColor}33` }}>
                     {selectedLead.statusIcon || ''} {selectedLead.statusLabel}
                   </span>
+                  <button type="button" onClick={() => setSelectedLeadId(null)}>✕</button>
                 </div>
               </div>
+              <div className="lead-workspace__modal-body">
 
               {/* Two-column layout */}
               <div className="lead-detail__two-col">
@@ -753,76 +929,53 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                     </>
                   )}
 
-                  {/* Workflow Actions */}
+                  {/* Workflow Action Dropdown (replaces chips) */}
                   {!selectedLead.isClosed && roleActions.length > 0 && (
-                    <>
-                      <h3 className="lead-detail__section-title">Workflow Actions</h3>
-                      <div className="lead-detail__quick-actions">
+                    <div style={{ marginBottom: 16 }}>
+                      <div className="crm-form-label">Workflow Action</div>
+                      <select
+                        className="crm-form-select"
+                        value=""
+                        onChange={(e) => {
+                          const ac = e.target.value;
+                          if (!ac) return;
+                          const action = roleActions.find((a) => a.code === ac);
+                          if (!action) return;
+                          // Special modals (SV Done, Closure) go through handleAction
+                          if (action.code === 'TC_SV_COMPLETED' || action.needsReason) {
+                            handleAction(action);
+                          } else {
+                            // All other actions go through the stage popup for follow-up + reason
+                            setStagePopupData({
+                              actionCode: action.code,
+                              stageLabel: action.label,
+                              followUpAt: '',
+                              reason: '',
+                              needsFollowUp: Boolean(action.needsFollowUp),
+                            });
+                            setStagePopupOpen(true);
+                          }
+                          e.target.value = '';
+                        }}
+                      >
+                        <option value="">Select an action...</option>
                         {roleActions.map((action) => (
-                          <button
-                            key={action.code}
-                            type="button"
-                            className={`crm-btn crm-btn-sm crm-btn-${action.tone === 'primary' ? 'primary' : action.tone === 'success' ? 'success' : action.tone === 'danger' ? 'danger' : 'ghost'}`}
-                            onClick={() => handleAction(action)}
-                          >
-                            {action.label}
-                          </button>
+                          <option key={action.code} value={action.code}>{action.label}</option>
                         ))}
-                      </div>
-
-                      {/* Action inputs: note, follow-up, assignee */}
-                      <div className="lead-detail__action-form">
-                        <textarea
-                          className="crm-form-input"
-                          value={actionState.note}
-                          onChange={(e) => setActionState((p) => ({ ...p, note: e.target.value }))}
-                          placeholder="Action note / reason..."
-                          rows={2}
-                        />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                          <div>
-                            <div className="crm-form-label">Next Follow Up</div>
-                            <input
-                              className="crm-form-input"
-                              type="datetime-local"
-                              value={actionState.nextFollowUpAt}
-                              onChange={(e) => setActionState((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
-                            />
-                          </div>
-                          {roleActions.some((a) => a.needsAssignee) && (
-                            <div>
-                              <div className="crm-form-label">Assign To</div>
-                              <select
-                                className="crm-form-select"
-                                value={actionState.assignToUserId}
-                                onChange={(e) => setActionState((p) => ({ ...p, assignToUserId: e.target.value }))}
-                              >
-                                <option value="">Select user...</option>
-                                {roleActions
-                                  .filter((a) => a.needsAssignee)
-                                  .map((a) => a.assigneeRole)
-                                  .filter((v, i, arr) => arr.indexOf(v) === i)
-                                  .flatMap((role) => (assignableUsers[role] || []))
-                                  .map((u) => (
-                                    <option key={u.id} value={u.id}>
-                                      {u.fullName} ({ROLE_LABELS[u.role] || u.roleName})
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
+                      </select>
+                    </div>
                   )}
 
-                  {/* Update Lead — Stage + Status dropdowns */}
+                  {/* Update Lead — Stage triggers popup, Status + Follow-up inline */}
                   <h3 className="lead-detail__section-title">Update Lead</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="lead-detail__update-grid">
                     <div>
                       <div className="crm-form-label">Stage</div>
-                      <select className="crm-form-select" value={selectedLead.stageCode || ''} disabled>
-                        <option>{selectedLead.stageLabel} (current)</option>
+                      <select className="crm-form-select" value="" onChange={(e) => { if (e.target.value) openStagePopup(e.target.value); }}>
+                        <option value="">{selectedLead.stageLabel} (current)</option>
+                        {stageTransitionOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.stageLabel}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -830,32 +983,32 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                       <select className="crm-form-select" value={manualStatus} onChange={(e) => setManualStatus(e.target.value)}>
                         <option value="">Select status</option>
                         {statusOptions.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label} ({o.category}){o.isTerminal ? ' - Terminal' : ''}{o.value === selectedLead.statusCode ? ' (current)' : ''}
-                          </option>
+                          <option key={o.value} value={o.value}>{o.label}{o.value === selectedLead.statusCode ? ' (current)' : ''}</option>
                         ))}
                       </select>
                     </div>
                   </div>
-                  <div style={{ marginTop: 12 }}>
-                    <div className="crm-form-label">Notes</div>
-                    <textarea
-                      id="note-input"
-                      className="crm-form-input"
-                      rows={2}
-                      value={noteDraft}
-                      onChange={(e) => setNoteDraft(e.target.value)}
-                      placeholder="Add notes..."
-                    />
+                  <div style={{ marginTop: 16 }}>
+                    <div className="crm-form-label">Next Follow Up</div>
+                    <input className="lead-detail__calendar-input" type="datetime-local" step={300} value={manualNextFollowUpAt} onChange={(e) => setManualNextFollowUpAt(e.target.value)} />
+                    <div className="lead-detail__calendar-shortcuts">
+                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
+                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
+                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
+                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 16, 0))}>Tomorrow 4 PM</button>
+                      <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                  <div style={{ marginTop: 16 }}>
+                    <div className="crm-form-label">Notes</div>
+                    <textarea id="note-input" className="crm-form-input" rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add notes..." />
+                  </div>
+                  <div className="lead-detail__save-bar">
                     {noteDraft.trim() && (
-                      <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" onClick={handleAddNote}>
-                        📝 Save Note
-                      </button>
+                      <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote}>📝 Save Note</button>
                     )}
-                    <button type="button" className="crm-btn crm-btn-primary crm-btn-sm" onClick={handleManualStatusUpdate} disabled={!manualStatus}>
-                      💾 Save Changes
+                    <button type="button" className="workspace-btn workspace-btn--primary" onClick={handleManualStatusUpdate} disabled={manualUpdateSaving}>
+                      {manualUpdateSaving ? 'Saving...' : '💾 Save Changes'}
                     </button>
                   </div>
                 </div>
@@ -909,6 +1062,84 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
         </div>
         )}
       </div>
+      {/* ── Stage Transition Popup Modal ── */}
+      {stagePopupOpen && (
+        <div className="lead-workspace__modal" onClick={(e) => { if (e.target === e.currentTarget) { setStagePopupOpen(false); } }}>
+          <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm" style={{ marginTop: '10vh' }}>
+            <div className="lead-workspace__modal-header" style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)' }}>
+              <div>
+                <h2 style={{ fontSize: 16 }}>🔄 Change Stage</h2>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {selectedLead?.stageLabel} → <strong style={{ color: '#4f46e5' }}>{stagePopupData.stageLabel}</strong>
+                </div>
+              </div>
+              <button type="button" onClick={() => setStagePopupOpen(false)}>✕</button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              {/* Follow-up Date & Time */}
+              <div style={{ marginBottom: 18 }}>
+                <div className="crm-form-label" style={{ marginBottom: 6 }}>
+                  📅 Follow-up Date & Time {stagePopupData.needsFollowUp && <span style={{ color: '#dc2626' }}>*</span>}
+                </div>
+                <input
+                  className="lead-detail__calendar-input"
+                  type="datetime-local"
+                  step={300}
+                  value={stagePopupData.followUpAt}
+                  onChange={(e) => setStagePopupData((p) => ({ ...p, followUpAt: e.target.value }))}
+                  style={{ marginBottom: 8 }}
+                />
+                <div className="lead-detail__calendar-shortcuts">
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 16, 0) }))}>Tomorrow 4 PM</button>
+                  <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: '' }))}>✕ Clear</button>
+                </div>
+                {stagePopupData.needsFollowUp && !stagePopupData.followUpAt && (
+                  <div className="followup-warning">⚠️ Follow-up date & time is required for this stage.</div>
+                )}
+              </div>
+
+              {/* Reason / Notes */}
+              <div style={{ marginBottom: 18 }}>
+                <div className="crm-form-label" style={{ marginBottom: 6 }}>📝 Reason / Notes <span style={{ color: '#dc2626' }}>*</span></div>
+                <textarea
+                  className="crm-form-input"
+                  rows={3}
+                  value={stagePopupData.reason}
+                  onChange={(e) => setStagePopupData((p) => ({ ...p, reason: e.target.value }))}
+                  placeholder="Enter reason for this stage change..."
+                  style={{ resize: 'vertical' }}
+                  autoFocus
+                />
+              </div>
+
+              {/* Current Lead Summary */}
+              {selectedLead && (
+                <div style={{ background: 'var(--bg-primary, #f8fafc)', borderRadius: 8, padding: '10px 14px', marginBottom: 18, border: '1px solid var(--border-primary, #e2e8f0)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Lead Summary</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{selectedLead.fullName} · {selectedLead.phone}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{selectedLead.project || 'No project'} · {selectedLead.source || 'Unknown source'}</div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setStagePopupOpen(false)}>Cancel</button>
+                <button
+                  type="button"
+                  className="workspace-btn workspace-btn--primary"
+                  disabled={manualUpdateSaving || !stagePopupData.reason.trim() || (stagePopupData.needsFollowUp && !stagePopupData.followUpAt)}
+                  onClick={handleStagePopupConfirm}
+                >
+                  {manualUpdateSaving ? 'Saving...' : '✅ Confirm Stage Change'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Create Lead Modal ── */}
       {newLeadOpen && (
@@ -941,7 +1172,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 WhatsApp Number
                 <input value={newLeadForm.whatsapp_number} onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value }))} placeholder="Optional" />
               </label>
-              <label>
+              {/* <label>
                 Secondary Phone 1
                 <input value={newLeadForm.secondary_phone_1} onChange={(e) => setNewLeadForm((p) => ({ ...p, secondary_phone_1: e.target.value }))} placeholder="Optional" />
               </label>
@@ -952,7 +1183,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               <label>
                 Secondary Phone 3
                 <input value={newLeadForm.secondary_phone_3} onChange={(e) => setNewLeadForm((p) => ({ ...p, secondary_phone_3: e.target.value }))} placeholder="Optional" />
-              </label>
+              </label> */}
               <label>
                 Email
                 <input type="email" value={newLeadForm.email} onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))} />
@@ -1083,7 +1314,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 </select>
               </label>
 
-              <div className="lead-workspace__new-form-section">Campaign Tracking</div>
+              {/* <div className="lead-workspace__new-form-section">Campaign Tracking</div>
               <label>
                 Campaign Name
                 <input value={newLeadForm.campaign_name} onChange={(e) => setNewLeadForm((p) => ({ ...p, campaign_name: e.target.value }))} placeholder="Optional" />
@@ -1103,7 +1334,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               <label>
                 Referral Code
                 <input value={newLeadForm.referral_code} onChange={(e) => setNewLeadForm((p) => ({ ...p, referral_code: e.target.value }))} placeholder="Optional" />
-              </label>
+              </label> */}
               <label className="lead-workspace__new-form-span">
                 Initial Notes
                 <textarea
@@ -1147,7 +1378,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 Assign to:
                 <select value={assignTarget.userId} onChange={(e) => setAssignTarget((p) => ({ ...p, userId: e.target.value }))}>
                   <option value="">Select user...</option>
-                  {['TC', 'SM', 'SH', 'COL'].map((role) => {
+                  {(workspaceRole === 'TC' ? ['TC'] : ['TC', 'SM', 'SH', 'COL']).map((role) => {
                     const users = assignableUsers[role] || [];
                     if (!users.length) return null;
                     return (
@@ -1322,6 +1553,147 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                   disabled={!closureForm.closureReasonId && !closureForm.reason.trim()}
                 >
                   Confirm {closureModalAction.label}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Customer Profile Modal (SH Close Won) ── */}
+      {customerProfileOpen && (
+        <div className="lead-workspace__modal-overlay" onClick={() => setCustomerProfileOpen(false)}>
+          <div className="lead-workspace__modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: '90vh', overflow: 'auto' }}>
+            <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '18px 24px', borderRadius: '12px 12px 0 0', color: '#fff' }}>
+              <h3 style={{ margin: 0, fontSize: 16 }}>🏆 Close Won — Customer Profile</h3>
+              <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.85 }}>Fill customer details before creating booking</p>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Personal Details */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>👤 Personal Details</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Date of Birth *
+                  <input type="date" value={customerProfileForm.date_of_birth} onChange={(e) => setCustomerProfileForm(p => ({ ...p, date_of_birth: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Marital Status
+                  <select value={customerProfileForm.marital_status} onChange={(e) => setCustomerProfileForm(p => ({ ...p, marital_status: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="">Select...</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Purchase Type
+                  <select value={customerProfileForm.purchase_type} onChange={(e) => setCustomerProfileForm(p => ({ ...p, purchase_type: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="">Select...</option>
+                    <option value="Investment">Investment</option>
+                    <option value="Self Use">Self Use</option>
+                    <option value="Rental">Rental</option>
+                    <option value="Gift">Gift</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Occupation *
+                  <input type="text" value={customerProfileForm.occupation} onChange={(e) => setCustomerProfileForm(p => ({ ...p, occupation: e.target.value }))} placeholder="e.g. Business, Salaried, Professional" style={{ width: '100%', marginTop: 4 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Current Post
+                  <input type="text" value={customerProfileForm.current_post} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_post: e.target.value }))} placeholder="e.g. Manager, Director" style={{ width: '100%', marginTop: 4 }} />
+                </label>
+              </div>
+
+              {/* Identity */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>🪪 Identity Documents</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  PAN Number *
+                  <input type="text" maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" style={{ width: '100%', marginTop: 4, textTransform: 'uppercase' }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Aadhar Number *
+                  <input type="text" maxLength={12} value={customerProfileForm.aadhar_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, aadhar_number: e.target.value.replace(/\D/g, '') }))} placeholder="1234 5678 9012" style={{ width: '100%', marginTop: 4 }} />
+                </label>
+              </div>
+
+              {/* Current Address */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>📍 Current Address *</div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Address
+                <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address, locality..." style={{ width: '100%', marginTop: 4 }} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  City
+                  <input type="text" value={customerProfileForm.current_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_city: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  State
+                  <input type="text" value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Pincode
+                  <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4 }} />
+                </label>
+              </div>
+
+              {/* Permanent Address */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, flex: 1 }}>🏠 Permanent Address</div>
+                <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 12 }}>
+                  <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} />
+                  Same as Current
+                </label>
+              </div>
+              {!customerProfileForm.sameAsCurrent && (
+                <>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Address
+                    <textarea rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      City
+                      <input type="text" value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                    </label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      State
+                      <input type="text" value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                    </label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      Pincode
+                      <input type="text" maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4 }} />
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {/* Collection Manager Assignment */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>👤 Assign Collection Manager *</div>
+              <select value={customerProfileForm.assignToUserId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, assignToUserId: e.target.value }))} style={{ width: '100%' }}>
+                <option value="">Select Collection Manager...</option>
+                {(assignableUsers['COL'] || []).map((u) => (
+                  <option key={u.id} value={u.id}>{u.first_name} {u.last_name || ''}</option>
+                ))}
+              </select>
+
+              {/* Notes */}
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Notes
+                <textarea rows={2} value={customerProfileForm.note} onChange={(e) => setCustomerProfileForm(p => ({ ...p, note: e.target.value }))} placeholder="Additional remarks..." style={{ width: '100%', marginTop: 4 }} />
+              </label>
+
+              <div className="assign-modal__footer" style={{ marginTop: 8 }}>
+                <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setCustomerProfileOpen(false)}>Cancel</button>
+                <button type="button" className="workspace-btn workspace-btn--success" onClick={handleCustomerProfileSubmit} disabled={manualUpdateSaving}>
+                  {manualUpdateSaving ? 'Processing...' : '🏆 Approve Booking & Create Customer'}
                 </button>
               </div>
             </div>

@@ -11,6 +11,8 @@ const bookingApi = {
   // Payment sub-resource
   getPayments: (bookingId) => api.get(`/bookings/${bookingId}/payments`),
   addPayment: (bookingId, data) => api.post(`/bookings/${bookingId}/payments`, data),
+  approvePaymentAccounts: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/accounts`),
+  approvePaymentManagement: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/management`),
 
   // Scoped to current user (Collection Manager)
   getMyBookings: (params = {}) => api.get('/bookings/my', { params }),

@@ -82,11 +82,11 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
             {SCREEN_TITLES[activeScreen] || activeScreen}
           </div>
           <div className="portal-topbar__center">
-            <div className="portal-search">
+            {/* <div className="portal-search">
               <span className="portal-search__icon">🔍</span>
               <input placeholder={searchPlaceholder || 'Search leads...'} />
               <span className="portal-search__shortcut">⌘K</span>
-            </div>
+            </div> */}
           </div>
           <div className="portal-topbar__right">
             <button

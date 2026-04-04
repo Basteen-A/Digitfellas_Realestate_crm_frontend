@@ -14,7 +14,7 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [paymentModal, setPaymentModal] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', remarks: '' });
+  const [paymentForm, setPaymentForm] = useState({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '' });
   const [statusOptions, setStatusOptions] = useState([]);
 
   const loadBookings = useCallback(async () => {
@@ -56,6 +56,22 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to update')); }
   };
 
+  const handleApproveAccounts = async (paymentId) => {
+    try {
+      await bookingApi.approvePaymentAccounts(selectedBooking.id, paymentId);
+      toast.success('Payment approved by Accounts');
+      openDetail(selectedBooking.id);
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to approve (Accounts)')); }
+  };
+
+  const handleApproveManagement = async (paymentId) => {
+    try {
+      await bookingApi.approvePaymentManagement(selectedBooking.id, paymentId);
+      toast.success('Payment approved by Management');
+      openDetail(selectedBooking.id);
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to approve (Management)')); }
+  };
+
   const handleAddPayment = async (e) => {
     e.preventDefault();
     if (!selectedBooking || !paymentForm.amount || !paymentForm.payment_date) {
@@ -65,7 +81,7 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
       await bookingApi.addPayment(selectedBooking.id, paymentForm);
       toast.success('Payment recorded');
       setPaymentModal(false);
-      setPaymentForm({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', remarks: '' });
+      setPaymentForm({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '' });
       openDetail(selectedBooking.id);
       loadBookings();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to add payment')); }
@@ -86,6 +102,8 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
       stamp_duty: selectedBooking.stamp_duty || '',
       registration_charges: selectedBooking.registration_charges || '',
       booking_status_id: selectedBooking.booking_status_id || '',
+      next_calling_date: selectedBooking.next_calling_date || '',
+      call_status: selectedBooking.call_status || '',
       remarks: selectedBooking.remarks || '',
     });
     setEditMode(true);
@@ -186,6 +204,22 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
                           {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
                         </select>
                       </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Next Calling Date</label>
+                        <input className="col-form-input" type="date" value={editForm.next_calling_date || ''} onChange={e => setEditForm(p => ({...p, next_calling_date: e.target.value}))} />
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Call Status</label>
+                        <select className="col-form-select" value={editForm.call_status || ''} onChange={e => setEditForm(p => ({...p, call_status: e.target.value}))}>
+                          <option value="">Select...</option>
+                          <option value="Not Reachable">Not Reachable</option>
+                          <option value="Busy">Busy</option>
+                          <option value="Callback Requested">Callback Requested</option>
+                          <option value="Connected">Connected</option>
+                          <option value="Committed to Pay">Committed to Pay</option>
+                          <option value="Refused / Issue">Refused / Issue</option>
+                        </select>
+                      </div>
                       <div className="col-form-group full-width">
                         <label className="col-form-label">Remarks</label>
                         <textarea className="col-form-textarea" value={editForm.remarks || ''} onChange={e => setEditForm(p => ({...p, remarks: e.target.value}))} rows={2} />
@@ -218,18 +252,30 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
                     ) : (
                       <div style={{ overflowX: 'auto' }}>
                         <table className="col-table">
-                          <thead><tr><th>Payment #</th><th>Type</th><th>Mode</th><th>Amount</th><th>Date</th><th>Verified</th></tr></thead>
+                          <thead><tr><th>Payment #</th><th>Type</th><th>Mode</th><th>Amount</th><th>Date</th><th>Account</th><th>Accounts ✓</th><th>Mgmt ✓</th><th>Status</th></tr></thead>
                           <tbody>
-                            {(selectedBooking.payments || []).map(p => (
-                              <tr key={p.id} className={p.is_verified ? 'col-payment-verified' : p.is_bounced ? 'col-payment-bounced' : ''}>
-                                <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
-                                <td>{p.payment_type}</td>
-                                <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
-                                <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
-                                <td style={{ fontSize: 12 }}>{formatDate(p.payment_date)}</td>
-                                <td>{p.is_verified ? '✅' : p.is_bounced ? '❌' : '⏳'}</td>
-                              </tr>
-                            ))}
+                            {(selectedBooking.payments || []).map(p => {
+                              const approvalStatus = p.management_approved ? 'APPROVED' : p.accounts_approved ? 'ACCOUNTS_OK' : 'PENDING';
+                              const statusColors = { PENDING: '#f59e0b', ACCOUNTS_OK: '#3b82f6', APPROVED: '#10b981' };
+                              const statusLabels = { PENDING: '⏳ Pending', ACCOUNTS_OK: '📋 Accounts OK', APPROVED: '✅ Approved' };
+                              return (
+                                <tr key={p.id} className={p.is_verified ? 'col-payment-verified' : p.is_bounced ? 'col-payment-bounced' : ''}>
+                                  <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
+                                  <td>{p.payment_type}</td>
+                                  <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
+                                  <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
+                                  <td style={{ fontSize: 12 }}>{formatDate(p.payment_date)}</td>
+                                  <td style={{ fontSize: 12 }}>{p.account_name || '-'}</td>
+                                  <td>{p.accounts_approved ? '✅' : (
+                                    <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleApproveAccounts(p.id)} style={{ padding: '4px 8px', fontSize: 11 }}>Approve A/C</button>
+                                  )}</td>
+                                  <td>{p.management_approved ? '✅' : (
+                                    <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => handleApproveManagement(p.id)} disabled={!p.accounts_approved} style={{ padding: '4px 8px', fontSize: 11 }}>Approve Mgmt</button>
+                                  )}</td>
+                                  <td><span className="col-badge" style={{ background: statusColors[approvalStatus] + '22', color: statusColors[approvalStatus], fontWeight: 600 }}>{statusLabels[approvalStatus]}</span></td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -272,6 +318,10 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
                   <div className="col-form-group">
                     <label className="col-form-label">Payment Date *</label>
                     <input className="col-form-input" type="date" required value={paymentForm.payment_date} onChange={e => setPaymentForm(p => ({...p, payment_date: e.target.value}))} />
+                  </div>
+                  <div className="col-form-group full-width">
+                    <label className="col-form-label">Account Name</label>
+                    <input className="col-form-input" value={paymentForm.account_name} onChange={e => setPaymentForm(p => ({...p, account_name: e.target.value}))} placeholder="Account holder name" />
                   </div>
                   <div className="col-form-group full-width">
                     <label className="col-form-label">Remarks</label>

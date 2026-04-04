@@ -15,13 +15,17 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
     setLoading(true);
     try {
       const [statsResp, fuResp, svResp] = await Promise.all([
-        dashboardApi.getTelecallerStats().catch(() => ({ data: null })),
-        followUpApi.getTodays().then(r => r.data).catch(() => ({ data: [] })),
-        siteVisitApi.getUpcoming().then(r => r.data).catch(() => ({ data: [] })),
+        dashboardApi.getTelecallerStats().catch(() => null),
+        followUpApi.getTodays().catch(() => ({ data: { data: [] } })),
+        siteVisitApi.getUpcoming().catch(() => ({ data: { data: [] } })),
       ]);
-      setStats(statsResp.data || null);
-      setTodaysFollowUps(fuResp.data || fuResp || []);
-      setUpcomingVisits(svResp.data || svResp || []);
+      // dashboardApi unwraps axios .data → statsResp = { success, data: {...stats} }
+      setStats(statsResp?.data || null);
+      // followUpApi returns raw axios response → fuResp.data = { success, data: [...] }
+      const fuData = fuResp?.data?.data || fuResp?.data || [];
+      setTodaysFollowUps(Array.isArray(fuData) ? fuData : []);
+      const svData = svResp?.data?.data || svResp?.data || [];
+      setUpcomingVisits(Array.isArray(svData) ? svData : []);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load dashboard'));
     } finally {
@@ -40,16 +44,20 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
     );
   }
 
+  // Greeting based on time of day
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+
   const statCards = [
     { label: 'Total Leads', value: stats?.totalLeads ?? 0, icon: '👥', iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: `↑ ${stats?.newToday ?? 0} new today`, changeType: stats?.newToday > 0 ? 'up' : 'neutral' },
     { label: "Today's Follow Ups", value: stats?.todaysFollowUps ?? 0, icon: '📞', iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: `${stats?.overdueFollowUps ?? 0} overdue`, changeType: stats?.overdueFollowUps > 0 ? 'down' : 'neutral' },
     { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: '🏠', iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: 'This week', changeType: 'neutral' },
     { label: 'SV Completed', value: stats?.svCompleted ?? 0, icon: '✅', iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: 'This month', changeType: 'neutral' },
-    { label: 'Not Reachable', value: stats?.notReachable ?? 0, icon: '📵', iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'Retry needed', changeType: 'neutral' },
+    { label: 'Missed Follow-ups', value: stats?.overdueFollowUps ?? 0, icon: '📵', iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'Needs attention', changeType: stats?.overdueFollowUps > 0 ? 'down' : 'neutral' },
   ];
 
   const stageData = stats?.stageBreakdown || [];
-  const stageColors = { NEW: '#94a3b8', CONTACTED: 'var(--accent-blue)', FOLLOW_UP: '#6366f1', SV_SCHEDULED: 'var(--accent-yellow)', SV_COMPLETED: 'var(--accent-green)' };
+  const stageColors = { NEW: '#94a3b8', NEW_LEAD: '#94a3b8', CONTACTED: 'var(--accent-blue)', FOLLOW_UP: '#6366f1', SV_SCHEDULED: 'var(--accent-yellow)', SV_COMPLETED: 'var(--accent-green)' };
   const maxStage = Math.max(...stageData.map(s => parseInt(s.count) || 0), 1);
 
   const fuList = Array.isArray(todaysFollowUps) ? todaysFollowUps : [];
@@ -60,7 +68,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
       {/* Page Header */}
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Good Morning, {user?.first_name || 'Telecaller'} 👋</h1>
+          <h1>{greeting}, {user?.first_name || 'Telecaller'} 👋</h1>
           <p>Here's what's happening with your leads today.</p>
         </div>
         <div className="page-header-actions">
@@ -88,7 +96,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         {/* Today's Follow Ups */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">📞 Today's Follow Ups</div>
+            <div className="crm-card-title">📞 Today's Follow Ups ({fuList.length})</div>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate?.('followups')}>View All →</button>
           </div>
           <div className="crm-card-body-flush">
@@ -99,39 +107,32 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                 <div className="empty-desc">You're all caught up!</div>
               </div>
             )}
-            {fuList.slice(0, 4).map((fu) => {
+            {fuList.slice(0, 5).map((fu) => {
               const time = fu.scheduled_at ? new Date(fu.scheduled_at) : null;
               const isOverdue = time && time.getTime() < Date.now();
+              const leadName = [fu.lead?.first_name, fu.lead?.last_name].filter(Boolean).join(' ') || 'Unknown';
+              const stageName = fu.lead?.stage?.stage_name || '';
+              const stageColor = fu.lead?.stage?.color_code || '#94a3b8';
               return (
-                <div key={fu.id} className="followup-item" style={isOverdue ? { background: 'var(--accent-red-bg)' } : {}}>
-                  <div className="followup-time-block">
-                    <div className="followup-time" style={isOverdue ? { color: 'var(--accent-red)' } : {}}>
-                      {time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--'}
+                <div key={fu.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #f1f5f9)', background: isOverdue ? 'var(--accent-red-bg)' : 'transparent' }}>
+                  <div style={{ minWidth: 54, textAlign: 'center' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isOverdue ? 'var(--accent-red)' : 'var(--text-primary)' }}>
+                      {time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
                     </div>
-                    <div className="followup-period">
-                      {time ? (time.getHours() >= 12 ? 'PM' : 'AM') : ''}
-                    </div>
-                    {isOverdue && <div className="followup-overdue-tag">OVERDUE</div>}
+                    {isOverdue && <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: '#dc2626', borderRadius: 3, padding: '1px 4px', marginTop: 2 }}>LATE</div>}
                   </div>
-                  <div className="followup-content">
-                    <div className="followup-name">
-                      {fu.lead?.first_name || ''} {fu.lead?.last_name || ''}
-                      {fu.lead?.status_label && (
-                        <span className={`crm-badge badge-${(fu.lead.status_label || '').toLowerCase().replace(/\s/g, '')}`}>
-                          {fu.lead.status_label}
-                        </span>
-                      )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{leadName}</span>
+                      {stageName && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: stageColor + '18', color: stageColor, fontWeight: 600 }}>{stageName}</span>}
                     </div>
-                    {fu.notes && <div className="followup-note">{fu.notes}</div>}
-                    <div className="followup-meta">
-                      {fu.lead?.project && <span>📍 {fu.lead.project.project_name || fu.lead.project}</span>}
+                    {fu.notes && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fu.notes}</div>}
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 10 }}>
                       {fu.lead?.phone && <span>📱 {fu.lead.phone}</span>}
+                      {fu.lead?.project?.project_name && <span>📍 {fu.lead.project.project_name}</span>}
                     </div>
                   </div>
-                  <div className="followup-actions">
-                    <button className="crm-btn crm-btn-success crm-btn-sm">📞 Call</button>
-                    <button className="crm-btn crm-btn-ghost crm-btn-sm">💬</button>
-                  </div>
+                  <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => onNavigate?.('workspace')}>📞 Call</button>
                 </div>
               );
             })}

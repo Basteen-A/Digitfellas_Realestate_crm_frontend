@@ -171,9 +171,9 @@ const TelecallerAddLead = ({ onNavigate }) => {
               <div className="crm-form-group"><label className="crm-form-label">WhatsApp Number</label><input className="crm-form-input" value={form.whatsapp_number} onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} /></div>
               <div className="crm-form-group"><label className="crm-form-label">Email</label><input className="crm-form-input" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} /></div>
 
-              <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 1</label><input className="crm-form-input" value={form.secondary_phone_1} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_1: e.target.value }))} /></div>
+              {/* <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 1</label><input className="crm-form-input" value={form.secondary_phone_1} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_1: e.target.value }))} /></div>
               <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 2</label><input className="crm-form-input" value={form.secondary_phone_2} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_2: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 3</label><input className="crm-form-input" value={form.secondary_phone_3} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_3: e.target.value }))} /></div>
+              <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 3</label><input className="crm-form-input" value={form.secondary_phone_3} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_3: e.target.value }))} /></div> */}
 
               <div className="crm-form-group">
                 <label className="crm-form-label">Lead Type</label>
@@ -278,11 +278,11 @@ const TelecallerAddLead = ({ onNavigate }) => {
                 </select>
               </div>
 
-              <div className="crm-form-group"><label className="crm-form-label">Campaign Name</label><input className="crm-form-input" value={form.campaign_name} onChange={(e) => setForm((p) => ({ ...p, campaign_name: e.target.value }))} /></div>
+              {/* <div className="crm-form-group"><label className="crm-form-label">Campaign Name</label><input className="crm-form-input" value={form.campaign_name} onChange={(e) => setForm((p) => ({ ...p, campaign_name: e.target.value }))} /></div>
               <div className="crm-form-group"><label className="crm-form-label">UTM Source</label><input className="crm-form-input" value={form.utm_source} onChange={(e) => setForm((p) => ({ ...p, utm_source: e.target.value }))} /></div>
               <div className="crm-form-group"><label className="crm-form-label">UTM Medium</label><input className="crm-form-input" value={form.utm_medium} onChange={(e) => setForm((p) => ({ ...p, utm_medium: e.target.value }))} /></div>
               <div className="crm-form-group"><label className="crm-form-label">UTM Campaign</label><input className="crm-form-input" value={form.utm_campaign} onChange={(e) => setForm((p) => ({ ...p, utm_campaign: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Referral Code</label><input className="crm-form-input" value={form.referral_code} onChange={(e) => setForm((p) => ({ ...p, referral_code: e.target.value }))} /></div>
+              <div className="crm-form-group"><label className="crm-form-label">Referral Code</label><input className="crm-form-input" value={form.referral_code} onChange={(e) => setForm((p) => ({ ...p, referral_code: e.target.value }))} /></div> */}
             </div>
 
             <div className="crm-form-group" style={{ marginTop: 10 }}>
