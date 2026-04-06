@@ -33,6 +33,9 @@ const Login = () => {
   return (
     <section className="auth-card">
       <header className="auth-card__header">
+        <div className="auth-card__logo-container">
+          <img src="/sujatha.png" alt="PropCRM Logo" className="auth-card__logo" />
+        </div>
         <h1>Sign in</h1>
         <p>Access your CRM workspace</p>
       </header>

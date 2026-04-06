@@ -10,15 +10,12 @@ import customerTypeApi from '../../../api/customerTypeApi';
 import { getErrorMessage } from '../../../utils/helpers';
 
 const initialForm = {
-  firstName: '',
-  lastName: '',
+  full_name: '',
   phone: '',
-  alternate_phone: '',
+  whatsappSameAsPhone: true,
   whatsapp_number: '',
+  alternate_phone: '',
   email: '',
-  secondary_phone_1: '',
-  secondary_phone_2: '',
-  secondary_phone_3: '',
   lead_type_id: '',
   customer_type_id: '',
   lead_source_id: '',
@@ -26,16 +23,8 @@ const initialForm = {
   project_id: '',
   location_id: '',
   configuration: '',
-  purpose: '',
   budgetMin: '',
   budgetMax: '',
-  budgetRange: '',
-  priority: 'Medium',
-  campaign_name: '',
-  utm_source: '',
-  utm_medium: '',
-  utm_campaign: '',
-  referral_code: '',
   note: '',
 };
 
@@ -104,8 +93,8 @@ const TelecallerAddLead = ({ onNavigate }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.firstName || !form.phone) {
-      toast.error('First name and phone are required');
+    if (!form.full_name || !form.phone) {
+      toast.error('Full name and phone are required');
       return;
     }
     if (!form.lead_source_id) {
@@ -130,6 +119,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
         ...form,
         budgetMin,
         budgetMax,
+        whatsapp_number: form.whatsappSameAsPhone ? form.phone : form.whatsapp_number,
         lead_source_id: form.lead_source_id || null,
         lead_sub_source_id: form.lead_sub_source_id || null,
         project_id: form.project_id || null,
@@ -164,32 +154,58 @@ const TelecallerAddLead = ({ onNavigate }) => {
         <div className="crm-card-body">
           <form onSubmit={handleSubmit}>
             <div className="crm-grid crm-grid-2" style={{ gap: 14 }}>
-              <div className="crm-form-group"><label className="crm-form-label">First Name *</label><input className="crm-form-input" value={form.firstName} onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))} required /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Last Name</label><input className="crm-form-input" value={form.lastName} onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Phone Number *</label><input className="crm-form-input" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} required /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Alternate Phone</label><input className="crm-form-input" value={form.alternate_phone} onChange={(e) => setForm((p) => ({ ...p, alternate_phone: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">WhatsApp Number</label><input className="crm-form-input" value={form.whatsapp_number} onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Email</label><input className="crm-form-input" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} /></div>
-
-              {/* <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 1</label><input className="crm-form-input" value={form.secondary_phone_1} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_1: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 2</label><input className="crm-form-input" value={form.secondary_phone_2} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_2: e.target.value }))} /></div>
-              <div className="crm-form-group"><label className="crm-form-label">Secondary Phone 3</label><input className="crm-form-input" value={form.secondary_phone_3} onChange={(e) => setForm((p) => ({ ...p, secondary_phone_3: e.target.value }))} /></div> */}
-
-              <div className="crm-form-group">
-                <label className="crm-form-label">Lead Type</label>
-                <select className="crm-form-select" value={form.lead_type_id} onChange={(e) => setForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
-                  <option value="">Select lead type</option>
-                  {leadTypeOptions.map((item) => <option key={item.id} value={item.id}>{item.type_name}</option>)}
-                </select>
+              <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="crm-form-label">Full Name *</label>
+                <input className="crm-form-input" value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))} required placeholder="Enter buyer full name" />
               </div>
+              
               <div className="crm-form-group">
-                <label className="crm-form-label">Customer Type</label>
-                <select className="crm-form-select" value={form.customer_type_id} onChange={(e) => setForm((p) => ({ ...p, customer_type_id: e.target.value }))}>
-                  <option value="">Select customer type</option>
-                  {customerTypeOptions.map((item) => <option key={item.id} value={item.id}>{item.type_name}</option>)}
-                </select>
+                <label className="crm-form-label">Phone Number *</label>
+                <input className="crm-form-input" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} required placeholder="Primary contact number" />
               </div>
 
+              <div className="crm-form-group">
+                <label className="crm-form-label">WhatsApp Details</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.whatsappSameAsPhone} 
+                      onChange={(e) => setForm((p) => ({ ...p, whatsappSameAsPhone: e.target.checked, whatsapp_number: e.target.checked ? '' : p.whatsapp_number }))} 
+                    />
+                    WhatsApp same as phone
+                  </label>
+                  {!form.whatsappSameAsPhone && (
+                    <input 
+                      className="crm-form-input" 
+                      value={form.whatsapp_number} 
+                      onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} 
+                      placeholder="Enter WhatsApp number"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="crm-form-group"><label className="crm-form-label">Alternate Phone (Optional)</label><input className="crm-form-input" value={form.alternate_phone} onChange={(e) => setForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Secondary contact number" /></div>
+              <div className="crm-form-group"><label className="crm-form-label">Email (Optional)</label><input className="crm-form-input" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" /></div>
+
+              <div className="crm-form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="crm-form-label">Lead Type</label>
+                  <select className="crm-form-select" value={form.lead_type_id} onChange={(e) => setForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
+                    <option value="">Select lead type</option>
+                    {leadTypeOptions.map((item) => <option key={item.id} value={item.id}>{item.type_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="crm-form-label">Customer Type</label>
+                  <select className="crm-form-select" value={form.customer_type_id} onChange={(e) => setForm((p) => ({ ...p, customer_type_id: e.target.value }))}>
+                    <option value="">Select customer type</option>
+                    {customerTypeOptions.map((item) => <option key={item.id} value={item.id}>{item.type_name}</option>)}
+                  </select>
+                </div>
+              </div>
+              
               <div className="crm-form-group">
                 <label className="crm-form-label">Lead Source *</label>
                 <select className="crm-form-select" value={form.lead_source_id} onChange={(e) => setForm((p) => ({ ...p, lead_source_id: e.target.value, lead_sub_source_id: '' }))} required>
@@ -233,26 +249,15 @@ const TelecallerAddLead = ({ onNavigate }) => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">Purpose</label>
-                <select className="crm-form-select" value={form.purpose} onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))}>
-                  <option value="">Select purpose</option>
-                  <option value="Purchase">Purchase</option>
-                  <option value="Investment">Investment</option>
-                  <option value="Rental">Rental</option>
-                </select>
-              </div>
-              <div className="crm-form-group">
-                <label className="crm-form-label">Configuration</label>
+                <label className="crm-form-label">Configuration (Optional)</label>
                 <select className="crm-form-select" value={form.configuration} onChange={(e) => setForm((p) => ({ ...p, configuration: e.target.value }))}>
                   <option value="">Select configuration</option>
-                  <option value="1RK">1RK</option>
                   <option value="1BHK">1BHK</option>
                   <option value="2BHK">2BHK</option>
                   <option value="3BHK">3BHK</option>
                   <option value="4BHK">4BHK</option>
                   <option value="Villa">Villa</option>
                   <option value="Plot">Plot</option>
-                  <option value="Commercial">Commercial</option>
                 </select>
               </div>
 

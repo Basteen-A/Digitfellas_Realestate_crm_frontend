@@ -10,8 +10,8 @@ const THEMES = {
 };
 
 const getInitialTheme = () => {
-  const saved = storage.get(STORAGE_KEYS.THEME, THEMES.DARK);
-  return saved === THEMES.LIGHT ? THEMES.LIGHT : THEMES.DARK;
+  const saved = storage.get(STORAGE_KEYS.THEME, THEMES.LIGHT);
+  return saved === THEMES.DARK ? THEMES.DARK : THEMES.LIGHT;
 };
 
 export const ThemeProvider = ({ children }) => {

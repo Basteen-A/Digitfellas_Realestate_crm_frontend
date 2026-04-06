@@ -13,6 +13,11 @@ const SalesManagerVisits = ({ onNavigate }) => {
     rating: 5,
     interested_after_visit: true,
     remarks: '',
+    time_spent: '',
+    requirement_details: '',
+    remarks_long: '',
+    latitude: null,
+    longitude: null,
   });
 
   const loadVisits = useCallback(async () => {
@@ -37,6 +42,7 @@ const SalesManagerVisits = ({ onNavigate }) => {
       await siteVisitApi.complete(completingVisit.id, {
         ...feedbackForm,
         rating: Number(feedbackForm.rating),
+        time_spent: feedbackForm.time_spent ? Number(feedbackForm.time_spent) : null,
       });
       toast.success('Site visit marked as completed');
       setCompletingVisit(null);
@@ -188,6 +194,63 @@ const SalesManagerVisits = ({ onNavigate }) => {
                     rows={2} 
                     value={feedbackForm.remarks}
                     onChange={e => setFeedbackForm(p => ({...p, remarks: e.target.value}))}
+                  />
+                </div>
+
+                <div className="lead-workspace__new-form-section" style={{ fontSize: 13, borderBottom: '1px solid var(--border-primary)', paddingBottom: 4, marginTop: 16 }}>Site Analysis</div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                  <div className="col-form-group">
+                    <label className="col-form-label">Time Spent (Mins)</label>
+                    <input 
+                      type="number" 
+                      className="col-form-input" 
+                      value={feedbackForm.time_spent} 
+                      onChange={e => setFeedbackForm(p => ({...p, time_spent: e.target.value}))} 
+                    />
+                  </div>
+                  <div className="col-form-group">
+                    <label className="col-form-label">Geo-location*</label>
+                    <button
+                      type="button"
+                      className={`crm-btn ${feedbackForm.latitude ? 'crm-btn-ghost' : 'crm-btn-primary'} crm-btn-sm`}
+                      style={{ width: '100%' }}
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          toast.error('Geolocation not supported');
+                          return;
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setFeedbackForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                            toast.success('Location captured!');
+                          },
+                          (err) => toast.error(`Error: ${err.message}`)
+                        );
+                      }}
+                    >
+                      {feedbackForm.latitude ? '📍 Captured' : '📍 Get Location'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="col-form-group">
+                  <label className="col-form-label">Detailed Requirement Details</label>
+                  <textarea 
+                    className="col-form-textarea" 
+                    rows={2} 
+                    value={feedbackForm.requirement_details}
+                    onChange={e => setFeedbackForm(p => ({...p, requirement_details: e.target.value}))}
+                  />
+                </div>
+
+                <div className="col-form-group">
+                  <label className="col-form-label">Long Remarks about Customer</label>
+                  <textarea 
+                    className="col-form-textarea" 
+                    rows={2} 
+                    value={feedbackForm.remarks_long}
+                    onChange={e => setFeedbackForm(p => ({...p, remarks_long: e.target.value}))}
                   />
                 </div>
               </div>

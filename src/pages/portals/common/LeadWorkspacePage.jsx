@@ -20,15 +20,12 @@ import {
 import './LeadWorkspacePage.css';
 
 const initialNewLead = {
-  firstName: '',
-  lastName: '',
+  full_name: '',
   phone: '',
-  alternate_phone: '',
+  whatsappSameAsPhone: true,
   whatsapp_number: '',
+  alternate_phone: '',
   email: '',
-  secondary_phone_1: '',
-  secondary_phone_2: '',
-  secondary_phone_3: '',
   lead_type_id: '',
   customer_type_id: '',
   lead_source_id: '',
@@ -36,17 +33,15 @@ const initialNewLead = {
   project_id: '',
   location_id: '',
   configuration: '',
-  purpose: '',
   budgetMin: '',
   budgetMax: '',
-  budgetRange: '',
-  campaign_name: '',
-  utm_source: '',
-  utm_medium: '',
-  utm_campaign: '',
-  referral_code: '',
   note: '',
   priority: 'Medium',
+  motivationType: '',
+  primaryRequirement: '',
+  secondaryRequirement: '',
+  latitude: null,
+  longitude: null,
 };
 
 const toDateTimeLocalValue = (value) => {
@@ -105,9 +100,23 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   const [stagePopupOpen, setStagePopupOpen] = useState(false);
   const [stagePopupData, setStagePopupData] = useState({ actionCode: '', stageLabel: '', followUpAt: '', reason: '', needsFollowUp: false });
 
-  // ── SV Done Modal ──
+  // ── SV Done Modal (TC Handoff) ──
   const [svDoneModalOpen, setSvDoneModalOpen] = useState(false);
   const [svDoneForm, setSvDoneForm] = useState({ assignToUserId: '', svDate: '', svProjectId: '', note: '' });
+
+  // ── Record Site Visit Modal (SM Analysis) ──
+  const [recordSvModalOpen, setRecordSvModalOpen] = useState(false);
+  const [recordSvForm, setRecordSvForm] = useState({
+    svDate: new Date().toISOString().split('T')[0],
+    svProjectId: '',
+    motivationType: '',
+    primaryRequirement: '',
+    secondaryRequirement: '',
+    latitude: null,
+    longitude: null,
+    timeSpent: '',
+    note: '',
+  });
 
   // ── Closure Reason Modal ──
   const [closureModalOpen, setClosureModalOpen] = useState(false);
@@ -329,7 +338,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
   // ── Handlers ──
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    if (!newLeadForm.firstName || !newLeadForm.phone) { toast.error('First name and phone are required'); return; }
+    if (!newLeadForm.full_name || !newLeadForm.phone) { toast.error('Full name and phone are required'); return; }
     if (!newLeadForm.lead_source_id) { toast.error('Lead source is required'); return; }
 
     const budgetMin = newLeadForm.budgetMin ? Number(newLeadForm.budgetMin) : null;
@@ -345,20 +354,26 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
 
     try {
+      if (workspaceRole === 'SM' && (!newLeadForm.latitude || !newLeadForm.longitude)) {
+        toast.error('Location is mandatory for SM lead creation');
+        return;
+      }
+
       await leadWorkflowApi.createLead({
         ...newLeadForm,
         budgetMin,
         budgetMax,
+        whatsapp_number: newLeadForm.whatsappSameAsPhone ? newLeadForm.phone : newLeadForm.whatsapp_number,
         lead_source_id: newLeadForm.lead_source_id || null,
         lead_sub_source_id: newLeadForm.lead_sub_source_id || null,
         project_id: newLeadForm.project_id || null,
         location_id: newLeadForm.location_id || null,
-        source: selectedSource?.source_name || null,
+        source: selectedSource?.source_name || (workspaceRole === 'SM' ? 'Walk In' : null),
         project: selectedProject?.project_name || null,
         location: selectedLocation ? `${selectedLocation.location_name}${selectedLocation.city ? `, ${selectedLocation.city}` : ''}` : null,
       });
       toast.success('Lead created successfully');
-      setNewLeadForm(initialNewLead);
+      setNewLeadForm({ ...initialNewLead, latitude: null, longitude: null });
       setNewLeadOpen(false);
       loadLeads({ silent: true });
     } catch (err) {
@@ -436,6 +451,33 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       loadLeads({ silent: true });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to update lead'));
+    }
+  };
+
+  const handleRecordSvSubmit = async () => {
+    if (!selectedLead) return;
+    if (!recordSvForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
+    if (!recordSvForm.motivationType) { toast.error('Buying Motivation is mandatory'); return; }
+    if (!recordSvForm.latitude) { toast.error('Geo-location is mandatory'); return; }
+
+    try {
+      await leadWorkflowApi.transitionLead(selectedLead.id, 'SM_SITE_VISIT', {
+        svDate: recordSvForm.svDate,
+        svProjectId: recordSvForm.svProjectId,
+        motivationType: recordSvForm.motivationType,
+        primaryRequirement: recordSvForm.primaryRequirement,
+        secondaryRequirement: recordSvForm.secondaryRequirement,
+        latitude: recordSvForm.latitude,
+        longitude: recordSvForm.longitude,
+        time_spent: recordSvForm.timeSpent ? Number(recordSvForm.timeSpent) : undefined,
+        note: recordSvForm.note?.trim() || undefined,
+      });
+      toast.success('Site visit recorded successfully');
+      setRecordSvModalOpen(false);
+      loadLeadDetail(selectedLead.id);
+      loadLeads({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Unable to record site visit'));
     }
   };
 
@@ -734,9 +776,13 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
         </div>
         <select value={filters.stageCode} onChange={(e) => setFilters((p) => ({ ...p, stageCode: e.target.value }))}>
           <option value="">All Stages</option>
-          {stageOptions.filter((o) => ['NEW', 'CONTACTED', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(o.value)).map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+          {workspaceRole === 'SM' ? (
+            <option value="NEGOTIATION">Negotiation</option>
+          ) : (
+            stageOptions.filter((o) => ['NEW', 'CONTACTED', 'FOLLOW_UP', 'SV_SCHEDULED', 'SV_COMPLETED'].includes(o.value)).map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))
+          )}
         </select>
         <select value={filters.statusCode} onChange={(e) => setFilters((p) => ({ ...p, statusCode: e.target.value }))}>
           <option value="">All Statuses</option>
@@ -922,12 +968,80 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                     </div>
                   </div>
 
+                  {/* Behavioral Analysis (New) */}
+                  {(selectedLead.motivationType || selectedLead.primaryRequirement || selectedLead.geoLat) && (
+                    <>
+                      <h3 className="lead-detail__section-title" style={{ marginTop: 24 }}>🧠 Behavioral Analysis</h3>
+                      <div className="lead-detail__info-grid">
+                        {selectedLead.motivationType && (
+                          <div className="lead-detail__info-item">
+                            <div className="crm-form-label">Buying Motivation</div>
+                            <div className="lead-detail__info-value">
+                              <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                                {selectedLead.motivationType}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {selectedLead.primaryRequirement && (
+                          <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
+                            <div className="crm-form-label">Primary Requirement</div>
+                            <div className="lead-detail__info-value">{selectedLead.primaryRequirement}</div>
+                          </div>
+                        )}
+                        {selectedLead.secondaryRequirement && (
+                          <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
+                            <div className="crm-form-label">Secondary / Site Remarks</div>
+                            <div className="lead-detail__info-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{selectedLead.secondaryRequirement}</div>
+                          </div>
+                        )}
+                        {selectedLead.geoLat && (
+                          <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
+                            <div className="crm-form-label">Creation Location</div>
+                            <div className="lead-detail__info-value">
+                              <a 
+                                href={`https://www.google.com/maps?q=${selectedLead.geoLat},${selectedLead.geoLong}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                              >
+                                📍 View Location on Map
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
                   {/* Quick Actions */}
                   {!selectedLead.isClosed && (
                     <>
                       <h3 className="lead-detail__section-title">Quick Actions</h3>
                       <div className="lead-detail__quick-actions">
                         <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote}>📞 Log Call</button>
+                        {workspaceRole === 'SM' && (
+                          <button 
+                            className="crm-btn crm-btn-primary crm-btn-sm" 
+                            onClick={() => {
+                              setRecordSvForm({
+                                svDate: new Date().toISOString().split('T')[0],
+                                svProjectId: selectedLead.projectId || '',
+                                motivationType: selectedLead.motivationType || '',
+                                primaryRequirement: selectedLead.primaryRequirement || '',
+                                secondaryRequirement: selectedLead.secondaryRequirement || '',
+                                latitude: null,
+                                longitude: null,
+                                timeSpent: '',
+                                note: '',
+                              });
+                              setRecordSvModalOpen(true);
+                              if (!projectOptions.length) loadCreateOptions();
+                            }}
+                          >
+                            🏠 Record Site Visit
+                          </button>
+                        )}
                         <button className="crm-btn crm-btn-ghost crm-btn-sm">💬 WhatsApp</button>
                         <button className="crm-btn crm-btn-ghost crm-btn-sm">📧 Email</button>
                         <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()}>📝 Add Note</button>
@@ -1168,82 +1282,75 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
             <form className="lead-workspace__new-form" onSubmit={handleCreateLead}>
               <div className="lead-workspace__new-form-section">Contact Information</div>
               <label>
-                First Name*
-                <input value={newLeadForm.firstName} onChange={(e) => setNewLeadForm((p) => ({ ...p, firstName: e.target.value }))} required />
-              </label>
-              <label>
-                Last Name
-                <input value={newLeadForm.lastName} onChange={(e) => setNewLeadForm((p) => ({ ...p, lastName: e.target.value }))} />
+                Full Name*
+                <input value={newLeadForm.full_name} onChange={(e) => setNewLeadForm((p) => ({ ...p, full_name: e.target.value }))} required placeholder="Enter buyer full name" />
               </label>
               <label>
                 Phone*
-                <input value={newLeadForm.phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: e.target.value }))} required />
+                <input value={newLeadForm.phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: e.target.value }))} required placeholder="Primary contact number" />
+              </label>
+              
+              <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={newLeadForm.whatsappSameAsPhone} 
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsappSameAsPhone: e.target.checked, whatsapp_number: e.target.checked ? '' : p.whatsapp_number }))} 
+                  />
+                  WhatsApp same as phone
+                </label>
+                {!newLeadForm.whatsappSameAsPhone && (
+                  <label style={{ marginTop: 0 }}>
+                    WhatsApp Number
+                    <input 
+                      value={newLeadForm.whatsapp_number} 
+                      onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value }))} 
+                      placeholder="Enter WhatsApp number"
+                    />
+                  </label>
+                )}
+              </div>
+
+              <label>
+                Alternate Phone (Optional)
+                <input value={newLeadForm.alternate_phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Secondary contact" />
               </label>
               <label>
-                Alternate Phone
-                <input value={newLeadForm.alternate_phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                WhatsApp Number
-                <input value={newLeadForm.whatsapp_number} onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value }))} placeholder="Optional" />
-              </label>
-              {/* <label>
-                Secondary Phone 1
-                <input value={newLeadForm.secondary_phone_1} onChange={(e) => setNewLeadForm((p) => ({ ...p, secondary_phone_1: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                Secondary Phone 2
-                <input value={newLeadForm.secondary_phone_2} onChange={(e) => setNewLeadForm((p) => ({ ...p, secondary_phone_2: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                Secondary Phone 3
-                <input value={newLeadForm.secondary_phone_3} onChange={(e) => setNewLeadForm((p) => ({ ...p, secondary_phone_3: e.target.value }))} placeholder="Optional" />
-              </label> */}
-              <label>
-                Email
-                <input type="email" value={newLeadForm.email} onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))} />
+                Email (Optional)
+                <input type="email" value={newLeadForm.email} onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
               </label>
 
               <div className="lead-workspace__new-form-section">Lead Classification</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label>
+                  Lead Type
+                  <select value={newLeadForm.lead_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
+                    <option value="">Select lead type</option>
+                    {leadTypeOptions.map((lt) => (
+                      <option key={lt.id} value={lt.id}>{lt.type_name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Customer Type
+                  <select value={newLeadForm.customer_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, customer_type_id: e.target.value }))}>
+                    <option value="">Select customer type</option>
+                    {customerTypeOptions.map((ct) => (
+                      <option key={ct.id} value={ct.id}>{ct.type_name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <label>
-                Lead Type
-                <select value={newLeadForm.lead_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
-                  <option value="">Select lead type</option>
-                  {leadTypeOptions.map((lt) => (
-                    <option key={lt.id} value={lt.id}>{lt.type_name}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Customer Type
-                <select value={newLeadForm.customer_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, customer_type_id: e.target.value }))}>
-                  <option value="">Select customer type</option>
-                  {customerTypeOptions.map((ct) => (
-                    <option key={ct.id} value={ct.id}>{ct.type_name}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Purpose
-                <select value={newLeadForm.purpose} onChange={(e) => setNewLeadForm((p) => ({ ...p, purpose: e.target.value }))}>
-                  <option value="">Select purpose</option>
-                  <option value="Purchase">Purchase</option>
-                  <option value="Investment">Investment</option>
-                  <option value="Rental">Rental</option>
-                </select>
-              </label>
-              <label>
-                Configuration
+                Configuration (Optional)
                 <select value={newLeadForm.configuration} onChange={(e) => setNewLeadForm((p) => ({ ...p, configuration: e.target.value }))}>
                   <option value="">Select configuration</option>
-                  <option value="1RK">1RK</option>
                   <option value="1BHK">1BHK</option>
                   <option value="2BHK">2BHK</option>
                   <option value="3BHK">3BHK</option>
                   <option value="4BHK">4BHK</option>
                   <option value="Villa">Villa</option>
                   <option value="Plot">Plot</option>
-                  <option value="Commercial">Commercial</option>
                 </select>
               </label>
 
@@ -1303,21 +1410,11 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               <div className="lead-workspace__new-form-section">Budget & Priority</div>
               <label>
                 Budget Min
-                <input type="number" value={newLeadForm.budgetMin} onChange={(e) => setNewLeadForm((p) => ({ ...p, budgetMin: e.target.value }))} />
+                <input type="number" value={newLeadForm.budgetMin} onChange={(e) => setNewLeadForm((p) => ({ ...p, budgetMin: e.target.value }))} placeholder="0" />
               </label>
               <label>
                 Budget Max
-                <input type="number" value={newLeadForm.budgetMax} onChange={(e) => setNewLeadForm((p) => ({ ...p, budgetMax: e.target.value }))} />
-              </label>
-              <label>
-                Budget Range
-                <select value={newLeadForm.budgetRange} onChange={(e) => setNewLeadForm((p) => ({ ...p, budgetRange: e.target.value }))}>
-                  <option value="">Select range</option>
-                  <option value="Below 8L">Below 8 Lakhs</option>
-                  <option value="8-15L">8 - 15 Lakhs</option>
-                  <option value="15-25L">15 - 25 Lakhs</option>
-                  <option value="Above 25L">Above 25 Lakhs</option>
-                </select>
+                <input type="number" value={newLeadForm.budgetMax} onChange={(e) => setNewLeadForm((p) => ({ ...p, budgetMax: e.target.value }))} placeholder="0" />
               </label>
               <label>
                 Priority
@@ -1329,36 +1426,83 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 </select>
               </label>
 
-              {/* <div className="lead-workspace__new-form-section">Campaign Tracking</div>
-              <label>
-                Campaign Name
-                <input value={newLeadForm.campaign_name} onChange={(e) => setNewLeadForm((p) => ({ ...p, campaign_name: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                UTM Source
-                <input value={newLeadForm.utm_source} onChange={(e) => setNewLeadForm((p) => ({ ...p, utm_source: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                UTM Medium
-                <input value={newLeadForm.utm_medium} onChange={(e) => setNewLeadForm((p) => ({ ...p, utm_medium: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                UTM Campaign
-                <input value={newLeadForm.utm_campaign} onChange={(e) => setNewLeadForm((p) => ({ ...p, utm_campaign: e.target.value }))} placeholder="Optional" />
-              </label>
-              <label>
-                Referral Code
-                <input value={newLeadForm.referral_code} onChange={(e) => setNewLeadForm((p) => ({ ...p, referral_code: e.target.value }))} placeholder="Optional" />
-              </label> */}
               <label className="lead-workspace__new-form-span">
                 Initial Notes
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={newLeadForm.note}
                   onChange={(e) => setNewLeadForm((p) => ({ ...p, note: e.target.value }))}
-                  placeholder="Add context, requirements, or comments"
+                  placeholder="Add context or initial comments"
                 />
               </label>
+
+              {/* SM Behavioral Metadata */}
+              {workspaceRole === 'SM' && (
+                <>
+                  <div className="lead-workspace__new-form-section">Site Visit Details (Behavioral)</div>
+                  <label>
+                    Buying Motivation*
+                    <select
+                      value={newLeadForm.motivationType}
+                      onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select motivation...</option>
+                      <option value="Necessity">Necessity (High Intent)</option>
+                      <option value="Comfort">Comfort</option>
+                      <option value="Emotional">Emotional</option>
+                      <option value="Prestige">Prestige</option>
+                      <option value="Thrill">Thrill / Investment</option>
+                    </select>
+                  </label>
+                  <label>
+                    Primary Requirement
+                    <input
+                      value={newLeadForm.primaryRequirement}
+                      onChange={(e) => setNewLeadForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
+                      placeholder="Principal requirement"
+                    />
+                  </label>
+                  <label className="lead-workspace__new-form-span">
+                    Secondary Requirements & Site Remarks
+                    <textarea
+                      rows={2}
+                      value={newLeadForm.secondaryRequirement}
+                      onChange={(e) => setNewLeadForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
+                      placeholder="Additional requirements or site visit remarks"
+                    />
+                  </label>
+                  
+                  <div className="lead-workspace__new-form-span" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, display: 'block' }}>📍 Geo-location*</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {newLeadForm.latitude ? `Captured: ${newLeadForm.latitude.toFixed(6)}, ${newLeadForm.longitude.toFixed(6)}` : 'Mandatory for Walk-in leads'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`workspace-btn ${newLeadForm.latitude ? 'workspace-btn--ghost' : 'workspace-btn--primary'}`}
+                      style={{ padding: '6px 12px', fontSize: 12 }}
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          toast.error('Geolocation is not supported by your browser');
+                          return;
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setNewLeadForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                            toast.success('Location captured!');
+                          },
+                          (err) => toast.error(`Error: ${err.message}`)
+                        );
+                      }}
+                    >
+                      {newLeadForm.latitude ? 'Update Location' : 'Get Location'}
+                    </button>
+                  </div>
+                </>
+              )}
 
               <div className="lead-workspace__new-form-footer">
                 {createOptionsLoading && <small>Loading options...</small>}
@@ -1368,6 +1512,107 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Record Site Visit Modal (SM) ── */}
+      {recordSvModalOpen && (
+        <div className="lead-workspace__modal" role="dialog" aria-modal="true">
+          <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm">
+            <div className="lead-workspace__modal-header" style={{ background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' }}>
+              <h2 style={{ color: '#fff' }}>🏠 Record Site Visit</h2>
+              <button type="button" style={{ color: '#fff' }} onClick={() => setRecordSvModalOpen(false)}>✕</button>
+            </div>
+
+            <div className="assign-modal__body" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+              <div style={{ marginBottom: 16 }}>
+                <strong>{selectedLead?.fullName}</strong> ({selectedLead?.leadNumber})
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Log a visit analysis for this lead.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <label>
+                  Date *
+                  <input type="date" value={recordSvForm.svDate} onChange={(e) => setRecordSvForm(p => ({ ...p, svDate: e.target.value }))} style={{ width: '100%' }} />
+                </label>
+                <label>
+                  Time Spent (Mins)
+                  <input type="number" placeholder="Duration" value={recordSvForm.timeSpent} onChange={(e) => setRecordSvForm(p => ({ ...p, timeSpent: e.target.value }))} style={{ width: '100%' }} />
+                </label>
+              </div>
+
+              <label style={{ marginBottom: 14 }}>
+                Project Visited *
+                <select value={recordSvForm.svProjectId} onChange={(e) => setRecordSvForm(p => ({ ...p, svProjectId: e.target.value }))} style={{ width: '100%' }}>
+                  <option value="">Select Project...</option>
+                  {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+                </select>
+              </label>
+
+              <label style={{ marginBottom: 14 }}>
+                Buying Motivation *
+                <select value={recordSvForm.motivationType} onChange={(e) => setRecordSvForm(p => ({ ...p, motivationType: e.target.value }))} style={{ width: '100%' }}>
+                  <option value="">Select motivation...</option>
+                  <option value="Necessity">Necessity</option>
+                  <option value="Comfort">Comfort</option>
+                  <option value="Emotional">Emotional</option>
+                  <option value="Prestige">Prestige</option>
+                  <option value="Thrill">Thrill / Investment</option>
+                </select>
+              </label>
+
+              <label style={{ marginBottom: 14 }}>
+                Primary Requirement
+                <input type="text" value={recordSvForm.primaryRequirement} onChange={(e) => setRecordSvForm(p => ({ ...p, primaryRequirement: e.target.value }))} placeholder="Key highlight" style={{ width: '100%' }} />
+              </label>
+
+              <label style={{ marginBottom: 14 }}>
+                Secondary Requirements / Remarks
+                <textarea rows={2} value={recordSvForm.secondaryRequirement} onChange={(e) => setRecordSvForm(p => ({ ...p, secondaryRequirement: e.target.value }))} placeholder="Additional details..." style={{ width: '100%' }} />
+              </label>
+
+              <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>📍 Geo-location*</div>
+                  <button
+                    type="button"
+                    className={`workspace-btn ${recordSvForm.latitude ? 'workspace-btn--ghost' : 'workspace-btn--primary'} workspace-btn--sm`}
+                    onClick={() => {
+                      if (!navigator.geolocation) { toast.error('Not supported'); return; }
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          setRecordSvForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                          toast.success('Location captured');
+                        },
+                        (err) => toast.error(err.message)
+                      );
+                    }}
+                  >
+                    {recordSvForm.latitude ? 'Update location' : 'Get Location'}
+                  </button>
+                </div>
+                {recordSvForm.latitude && (
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                    Lat: {recordSvForm.latitude.toFixed(6)}, Lng: {recordSvForm.longitude.toFixed(6)}
+                  </div>
+                )}
+              </div>
+
+              <div className="assign-modal__footer">
+                <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setRecordSvModalOpen(false)}>Cancel</button>
+                <button
+                  type="button"
+                  className="workspace-btn workspace-btn--primary"
+                  onClick={handleRecordSvSubmit}
+                  disabled={!recordSvForm.latitude || !recordSvForm.svProjectId || !recordSvForm.motivationType}
+                >
+                  ✓ Record Visit
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

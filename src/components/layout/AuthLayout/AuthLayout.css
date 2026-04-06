@@ -14,7 +14,8 @@
 .auth-layout__backdrop {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #0f172a99 0%, #0f172a 100%);
+  background: var(--bg-primary);
+  opacity: 0.8;
 }
 
 .auth-layout__content {

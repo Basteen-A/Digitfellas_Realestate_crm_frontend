@@ -8,8 +8,22 @@
 }
 
 .auth-card__header h1 {
-  font-size: 28px;
+  font-size: 24px;
+  font-weight: 700;
   margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.auth-card__logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.auth-card__logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
 }
 
 .auth-card__header p {

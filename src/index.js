@@ -37,21 +37,21 @@ root.render(
                 toastOptions={{
                   duration: 4000,
                   style: {
-                    background: '#1e293b',
-                    color: '#e2e8f0',
-                    border: '1px solid #334155',
-                    borderRadius: '12px',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--border-radius-lg)',
                     fontSize: '14px',
                     padding: '12px 16px',
-                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
+                    boxShadow: 'var(--shadow-lg)',
                   },
                   success: {
-                    iconTheme: { primary: '#22c55e', secondary: '#0f172a' },
-                    style: { borderColor: '#22c55e33' },
+                    iconTheme: { primary: 'var(--accent-green)', secondary: 'var(--bg-card)' },
+                    style: { borderColor: 'var(--accent-green)' },
                   },
                   error: {
-                    iconTheme: { primary: '#ef4444', secondary: '#0f172a' },
-                    style: { borderColor: '#ef444433' },
+                    iconTheme: { primary: 'var(--accent-red)', secondary: 'var(--bg-card)' },
+                    style: { borderColor: 'var(--accent-red)' },
                     duration: 5000,
                   },
                 }}

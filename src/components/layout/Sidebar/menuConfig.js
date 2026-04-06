@@ -30,17 +30,6 @@ export const getSidebarMenuForRole = (roleCode) => {
 
 // ── Admin / Super Admin ──
 const adminSidebar = [
-  { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  {
-    label: 'Role Workspaces',
-    icon: '🎯',
-    children: [
-      { label: 'Telecaller Leads', path: '/telecaller/leads' },
-      { label: 'Sales Manager Leads', path: '/sales-manager/leads' },
-      { label: 'Sales Head Leads', path: '/sales-head/leads' },
-      { label: 'Collection Leads', path: '/collection/leads' },
-    ],
-  },
   {
     label: 'Masters',
     icon: '🛠',

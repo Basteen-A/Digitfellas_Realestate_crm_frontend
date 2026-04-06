@@ -56,9 +56,8 @@ const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName }) 
   return (
     <aside className="portal-sidebar">
       <div className="portal-sidebar__brand">
-        <div className="portal-sidebar__brand-icon">P</div>
-        <div className="portal-sidebar__brand-text">
-          Prop<span>CRM</span>
+        <div className="portal-sidebar__brand-icon">
+          <img src="/sujatha.png" alt="Logo" className="sidebar-logo" />
         </div>
       </div>
 
