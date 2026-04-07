@@ -61,14 +61,7 @@ const CalendarPicker = ({
     if (type === 'date') setIsOpen(false);
   };
 
-  const handleTimeChange = (e, field) => {
-    if (!selectedDate) return;
-    const newDate = new Date(selectedDate);
-    if (field === 'hours') newDate.setHours(parseInt(e.target.value, 10));
-    if (field === 'minutes') newDate.setMinutes(parseInt(e.target.value, 10));
-    setSelectedDate(newDate);
-    onChange(newDate.toISOString());
-  };
+
 
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
