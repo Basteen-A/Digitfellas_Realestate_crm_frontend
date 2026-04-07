@@ -4,6 +4,7 @@ import PortalLayout from '../common/PortalLayout';
 import SalesManagerDashboard from './SalesManagerDashboard';
 import SalesManagerIncoming from './SalesManagerIncoming';
 import SalesManagerVisits from './SalesManagerVisits';
+import SalesManagerSiteVisits from './SalesManagerSiteVisits';
 import SalesManagerPullLead from './SalesManagerPullLead';
 import SalesManagerPushLeads from './SalesManagerPushLeads';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
@@ -30,6 +31,7 @@ const SalesManagerWorkspace = () => {
           {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SM" />}
           {activeScreen === 'pull' && <SalesManagerPullLead user={user} onNavigate={setActiveScreen} />}
           {activeScreen === 'push' && <SalesManagerPushLeads onNavigate={setActiveScreen} />}
+          {activeScreen === 'sitevisits' && <SalesManagerSiteVisits onNavigate={setActiveScreen} />}
         </>
       )}
     </PortalLayout>

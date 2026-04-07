@@ -36,7 +36,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
   const handleAccept = async (handoff) => {
     setProcessingId(handoff.id);
     try {
-      await leadWorkflowApi.transitionLead(handoff.leadId, 'SM_VISIT', {
+      await leadWorkflowApi.transitionLead(handoff.leadId, 'SM_ACCEPT_HANDOFF', {
         note: 'Incoming handoff accepted by Sales Manager',
       });
       toast.success('Lead accepted successfully!');

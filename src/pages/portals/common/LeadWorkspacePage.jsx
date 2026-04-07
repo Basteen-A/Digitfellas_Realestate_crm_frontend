@@ -17,6 +17,7 @@ import {
   getActionsForRole,
   ROLE_LABELS,
 } from './workflowConfig';
+import CalendarPicker from '../../../components/common/CalendarPicker';
 import './LeadWorkspacePage.css';
 
 const initialNewLead = {
@@ -619,10 +620,6 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
       toast.error('Follow-up date & time is required for this stage');
       return;
     }
-    if (!stagePopupData.reason.trim()) {
-      toast.error('Please provide a reason / note for the stage change');
-      return;
-    }
 
     setManualUpdateSaving(true);
     try {
@@ -1119,7 +1116,13 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                   </div>
                   <div style={{ marginTop: 16 }}>
                     <div className="crm-form-label">Next Follow Up</div>
-                    <input className="lead-detail__calendar-input" type="datetime-local" step={300} value={manualNextFollowUpAt} onChange={(e) => setManualNextFollowUpAt(e.target.value)} />
+                    <CalendarPicker
+                      type="datetime"
+                      value={manualNextFollowUpAt ? manualNextFollowUpAt + ':00Z' : ''}
+                      onChange={(val) => setManualNextFollowUpAt(val ? val.slice(0, 16) : '')}
+                      placeholder="Select Date & Time..."
+                      className="lead-detail__calendar-input"
+                    />
                     <div className="lead-detail__calendar-shortcuts">
                       <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
                       <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
@@ -1210,13 +1213,12 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 <div className="crm-form-label" style={{ marginBottom: 6 }}>
                   📅 Follow-up Date & Time {stagePopupData.needsFollowUp && <span style={{ color: '#dc2626' }}>*</span>}
                 </div>
-                <input
+                <CalendarPicker
+                  type="datetime"
+                  value={stagePopupData.followUpAt ? stagePopupData.followUpAt + ':00Z' /* approximate valid ISO string if it is just a local format */ : ''}
+                  onChange={(val) => setStagePopupData((p) => ({ ...p, followUpAt: val ? val.slice(0, 16) : '' }))}
+                  placeholder="Select Date & Time..."
                   className="lead-detail__calendar-input"
-                  type="datetime-local"
-                  step={300}
-                  value={stagePopupData.followUpAt}
-                  onChange={(e) => setStagePopupData((p) => ({ ...p, followUpAt: e.target.value }))}
-                  style={{ marginBottom: 8 }}
                 />
                 <div className="lead-detail__calendar-shortcuts">
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
@@ -1232,7 +1234,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
               {/* Reason / Notes */}
               <div style={{ marginBottom: 18 }}>
-                <div className="crm-form-label" style={{ marginBottom: 6 }}>📝 Reason / Notes <span style={{ color: '#dc2626' }}>*</span></div>
+                <div className="crm-form-label" style={{ marginBottom: 6 }}>📝 Reason / Notes (Optional)</div>
                 <textarea
                   className="crm-form-input"
                   rows={3}
@@ -1259,7 +1261,7 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
                 <button
                   type="button"
                   className="workspace-btn workspace-btn--primary"
-                  disabled={manualUpdateSaving || !stagePopupData.reason.trim() || (stagePopupData.needsFollowUp && !stagePopupData.followUpAt)}
+                  disabled={manualUpdateSaving || (stagePopupData.needsFollowUp && !stagePopupData.followUpAt)}
                   onClick={handleStagePopupConfirm}
                 >
                   {manualUpdateSaving ? 'Saving...' : '✅ Confirm Stage Change'}
@@ -1536,7 +1538,11 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <label>
                   Date *
-                  <input type="date" value={recordSvForm.svDate} onChange={(e) => setRecordSvForm(p => ({ ...p, svDate: e.target.value }))} style={{ width: '100%' }} />
+                  <CalendarPicker 
+                    type="date"
+                    value={recordSvForm.svDate ? new Date(recordSvForm.svDate).toISOString() : ''}
+                    onChange={(val) => setRecordSvForm(p => ({ ...p, svDate: val ? val.split('T')[0] : '' }))}
+                  />
                 </label>
                 <label>
                   Time Spent (Mins)
@@ -1711,11 +1717,10 @@ const LeadWorkspacePage = ({ user, workspaceRole }) => {
 
               <label>
                 Date of Site Visit *
-                <input
+                <CalendarPicker 
                   type="date"
-                  value={svDoneForm.svDate}
-                  onChange={(e) => setSvDoneForm((p) => ({ ...p, svDate: e.target.value }))}
-                  required
+                  value={svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : ''}
+                  onChange={(val) => setSvDoneForm(p => ({ ...p, svDate: val ? val.split('T')[0] : '' }))}
                 />
               </label>
 

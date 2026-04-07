@@ -8,6 +8,12 @@ const siteVisitApi = {
   complete: (id, data) => api.patch(`/site-visits/${id}/complete`, data),
   cancel: (id, data) => api.patch(`/site-visits/${id}/cancel`, data),
   remove: (id) => api.delete(`/site-visits/${id}`),
+
+  // SM's own lead visits
+  getMyLeadVisits: (params = {}) => api.get('/site-visits/my-lead-visits', { params }),
+
+  // SH oversight: get visits for a specific SM's leads
+  getBySM: (smId, params = {}) => api.get(`/site-visits/by-sm/${smId}`, { params }),
 };
 
 export default siteVisitApi;

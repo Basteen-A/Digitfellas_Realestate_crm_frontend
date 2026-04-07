@@ -117,6 +117,23 @@ const leadWorkflowApi = {
     const { data } = await api.get('/leads/pull-requests', { params });
     return data;
   },
+
+  // ── SH Team Management ──
+
+  getMySMTeam: async () => {
+    const { data } = await api.get('/leads/my-sm-team');
+    return data;
+  },
+
+  getLeadsBySM: async (smId, params = {}) => {
+    const { data } = await api.get(`/leads/by-sm/${smId}`, { params });
+    return data;
+  },
+
+  reassignLeadToSM: async (leadId, newSMId, note) => {
+    const { data } = await api.patch(`/leads/${leadId}/reassign-sm`, { newSMId, note });
+    return data;
+  },
 };
 
 export default leadWorkflowApi;

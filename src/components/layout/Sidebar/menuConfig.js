@@ -107,7 +107,7 @@ export const salesManagerMenu = [
   { label: 'Dashboard', key: 'dashboard', icon: '📊', badge: null },
   { label: 'My Leads', key: 'leads', icon: '👥', badgeColor: 'green' },
   { label: 'Handoff Leads', key: 'handoffs', icon: '🤝', badgeColor: 'purple' },
-  { label: 'Revisits', key: 'visits', icon: '🔄', badge: null },
+  { label: 'Site Visits', key: 'sitevisits', icon: '🏠', badge: null },
   { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: '⚡', badgeColor: 'orange' },
   { label: 'Pull Lead', key: 'pull', icon: '🔍', badge: null },
@@ -122,8 +122,10 @@ export const salesHeadMenu = [
   { label: 'Bookings', key: 'bookings', icon: '📋', badgeColor: 'green' },
   { label: 'Approvals', key: 'approvals', icon: '✅', badgeColor: 'red' },
   { group: 'Overview' },
+  { label: 'SM Team', key: 'smteam', icon: '👥', badge: null },
+  { label: 'Site Visits', key: 'sitevisits', icon: '🏠', badge: null },
   { label: 'All Leads', key: 'allleads', icon: '👥', badge: null },
-  { label: 'Team', key: 'team', icon: '👔', badge: null },
+  { label: 'Team Metrics', key: 'team', icon: '👔', badge: null },
   { label: 'Revenue', key: 'revenue', icon: '💰', badge: null },
 ];
 
