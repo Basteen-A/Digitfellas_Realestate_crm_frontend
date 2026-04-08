@@ -32,11 +32,11 @@ const SalesHeadWorkspace = () => {
           {activeScreen === 'allleads' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
           {activeScreen === 'smteam' && <SalesHeadTeamLeads user={user} />}
           {activeScreen === 'team' && (
-            <div><div className="page-header"><div className="page-header-left"><h1>Team Performance</h1><p>Monitor your team's metrics</p></div></div>
+            <div><div className="page-header flex-col md:flex-row md:items-center gap-3"><div className="page-header-left"><h1>Team Performance</h1><p className="hidden sm:block">Monitor your team's metrics</p></div></div>
             <div className="crm-card"><div className="empty-state"><div className="empty-icon">👔</div><div className="empty-title">Team performance analytics</div><div className="empty-desc">View detailed team metrics and KPIs</div></div></div></div>
           )}
           {activeScreen === 'revenue' && (
-            <div><div className="page-header"><div className="page-header-left"><h1>Revenue</h1><p>Track collections and payments</p></div></div>
+            <div><div className="page-header flex-col md:flex-row md:items-center gap-3"><div className="page-header-left"><h1>Revenue</h1><p className="hidden sm:block">Track collections and payments</p></div></div>
             <div className="crm-card"><div className="empty-state"><div className="empty-icon">💰</div><div className="empty-title">Revenue tracking</div><div className="empty-desc">Monitor collections and payment schedules</div></div></div></div>
           )}
         </>

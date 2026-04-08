@@ -14,10 +14,10 @@ const TelecallerCallLog = ({ user }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
           <h1>Call Log</h1>
-          <p>Track all your calls and outcomes</p>
+          <p className="hidden sm:block">Track all your calls and outcomes</p>
         </div>
       </div>
       <div className="crm-card">

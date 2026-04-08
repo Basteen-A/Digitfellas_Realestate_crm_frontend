@@ -72,14 +72,14 @@ const SalesManagerIncoming = ({ onNavigate }) => {
 
   return (
     <div className="incoming-leads-page">
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
           <h1>Incoming Leads</h1>
-          <p>Leads handed off from telecallers after site visit completion</p>
+          <p className="hidden sm:block">Leads handed off from telecallers after site visit completion</p>
         </div>
       </div>
 
-      <div className="incoming-grid">
+      <div className="incoming-grid grid grid-cols-1 md:grid-cols-2 gap-4">
         {handoffs.length === 0 ? (
           <div className="crm-card" style={{ gridColumn: '1 / -1' }}>
             <div className="empty-state" style={{ padding: '60px 20px' }}>
@@ -104,7 +104,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                   </span>
                 </div>
               </div>
-                <div className="approval-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div className="approval-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div>
                   <div className="approval-field-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>Lead #</div>
                   <div className="approval-field-value">{handoff.leadNumber || '—'}</div>

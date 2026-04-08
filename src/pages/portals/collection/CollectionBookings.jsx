@@ -111,13 +111,13 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>📋 Bookings</h1>
-          <p>Manage bookings, update details, and record payments</p>
+          <h1> Bookings</h1>
+          <p className="hidden sm:block">Manage bookings, update details, and record payments</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={loadBookings}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={loadBookings}> Refresh</button>
         </div>
       </div>
 

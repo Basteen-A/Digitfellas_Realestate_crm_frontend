@@ -143,18 +143,18 @@ const TelecallerAddLead = ({ onNavigate }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
           <h1>Add New Lead</h1>
-          <p>Enter buyer details to create a new lead</p>
+          <p className="hidden sm:block">Enter buyer details to create a new lead</p>
         </div>
       </div>
 
       <div className="crm-card">
         <div className="crm-card-body">
           <form onSubmit={handleSubmit}>
-            <div className="crm-grid crm-grid-2" style={{ gap: 14 }}>
-              <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
                 <label className="crm-form-label">Full Name *</label>
                 <input className="crm-form-input" value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))} required placeholder="Enter buyer full name" />
               </div>

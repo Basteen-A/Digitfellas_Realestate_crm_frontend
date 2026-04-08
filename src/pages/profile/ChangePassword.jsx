@@ -36,7 +36,7 @@ const ChangePassword = () => {
         <p>Update your account password securely.</p>
       </header>
 
-      <form className="profile-card" onSubmit={handleSubmit} style={{ padding: 14 }}>
+      <form className="profile-card" onSubmit={handleSubmit}>
         <label className="auth-card__label" htmlFor="current-password">
           Current Password
         </label>

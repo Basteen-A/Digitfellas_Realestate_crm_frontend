@@ -66,19 +66,19 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   return (
     <div>
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>{greeting}, {user?.first_name || 'Telecaller'} 👋</h1>
-          <p>Here's what's happening with your leads today.</p>
+          <p className="hidden sm:block">Here's what's happening with your leads today.</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header-actions flex-wrap">
           <button className="crm-btn crm-btn-ghost" onClick={loadDashboard}>↻ Refresh</button>
           <button className="crm-btn crm-btn-primary" onClick={() => onNavigate?.('addlead')}>➕ Add Lead</button>
         </div>
       </div>
 
       {/* Stat Cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+      <div className="stats-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((card) => (
           <div className="stat-card" key={card.label}>
             <div className="stat-card-header">

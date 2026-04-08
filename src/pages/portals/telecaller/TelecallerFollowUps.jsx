@@ -102,13 +102,13 @@ const TelecallerFollowUps = ({ user }) => {
 
   return (
     <div>
-      {/* ── Page Header ── */}
-      <div className="page-header">
+      {/*  Page Header  */}
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Follow-ups</h1>
-          <p>Manage your scheduled calls & follow-ups</p>
+          <p className="hidden sm:block">Manage your scheduled calls & follow-ups</p>
         </div>
-        <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="page-header-actions flex-wrap" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}

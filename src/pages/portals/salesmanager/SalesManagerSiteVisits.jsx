@@ -69,12 +69,12 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>🏠 Site Visit Records</h1>
-          <p>View all site visits for your leads</p>
+          <h1> Site Visit Records</h1>
+          <p className="hidden sm:block">View all site visits for your leads</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header-actions flex-wrap">
           <div className="crm-btn-group">
             {['all', 'upcoming', 'completed', 'cancelled'].map(f => (
               <button

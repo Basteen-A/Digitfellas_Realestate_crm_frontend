@@ -72,18 +72,18 @@ const SalesManagerVisits = ({ onNavigate }) => {
 
   return (
     <div className="visits-page">
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>🏠 Site Visits</h1>
-          <p>Track your appointments and buyer feedback</p>
+          <h1> Site Visits</h1>
+          <p className="hidden sm:block">Track your appointments and buyer feedback</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header-actions flex-wrap">
           <div className="crm-btn-group">
             <button className={`crm-btn ${filter === 'upcoming' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('upcoming')}>Upcoming</button>
             <button className={`crm-btn ${filter === 'completed' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('completed')}>Completed</button>
             <button className={`crm-btn ${filter === 'cancelled' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('cancelled')}>Cancelled</button>
           </div>
-          <button className="crm-btn crm-btn-ghost" onClick={loadVisits}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={loadVisits}> Refresh</button>
         </div>
       </div>
 

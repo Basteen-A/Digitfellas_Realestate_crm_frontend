@@ -21,6 +21,7 @@ import './styles/utilities.css';
 import './styles/animations.css';
 import './styles/propcrm.css';
 import './styles/responsive.css';
+import './styles/tailwind.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { logout } from '../../../redux/slices/authSlice';
 import './PortalSidebar.css';
 
-const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName }) => {
+const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName, collapsed, mobileOpen, onMobileClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -54,7 +54,16 @@ const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName }) 
   };
 
   return (
-    <aside className="portal-sidebar">
+    <aside className={`portal-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+      {mobileOpen && (
+        <button
+          type="button"
+          className="portal-sidebar__close lg:hidden"
+          onClick={onMobileClose}
+        >
+          ✕
+        </button>
+      )}
       <div className="portal-sidebar__brand">
         <div className="portal-sidebar__brand-icon">
           <img src="/sujatha.png" alt="Logo" className="sidebar-logo" />

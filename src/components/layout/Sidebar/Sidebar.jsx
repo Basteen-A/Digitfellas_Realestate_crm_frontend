@@ -7,7 +7,9 @@ import { logout } from '../../../redux/slices/authSlice';
 import toast from 'react-hot-toast';
 import './Sidebar.css';
 
-const Sidebar = () => {
+const MOBILE_BREAKPOINT = 768;
+
+const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const { sidebarCollapsed } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const roleCode = useSelector((state) => getRoleCode(state.auth.user));
@@ -15,6 +17,13 @@ const Sidebar = () => {
   const navigate = useNavigate();
 
   const [openGroups, setOpenGroups] = useState({});
+  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const menu = getSidebarMenuForRole(roleCode);
 
@@ -32,8 +41,31 @@ const Sidebar = () => {
     navigate('/login');
   };
 
+  const handleLinkClick = () => {
+    if (isMobile && onMobileClose) {
+      onMobileClose();
+    }
+  };
+
   return (
-    <aside className={`app-sidebar ${sidebarCollapsed ? 'app-sidebar--collapsed' : ''}`}>
+    <>
+      {isMobile && isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onMobileClose}
+        />
+      )}
+      <aside className={`app-sidebar ${sidebarCollapsed ? 'app-sidebar--collapsed' : ''} ${isMobile ? 'fixed left-0 top-0 z-50 w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 md:hidden"
+            aria-label="Close sidebar"
+          >
+            ✕
+          </button>
+        )}
       {/* Brand */}
       <div className="app-sidebar__brand">
         <span className="app-sidebar__logo">RC</span>
@@ -83,6 +115,7 @@ const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={handleLinkClick}
               className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
             >
               <span>{item.icon || '•'}</span>
@@ -115,6 +148,7 @@ const Sidebar = () => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

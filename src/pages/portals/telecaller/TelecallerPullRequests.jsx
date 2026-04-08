@@ -42,14 +42,14 @@ const TelecallerPullRequests = ({ user }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>📥 Pull Requests</h1>
-          <p>Sales Managers requesting to take over your leads</p>
+          <h1> Pull Requests</h1>
+          <p className="hidden sm:block">Sales Managers requesting to take over your leads</p>
         </div>
         <div className="page-header-right">
           <button className="crm-btn crm-btn-ghost" onClick={loadPullRequests} disabled={loading}>
-            🔄 Refresh
+             Refresh
           </button>
         </div>
       </div>

@@ -43,13 +43,13 @@ const TelecallerPipeline = ({ user, onNavigate }) => {
 
   return (
     <div className="telecaller-pipeline">
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Pipeline Board</h1>
-          <p>Track your leads through the sales funnel</p>
+          <p className="hidden sm:block">Track your leads through the sales funnel</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={load}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={load}> Refresh</button>
         </div>
       </div>
 

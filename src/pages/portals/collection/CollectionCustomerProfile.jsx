@@ -82,10 +82,10 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
           <h1>👤 Customer Profiles</h1>
-          <p>View and manage customer details, KYC, and booking history</p>
+          <p className="hidden sm:block">View and manage customer details, KYC, and booking history</p>
         </div>
       </div>
 

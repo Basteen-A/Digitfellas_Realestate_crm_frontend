@@ -590,7 +590,7 @@
   background: var(--bg-card, #fff);
   border-radius: 12px;
   border: 1px solid var(--border-primary, #e2e8f0);
-  max-width: 600px;
+  max-width: 800px;
   width: 100%;
   box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.06);
   animation: modalIn 0.2s ease;
@@ -645,11 +645,23 @@
   border-color: #dc2626;
 }
 
-/* ── Modal Body ── */
+/*  Modal Body  */
 .lead-workspace__modal-body {
   padding: 24px;
   max-height: 75vh;
   overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .lead-workspace__modal-body {
+    padding: 16px;
+    max-height: 60vh;
+  }
+
+  .lead-workspace__modal-panel {
+    max-width: calc(100vw - 24px);
+    margin: 12px;
+  }
 }
 
 /* ── Detail Panel (two-column matching revised.html modal) ── */
@@ -995,6 +1007,39 @@ textarea.crm-form-input {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .lead-workspace__new-form {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .lead-workspace__modal-panel {
+    max-width: calc(100vw - 24px);
+    margin: 12px;
+  }
+
+  .lead-workspace__new-form-section {
+    font-size: 10px;
+    padding-top: 8px;
+  }
+
+  .lead-workspace__new-form input,
+  .lead-workspace__new-form select,
+  .lead-workspace__new-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .lead-workspace__new-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 }
 
 .lead-workspace__new-form-section {

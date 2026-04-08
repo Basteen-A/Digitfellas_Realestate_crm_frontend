@@ -188,3 +188,64 @@
 @keyframes profileSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ===== Change Password Form ===== */
+.profile-page form.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.profile-page form.profile-card .auth-card__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.profile-page form.profile-card .auth-card__input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.profile-page form.profile-card .auth-card__input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-bg);
+}
+
+.profile-page form.profile-card .auth-card__submit {
+  margin-top: 8px;
+  padding: 12px 24px;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.profile-page form.profile-card .auth-card__submit:hover {
+  background: var(--accent-blue-dark, #1d4ed8);
+}
+
+.profile-page form.profile-card .auth-card__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .profile-page form.profile-card {
+    padding: 16px;
+  }
+}

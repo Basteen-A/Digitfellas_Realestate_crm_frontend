@@ -40,10 +40,10 @@ const CollectionPayments = ({ user }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>💳 Payment History</h1>
-          <p>Track all payment transactions across your bookings</p>
+          <p className="hidden sm:block">Track all payment transactions across your bookings</p>
         </div>
         <div className="page-header-actions">
           <button className="crm-btn crm-btn-ghost" onClick={load}>↻ Refresh</button>
@@ -51,7 +51,7 @@ const CollectionPayments = ({ user }) => {
       </div>
 
       {/* Summary */}
-      <div className="col-stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="col-stats-grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'all' ? '2px solid var(--accent-blue)' : undefined }} onClick={() => setFilter('all')}>
           <div className="col-stat-icon" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>📊</div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.length}</div><div className="col-stat-label">Total Payments</div></div>

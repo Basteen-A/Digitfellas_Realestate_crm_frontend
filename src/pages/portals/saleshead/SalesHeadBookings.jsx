@@ -3,12 +3,12 @@ import React from 'react';
 const SalesHeadBookings = ({ user }) => {
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Bookings</h1>
-          <p>Manage all confirmed property bookings</p>
+          <p className="hidden sm:block">Manage all confirmed property bookings</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header-actions flex-wrap">
           <div className="filter-tabs">
             <button className="filter-tab active">All</button>
             <button className="filter-tab">Active</button>

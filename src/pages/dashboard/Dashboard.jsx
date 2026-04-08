@@ -89,19 +89,19 @@ const Dashboard = () => {
   return (
     <section>
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Organization Overview ⚙️</h1>
-          <p>Complete business metrics across all teams</p>
+          <p className="hidden sm:block">Complete business metrics across all teams</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header-actions flex-wrap">
           <button className="crm-btn crm-btn-ghost" onClick={refresh}>↻ Refresh</button>
-          <button className="crm-btn crm-btn-primary">📥 Export Report</button>
+          <button className="crm-btn crm-btn-primary">📥 Export</button>
         </div>
       </div>
 
       {/* Stat Cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+      <div className="stats-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {statCards.map((card) => (
           <div className="stat-card" key={card.label}>
             <div className="stat-card-header">
@@ -115,7 +115,7 @@ const Dashboard = () => {
       </div>
 
       {/* Two Column: Sources + Project Inventory */}
-      <div className="crm-grid crm-grid-2" style={{ marginBottom: 20 }}>
+      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4 mb-5">
         {/* Leads by Source */}
         <div className="crm-card">
           <div className="crm-card-header">
@@ -178,7 +178,7 @@ const Dashboard = () => {
       {workspaceLinks.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>🎯 Role Workspaces</h2>
-          <div className="crm-grid" style={{ gridTemplateColumns: `repeat(${Math.min(workspaceLinks.length, 4)}, 1fr)` }}>
+          <div className="crm-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {workspaceLinks.map((link) => (
               <Link key={link.path} to={link.path} className="admin-workspace-card">
                 <span className="admin-workspace-card__icon">{link.icon}</span>
@@ -197,7 +197,7 @@ const Dashboard = () => {
       {['SA', 'ADM'].includes(roleCode) && (
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>⚙️ Configuration</h2>
-          <div className="crm-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+          <div className="crm-grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {quickLinks.map((link) => (
               <Link key={link.path} to={link.path} className="admin-config-card">
                 <span className="admin-config-card__icon">{link.icon}</span>
@@ -209,7 +209,7 @@ const Dashboard = () => {
       )}
 
       {/* Two Column: User Distribution + Activity */}
-      <div className="crm-grid crm-grid-2">
+      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4 mt-4">
         <div className="crm-card">
           <div className="crm-card-header">
             <div className="crm-card-title">👥 User Distribution</div>

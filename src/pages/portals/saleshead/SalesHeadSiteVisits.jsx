@@ -76,12 +76,12 @@ const SalesHeadSiteVisits = () => {
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>🏠 Team Site Visits</h1>
-          <p>Monitor site visits across your Sales Manager team</p>
+          <p className="hidden sm:block">Monitor site visits across your Sales Manager team</p>
         </div>
-        <div className="page-header-actions" style={{ display: 'flex', gap: 12 }}>
+        <div className="page-header-actions flex-wrap" style={{ display: 'flex', gap: 12 }}>
           <select 
             className="crm-form-select" 
             value={selectedSM} 

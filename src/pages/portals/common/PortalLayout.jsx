@@ -38,6 +38,8 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const { isDark, toggleTheme } = useThemeContext();
   const [activeScreen, setActiveScreen] = useState(defaultScreen || 'dashboard');
   const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const topbarMenuRef = useRef(null);
 
   const handleNavigate = (key) => {
@@ -71,15 +73,35 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
 
   return (
     <div className="portal-layout">
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
+      )}
       <PortalSidebar
         menuItems={menuItems}
         activeScreen={activeScreen}
-        onNavigate={handleNavigate}
+        onNavigate={(key) => { handleNavigate(key); setMobileMenuOpen(false); }}
         user={user}
         roleName={roleName}
+        collapsed={sidebarCollapsed}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
       />
-      <div className="portal-main">
+      <div className={`portal-main ${sidebarCollapsed ? 'is-expanded' : ''}`}>
         <div className="portal-topbar">
+          <button
+            type="button"
+            className="portal-topbar-btn lg:hidden mr-2"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            ☰
+          </button>
+          <button
+            type="button"
+            className="portal-topbar-btn hidden lg:inline-flex mr-2"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          >
+            {sidebarCollapsed ? '→' : '←'}
+          </button>
           <div className="portal-topbar__title">
             {SCREEN_TITLES[activeScreen] || activeScreen}
           </div>

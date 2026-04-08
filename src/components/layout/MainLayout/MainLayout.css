@@ -16,20 +16,12 @@
   padding: 20px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .main-layout {
     grid-template-columns: 1fr;
   }
 
-  .main-layout .app-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: var(--z-sidebar);
-  }
-
-  .main-layout .app-sidebar--collapsed {
-    transform: translateX(-100%);
+  .main-layout__content {
+    padding: 16px;
   }
 }

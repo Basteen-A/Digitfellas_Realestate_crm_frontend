@@ -66,10 +66,10 @@ const SalesManagerPushLeads = ({ onNavigate }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Push to Sales Head</h1>
-          <p>Move positive visit leads to negotiation with Sales Head</p>
+          <p className="hidden sm:block">Move positive visit leads to negotiation with Sales Head</p>
         </div>
         <div className="page-header-actions">
           <button className="crm-btn crm-btn-ghost" onClick={loadData} disabled={loading}>

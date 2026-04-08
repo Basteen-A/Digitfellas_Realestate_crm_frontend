@@ -53,10 +53,10 @@ const SalesManagerPullLead = ({ user }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
           <h1>🔍 Pull Lead</h1>
-          <p>Search by customer phone number to request a lead from a Telecaller</p>
+          <p className="hidden sm:block">Search by customer phone number to request a lead from a Telecaller</p>
         </div>
       </div>
 

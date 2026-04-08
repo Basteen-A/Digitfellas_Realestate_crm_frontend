@@ -97,13 +97,13 @@ const SalesHeadTeamLeads = () => {
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>👥 Sales Manager Team</h1>
-          <p>View your team's leads, site visits, and reassign between managers</p>
+          <h1> Sales Manager Team</h1>
+          <p className="hidden sm:block">View your team's leads, site visits, and reassign between managers</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={loadTeam} disabled={loading}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={loadTeam} disabled={loading}> Refresh</button>
         </div>
       </div>
 

@@ -41,18 +41,18 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Sales Overview</h1>
-          <p>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Performance</p>
+          <p className="hidden sm:block">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Performance</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={load}>📥 Export Report</button>
+          <button className="crm-btn crm-btn-ghost" onClick={load}> Export</button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+      <div className="stats-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((card) => (
           <div className="stat-card" key={card.label}>
             <div className="stat-card-header">

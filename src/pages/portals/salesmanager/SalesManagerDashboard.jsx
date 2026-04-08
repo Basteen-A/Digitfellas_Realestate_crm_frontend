@@ -88,7 +88,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       )}
 
       {/* Stats */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', marginBottom: 24 }}>
+      <div className="stats-grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {statCards.map((card) => (
           <div className="stat-card" key={card.label}>
             <div className="stat-card-header">
@@ -102,7 +102,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       </div>
 
       {/* Two Column Grid */}
-      <div className="crm-grid crm-grid-2">
+      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4">
         {/* Today's Meetings */}
         <div className="crm-card">
           <div className="crm-card-header">

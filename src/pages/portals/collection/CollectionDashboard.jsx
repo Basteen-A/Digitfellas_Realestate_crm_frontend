@@ -39,17 +39,17 @@ const CollectionDashboard = ({ user, onNavigate }) => {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Welcome, {user?.first_name || 'Collection Manager'} 💰</h1>
-          <p>Manage bookings, payments, and customer profiles</p>
+          <p className="hidden sm:block">Manage bookings, payments, and customer profiles</p>
         </div>
         <div className="page-header-actions">
           <button className="crm-btn crm-btn-ghost" onClick={load}>↻ Refresh</button>
         </div>
       </div>
 
-      <div className="col-stats-grid">
+      <div className="col-stats-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(c => (
           <div className="col-stat-card" key={c.label}>
             <div className="col-stat-icon" style={{ background: c.bg, color: c.color }}>{c.icon}</div>

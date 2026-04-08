@@ -3,10 +3,10 @@ import React from 'react';
 const SalesHeadApprovals = ({ user }) => {
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
           <h1>Pending Approvals</h1>
-          <p>Discount requests and escalations awaiting your approval</p>
+          <p className="hidden sm:block">Discount requests and escalations awaiting your approval</p>
         </div>
       </div>
 
