@@ -30,6 +30,9 @@ const TelecallerWorkspace = () => {
           {activeScreen === 'leads' && (
             <LeadWorkspacePage user={user} workspaceRole="TC" />
           )}
+          {activeScreen === 'leads-addnew' && (
+            <LeadWorkspacePage user={user} workspaceRole="TC" autoOpenCreate />
+          )}
           {activeScreen === 'followups' && (
             <TelecallerFollowUps user={user} onNavigate={setActiveScreen} />
           )}

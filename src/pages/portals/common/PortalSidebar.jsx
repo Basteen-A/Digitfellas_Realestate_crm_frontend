@@ -86,7 +86,7 @@ const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName, co
               onClick={() => onNavigate(item.key)}
             >
               <span className="portal-sidebar__icon">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="portal-sidebar__label">{item.label}</span>
               {item.badgeCount > 0 && (
                 <span className={`s-badge s-badge-${item.badgeColor || 'blue'}`}>
                   {item.badgeCount}

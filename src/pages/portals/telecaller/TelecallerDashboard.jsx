@@ -73,7 +73,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         </div>
         <div className="page-header-actions flex-wrap">
           <button className="crm-btn crm-btn-ghost" onClick={loadDashboard}>↻ Refresh</button>
-          <button className="crm-btn crm-btn-primary" onClick={() => onNavigate?.('addlead')}>➕ Add Lead</button>
+          <button className="crm-btn crm-btn-primary" onClick={() => onNavigate?.('leads-addnew')}>➕ Add Lead</button>
         </div>
       </div>
 

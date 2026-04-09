@@ -44,6 +44,10 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
 
   const handleNavigate = (key) => {
     setActiveScreen(key);
+    // Auto-collapse sidebar on desktop after navigating
+    if (window.innerWidth >= 1024) {
+      setSidebarCollapsed(true);
+    }
   };
 
   const initials = useMemo(() => {

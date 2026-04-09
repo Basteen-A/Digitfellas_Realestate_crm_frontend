@@ -24,7 +24,9 @@
 }
 
 .portal-sidebar.collapsed .portal-sidebar__brand-icon,
-.portal-sidebar.collapsed .portal-sidebar__nav span,
+.portal-sidebar.collapsed .portal-sidebar__label,
+.portal-sidebar.collapsed .portal-sidebar__group-label,
+.portal-sidebar.collapsed .s-badge,
 .portal-sidebar.collapsed .portal-sidebar__user-info,
 .portal-sidebar.collapsed .portal-sidebar__chevron {
   display: none;
@@ -37,6 +39,31 @@
 
 .portal-sidebar.collapsed .portal-sidebar__user {
   justify-content: center;
+}
+
+/* ── Hover-to-expand: collapsed sidebar auto-opens on mouse hover ── */
+.portal-sidebar.collapsed:hover {
+  width: 250px;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+  z-index: 60;
+}
+
+.portal-sidebar.collapsed:hover .portal-sidebar__brand-icon,
+.portal-sidebar.collapsed:hover .portal-sidebar__label,
+.portal-sidebar.collapsed:hover .portal-sidebar__group-label,
+.portal-sidebar.collapsed:hover .s-badge,
+.portal-sidebar.collapsed:hover .portal-sidebar__user-info,
+.portal-sidebar.collapsed:hover .portal-sidebar__chevron {
+  display: block;
+}
+
+.portal-sidebar.collapsed:hover .portal-sidebar__link {
+  justify-content: flex-start;
+  padding: 8px 16px;
+}
+
+.portal-sidebar.collapsed:hover .portal-sidebar__user {
+  justify-content: flex-start;
 }
 
 @media (max-width: 1023px) {
@@ -59,7 +86,9 @@
   }
 
   .portal-sidebar.mobile-open.collapsed .portal-sidebar__brand-icon,
-  .portal-sidebar.mobile-open.collapsed .portal-sidebar__nav span,
+  .portal-sidebar.mobile-open.collapsed .portal-sidebar__label,
+  .portal-sidebar.mobile-open.collapsed .portal-sidebar__group-label,
+  .portal-sidebar.mobile-open.collapsed .s-badge,
   .portal-sidebar.mobile-open.collapsed .portal-sidebar__user-info,
   .portal-sidebar.mobile-open.collapsed .portal-sidebar__chevron {
     display: block;
