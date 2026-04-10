@@ -134,6 +134,11 @@ const leadWorkflowApi = {
     const { data } = await api.patch(`/leads/${leadId}/reassign-sm`, { newSMId, note });
     return data;
   },
+
+  getUserWithScore: async (userId) => {
+    const { data } = await api.get(`/leads/user/${userId}/score`);
+    return data;
+  },
 };
 
 export default leadWorkflowApi;

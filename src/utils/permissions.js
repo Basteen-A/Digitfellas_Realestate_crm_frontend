@@ -50,6 +50,7 @@ export const routePermissions = {
   '/super-admin/lead-stages': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/closed-lost-reasons': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/booking-cancel-reasons': ROLE_GROUPS.ADMIN_LEVEL,
+  '/super-admin/workflow-actions': ROLE_GROUPS.ADMIN_LEVEL,
 };
 
 export const canAccessRoute = (user, path) => {

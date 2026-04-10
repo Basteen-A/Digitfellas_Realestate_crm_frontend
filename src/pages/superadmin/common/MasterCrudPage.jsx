@@ -255,9 +255,36 @@ const MasterCrudPage = ({ config }) => {
           <p>Manage master records used across the CRM workflow.</p>
         </div>
 
-        <button type="button" className="master-page__primary" onClick={openCreate}>
-          + Add
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {config.api.seed && (
+            <button
+              type="button"
+              className="master-page__secondary"
+              onClick={async () => {
+                if (window.confirm('This will add default records if none exist. Continue?')) {
+                  try {
+                    const res = await config.api.seed();
+                    if (res.message) {
+                      toast.success(res.message);
+                    } else {
+                      toast.success('Seeded successfully');
+                    }
+                    loadList();
+                  } catch (err) {
+                    console.error('Seed error:', err);
+                    const msg = err.response?.data?.message || err.message || 'Seed failed';
+                    toast.error(msg);
+                  }
+                }
+              }}
+            >
+              Seed Defaults
+            </button>
+          )}
+          <button type="button" className="master-page__primary" onClick={openCreate}>
+            + Add
+          </button>
+        </div>
       </header>
 
       <div className="master-page__toolbar">
@@ -306,19 +333,19 @@ const MasterCrudPage = ({ config }) => {
             {!loading &&
               rows.map((row) => (
                 <tr key={row.id}>
-                  {(config.columns || []).map((col) => {
+                  {(config.columns || []).map((col, colIdx) => {
                     const raw = col.render ? col.render(row) : getValueByPath(row, col.path);
                     const display = raw ?? '-';
                     if (col.type === 'boolean') {
                       return (
-                        <td key={col.header}>
+                        <td key={col.name || colIdx}>
                           <span className={`status-pill ${display ? 'status-pill--on' : 'status-pill--off'}`}>
                             {display ? 'Yes' : 'No'}
                           </span>
                         </td>
                       );
                     }
-                    return <td key={col.header}>{String(display)}</td>;
+                    return <td key={col.name || colIdx}>{String(display)}</td>;
                   })}
                   <td>
                     <div className="master-table__actions">

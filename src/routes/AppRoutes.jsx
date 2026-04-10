@@ -16,6 +16,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import Dashboard from '../pages/dashboard';
 import Profile from '../pages/profile/Profile';
 import ChangePassword from '../pages/profile/ChangePassword';
+import LeadDetailsPage from '../pages/portals/common/LeadDetailsPage';
 import NotFound from '../pages/NotFound';
 
 import Locations from '../pages/superadmin/Locations';
@@ -33,6 +34,7 @@ import BookingStatuses from '../pages/superadmin/BookingStatuses';
 import LeadStages from '../pages/superadmin/LeadStages';
 import ClosedLostReasons from '../pages/superadmin/ClosedLostReasons';
 import BookingCancelReasons from '../pages/superadmin/BookingCancelReasons';
+import WorkflowActions from '../pages/superadmin/WorkflowActions/WorkflowActionList';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
@@ -90,6 +92,7 @@ const AppRoutes = () => {
 
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/change-password" element={<ChangePassword />} />
+          <Route path="/lead/:id" element={<LeadDetailsPage />} />
 
           <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
             <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />
@@ -108,6 +111,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/lead-stages" element={<LeadStages />} />
             <Route path="/super-admin/closed-lost-reasons" element={<ClosedLostReasons />} />
             <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />
+            <Route path="/super-admin/workflow-actions" element={<WorkflowActions />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

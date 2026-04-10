@@ -29,4 +29,5 @@ export const SUPER_ADMIN_MASTER_ROUTES = [
   { path: 'lead-stages', label: 'Lead Stage' },
   { path: 'closed-lost-reasons', label: 'Closed-Lost Reasons' },
   { path: 'booking-cancel-reasons', label: 'Booking Cancel Reasons' },
+  { path: 'workflow-actions', label: 'Workflow Actions' },
 ];

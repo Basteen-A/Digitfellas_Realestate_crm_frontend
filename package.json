@@ -2,6 +2,7 @@
   "name": "realestate-crm-client",
   "version": "1.0.0",
   "private": true,
+  "proxy": "http://localhost:5000",
   "description": "Real Estate CRM - React frontend",
   "scripts": {
     "dev": "react-scripts start",

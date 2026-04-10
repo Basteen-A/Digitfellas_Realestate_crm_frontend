@@ -13,6 +13,7 @@ import bookingStatusApi from '../../../api/bookingStatusApi';
 import leadStageApi from '../../../api/leadStageApi';
 import closedLostReasonApi from '../../../api/closedLostReasonApi';
 import bookingCancelReasonApi from '../../../api/bookingCancelReasonApi';
+import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
   (items || []).map((item) => ({
@@ -43,6 +44,16 @@ const loadUserTypeOptions = async () => {
 const loadUserOptions = async () => {
   const response = await userApi.getDropdown();
   return asOptions(response.data, (item) => `${item.first_name} ${item.last_name} - ${item.email}`);
+};
+
+const loadLeadStageOptions = async () => {
+  const response = await leadStageApi.getDropdown();
+  return asOptions(response.data, (item) => `${item.stage_name} (${item.stage_code})`, 'stage_code');
+};
+
+const loadLeadStatusOptions = async () => {
+  const response = await leadStatusApi.getDropdown();
+  return asOptions(response.data, (item) => `${item.status_name} (${item.status_code})`, 'status_code');
 };
 
 const commonSimpleColumns = [
@@ -463,6 +474,103 @@ export const masterConfigs = {
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  workflowActions: {
+    title: 'Workflow Actions',
+    api: {
+      getAll: async () => {
+        const { data } = await api.get('/workflow-actions');
+        return data;
+      },
+      create: async (data) => {
+        const { data: result } = await api.post('/workflow-actions', data);
+        return result;
+      },
+      update: async (id, data) => {
+        const { data: result } = await api.put(`/workflow-actions/${id}`, data);
+        return result;
+      },
+      delete: async (id) => {
+        const { data: result } = await api.delete(`/workflow-actions/${id}`);
+        return result;
+      },
+      seed: async () => {
+        const { data } = await api.post('/workflow-actions/seed');
+        return data;
+      },
+    },
+    columns: [
+      { header: 'ID', path: 'id', width: 60 },
+      { header: 'Role', path: 'role', width: 80 },
+      { header: 'Code', path: 'code' },
+      { header: 'Label', path: 'label' },
+      { header: 'Tone', path: 'tone', width: 100 },
+      { header: 'Target Stage', path: 'targetStageCode' },
+      { header: 'Target Status', path: 'targetStatusCode' },
+      { header: 'Active', path: 'isActive', width: 80, type: 'boolean' },
+    ],
+    fields: [
+      {
+        name: 'role',
+        label: 'Role',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'TC', label: 'Telecaller (TC)' },
+          { value: 'SM', label: 'Sales Manager (SM)' },
+          { value: 'SH', label: 'Sales Head (SH)' },
+          { value: 'COL', label: 'Collection (COL)' },
+        ],
+      },
+      { name: 'code', label: 'Action Code', type: 'text', required: true, placeholder: 'e.g. TC_CONNECTED_INTERESTED' },
+      { name: 'label', label: 'Label', type: 'text', required: true, placeholder: 'e.g. Mark Interested' },
+      {
+        name: 'tone',
+        label: 'Tone',
+        type: 'select',
+        options: [
+          { value: 'primary', label: 'Primary (Blue)' },
+          { value: 'secondary', label: 'Secondary (Gray)' },
+          { value: 'success', label: 'Success (Green)' },
+          { value: 'warning', label: 'Warning (Yellow)' },
+          { value: 'danger', label: 'Danger (Red)' },
+        ],
+      },
+      { name: 'targetStageCode', label: 'Target Stage', type: 'select', loadOptions: loadLeadStageOptions },
+      { name: 'targetStatusCode', label: 'Target Status', type: 'select', loadOptions: loadLeadStatusOptions },
+      { name: 'needsFollowUp', label: 'Needs Follow-up', type: 'checkbox' },
+      { name: 'needsReason', label: 'Needs Reason', type: 'checkbox' },
+      {
+        name: 'reasonCategory',
+        label: 'Reason Category',
+        type: 'select',
+        options: [
+          { value: 'COLD', label: 'COLD' },
+          { value: 'JUNK', label: 'JUNK' },
+          { value: 'TC_DROP', label: 'TC_DROP' },
+          { value: 'SM_DROP', label: 'SM_DROP' },
+          { value: 'SH_DROP', label: 'SH_DROP' },
+          { value: 'COL_CANCEL', label: 'COL_CANCEL' },
+        ],
+      },
+      { name: 'needsAssignee', label: 'Needs Assignee', type: 'checkbox' },
+      {
+        name: 'assigneeRole',
+        label: 'Assignee Role',
+        type: 'select',
+        options: [
+          { value: 'TC', label: 'Telecaller (TC)' },
+          { value: 'SM', label: 'Sales Manager (SM)' },
+          { value: 'SH', label: 'Sales Head (SH)' },
+          { value: 'COL', label: 'Collection (COL)' },
+        ],
+      },
+      { name: 'needsSvDetails', label: 'Needs Site Visit Details', type: 'checkbox' },
+      { name: 'needsCustomerProfile', label: 'Needs Customer Profile', type: 'checkbox' },
+      { name: 'displayOrder', label: 'Display Order', type: 'number' },
+      { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },
 };

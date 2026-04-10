@@ -49,6 +49,7 @@ const adminSidebar = [
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
+      { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
     ],
   },
 ];

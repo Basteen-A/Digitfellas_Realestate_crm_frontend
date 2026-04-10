@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
@@ -74,6 +75,7 @@ const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
 };
 
 const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
+  const navigate = useNavigate();
   const wsTitle = getWorkspaceTitle(workspaceRole);
 
 
@@ -965,7 +967,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     </td>
                     <td>{lead.nextFollowUpAt ? formatDateTime(lead.nextFollowUpAt) : '-'}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}>
+                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/lead/${lead.id}`); }}>
                         View
                       </button>
                     </td>
