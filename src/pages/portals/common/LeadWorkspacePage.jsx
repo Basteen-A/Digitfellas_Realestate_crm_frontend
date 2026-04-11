@@ -7,6 +7,7 @@ import locationApi from '../../../api/locationApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import leadTypeApi from '../../../api/leadTypeApi';
+import siteVisitApi from '../../../api/siteVisitApi';
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -46,6 +47,7 @@ const initialNewLead = {
   secondaryRequirement: '',
   latitude: null,
   longitude: null,
+  assigned_to: '', // '' = unassigned, user.id = assigned to that user
 };
 
 const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50, 75, 100];
@@ -74,6 +76,54 @@ const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
+const getAssigneeRoleForAction = (action, workspaceRole) => {
+  if (!action) return 'SM';
+  if (action.code === 'TC_SV_DONE') return 'SM';
+  if (action.code === 'SM_SITE_VISIT') return 'SH';
+  if (workspaceRole === 'SM' && action.needsSvDetails) return 'SH';
+  if (action.assigneeRole) return action.assigneeRole;
+  if (workspaceRole === 'SH') return 'COL';
+  if (workspaceRole === 'SM') return 'SH';
+  return 'SM';
+};
+
+const FilterDropdown = ({ label, options, selectedValues, onToggle, onClear }) => (
+  <details className="lead-filter-dropdown">
+    <summary className="lead-filter-dropdown__summary">
+      <span>{label}</span>
+      <span className="lead-filter-dropdown__count">{selectedValues.length ? selectedValues.length : 'All'}</span>
+    </summary>
+    <div className="lead-filter-dropdown__menu">
+      <div className="lead-filter-dropdown__menu-head">
+        <strong>{label}</strong>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onClear();
+          }}
+        >
+          Clear
+        </button>
+      </div>
+      {options.length === 0 ? (
+        <p className="lead-filter-dropdown__empty">No options</p>
+      ) : (
+        options.map((opt) => (
+          <label key={opt.value} className="lead-filter-dropdown__item">
+            <input
+              type="checkbox"
+              checked={selectedValues.includes(opt.value)}
+              onChange={() => onToggle(opt.value)}
+            />
+            <span>{opt.label}</span>
+          </label>
+        ))
+      )}
+    </div>
+  </details>
+);
+
 const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const navigate = useNavigate();
   const wsTitle = getWorkspaceTitle(workspaceRole);
@@ -85,12 +135,32 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Leads ──
   const [filters, setFilters] = useState({ search: '', stageCode: '', statusCode: '', includeClosed: false });
+  const [multiFilters, setMultiFilters] = useState({ stageCodes: [], statusCodes: [], sources: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [leads, setLeads] = useState([]);
   const [selectedLeadId, setSelectedLeadId] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
+
+  // ── Quick Action Popup ──
+  const [quickActionLead, setQuickActionLead] = useState(null);
+  const [quickFollowUpDate, setQuickFollowUpDate] = useState('');
+  const [quickActionLoading, setQuickActionLoading] = useState(false);
+  const [quickWorkflowAction, setQuickWorkflowAction] = useState(null);
+  const [quickActionSiteVisits, setQuickActionSiteVisits] = useState([]);
+  const [quickWorkflowForm, setQuickWorkflowForm] = useState({
+    note: '',
+    nextFollowUpAt: '',
+    assignToUserId: '',
+    closureReasonId: '',
+    reason: '',
+    svDate: '',
+    svProjectId: '',
+  });
+
+  // ── Tabs for TC ──
+  const [activeTab, setActiveTab] = useState('mine'); // 'all' | 'new' | 'mine'
 
   // ── Create lead ──
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -107,6 +177,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const locationDropdownRef = useRef(null);
   const [locationSearch, setLocationSearch] = useState('');
+  const [creating, setCreating] = useState(false);
 
   // ── Workflow actions ──
   const [noteDraft, setNoteDraft] = useState('');
@@ -128,6 +199,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [recordSvForm, setRecordSvForm] = useState({
     svDate: new Date().toISOString().split('T')[0],
     svProjectId: '',
+    assignToUserId: '',
     motivationType: '',
     primaryRequirement: '',
     secondaryRequirement: '',
@@ -141,6 +213,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [closureModalOpen, setClosureModalOpen] = useState(false);
   const [closureModalAction, setClosureModalAction] = useState(null);
   const [closureForm, setClosureForm] = useState({ closureReasonId: '', reason: '' });
+
+  // ── Phone Validation States ──
+  const [phoneCheck, setPhoneCheck] = useState({ status: 'idle', leadInfo: null });
+  const [altPhoneCheck, setAltPhoneCheck] = useState({ status: 'idle', leadInfo: null });
   const [closureReasons, setClosureReasons] = useState([]);
 
   // ── Customer Profile Modal (SH Close Won) ──
@@ -201,6 +277,68 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         needsFollowUp: Boolean(action.needsFollowUp),
       };
     }), [roleActions, selectedLead?.stageCode, stageByCode]);
+
+  const toolbarStageOptions = useMemo(() => {
+    if (workspaceRole === 'SM') {
+      return stageOptions.filter((o) => ['SITE_VISIT', 'OPPORTUNITY'].includes(o.value));
+    }
+    if (workspaceRole === 'SH') {
+      return stageOptions.filter((o) => ['OPPORTUNITY', 'BOOKING'].includes(o.value));
+    }
+    return stageOptions.filter((o) => ['LEAD', 'CONTACTED', 'QUALIFIED'].includes(o.value));
+  }, [workspaceRole, stageOptions]);
+
+  const sourceFilterOptions = useMemo(() => {
+    const sourceSet = new Set();
+
+    sourceOptions.forEach((s) => {
+      const name = (s?.source_name || s?.name || '').trim();
+      if (name) sourceSet.add(name);
+    });
+
+    leads.forEach((l) => {
+      const name = (l?.source || '').trim();
+      if (name) sourceSet.add(name);
+    });
+
+    return Array.from(sourceSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ value: name.toLowerCase(), label: name }));
+  }, [sourceOptions, leads]);
+
+  const filteredLeads = useMemo(() => {
+    const searchText = (filters.search || '').trim().toLowerCase();
+
+    return leads.filter((lead) => {
+      if (searchText) {
+        const haystack = [
+          lead.fullName,
+          lead.phone,
+          lead.email,
+          lead.leadNumber,
+          lead.source,
+          lead.subSource,
+          lead.project,
+          lead.location,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        if (!haystack.includes(searchText)) return false;
+      }
+
+      if (multiFilters.stageCodes.length && !multiFilters.stageCodes.includes(lead.stageCode)) return false;
+      if (multiFilters.statusCodes.length && !multiFilters.statusCodes.includes(lead.statusCode)) return false;
+
+      if (multiFilters.sources.length) {
+        const sourceKey = (lead.source || '').toLowerCase();
+        if (!multiFilters.sources.includes(sourceKey)) return false;
+      }
+
+      return true;
+    });
+  }, [leads, filters.search, multiFilters]);
 
   const selectedSourceSubSources = useMemo(
     () => subSourceMap[newLeadForm.lead_source_id] || [],
@@ -263,12 +401,25 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     else setLoading(true);
 
     try {
-      const resp = await leadWorkflowApi.getLeads({
+      // Build query params based on active tab for TC
+      const queryParams = {
         roleCode: workspaceRole,
         page: 1,
         limit: 100,
         ...filters,
-      });
+      };
+
+      // Add tab-specific filters for TC
+      if (workspaceRole === 'TC') {
+        if (activeTab === 'new') {
+          queryParams.unassigned = true;
+        } else {
+          // 'mine' (default) — only show leads assigned to this user
+          queryParams.assignedToMe = true;
+        }
+      }
+
+      const resp = await leadWorkflowApi.getLeads(queryParams);
 
       const data = resp.data || [];
       setLeads(data);
@@ -276,7 +427,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
       const selectedExists = data.some((l) => l.id === selectedLeadId);
       if (selectedLeadId && !selectedExists) {
-        // Previously selected lead is no longer in list (filtered out) — clear selection
         setSelectedLeadId(null);
       }
       if (!data.length) {
@@ -288,7 +438,55 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, workspaceRole, selectedLeadId]);
+  }, [filters, workspaceRole, selectedLeadId, activeTab]);
+
+  // ── Duplicate Phone Check ──
+  const checkDuplicatePhone = async (phone, type) => {
+    if (!phone || phone.length < 10) {
+      if (type === 'primary') setPhoneCheck({ status: 'idle', leadInfo: null });
+      else setAltPhoneCheck({ status: 'idle', leadInfo: null });
+      return;
+    }
+
+    if (type === 'primary') setPhoneCheck({ status: 'checking', leadInfo: null });
+    else setAltPhoneCheck({ status: 'checking', leadInfo: null });
+
+    try {
+      const resp = await leadWorkflowApi.searchLeadByPhone(phone);
+      const results = resp.data || [];
+      const exactMatch = results.find(l =>
+        l.phone === phone ||
+        l.alternate_phone === phone ||
+        l.whatsapp_number === phone
+      );
+
+      if (exactMatch) {
+        const info = `${exactMatch.lead_number || 'Lead'} - ${exactMatch.first_name || ''} ${exactMatch.last_name || ''} (${exactMatch.stage?.stage_name || 'No Stage'})`;
+        if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info });
+        else setAltPhoneCheck({ status: 'exists', leadInfo: info });
+      } else {
+        if (type === 'primary') setPhoneCheck({ status: 'valid', leadInfo: null });
+        else setAltPhoneCheck({ status: 'valid', leadInfo: null });
+      }
+    } catch {
+      if (type === 'primary') setPhoneCheck({ status: 'idle', leadInfo: null });
+      else setAltPhoneCheck({ status: 'idle', leadInfo: null });
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkDuplicatePhone(newLeadForm.phone, 'primary');
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [newLeadForm.phone]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkDuplicatePhone(newLeadForm.alternate_phone, 'alt');
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [newLeadForm.alternate_phone]);
 
   // ── Load lead detail ──
   const loadLeadDetail = useCallback(async (leadId) => {
@@ -305,8 +503,23 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadLeads(); }, [filters, workspaceRole]);
+  useEffect(() => { loadLeads(); }, [filters, workspaceRole, activeTab]);
   useEffect(() => { loadLeadDetail(selectedLeadId); }, [selectedLeadId, loadLeadDetail]);
+
+  const toggleMultiFilter = (key, value) => {
+    setMultiFilters((prev) => {
+      const existing = prev[key] || [];
+      const next = existing.includes(value)
+        ? existing.filter((v) => v !== value)
+        : [...existing, value];
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const clearMultiFilters = () => {
+    setMultiFilters({ stageCodes: [], statusCodes: [], sources: [] });
+    setFilters((prev) => ({ ...prev, search: '' }));
+  };
 
   // ── Create lead options ──
   const loadCreateOptions = async () => {
@@ -348,10 +561,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   };
 
   useEffect(() => {
-    if (!newLeadOpen) return;
     loadCreateOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newLeadOpen]);
+  }, []);
 
   // Auto-open create modal when navigated from dashboard
   useEffect(() => {
@@ -452,6 +664,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         return;
       }
 
+      setCreating(true);
+      // Handle assigned_to - convert "self" to actual user ID
+      const assignedToValue = newLeadForm.assigned_to === 'self' ? user?.id : (newLeadForm.assigned_to || null);
+
       await leadWorkflowApi.createLead({
         ...newLeadForm,
         budgetMin,
@@ -468,14 +684,26 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         location: selectedLocation ? `${selectedLocation.location_name}${selectedLocation.city ? `, ${selectedLocation.city}` : ''}` : null,
         nextFollowUpAt: newLeadForm.nextFollowUpAt ? new Date(newLeadForm.nextFollowUpAt).toISOString() : undefined,
         lead_status_id: newLeadForm.lead_status_id || undefined,
+        assigned_to: assignedToValue,
       });
       toast.success('Lead created successfully');
       setNewLeadForm({ ...initialNewLead, latitude: null, longitude: null });
       setNewLeadOpen(false);
       setProjectDropdownOpen(false);
-      loadLeads({ silent: true });
+      if (workspaceRole === 'TC') {
+        const targetTab = assignedToValue ? 'mine' : 'new';
+        if (activeTab !== targetTab) {
+          setActiveTab(targetTab);
+        } else {
+          loadLeads({ silent: true });
+        }
+      } else {
+        loadLeads({ silent: true });
+      }
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to create lead'));
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -496,7 +724,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!selectedLead) return;
 
     // SV Done: open SV Done modal instead of direct action
-    if (action.code === 'TC_SV_COMPLETED') {
+    if (action.code === 'TC_SV_DONE') {
       setSvDoneForm({ assignToUserId: '', svDate: '', svProjectId: '', note: actionState.note || '' });
       setSvDoneModalOpen(true);
       loadAssignableUsers('SM');
@@ -504,8 +732,27 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       return;
     }
 
+    if (action.code === 'SM_SITE_VISIT' || (workspaceRole === 'SM' && action.needsSvDetails)) {
+      setRecordSvForm({
+        svDate: new Date().toISOString().split('T')[0],
+        svProjectId: selectedLead.projectId || '',
+        assignToUserId: '',
+        motivationType: selectedLead.motivationType || '',
+        primaryRequirement: selectedLead.primaryRequirement || '',
+        secondaryRequirement: selectedLead.secondaryRequirement || '',
+        latitude: null,
+        longitude: null,
+        timeSpent: '',
+        note: actionState.note || '',
+      });
+      setRecordSvModalOpen(true);
+      loadAssignableUsers('SH');
+      if (!projectOptions.length) loadCreateOptions();
+      return;
+    }
+
     // SH Close Won: open Customer Profile modal
-    if (action.needsCustomerProfile || action.code === 'SH_BOOKING_APPROVE') {
+    if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
       setStagePopupOpen(false);
       setCustomerProfileForm({
         date_of_birth: '', pan_number: '', aadhar_number: '',
@@ -554,12 +801,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleRecordSvSubmit = async () => {
     if (!selectedLead) return;
+    if (!recordSvForm.assignToUserId) { toast.error('Sales Head selection is mandatory'); return; }
     if (!recordSvForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
     if (!recordSvForm.motivationType) { toast.error('Buying Motivation is mandatory'); return; }
     if (!recordSvForm.latitude) { toast.error('Geo-location is mandatory'); return; }
 
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SM_SITE_VISIT', {
+        assignToUserId: recordSvForm.assignToUserId,
         svDate: recordSvForm.svDate,
         svProjectId: recordSvForm.svProjectId,
         motivationType: recordSvForm.motivationType,
@@ -570,7 +819,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         time_spent: recordSvForm.timeSpent ? Number(recordSvForm.timeSpent) : undefined,
         note: recordSvForm.note?.trim() || undefined,
       });
-      toast.success('Site visit recorded successfully');
+      toast.success('Site visit recorded and lead moved to selected Sales Head');
       setRecordSvModalOpen(false);
       loadLeadDetail(selectedLead.id);
       loadLeads({ silent: true });
@@ -587,7 +836,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!svDoneForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
 
     try {
-      await leadWorkflowApi.transitionLead(selectedLead.id, 'TC_SV_COMPLETED', {
+      await leadWorkflowApi.transitionLead(selectedLead.id, 'TC_SV_DONE', {
         assignToUserId: svDoneForm.assignToUserId,
         svDate: svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : undefined,
         svProjectId: svDoneForm.svProjectId,
@@ -651,7 +900,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         permanent_pincode: f.permanent_pincode,
       };
 
-      await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING_APPROVE', {
+      await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING', {
         assignToUserId: f.assignToUserId,
         note: f.note?.trim() || 'Booking approved by Sales Head',
         customerProfile: {
@@ -699,7 +948,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!selectedLead || !stagePopupData.actionCode) return;
 
     const popupAction = roleActions.find((a) => a.code === stagePopupData.actionCode);
-    if (popupAction?.needsCustomerProfile || popupAction?.code === 'SH_BOOKING_APPROVE') {
+    if (popupAction?.needsCustomerProfile || popupAction?.code === 'SH_BOOKING') {
       setStagePopupOpen(false);
       setCustomerProfileForm({
         date_of_birth: '', pan_number: '', aadhar_number: '',
@@ -782,6 +1031,142 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
   };
 
+  const resetQuickWorkflowForm = useCallback(() => {
+    setQuickWorkflowAction(null);
+    setQuickWorkflowForm({
+      note: '',
+      nextFollowUpAt: '',
+      assignToUserId: '',
+      closureReasonId: '',
+      reason: '',
+      svDate: '',
+      svProjectId: '',
+    });
+  }, []);
+
+  const runQuickWorkflowAction = useCallback(async (action, payload = {}) => {
+    if (!quickActionLead || !action) return;
+
+    setQuickActionLoading(true);
+    try {
+      await leadWorkflowApi.transitionLead(quickActionLead.id, action.code, payload);
+      toast.success(`${action.label} updated successfully`);
+      resetQuickWorkflowForm();
+      setQuickFollowUpDate('');
+      setQuickActionLead(null);
+      setSelectedLeadId(null);
+      loadLeads({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, `Failed to ${action.label.toLowerCase()}`));
+    } finally {
+      setQuickActionLoading(false);
+    }
+  }, [quickActionLead, loadLeads, resetQuickWorkflowForm]);
+
+  const handleQuickWorkflowActionSelect = async (action) => {
+    if (!action) return;
+
+    const targetAssigneeRole = getAssigneeRoleForAction(action, workspaceRole);
+
+    const needsInput = Boolean(
+      action.needsFollowUp
+      || action.needsAssignee
+      || action.needsReason
+      || action.needsSvDetails
+      || action.needsCustomerProfile
+      || action.code === 'TC_SV_DONE'
+    );
+
+    if (!needsInput) {
+      await runQuickWorkflowAction(action, {});
+      return;
+    }
+
+    if (action.needsAssignee) {
+      loadAssignableUsers(targetAssigneeRole);
+    }
+
+    if (action.needsSvDetails || action.code === 'TC_SV_DONE') {
+      loadAssignableUsers(targetAssigneeRole);
+      if (!projectOptions.length) loadCreateOptions();
+    }
+
+    if (action.needsReason && action.reasonCategory) {
+      try {
+        const resp = await leadWorkflowApi.getClosureReasons(action.reasonCategory);
+        setClosureReasons(resp.data?.rows || resp.data || []);
+      } catch {
+        setClosureReasons([]);
+      }
+    }
+
+    setQuickWorkflowAction(action);
+    setQuickWorkflowForm({
+      note: '',
+      nextFollowUpAt: '',
+      assignToUserId: '',
+      closureReasonId: '',
+      reason: '',
+      svDate: '',
+      svProjectId: '',
+    });
+  };
+
+  const handleQuickWorkflowSubmit = async () => {
+    if (!quickActionLead || !quickWorkflowAction) return;
+
+    if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
+      toast.error('Please complete booking approval from the lead details page.');
+      return;
+    }
+
+    const payload = {
+      note: quickWorkflowForm.note.trim() || undefined,
+    };
+
+    if (quickWorkflowAction.needsFollowUp) {
+      if (!quickWorkflowForm.nextFollowUpAt) {
+        toast.error('Follow-up date is required');
+        return;
+      }
+      payload.nextFollowUpAt = new Date(quickWorkflowForm.nextFollowUpAt).toISOString();
+    }
+
+    if (quickWorkflowAction.needsAssignee || quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') {
+      const assigneeRole = getAssigneeRoleForAction(quickWorkflowAction, workspaceRole);
+      if (!quickWorkflowForm.assignToUserId) {
+        toast.error(assigneeRole === 'SH' ? 'Please select Sales Head negotiator' : 'Please select user to assign');
+        return;
+      }
+      payload.assignToUserId = quickWorkflowForm.assignToUserId;
+    }
+
+    if (quickWorkflowAction.needsReason) {
+      if (!quickWorkflowForm.closureReasonId && !quickWorkflowForm.reason.trim()) {
+        toast.error('A closure reason is mandatory');
+        return;
+      }
+      payload.closureReasonId = quickWorkflowForm.closureReasonId || undefined;
+      payload.reason = quickWorkflowForm.reason.trim() || undefined;
+      if (!payload.note) payload.note = payload.reason;
+    }
+
+    if (quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') {
+      if (!quickWorkflowForm.svDate) {
+        toast.error('Site Visit date is mandatory');
+        return;
+      }
+      if (!quickWorkflowForm.svProjectId) {
+        toast.error('Project visited is mandatory');
+        return;
+      }
+      payload.svDate = new Date(quickWorkflowForm.svDate).toISOString();
+      payload.svProjectId = quickWorkflowForm.svProjectId;
+    }
+
+    await runQuickWorkflowAction(quickWorkflowAction, payload);
+  };
+
 
 
   // Loading state
@@ -814,49 +1199,51 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         </div>
       </header>
 
-      {/* ── Stats (5-column telecaller KPI cards) ── */}
-      <div className="lead-workspace__stats">
-        <article className="workspace-stat-card">
-          <div className="stat-card__header">
-            <div className="stat-card__label">Total Leads</div>
-            <div className="stat-card__icon" style={{ background: '#dbeafe', color: '#2563eb' }}>👥</div>
-          </div>
-          <div className="stat-card__value">{computedStats.totalLeads}</div>
-          <div className="stat-card__change change-up">↑ {computedStats.newToday} new today</div>
-        </article>
-        <article className="workspace-stat-card">
-          <div className="stat-card__header">
-            <div className="stat-card__label">Today's Follow Ups</div>
-            <div className="stat-card__icon" style={{ background: '#fef3c7', color: '#d97706' }}>📞</div>
-          </div>
-          <div className="stat-card__value" style={{ color: '#d97706' }}>{computedStats.todayFollowUps}</div>
-          <div className={`stat-card__change ${computedStats.overdueFollowUps > 0 ? 'change-down' : 'change-neutral'}`}>{computedStats.overdueFollowUps} overdue</div>
-        </article>
-        <article className="workspace-stat-card">
-          <div className="stat-card__header">
-            <div className="stat-card__label">SV Scheduled</div>
-            <div className="stat-card__icon" style={{ background: '#cffafe', color: '#0891b2' }}>🏠</div>
-          </div>
-          <div className="stat-card__value" style={{ color: '#0891b2' }}>{computedStats.svScheduled}</div>
-          <div className="stat-card__change change-neutral">Active</div>
-        </article>
-        <article className="workspace-stat-card">
-          <div className="stat-card__header">
-            <div className="stat-card__label">SV Completed</div>
-            <div className="stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}>✅</div>
-          </div>
-          <div className="stat-card__value" style={{ color: '#16a34a' }}>{computedStats.svCompleted}</div>
-          <div className="stat-card__change change-neutral">This month</div>
-        </article>
-        <article className="workspace-stat-card">
-          <div className="stat-card__header">
-            <div className="stat-card__label">Missed Followups</div>
-            <div className="stat-card__icon" style={{ background: '#fee2e2', color: '#dc2626' }}>📵</div>
-          </div>
-          <div className="stat-card__value" style={{ color: '#dc2626' }}>{computedStats.missedFollowups}</div>
-          <div className="stat-card__change change-neutral">Retry needed</div>
-        </article>
-      </div>
+      {/* ── Stats (KPI cards) - Hide for Telecaller ── */}
+      {workspaceRole !== 'TC' && workspaceRole !== 'SM' && (
+        <div className="lead-workspace__stats">
+          <article className="workspace-stat-card">
+            <div className="stat-card__header">
+              <div className="stat-card__label">Total Leads</div>
+              <div className="stat-card__icon" style={{ background: '#dbeafe', color: '#2563eb' }}>👥</div>
+            </div>
+            <div className="stat-card__value">{computedStats.totalLeads}</div>
+            <div className="stat-card__change change-up">↑ {computedStats.newToday} new today</div>
+          </article>
+          <article className="workspace-stat-card">
+            <div className="stat-card__header">
+              <div className="stat-card__label">Today's Follow Ups</div>
+              <div className="stat-card__icon" style={{ background: '#fef3c7', color: '#d97706' }}>📞</div>
+            </div>
+            <div className="stat-card__value" style={{ color: '#d97706' }}>{computedStats.todayFollowUps}</div>
+            <div className={`stat-card__change ${computedStats.overdueFollowUps > 0 ? 'change-down' : 'change-neutral'}`}>{computedStats.overdueFollowUps} overdue</div>
+          </article>
+          <article className="workspace-stat-card">
+            <div className="stat-card__header">
+              <div className="stat-card__label">SV Scheduled</div>
+              <div className="stat-card__icon" style={{ background: '#cffafe', color: '#0891b2' }}>🏠</div>
+            </div>
+            <div className="stat-card__value" style={{ color: '#0891b2' }}>{computedStats.svScheduled}</div>
+            <div className="stat-card__change change-neutral">Active</div>
+          </article>
+          <article className="workspace-stat-card">
+            <div className="stat-card__header">
+              <div className="stat-card__label">SV Completed</div>
+              <div className="stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}>✅</div>
+            </div>
+            <div className="stat-card__value" style={{ color: '#16a34a' }}>{computedStats.svCompleted}</div>
+            <div className="stat-card__change change-neutral">This month</div>
+          </article>
+          <article className="workspace-stat-card">
+            <div className="stat-card__header">
+              <div className="stat-card__label">Missed Followups</div>
+              <div className="stat-card__icon" style={{ background: '#fee2e2', color: '#dc2626' }}>📵</div>
+            </div>
+            <div className="stat-card__value" style={{ color: '#dc2626' }}>{computedStats.missedFollowups}</div>
+            <div className="stat-card__change change-neutral">Retry needed</div>
+          </article>
+        </div>
+      )}
 
       {/* ── Toolbar ── */}
       <div className="lead-workspace__toolbar">
@@ -868,22 +1255,30 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             placeholder="Search leads by name, phone, email..."
           />
         </div>
-        <select value={filters.stageCode} onChange={(e) => setFilters((p) => ({ ...p, stageCode: e.target.value }))}>
-          <option value="">All Stages</option>
-          {workspaceRole === 'SM' ? (
-            <option value="NEGOTIATION">Negotiation</option>
-          ) : (
-            stageOptions.filter((o) => ['NEW', 'CONTACTED', 'FOLLOW_UP', 'SV_SCHEDULED', 'SV_COMPLETED'].includes(o.value)).map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))
-          )}
-        </select>
-        <select value={filters.statusCode} onChange={(e) => setFilters((p) => ({ ...p, statusCode: e.target.value }))}>
-          <option value="">All Statuses</option>
-          {statusOptions.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <FilterDropdown
+          label="Stages"
+          options={toolbarStageOptions}
+          selectedValues={multiFilters.stageCodes}
+          onToggle={(value) => toggleMultiFilter('stageCodes', value)}
+          onClear={() => setMultiFilters((prev) => ({ ...prev, stageCodes: [] }))}
+        />
+        <FilterDropdown
+          label="Statuses"
+          options={statusOptions}
+          selectedValues={multiFilters.statusCodes}
+          onToggle={(value) => toggleMultiFilter('statusCodes', value)}
+          onClear={() => setMultiFilters((prev) => ({ ...prev, statusCodes: [] }))}
+        />
+        <FilterDropdown
+          label="Sources"
+          options={sourceFilterOptions}
+          selectedValues={multiFilters.sources}
+          onToggle={(value) => toggleMultiFilter('sources', value)}
+          onClear={() => setMultiFilters((prev) => ({ ...prev, sources: [] }))}
+        />
+        <button type="button" className="lead-workspace__clear-filters" onClick={clearMultiFilters}>
+          Clear All
+        </button>
       </div>
 
       {/* ── Main Grid ── */}
@@ -892,8 +1287,47 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         <div className="lead-workspace__list-card">
           <div className="lead-workspace__list-header">
             <h2>Leads</h2>
-            <small>{meta.total} records</small>
+            <small>
+              {filteredLeads.length}
+              {meta.total !== filteredLeads.length ? ` / ${meta.total}` : ''} records
+            </small>
           </div>
+
+          {/* Tabs for TC */}
+          {workspaceRole === 'TC' && (
+            <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px', borderBottom: '1px solid var(--border-secondary)' }}>
+              <button
+                onClick={() => setActiveTab('mine')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: activeTab === 'mine' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeTab === 'mine' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                My Leads
+              </button>
+              <button
+                onClick={() => setActiveTab('new')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: activeTab === 'new' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeTab === 'new' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                }}
+              >
+                New (Unassigned)
+              </button>
+            </div>
+          )}
 
           <div className="lead-workspace__table-wrap">
             <table className="lead-workspace__table">
@@ -901,25 +1335,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <tr>
                   <th>Lead</th>
                   <th>Contact</th>
-                  <th>Source / Project</th>
-                  <th>Stage</th>
                   <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Follow-up</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th>Source</th>
+                  <th>Medium</th>
+                  <th>Project/Location</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr><td colSpan={8} className="lead-workspace__empty">Loading leads...</td></tr>
                 )}
-                {!loading && !leads.length && (
+                {!loading && !filteredLeads.length && (
                   <tr><td colSpan={8} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
-                {!loading && leads.map((lead) => (
+                {!loading && filteredLeads.map((lead) => (
                   <tr
                     key={lead.id}
-                    onClick={() => setSelectedLeadId(lead.id)}
+                    onClick={() => navigate(`/portal/lead/${lead.id}`)}
                     className={selectedLeadId === lead.id ? 'is-selected' : ''}
                   >
                     <td>
@@ -931,22 +1364,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <small>{lead.email || '-'}</small>
                     </td>
                     <td>
-                      <p>{lead.source || '-'}</p>
-                      <small>{(lead.interestedProjects?.length > 0
-                        ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
-                        : lead.project) || '-'}</small>
-                      {(lead.interestedLocations?.length > 0 || lead.location) && (
-                        <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>📍 {lead.interestedLocations?.length > 0
-                          ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
-                          : lead.location}</small>
-                      )}
-                    </td>
-                    <td>
-                      <span className="stage-chip" style={{ backgroundColor: lead.stageColor + '22', color: lead.stageColor, borderColor: lead.stageColor }}>
-                        {lead.stageLabel}
-                      </span>
-                    </td>
-                    <td>
                       <span
                         className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
                         style={{ backgroundColor: lead.statusColor + '22', color: lead.statusColor, borderColor: lead.statusColor }}
@@ -955,20 +1372,63 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </span>
                     </td>
                     <td>
-                      <p className="assigned-name">{lead.assignedToUserName || <em>Unassigned</em>}</p>
-                      {lead.assignedRole && (
-                        <small className="assigned-role">{ROLE_LABELS[lead.assignedRole] || lead.assignedRole}</small>
-                      )}
-                      {lead.handoff?.fromUserName && (
-                        <small className="assigned-handoff">
-                          ↪ from {lead.handoff.fromUserName}
-                        </small>
-                      )}
+                      <p>{lead.source || '-'}</p>
                     </td>
-                    <td>{lead.nextFollowUpAt ? formatDateTime(lead.nextFollowUpAt) : '-'}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/lead/${lead.id}`); }}>
-                        View
+                    <td>
+                      <p>{lead.subSource || '-'}</p>
+                    </td>
+                    <td>
+                      <small>{(() => {
+                        const projText = lead.interestedProjects?.length > 0
+                          ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
+                          : lead.project;
+                        return projText || '-';
+                      })()}</small>
+                      {(() => {
+                        const locText = lead.interestedLocations?.length > 0
+                          ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
+                          : lead.location;
+                        return locText ? (
+                          <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>Location: {locText}</small>
+                        ) : null;
+                      })()}
+                    </td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {!lead.assignedToUserId && activeTab === 'new' && (
+                        <button
+                          className="crm-btn crm-btn-sm"
+                          style={{ marginRight: 4, background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await leadWorkflowApi.assignLead(lead.id, user.id, 'Self-assigned from pool');
+                              toast.success(`Lead claimed: ${lead.fullName}`);
+                              setSelectedLeadId(null);
+                              setActiveTab('mine');
+                            } catch (err) {
+                              toast.error(getErrorMessage(err, 'Failed to claim lead'));
+                            }
+                          }}
+                        >
+                          🙋 Claim
+                        </button>
+                      )}
+                      <button
+                        className="crm-btn crm-btn-primary crm-btn-sm"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          resetQuickWorkflowForm();
+                          setQuickActionLead(lead);
+                          // Load site visits for this lead
+                          try {
+                            const svResp = await siteVisitApi.getAll({ lead_id: lead.id });
+                            setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
+                          } catch {
+                            setQuickActionSiteVisits([]);
+                          }
+                        }}
+                      >
+                        Action
                       </button>
                     </td>
                   </tr>
@@ -1002,334 +1462,336 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </div>
               <div className="lead-workspace__modal-body">
 
-              {/* Two-column layout */}
-              <div className="lead-detail__two-col">
-                {/* Left Column */}
-                <div className="lead-detail__left">
-                  {/* Lead Details Grid */}
-                  <h3 className="lead-detail__section-title">Lead Details</h3>
-                  <div className="lead-detail__info-grid">
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Source</div>
-                      <div className="lead-detail__info-value">{selectedLead.source || '-'}</div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Project(s)</div>
-                      <div className="lead-detail__info-value" style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                        {(selectedLead.interestedProjects?.length > 0
-                          ? selectedLead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean)
-                          : [selectedLead.project].filter(Boolean)
-                        ).length > 0
-                          ? (selectedLead.interestedProjects?.length > 0
+                {/* Two-column layout */}
+                <div className="lead-detail__two-col">
+                  {/* Left Column */}
+                  <div className="lead-detail__left">
+                    {/* Lead Details Grid */}
+                    <h3 className="lead-detail__section-title">Lead Details</h3>
+                    <div className="lead-detail__info-grid">
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Source</div>
+                        <div className="lead-detail__info-value">{selectedLead.source || '-'}</div>
+                      </div>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Project(s)</div>
+                        <div className="lead-detail__info-value" style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {(selectedLead.interestedProjects?.length > 0
+                            ? selectedLead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean)
+                            : [selectedLead.project].filter(Boolean)
+                          ).length > 0
+                            ? (selectedLead.interestedProjects?.length > 0
                               ? selectedLead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean)
                               : [selectedLead.project].filter(Boolean)
                             ).map((name, i) => (
                               <span key={i} style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{name}</span>
                             ))
-                          : '-'
-                        }
+                            : '-'
+                          }
+                        </div>
                       </div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Location(s)</div>
-                      <div className="lead-detail__info-value" style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                        {(selectedLead.interestedLocations?.length > 0
-                          ? selectedLead.interestedLocations.map((lid) => {
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Location(s)</div>
+                        <div className="lead-detail__info-value" style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {(selectedLead.interestedLocations?.length > 0
+                            ? selectedLead.interestedLocations.map((lid) => {
                               const l = locationOptions.find((loc) => loc.id === lid);
                               return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
                             }).filter(Boolean)
-                          : [selectedLead.location].filter(Boolean)
-                        ).length > 0
-                          ? (selectedLead.interestedLocations?.length > 0
+                            : [selectedLead.location].filter(Boolean)
+                          ).length > 0
+                            ? (selectedLead.interestedLocations?.length > 0
                               ? selectedLead.interestedLocations.map((lid) => {
-                                  const l = locationOptions.find((loc) => loc.id === lid);
-                                  return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
-                                }).filter(Boolean)
+                                const l = locationOptions.find((loc) => loc.id === lid);
+                                return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
+                              }).filter(Boolean)
                               : [selectedLead.location].filter(Boolean)
                             ).map((name, i) => (
                               <span key={i} style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{name}</span>
                             ))
-                          : '-'
-                        }
+                            : '-'
+                          }
+                        </div>
                       </div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Budget</div>
-                      <div className="lead-detail__info-value">
-                        {(selectedLead.budgetMin != null || selectedLead.budgetMax != null)
-                          ? `${selectedLead.budgetMin != null ? formatCurrency(selectedLead.budgetMin) : '0'} – ${selectedLead.budgetMax != null ? formatCurrency(selectedLead.budgetMax) : 'No limit'}`
-                          : 'Not specified'}
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Budget</div>
+                        <div className="lead-detail__info-value">
+                          {(selectedLead.budgetMin != null || selectedLead.budgetMax != null)
+                            ? `${selectedLead.budgetMin != null ? formatCurrency(selectedLead.budgetMin) : '0'} – ${selectedLead.budgetMax != null ? formatCurrency(selectedLead.budgetMax) : 'No limit'}`
+                            : 'Not specified'}
+                        </div>
                       </div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">WhatsApp</div>
-                      <div className="lead-detail__info-value">{selectedLead.whatsappNumber || '-'}</div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Alternate Phone</div>
-                      <div className="lead-detail__info-value">{selectedLead.alternatePhone || '-'}</div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Purpose / Config</div>
-                      <div className="lead-detail__info-value">{selectedLead.purpose || '-'} / {selectedLead.configuration || '-'}</div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Campaign</div>
-                      <div className="lead-detail__info-value">{selectedLead.campaignName || '-'}</div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Assigned To</div>
-                      <div className="lead-detail__info-value" style={{ color: 'var(--accent-blue)' }}>
-                        {selectedLead.assignedToUserName || 'Unassigned'}
-                        {selectedLead.assignedRole && (
-                          <small style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({ROLE_LABELS[selectedLead.assignedRole] || selectedLead.assignedRole})</small>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">WhatsApp</div>
+                        <div className="lead-detail__info-value">{selectedLead.whatsappNumber || '-'}</div>
+                      </div>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Alternate Phone</div>
+                        <div className="lead-detail__info-value">{selectedLead.alternatePhone || '-'}</div>
+                      </div>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Purpose / Config</div>
+                        <div className="lead-detail__info-value">{selectedLead.purpose || '-'} / {selectedLead.configuration || '-'}</div>
+                      </div>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Campaign</div>
+                        <div className="lead-detail__info-value">{selectedLead.campaignName || '-'}</div>
+                      </div>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Assigned To</div>
+                        <div className="lead-detail__info-value" style={{ color: 'var(--accent-blue)' }}>
+                          {selectedLead.assignedToUserName || 'Unassigned'}
+                          {selectedLead.assignedRole && (
+                            <small style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({ROLE_LABELS[selectedLead.assignedRole] || selectedLead.assignedRole})</small>
+                          )}
+                        </div>
+                      </div>
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Last Handoff</div>
+                        <div className="lead-detail__info-value">
+                          {selectedLead.handoff?.fromUserName
+                            ? `${selectedLead.handoff.fromUserName} → ${selectedLead.handoff.toUserName || 'Unassigned'}`
+                            : 'No handoff yet'}
+                        </div>
+                        {selectedLead.handoff?.handedOffAt && (
+                          <small>{formatDateTime(selectedLead.handoff.handedOffAt)}</small>
                         )}
                       </div>
-                    </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Last Handoff</div>
-                      <div className="lead-detail__info-value">
-                        {selectedLead.handoff?.fromUserName
-                          ? `${selectedLead.handoff.fromUserName} → ${selectedLead.handoff.toUserName || 'Unassigned'}`
-                          : 'No handoff yet'}
+                      <div className="lead-detail__info-item">
+                        <div className="crm-form-label">Lead Number</div>
+                        <div className="lead-detail__info-value">{selectedLead.leadNumber}</div>
                       </div>
-                      {selectedLead.handoff?.handedOffAt && (
-                        <small>{formatDateTime(selectedLead.handoff.handedOffAt)}</small>
-                      )}
                     </div>
-                    <div className="lead-detail__info-item">
-                      <div className="crm-form-label">Lead Number</div>
-                      <div className="lead-detail__info-value">{selectedLead.leadNumber}</div>
-                    </div>
-                  </div>
 
-                  {/* Behavioral Analysis (New) */}
-                  {(selectedLead.motivationType || selectedLead.primaryRequirement || selectedLead.geoLat) && (
-                    <>
-                      <h3 className="lead-detail__section-title" style={{ marginTop: 24 }}>🧠 Behavioral Analysis</h3>
-                      <div className="lead-detail__info-grid">
-                        {selectedLead.motivationType && (
-                          <div className="lead-detail__info-item">
-                            <div className="crm-form-label">Buying Motivation</div>
-                            <div className="lead-detail__info-value">
-                              <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
-                                {selectedLead.motivationType}
-                              </span>
+                    {/* Behavioral Analysis (New) */}
+                    {(selectedLead.motivationType || selectedLead.primaryRequirement || selectedLead.geoLat) && (
+                      <>
+                        <h3 className="lead-detail__section-title" style={{ marginTop: 24 }}>🧠 Behavioral Analysis</h3>
+                        <div className="lead-detail__info-grid">
+                          {selectedLead.motivationType && (
+                            <div className="lead-detail__info-item">
+                              <div className="crm-form-label">Buying Motivation</div>
+                              <div className="lead-detail__info-value">
+                                <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                                  {selectedLead.motivationType}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {selectedLead.primaryRequirement && (
-                          <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
-                            <div className="crm-form-label">Primary Requirement</div>
-                            <div className="lead-detail__info-value">{selectedLead.primaryRequirement}</div>
-                          </div>
-                        )}
-                        {selectedLead.secondaryRequirement && (
-                          <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
-                            <div className="crm-form-label">Secondary / Site Remarks</div>
-                            <div className="lead-detail__info-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{selectedLead.secondaryRequirement}</div>
-                          </div>
-                        )}
-                        {selectedLead.geoLat && (
-                          <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
-                            <div className="crm-form-label">Creation Location</div>
-                            <div className="lead-detail__info-value">
-                              <a 
-                                href={`https://www.google.com/maps?q=${selectedLead.geoLat},${selectedLead.geoLong}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-                              >
-                                📍 View Location on Map
-                              </a>
+                          )}
+                          {selectedLead.primaryRequirement && (
+                            <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
+                              <div className="crm-form-label">Primary Requirement</div>
+                              <div className="lead-detail__info-value">{selectedLead.primaryRequirement}</div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
+                          )}
+                          {selectedLead.secondaryRequirement && (
+                            <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
+                              <div className="crm-form-label">Secondary / Site Remarks</div>
+                              <div className="lead-detail__info-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{selectedLead.secondaryRequirement}</div>
+                            </div>
+                          )}
+                          {selectedLead.geoLat && (
+                            <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
+                              <div className="crm-form-label">Creation Location</div>
+                              <div className="lead-detail__info-value">
+                                <a
+                                  href={`https://www.google.com/maps?q=${selectedLead.geoLat},${selectedLead.geoLong}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                                >
+                                  📍 View Location on Map
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
 
-                  {/* Quick Actions */}
-                  {!selectedLead.isClosed && (
-                    <>
-                      <h3 className="lead-detail__section-title">Quick Actions</h3>
-                      <div className="lead-detail__quick-actions">
-                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote}>📞 Log Call</button>
-                        {workspaceRole === 'SM' && (
-                          <button 
-                            className="crm-btn crm-btn-primary crm-btn-sm" 
+                    {/* Quick Actions */}
+                    {!selectedLead.isClosed && (
+                      <>
+                        <h3 className="lead-detail__section-title">Quick Actions</h3>
+                        <div className="lead-detail__quick-actions">
+                          <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote}>📞 Log Call</button>
+                          {workspaceRole === 'SM' && (
+                            <button
+                              className="crm-btn crm-btn-primary crm-btn-sm"
+                              onClick={() => {
+                                setRecordSvForm({
+                                  svDate: new Date().toISOString().split('T')[0],
+                                  svProjectId: selectedLead.projectId || '',
+                                  assignToUserId: '',
+                                  motivationType: selectedLead.motivationType || '',
+                                  primaryRequirement: selectedLead.primaryRequirement || '',
+                                  secondaryRequirement: selectedLead.secondaryRequirement || '',
+                                  latitude: null,
+                                  longitude: null,
+                                  timeSpent: '',
+                                  note: '',
+                                });
+                                setRecordSvModalOpen(true);
+                                loadAssignableUsers('SH');
+                                if (!projectOptions.length) loadCreateOptions();
+                              }}
+                            >
+                              🏠 Record Site Visit
+                            </button>
+                          )}
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm">💬 WhatsApp</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm">📧 Email</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()}>📝 Add Note</button>
+                          <button
+                            className="crm-btn crm-btn-warning crm-btn-sm"
                             onClick={() => {
-                              setRecordSvForm({
-                                svDate: new Date().toISOString().split('T')[0],
-                                svProjectId: selectedLead.projectId || '',
-                                motivationType: selectedLead.motivationType || '',
-                                primaryRequirement: selectedLead.primaryRequirement || '',
-                                secondaryRequirement: selectedLead.secondaryRequirement || '',
-                                latitude: null,
-                                longitude: null,
-                                timeSpent: '',
-                                note: '',
-                              });
-                              setRecordSvModalOpen(true);
-                              if (!projectOptions.length) loadCreateOptions();
+                              setAssignModalOpen(true);
+                              ['TC', 'SM', 'SH', 'COL'].forEach((r) => loadAssignableUsers(r));
                             }}
                           >
-                            🏠 Record Site Visit
+                            🔄 Reassign
                           </button>
-                        )}
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm">💬 WhatsApp</button>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm">📧 Email</button>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()}>📝 Add Note</button>
-                        <button
-                          className="crm-btn crm-btn-warning crm-btn-sm"
-                          onClick={() => {
-                            setAssignModalOpen(true);
-                            ['TC', 'SM', 'SH', 'COL'].forEach((r) => loadAssignableUsers(r));
+                        </div>
+                      </>
+                    )}
+
+                    {/* Workflow Action Dropdown (replaces chips) */}
+                    {!selectedLead.isClosed && roleActions.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div className="crm-form-label">Workflow Action</div>
+                        <select
+                          className="crm-form-select"
+                          value=""
+                          onChange={(e) => {
+                            const ac = e.target.value;
+                            if (!ac) return;
+                            const action = roleActions.find((a) => a.code === ac);
+                            if (!action) return;
+                            // Special modals (SV Done / Site Visit / Closure) go through handleAction
+                            if (action.code === 'TC_SV_DONE' || action.needsSvDetails || action.needsReason || action.needsCustomerProfile) {
+                              handleAction(action);
+                            } else {
+                              // All other actions go through the stage popup for follow-up + reason
+                              setStagePopupData({
+                                actionCode: action.code,
+                                stageLabel: action.label,
+                                followUpAt: '',
+                                reason: '',
+                                needsFollowUp: Boolean(action.needsFollowUp),
+                              });
+                              setStagePopupOpen(true);
+                            }
+                            e.target.value = '';
                           }}
                         >
-                          🔄 Reassign
-                        </button>
+                          <option value="">Select an action...</option>
+                          {roleActions.map((action) => (
+                            <option key={action.code} value={action.code}>{action.label}</option>
+                          ))}
+                        </select>
                       </div>
-                    </>
-                  )}
-
-                  {/* Workflow Action Dropdown (replaces chips) */}
-                  {!selectedLead.isClosed && roleActions.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div className="crm-form-label">Workflow Action</div>
-                      <select
-                        className="crm-form-select"
-                        value=""
-                        onChange={(e) => {
-                          const ac = e.target.value;
-                          if (!ac) return;
-                          const action = roleActions.find((a) => a.code === ac);
-                          if (!action) return;
-                          // Special modals (SV Done, Closure) go through handleAction
-                          if (action.code === 'TC_SV_COMPLETED' || action.needsReason || action.needsCustomerProfile) {
-                            handleAction(action);
-                          } else {
-                            // All other actions go through the stage popup for follow-up + reason
-                            setStagePopupData({
-                              actionCode: action.code,
-                              stageLabel: action.label,
-                              followUpAt: '',
-                              reason: '',
-                              needsFollowUp: Boolean(action.needsFollowUp),
-                            });
-                            setStagePopupOpen(true);
-                          }
-                          e.target.value = '';
-                        }}
-                      >
-                        <option value="">Select an action...</option>
-                        {roleActions.map((action) => (
-                          <option key={action.code} value={action.code}>{action.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Update Lead — Stage triggers popup, Status + Follow-up inline */}
-                  <h3 className="lead-detail__section-title">Update Lead</h3>
-                  <div className="lead-detail__update-grid">
-                    <div>
-                      <div className="crm-form-label">Stage</div>
-                      <select className="crm-form-select" value="" onChange={(e) => { if (e.target.value) openStagePopup(e.target.value); }}>
-                        <option value="">{selectedLead.stageLabel} (current)</option>
-                        {stageTransitionOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.stageLabel}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <div className="crm-form-label">Status</div>
-                      <select className="crm-form-select" value={manualStatus} onChange={(e) => setManualStatus(e.target.value)}>
-                        <option value="">Select status</option>
-                        {statusOptions.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}{o.value === selectedLead.statusCode ? ' (current)' : ''}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 16 }}>
-                    <div className="crm-form-label">Next Follow Up</div>
-                    <CalendarPicker
-                      type="datetime"
-                      value={manualNextFollowUpAt ? manualNextFollowUpAt + ':00Z' : ''}
-                      onChange={(val) => setManualNextFollowUpAt(val ? val.slice(0, 16) : '')}
-                      placeholder="Select Date & Time..."
-                      className="lead-detail__calendar-input"
-                    />
-                    <div className="lead-detail__calendar-shortcuts">
-                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
-                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
-                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
-                      <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 16, 0))}>Tomorrow 4 PM</button>
-                      <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 16 }}>
-                    <div className="crm-form-label">Notes</div>
-                    <textarea id="note-input" className="crm-form-input" rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add notes..." />
-                  </div>
-                  <div className="lead-detail__save-bar">
-                    {noteDraft.trim() && (
-                      <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote}>📝 Save Note</button>
                     )}
-                    <button type="button" className="workspace-btn workspace-btn--primary" onClick={handleManualStatusUpdate} disabled={manualUpdateSaving}>
-                      {manualUpdateSaving ? 'Saving...' : '💾 Save Changes'}
-                    </button>
+
+                    {/* Update Lead — Stage triggers popup, Status + Follow-up inline */}
+                    <h3 className="lead-detail__section-title">Update Lead</h3>
+                    <div className="lead-detail__update-grid">
+                      <div>
+                        <div className="crm-form-label">Stage</div>
+                        <select className="crm-form-select" value="" onChange={(e) => { if (e.target.value) openStagePopup(e.target.value); }}>
+                          <option value="">{selectedLead.stageLabel} (current)</option>
+                          {stageTransitionOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.stageLabel}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <div className="crm-form-label">Status</div>
+                        <select className="crm-form-select" value={manualStatus} onChange={(e) => setManualStatus(e.target.value)}>
+                          <option value="">Select status</option>
+                          {statusOptions.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}{o.value === selectedLead.statusCode ? ' (current)' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 16 }}>
+                      <div className="crm-form-label">Next Follow Up</div>
+                      <CalendarPicker
+                        type="datetime"
+                        value={manualNextFollowUpAt ? manualNextFollowUpAt + ':00Z' : ''}
+                        onChange={(val) => setManualNextFollowUpAt(val ? val.slice(0, 16) : '')}
+                        placeholder="Select Date & Time..."
+                        className="lead-detail__calendar-input"
+                      />
+                      <div className="lead-detail__calendar-shortcuts">
+                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
+                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
+                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
+                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 16, 0))}>Tomorrow 4 PM</button>
+                        <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 16 }}>
+                      <div className="crm-form-label">Notes</div>
+                      <textarea id="note-input" className="crm-form-input" rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add notes..." />
+                    </div>
+                    <div className="lead-detail__save-bar">
+                      {noteDraft.trim() && (
+                        <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote}>📝 Save Note</button>
+                      )}
+                      <button type="button" className="workspace-btn workspace-btn--primary" onClick={handleManualStatusUpdate} disabled={manualUpdateSaving}>
+                        {manualUpdateSaving ? 'Saving...' : '💾 Save Changes'}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Right Column — Activity Timeline */}
-                <div className="lead-detail__right">
-                  <h3 className="lead-detail__section-title">Activity Timeline</h3>
-                  <div className="crm-timeline">
-                    {(selectedLead.timeline || []).length === 0 && (
-                      <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>
-                        No activity yet
-                      </p>
-                    )}
-                    {(selectedLead.timeline || []).map((evt) => {
-                      const typeClass = evt.type === 'NOTE_ADDED' ? 'tl-note'
-                        : evt.type === 'STAGE_CHANGE' ? 'tl-stage'
-                        : evt.type === 'STATUS_CHANGE' ? 'tl-stage'
-                        : evt.type === 'REASSIGNMENT' ? 'tl-handoff'
-                        : evt.type === 'CREATED' ? 'tl-system'
-                        : evt.type === 'CLOSED_WON' ? 'tl-call'
-                        : evt.type === 'CLOSED_LOST' ? 'tl-note'
-                        : 'tl-system';
+                  {/* Right Column — Activity Timeline */}
+                  <div className="lead-detail__right">
+                    <h3 className="lead-detail__section-title">Activity Timeline</h3>
+                    <div className="crm-timeline">
+                      {(selectedLead.timeline || []).length === 0 && (
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>
+                          No activity yet
+                        </p>
+                      )}
+                      {(selectedLead.timeline || []).map((evt) => {
+                        const typeClass = evt.type === 'NOTE_ADDED' ? 'tl-note'
+                          : evt.type === 'STAGE_CHANGE' ? 'tl-stage'
+                            : evt.type === 'STATUS_CHANGE' ? 'tl-stage'
+                              : evt.type === 'REASSIGNMENT' ? 'tl-handoff'
+                                : evt.type === 'CREATED' ? 'tl-system'
+                                  : evt.type === 'CLOSED_WON' ? 'tl-call'
+                                    : evt.type === 'CLOSED_LOST' ? 'tl-note'
+                                      : 'tl-system';
 
-                      const typeIcon = evt.type === 'NOTE_ADDED' ? '📝'
-                        : evt.type === 'STAGE_CHANGE' ? '🔄'
-                        : evt.type === 'STATUS_CHANGE' ? '🏷️'
-                        : evt.type === 'REASSIGNMENT' ? '🔀'
-                        : evt.type === 'CREATED' ? '➕'
-                        : evt.type === 'CLOSED_WON' ? '🎉'
-                        : evt.type === 'CLOSED_LOST' ? '❌'
-                        : '📌';
+                        const typeIcon = evt.type === 'NOTE_ADDED' ? '📝'
+                          : evt.type === 'STAGE_CHANGE' ? '🔄'
+                            : evt.type === 'STATUS_CHANGE' ? '🏷️'
+                              : evt.type === 'REASSIGNMENT' ? '🔀'
+                                : evt.type === 'CREATED' ? '➕'
+                                  : evt.type === 'CLOSED_WON' ? '🎉'
+                                    : evt.type === 'CLOSED_LOST' ? '❌'
+                                      : '📌';
 
-                      const typeLabel = evt.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+                        const typeLabel = evt.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
-                      return (
-                        <div key={evt.id} className={`tl-item ${typeClass}`}>
-                          <div className="tl-header">
-                            <span className="tl-type">{typeIcon} {evt.title || typeLabel}</span>
-                            <span className="tl-date">{formatDateTime(evt.at)}</span>
+                        return (
+                          <div key={evt.id} className={`tl-item ${typeClass}`}>
+                            <div className="tl-header">
+                              <span className="tl-type">{typeIcon} {evt.title || typeLabel}</span>
+                              <span className="tl-date">{formatDateTime(evt.at)}</span>
+                            </div>
+                            {evt.description && <div className="tl-text">{evt.description}</div>}
+                            <div className="tl-by">By {evt.by || 'System'}</div>
                           </div>
-                          {evt.description && <div className="tl-text">{evt.description}</div>}
-                          <div className="tl-by">By {evt.by || 'System'}</div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         )}
       </div>
       {/* ── Stage Transition Popup Modal ── */}
@@ -1421,44 +1883,78 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
             <form className="lead-workspace__new-form" onSubmit={handleCreateLead}>
               <div className="lead-workspace__new-form-section">Contact Information</div>
-              <label>
-                Full Name*
-                <input value={newLeadForm.full_name} onChange={(e) => setNewLeadForm((p) => ({ ...p, full_name: e.target.value }))} required placeholder="Enter buyer full name" />
-              </label>
-              <label>
-                Phone*
-                <input value={newLeadForm.phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: e.target.value }))} required placeholder="Primary contact number" />
-              </label>
-              
-              <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
-                  <input 
-                    type="checkbox" 
-                    checked={newLeadForm.whatsappSameAsPhone} 
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsappSameAsPhone: e.target.checked, whatsapp_number: e.target.checked ? '' : p.whatsapp_number }))} 
+              <div className="lead-workspace__new-form-span" style={{ display: 'grid', gridTemplateColumns: '2fr 1.8fr 1.5fr', gap: 16, alignItems: 'end', marginBottom: 16 }}>
+                <label style={{ marginBottom: 0 }}>
+                  <span style={{ display: 'block', marginBottom: 6 }}>Full Name*</span>
+                  <input
+                    value={newLeadForm.full_name}
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, full_name: e.target.value }))}
+                    required
+                    placeholder="Enter buyer full name"
+                    style={{ width: '100%', height: 38 }}
                   />
-                  WhatsApp same as phone
                 </label>
-                {!newLeadForm.whatsappSameAsPhone && (
-                  <label style={{ marginTop: 0 }}>
-                    WhatsApp Number
-                    <input 
-                      value={newLeadForm.whatsapp_number} 
-                      onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value }))} 
-                      placeholder="Enter WhatsApp number"
+
+                <label style={{ marginBottom: 0 }}>
+                  <span style={{ display: 'block', marginBottom: 6 }}>Phone*</span>
+                  <input
+                    value={newLeadForm.phone}
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: e.target.value.replace(/[^0-9+]/g, '') }))}
+                    required
+                    placeholder="Primary contact number"
+                    style={{
+                      width: '100%',
+                      height: 38,
+                      borderColor: phoneCheck.status === 'exists' ? 'var(--accent-red)' : phoneCheck.status === 'valid' ? 'var(--accent-green)' : undefined
+                    }}
+                  />
+                  <div style={{ height: 0, position: 'relative' }}>
+                    {phoneCheck.status === 'exists' && <div style={{ color: 'var(--accent-red)', fontSize: 10, position: 'absolute', top: 4, left: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>⚠️ Exists: {phoneCheck.leadInfo}</div>}
+                    {phoneCheck.status === 'valid' && <div style={{ color: 'var(--accent-green)', fontSize: 10, position: 'absolute', top: 4, left: 0, fontWeight: 600 }}>✅ Valid</div>}
+                  </div>
+                </label>
+
+                <div style={{ height: 38, display: 'flex', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      style={{ width: 13, height: 13, accentColor: 'var(--accent-blue)' }}
+                      checked={newLeadForm.whatsappSameAsPhone}
+                      onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsappSameAsPhone: e.target.checked, whatsapp_number: e.target.checked ? '' : p.whatsapp_number }))}
                     />
+                    WhatsApp same as Phone
                   </label>
-                )}
+                </div>
               </div>
 
-              <label>
-                Alternate Phone (Optional)
-                <input value={newLeadForm.alternate_phone} onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Secondary contact" />
-              </label>
-              <label>
-                Email (Optional)
-                <input type="email" value={newLeadForm.email} onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
-              </label>
+              {!newLeadForm.whatsappSameAsPhone && (
+                <label className="lead-workspace__new-form-span">
+                  WhatsApp Number
+                  <input
+                    value={newLeadForm.whatsapp_number}
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value.replace(/[^0-9+]/g, '') }))}
+                    placeholder="Enter WhatsApp number"
+                  />
+                </label>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label>
+                  Alternate Phone (Optional)
+                  <input
+                    value={newLeadForm.alternate_phone}
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: e.target.value.replace(/[^0-9+]/g, '') }))}
+                    placeholder="Secondary contact"
+                    style={{ borderColor: altPhoneCheck.status === 'exists' ? 'var(--accent-red)' : altPhoneCheck.status === 'valid' ? 'var(--accent-green)' : undefined }}
+                  />
+                  {altPhoneCheck.status === 'exists' && <div style={{ color: 'var(--accent-red)', fontSize: 11, marginTop: 4, fontWeight: 600 }}>⚠️ Already exists: {altPhoneCheck.leadInfo}</div>}
+                  {altPhoneCheck.status === 'valid' && <div style={{ color: 'var(--accent-green)', fontSize: 11, marginTop: 4, fontWeight: 600 }}>✅ Valid Number</div>}
+                </label>
+                <label>
+                  Email (Optional)
+                  <input type="email" value={newLeadForm.email} onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
+                </label>
+              </div>
 
               <div className="lead-workspace__new-form-section">Lead Classification</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1511,16 +2007,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <div style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>
                       <input type="text" placeholder="Search projects..." value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, outline: 'none' }} />
                     </div>
-                    <div style={{ maxHeight: 180, overflowY: 'auto' }}>
-                      {filteredProjectOptions.map((project) => (
-                        <label key={project.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f1f5f9' }}
-                          onMouseEnter={(ev) => ev.currentTarget.style.background = '#f8fafc'}
-                          onMouseLeave={(ev) => ev.currentTarget.style.background = 'transparent'}
-                        >
-                          <input type="checkbox" checked={(newLeadForm.project_ids || []).includes(project.id)} onChange={() => toggleProject(project.id)} />
-                          {project.project_name}{project.project_code ? ` (${project.project_code})` : ''}
-                        </label>
-                      ))}
+                    <div style={{ maxHeight: 220, overflowY: 'auto', padding: 12 }}>
+                      <div className="checkbox-grid">
+                        {filteredProjectOptions.map((project) => (
+                          <label key={project.id} className="checkbox-item">
+                            <input type="checkbox" checked={(newLeadForm.project_ids || []).includes(project.id)} onChange={() => toggleProject(project.id)} />
+                            <span>{project.project_name}{project.project_code ? ` (${project.project_code})` : ''}</span>
+                          </label>
+                        ))}
+                      </div>
                       {filteredProjectOptions.length === 0 && <div style={{ padding: 12, color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>No projects found</div>}
                     </div>
                   </div>
@@ -1574,16 +2069,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <div style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>
                       <input type="text" placeholder="Search locations..." value={locationSearch} onChange={(e) => setLocationSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, outline: 'none' }} />
                     </div>
-                    <div style={{ maxHeight: 180, overflowY: 'auto' }}>
-                      {filteredLocationOptions.map((loc) => (
-                        <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f1f5f9' }}
-                          onMouseEnter={(ev) => ev.currentTarget.style.background = '#f8fafc'}
-                          onMouseLeave={(ev) => ev.currentTarget.style.background = 'transparent'}
-                        >
-                          <input type="checkbox" checked={(newLeadForm.location_ids || []).includes(loc.id)} onChange={() => toggleLocation(loc.id)} />
-                          {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
-                        </label>
-                      ))}
+                    <div style={{ maxHeight: 220, overflowY: 'auto', padding: 12 }}>
+                      <div className="checkbox-grid">
+                        {filteredLocationOptions.map((loc) => (
+                          <label key={loc.id} className="checkbox-item">
+                            <input type="checkbox" checked={(newLeadForm.location_ids || []).includes(loc.id)} onChange={() => toggleLocation(loc.id)} />
+                            <span>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</span>
+                          </label>
+                        ))}
+                      </div>
                       {filteredLocationOptions.length === 0 && <div style={{ padding: 12, color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>No locations found</div>}
                     </div>
                   </div>
@@ -1642,6 +2136,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </div>
               )}
 
+              {/* Assign To - TC can create unassigned leads */}
+              {workspaceRole === 'TC' && (
+                <div className="lead-workspace__new-form-span">
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Assign To</div>
+                  <select
+                    value={newLeadForm.assigned_to}
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, assigned_to: e.target.value }))}
+                    style={{ width: '100%', padding: '10px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-card)' }}
+                  >
+                    <option value="">-- Unassigned (New Lead) --</option>
+                    <option value="self">Assign to Me</option>
+                  </select>
+                  <small style={{ color: 'var(--text-secondary)', fontSize: 11, marginTop: 4, display: 'block' }}>
+                    Select "Assign to Me" to add to your leads, or leave unassigned for pool
+                  </small>
+                </div>
+              )}
+
               {/* SM Behavioral Metadata */}
               {workspaceRole === 'SM' && (
                 <>
@@ -1678,7 +2190,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       placeholder="Additional requirements or site visit remarks"
                     />
                   </label>
-                  
+
                   <div className="lead-workspace__new-form-span" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, display: 'block' }}>📍 Geo-location*</span>
@@ -1710,11 +2222,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </>
               )}
 
-              <div className="lead-workspace__new-form-footer">
-                {createOptionsLoading && <small>Loading options...</small>}
+              <div className="lead-workspace__modal-footer">
                 <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setNewLeadOpen(false)}>Cancel</button>
-                <button type="submit" className="workspace-btn workspace-btn--primary" disabled={createOptionsLoading}>
-                  {createOptionsLoading ? 'Loading...' : 'Create Lead'}
+                <button
+                  type="submit"
+                  className="workspace-btn workspace-btn--primary"
+                  disabled={creating || phoneCheck.status === 'exists' || (workspaceRole === 'TC' && !newLeadForm.lead_status_id)}
+                >
+                  {creating ? 'Creating...' : '🚀 Create Lead'}
                 </button>
               </div>
             </form>
@@ -1742,7 +2257,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <label>
                   Date *
-                  <CalendarPicker 
+                  <CalendarPicker
                     type="date"
                     value={recordSvForm.svDate ? new Date(recordSvForm.svDate).toISOString() : ''}
                     onChange={(val) => setRecordSvForm(p => ({ ...p, svDate: val ? val.split('T')[0] : '' }))}
@@ -1760,6 +2275,23 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <option value="">Select Project...</option>
                   {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
                 </select>
+              </label>
+
+              <label style={{ marginBottom: 14 }}>
+                Select Sales Head (Negotiator) *
+                <select
+                  value={recordSvForm.assignToUserId}
+                  onChange={(e) => setRecordSvForm((p) => ({ ...p, assignToUserId: e.target.value }))}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">Select Sales Head...</option>
+                  {(assignableUsers.SH || []).map((u) => (
+                    <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}</option>
+                  ))}
+                </select>
+                <small style={{ display: 'block', marginTop: 4, color: 'var(--text-muted)' }}>
+                  Any Sales Manager can log visit details; lead ownership does not move to that SM. Lead will transfer to selected Sales Head.
+                </small>
               </label>
 
               <label style={{ marginBottom: 14 }}>
@@ -1817,7 +2349,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   type="button"
                   className="workspace-btn workspace-btn--primary"
                   onClick={handleRecordSvSubmit}
-                  disabled={!recordSvForm.latitude || !recordSvForm.svProjectId || !recordSvForm.motivationType}
+                  disabled={!recordSvForm.assignToUserId || !recordSvForm.latitude || !recordSvForm.svProjectId || !recordSvForm.motivationType}
                 >
                   ✓ Record Visit
                 </button>
@@ -1921,7 +2453,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               <label>
                 Date of Site Visit *
-                <CalendarPicker 
+                <CalendarPicker
                   type="date"
                   value={svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : ''}
                   onChange={(val) => setSvDoneForm(p => ({ ...p, svDate: val ? val.split('T')[0] : '' }))}
@@ -2184,6 +2716,390 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <button type="button" className="workspace-btn workspace-btn--success" onClick={handleCustomerProfileSubmit} disabled={manualUpdateSaving}>
                   {manualUpdateSaving ? 'Processing...' : '🏆 Approve Booking & Create Customer'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Action Drawer */}
+      {quickActionLead && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 999
+        }} onClick={() => {
+          setQuickActionLead(null);
+          setQuickFollowUpDate('');
+          resetQuickWorkflowForm();
+        }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed', top: 0, right: 0, bottom: 0, width: 400, maxWidth: '100vw',
+              background: 'var(--bg-card)', boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+              zIndex: 1000, display: 'flex', flexDirection: 'column',
+              animation: 'slideInRight 0.2s ease-out'
+            }}>
+            <style>{`@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid var(--border-primary)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: 'linear-gradient(135deg, #1e293b, #334155)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, color: '#fff' }}>⚡ Quick Actions</h3>
+                <small style={{ color: '#94a3b8' }}>{quickActionLead.fullName} · {quickActionLead.phone}</small>
+              </div>
+              <button
+                onClick={() => {
+                  setQuickActionLead(null);
+                  setQuickFollowUpDate('');
+                  resetQuickWorkflowForm();
+                }}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', fontSize: 18, cursor: 'pointer', color: '#fff', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ flex: 1, padding: 0, overflowY: 'auto' }}>
+              {/* Lead Summary Card */}
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary, #e2e8f0)', background: 'var(--bg-secondary, #f8fafc)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: 12 }}>
+                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Stage:</span> <span style={{ color: quickActionLead.stageColor || 'var(--text-primary)', fontWeight: 600 }}>{quickActionLead.stageLabel || '-'}</span></div>
+                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Status:</span> <span style={{ color: quickActionLead.statusColor || 'var(--text-primary)', fontWeight: 600 }}>{quickActionLead.statusLabel || '-'}</span></div>
+                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Source:</span> {quickActionLead.source || '-'}</div>
+                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Project:</span> {quickActionLead.project || '-'}</div>
+                </div>
+              </div>
+
+              {/* Claim Lead (for unassigned) */}
+              {workspaceRole === 'TC' && !quickActionLead.assignedToUserId && (
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                  <button
+                    className="crm-btn crm-btn-primary"
+                    style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 600, borderRadius: 10, background: 'linear-gradient(135deg, #059669, #10b981)' }}
+                    disabled={quickActionLoading}
+                    onClick={async () => {
+                      setQuickActionLoading(true);
+                      try {
+                        await leadWorkflowApi.assignLead(quickActionLead.id, user.id, 'Self-assigned from pool');
+                        toast.success('Lead claimed! Added to My Leads.');
+                        setQuickActionLead(null);
+                        resetQuickWorkflowForm();
+                        setSelectedLeadId(null);
+                        setActiveTab('mine');
+                      } catch (err) {
+                        toast.error(getErrorMessage(err, 'Failed to claim lead'));
+                      } finally {
+                        setQuickActionLoading(false);
+                      }
+                    }}
+                  >
+                    {quickActionLoading ? 'Claiming...' : '🙋 Claim This Lead (Assign to Me)'}
+                  </button>
+                </div>
+              )}
+
+              {/* Workflow Actions */}
+              {!quickActionLead.isClosed && (
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                  {workspaceRole === 'SM' && (
+                    <button
+                      className="crm-btn crm-btn-success crm-btn-sm"
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 10,
+                        fontSize: 13, fontWeight: 700, marginBottom: 16,
+                        background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', border: 'none'
+                      }}
+                      onClick={() => {
+                        setSelectedLeadId(quickActionLead.id);
+                        setRecordSvForm({
+                          svDate: new Date().toISOString().split('T')[0],
+                          svProjectId: quickActionLead.projectId || '',
+                          assignToUserId: '',
+                          motivationType: quickActionLead.motivationType || '',
+                          primaryRequirement: quickActionLead.primaryRequirement || '',
+                          secondaryRequirement: quickActionLead.secondaryRequirement || '',
+                          latitude: null,
+                          longitude: null,
+                          timeSpent: '',
+                          note: '',
+                        });
+                        setRecordSvModalOpen(true);
+                        setQuickActionLead(null);
+                        loadAssignableUsers('SH');
+                      }}
+                    >
+                      🏠 Record Site Visit
+                    </button>
+                  )}
+
+                  <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Workflow Actions</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {roleActions.filter(a => a.tone === 'primary' || a.tone === 'success').map((action) => (
+                      <button
+                        key={action.code}
+                        className={`crm-btn crm-btn-${action.tone === 'success' ? 'success' : 'primary'} crm-btn-sm`}
+                        style={{ width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500 }}
+                        disabled={quickActionLoading}
+                        onClick={() => handleQuickWorkflowActionSelect(action)}
+                      >
+                        {action.tone === 'success' ? '✅' : '📋'} {action.label}
+                      </button>
+                    ))}
+                    {roleActions.filter(a => a.tone === 'secondary').map((action) => (
+                      <button
+                        key={action.code}
+                        className="crm-btn crm-btn-ghost crm-btn-sm"
+                        style={{ width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, border: '1px solid var(--border-primary)' }}
+                        disabled={quickActionLoading}
+                        onClick={() => handleQuickWorkflowActionSelect(action)}
+                      >
+                        🔄 {action.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {quickWorkflowAction && (
+                    <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 10, background: 'var(--bg-secondary, #f8fafc)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>
+                        {quickWorkflowAction.label}
+                      </div>
+
+                      {quickWorkflowAction.needsFollowUp && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Follow-up Date & Time *</div>
+                          <CalendarPicker
+                            type="datetime"
+                            value={quickWorkflowForm.nextFollowUpAt}
+                            onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
+                            placeholder="Select follow-up date & time..."
+                            minDate={new Date().toISOString()}
+                          />
+                        </div>
+                      )}
+
+                      {(quickWorkflowAction.needsAssignee || quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') && (
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                          {getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
+                          <select
+                            value={quickWorkflowForm.assignToUserId}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, assignToUserId: e.target.value }))}
+                            style={{ width: '100%', marginTop: 4 }}
+                          >
+                            <option value="">{getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head...' : 'Select user...'}</option>
+                            {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || []).map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+
+                      {(quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') && (
+                        <>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                            Site Visit Date *
+                            <input
+                              type="date"
+                              value={quickWorkflowForm.svDate}
+                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svDate: e.target.value }))}
+                              style={{ width: '100%', marginTop: 4 }}
+                            />
+                          </label>
+
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                            Project Visited *
+                            <select
+                              value={quickWorkflowForm.svProjectId}
+                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                              style={{ width: '100%', marginTop: 4 }}
+                            >
+                              <option value="">Select project...</option>
+                              {projectOptions.map((p) => (
+                                <option key={p.id} value={p.id}>{p.project_name}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </>
+                      )}
+
+                      {quickWorkflowAction.needsReason && (
+                        <>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                            Closure Reason
+                            <select
+                              value={quickWorkflowForm.closureReasonId}
+                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, closureReasonId: e.target.value }))}
+                              style={{ width: '100%', marginTop: 4 }}
+                            >
+                              <option value="">Select reason...</option>
+                              {closureReasons.map((r) => (
+                                <option key={r.id} value={r.id}>{r.reason || r.reason_text || r.label || 'Reason'}</option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                            Reason Note
+                            <textarea
+                              rows={2}
+                              value={quickWorkflowForm.reason}
+                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, reason: e.target.value }))}
+                              placeholder="Enter reason..."
+                              style={{ width: '100%', marginTop: 4 }}
+                            />
+                          </label>
+                        </>
+                      )}
+
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                        Note
+                        <textarea
+                          rows={2}
+                          value={quickWorkflowForm.note}
+                          onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))}
+                          placeholder="Add a note..."
+                          style={{ width: '100%', marginTop: 4 }}
+                        />
+                      </label>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-ghost crm-btn-sm"
+                          style={{ flex: 1 }}
+                          onClick={resetQuickWorkflowForm}
+                          disabled={quickActionLoading}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-primary crm-btn-sm"
+                          style={{ flex: 1 }}
+                          onClick={handleQuickWorkflowSubmit}
+                          disabled={quickActionLoading}
+                        >
+                          {quickActionLoading ? 'Saving...' : 'Submit Action'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div style={{ borderTop: '1px dashed var(--border-primary, #e2e8f0)', margin: '12px 0', position: 'relative' }}>
+                    <span style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', padding: '0 8px', fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Disqualify</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {roleActions.filter(a => a.tone === 'danger' || a.tone === 'warning').map((action) => (
+                      <button
+                        key={action.code}
+                        className="crm-btn crm-btn-sm"
+                        style={{ flex: '1 1 45%', textAlign: 'center', padding: '8px 10px', borderRadius: 8, fontSize: 12, fontWeight: 500, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+                        disabled={quickActionLoading}
+                        onClick={() => handleQuickWorkflowActionSelect(action)}
+                      >
+                        ❌ {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Schedule Follow-Up */}
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📅 Schedule Follow-Up</div>
+                <CalendarPicker
+                  type="datetime"
+                  value={quickFollowUpDate}
+                  onChange={setQuickFollowUpDate}
+                  placeholder="Select date & time..."
+                  minDate={new Date().toISOString()}
+                />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(0, 14, 0))}>Today 2PM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(0, 18, 0))}>Today 6PM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(1, 11, 0))}>Tmrw 11AM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(1, 16, 0))}>Tmrw 4PM</button>
+                </div>
+                {quickFollowUpDate && (
+                  <button
+                    className="crm-btn crm-btn-primary crm-btn-sm"
+                    style={{ width: '100%', marginTop: 10, padding: '10px', borderRadius: 8, fontSize: 13 }}
+                    disabled={quickActionLoading}
+                    onClick={async () => {
+                      setQuickActionLoading(true);
+                      try {
+                        await leadWorkflowApi.transitionLead(quickActionLead.id, roleActions.find(a => a.needsFollowUp)?.code || 'TC_RNR', {
+                          nextFollowUpAt: new Date(quickFollowUpDate).toISOString(),
+                        });
+                        toast.success('Follow-up scheduled!');
+                        resetQuickWorkflowForm();
+                        setQuickActionLead(null);
+                        setQuickFollowUpDate('');
+                        loadLeads({ silent: true });
+                      } catch (err) {
+                        toast.error(getErrorMessage(err, 'Failed to schedule follow-up'));
+                      } finally {
+                        setQuickActionLoading(false);
+                      }
+                    }}
+                  >
+                    {quickActionLoading ? 'Saving...' : '💾 Save Follow-Up'}
+                  </button>
+                )}
+              </div>
+
+              {/* Site Visit History */}
+              {quickActionSiteVisits.length > 0 && (
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏠 Site Visit History ({quickActionSiteVisits.length})</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {quickActionSiteVisits.slice(0, 3).map((sv) => (
+                      <div key={sv.id} style={{ padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <strong>{sv.project?.project_name || 'Unknown Project'}</strong>
+                          <span style={{ color: sv.status === 'Completed' ? '#059669' : '#d97706', fontWeight: 600 }}>{sv.status}</span>
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+                          {sv.actual_visit_date ? `Visited: ${formatDateTime(sv.actual_visit_date)}` : `Scheduled: ${formatDateTime(sv.scheduled_date)}`}
+                        </div>
+                        {sv.attendedBy && (
+                          <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+                            By: {sv.attendedBy.first_name} {sv.attendedBy.last_name}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {quickActionSiteVisits.length > 3 && (
+                      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)' }}>
+                        +{quickActionSiteVisits.length - 3} more site visits
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Communication */}
+              <div style={{ padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Communication</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ flex: 1, borderRadius: 8, padding: '10px' }}>
+                    📞 Call
+                  </button>
+                  <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ flex: 1, borderRadius: 8, padding: '10px' }}>
+                    💬 WhatsApp
+                  </button>
+                  <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ flex: 1, borderRadius: 8, padding: '10px' }}>
+                    📧 Email
+                  </button>
+                </div>
               </div>
             </div>
           </div>

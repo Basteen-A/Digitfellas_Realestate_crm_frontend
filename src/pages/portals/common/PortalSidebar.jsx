@@ -45,12 +45,12 @@ const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName, co
 
   const handleProfile = () => {
     setUserMenuOpen(false);
-    navigate('/profile');
+    navigate('/portal/profile');
   };
 
   const handleChangePassword = () => {
     setUserMenuOpen(false);
-    navigate('/profile/change-password');
+    navigate('/portal/profile/change-password');
   };
 
   return (

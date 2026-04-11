@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import authApi from '../../api/authApi';
 import './Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: cachedUser } = useSelector((state) => state.auth);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,9 @@ const Profile = () => {
   };
 
   const rc = roleColors[roleCode] || roleColors.TC;
+  const changePasswordPath = location.pathname.startsWith('/portal/')
+    ? '/portal/profile/change-password'
+    : '/profile/change-password';
 
   if (loading) {
     return (
@@ -80,7 +84,7 @@ const Profile = () => {
           <button
             type="button"
             className="crm-btn crm-btn-ghost"
-            onClick={() => navigate('/profile/change-password')}
+            onClick={() => navigate(changePasswordPath)}
           >
             🔒 Change Password
           </button>

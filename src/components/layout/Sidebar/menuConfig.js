@@ -57,7 +57,7 @@ const adminSidebar = [
 // ── Telecaller ──
 const telecallerSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  { label: 'My Leads', path: '/telecaller/leads', icon: '👥' },
+  { label: 'Leads', path: '/telecaller/leads', icon: '👥' },
   { label: "Today's Follow Ups", path: '/telecaller/followups', icon: '📞' },
   { label: 'Pipeline Board', path: '/telecaller/pipeline', icon: '📋' },
 ];
@@ -65,7 +65,7 @@ const telecallerSidebar = [
 // ── Sales Manager ──
 const salesManagerSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  { label: 'My Leads', path: '/sales-manager/leads', icon: '👥' },
+  { label: 'Leads', path: '/sales-manager/leads', icon: '👥' },
   { label: 'Revisits', path: '/sales-manager/visits', icon: '🔄' },
   { label: 'Incoming Leads', path: '/sales-manager/incoming', icon: '⚡' },
 ];
@@ -82,7 +82,7 @@ const salesHeadSidebar = [
 // ── Collection Manager ──
 const collectionSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  { label: 'My Leads', path: '/collection/leads', icon: '💰' },
+  { label: 'Leads', path: '/collection/leads', icon: '💰' },
   { label: 'Payments', path: '/collection/payments', icon: '💳' },
 ];
 
@@ -93,7 +93,7 @@ export const sidebarMenu = adminSidebar;
 export const telecallerMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: '📊', badge: null },
-  { label: 'My Leads', key: 'leads', icon: '👥', badgeColor: 'blue' },
+  { label: 'Leads', key: 'leads', icon: '👥', badgeColor: 'blue' },
   { label: 'Handoff Leads', key: 'handoffs', icon: '🤝', badgeColor: 'purple' },
   { label: "Today's Follow Ups", key: 'followups', icon: '📞', badgeColor: 'orange' },
   { label: 'Pipeline Board', key: 'pipeline', icon: '📋', badge: null },

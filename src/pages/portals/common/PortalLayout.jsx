@@ -147,10 +147,10 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                     <small>{roleName}</small>
                   </div>
                   <div className="portal-topbar__dropdown-divider" />
-                  <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/profile'); }}>
+                  <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile'); }}>
                     👤 My Profile
                   </button>
-                  <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/profile/change-password'); }}>
+                  <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
                     🔒 Change Password
                   </button>
                   <div className="portal-topbar__dropdown-divider" />

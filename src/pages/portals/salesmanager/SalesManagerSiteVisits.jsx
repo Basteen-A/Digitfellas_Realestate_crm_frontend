@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import siteVisitApi from '../../../api/siteVisitApi';
+import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import projectApi from '../../../api/projectApi';
 import { getErrorMessage } from '../../../utils/helpers';
 
 const SalesManagerSiteVisits = ({ onNavigate }) => {
@@ -9,6 +11,21 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [filter, setFilter] = useState('all');
   const [expandedLead, setExpandedLead] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    lead_id: '',
+    project_id: '',
+    scheduled_date: new Date().toISOString().split('T')[0],
+    scheduled_time_slot: '',
+    attended_by: '',
+    remarks: '',
+    feedback: '',
+    rating: '',
+    interested_after_visit: null,
+  });
+  const [projects, setProjects] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [creating, setCreating] = useState(false);
 
   const loadVisits = useCallback(async () => {
     setLoading(true);
@@ -67,6 +84,57 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
 
+  const loadCreateOptions = async () => {
+    try {
+      const [projResp, leadsResp] = await Promise.all([
+        projectApi.getDropdown(),
+        leadWorkflowApi.getLeads({ roleCode: 'SM', limit: 100 }),
+      ]);
+      setProjects(projResp.data || []);
+      setLeads(Array.isArray(leadsResp.data) ? leadsResp.data : []);
+    } catch (err) {
+      console.error('Failed to load options:', err);
+    }
+  };
+
+  const handleOpenCreate = async () => {
+    setShowCreateModal(true);
+    await loadCreateOptions();
+  };
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!createForm.lead_id || !createForm.project_id || !createForm.scheduled_date) {
+      toast.error('Lead, Project and Date are required');
+      return;
+    }
+    setCreating(true);
+    try {
+      await siteVisitApi.create({
+        ...createForm,
+        rating: createForm.rating ? Number(createForm.rating) : null,
+      });
+      toast.success('Site visit created successfully');
+      setShowCreateModal(false);
+      setCreateForm({
+        lead_id: '',
+        project_id: '',
+        scheduled_date: new Date().toISOString().split('T')[0],
+        scheduled_time_slot: '',
+        attended_by: '',
+        remarks: '',
+        feedback: '',
+        rating: '',
+        interested_after_visit: null,
+      });
+      loadVisits();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to create site visit'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -87,6 +155,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
             ))}
           </div>
           <button className="crm-btn crm-btn-ghost" onClick={loadVisits}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-primary" onClick={handleOpenCreate}>+ Add Site Visit</button>
         </div>
       </div>
 
@@ -242,6 +311,125 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
             <div className="col-modal-footer">
               <button className="crm-btn crm-btn-ghost" onClick={() => setSelectedVisit(null)}>Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Site Visit Modal */}
+      {showCreateModal && (
+        <div className="col-modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="col-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="col-modal-header">
+              <h2>Add Site Visit</h2>
+              <button className="col-modal-close" onClick={() => setShowCreateModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleCreateSubmit}>
+              <div className="col-modal-body">
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Lead *</label>
+                  <select
+                    value={createForm.lead_id}
+                    onChange={(e) => setCreateForm(p => ({ ...p, lead_id: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                    required
+                  >
+                    <option value="">Select lead...</option>
+                    {leads.map(l => (
+                      <option key={l.id} value={l.id}>{l.fullName || l.first_name} - {l.phone}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Project *</label>
+                  <select
+                    value={createForm.project_id}
+                    onChange={(e) => setCreateForm(p => ({ ...p, project_id: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                    required
+                  >
+                    <option value="">Select project...</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.project_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Visit Date *</label>
+                    <input
+                      type="date"
+                      value={createForm.scheduled_date}
+                      onChange={(e) => setCreateForm(p => ({ ...p, scheduled_date: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Time Slot</label>
+                    <input
+                      type="text"
+                      value={createForm.scheduled_time_slot}
+                      onChange={(e) => setCreateForm(p => ({ ...p, scheduled_time_slot: e.target.value }))}
+                      placeholder="e.g., 10:00 AM - 12:00 PM"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Rating (1-5)</label>
+                    <select
+                      value={createForm.rating}
+                      onChange={(e) => setCreateForm(p => ({ ...p, rating: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                    >
+                      <option value="">Select rating...</option>
+                      {[1,2,3,4,5].map(r => (
+                        <option key={r} value={r}>{'★'.repeat(r)}{'☆'.repeat(5-r)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Interested After Visit</label>
+                    <select
+                      value={createForm.interested_after_visit === null ? '' : createForm.interested_after_visit}
+                      onChange={(e) => setCreateForm(p => ({ ...p, interested_after_visit: e.target.value === '' ? null : e.target.value === 'true' }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                    >
+                      <option value="">Select...</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Feedback</label>
+                  <textarea
+                    value={createForm.feedback}
+                    onChange={(e) => setCreateForm(p => ({ ...p, feedback: e.target.value }))}
+                    rows={3}
+                    placeholder="Enter feedback..."
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Remarks</label>
+                  <textarea
+                    value={createForm.remarks}
+                    onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))}
+                    rows={2}
+                    placeholder="Additional remarks..."
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
+                  />
+                </div>
+              </div>
+              <div className="col-modal-footer">
+                <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create Site Visit'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

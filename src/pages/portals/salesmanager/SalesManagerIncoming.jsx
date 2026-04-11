@@ -15,7 +15,8 @@ const SalesManagerIncoming = ({ onNavigate }) => {
       setLoading(true);
       const resp = await leadWorkflowApi.getHandoffs({
         type: 'incoming',
-        stageCode: 'SV_COMPLETED',
+        stageCode: 'SITE_VISIT',
+        statusCode: 'SV_DONE',
         currentOnly: true,
         limit: 100,
       });
@@ -36,11 +37,11 @@ const SalesManagerIncoming = ({ onNavigate }) => {
   const handleAccept = async (handoff) => {
     setProcessingId(handoff.id);
     try {
-      await leadWorkflowApi.transitionLead(handoff.leadId, 'SM_ACCEPT_HANDOFF', {
-        note: 'Incoming handoff accepted by Sales Manager',
+      await leadWorkflowApi.updateLeadStatus(handoff.leadId, 'FOLLOW_UP', {
+        note: 'Incoming handoff accepted by Sales Manager and moved to My Leads',
       });
+      setHandoffs((prev) => prev.filter((item) => item.id !== handoff.id));
       toast.success('Lead accepted successfully!');
-      fetchHandoffs();
       onNavigate?.('leads');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to accept lead.'));
@@ -99,7 +100,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                         From {handoff.fromUserName || 'Telecaller'} · {formatDateTime(handoff.handedOffAt)}
                       </div>
                     </div>
-                  <span className={`crm-badge ${handoff.stageCode === 'SV_COMPLETED' ? 'badge-interested' : 'badge-neutral'}`} style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem' }}>
+                  <span className={`crm-badge ${handoff.stageCode === 'SITE_VISIT' ? 'badge-interested' : 'badge-neutral'}`} style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem' }}>
                     {handoff.stageName || 'Pending'}
                   </span>
                 </div>

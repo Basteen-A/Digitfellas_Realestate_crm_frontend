@@ -48,10 +48,37 @@ export const buildStatusOptions = (statuses = []) =>
       isTerminal: Boolean(s.is_terminal),
     }));
 
+const FALLBACK_ACTIONS = {
+  TC: [
+    { code: 'TC_RNR', label: 'RnR', tone: 'secondary', targetStageCode: 'CONTACTED', targetStatusCode: 'RNR', needsFollowUp: true },
+    { code: 'TC_LEAD_QUALIFIED', label: 'Lead Qualified', tone: 'primary', targetStageCode: 'QUALIFIED', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
+    { code: 'TC_SV_SCHEDULED', label: 'SV Scheduled', tone: 'success', targetStageCode: 'QUALIFIED', targetStatusCode: 'SV_SCHEDULED', needsFollowUp: true },
+    { code: 'TC_SV_DONE', label: 'SV Done', tone: 'success', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true },
+  ],
+  SM: [
+    { code: 'SM_SITE_VISIT', label: 'Record Site Visit', tone: 'primary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsAssignee: true, assigneeRole: 'SH', needsSvDetails: true },
+    { code: 'SM_SCHEDULE_REVISIT', label: 'Schedule a Revisit', tone: 'secondary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'REVISIT', needsFollowUp: true },
+    { code: 'SM_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
+    { code: 'SM_MOVE_TO_NEGOTIATION', label: 'Move to Negotiation', tone: 'primary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_HOT' },
+    { code: 'SM_DEAL_ESCALATED', label: 'Deal Escalated', tone: 'success', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_WARM', needsAssignee: true, assigneeRole: 'SH' },
+  ],
+  SH: [
+    { code: 'SH_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
+    { code: 'SH_BOOKING', label: 'Booking (Token Received)', tone: 'success', targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true },
+  ],
+  COL: [
+    { code: 'COL_PAYMENT_UPDATE', label: 'Update Payment Milestone', tone: 'secondary', targetStatusCode: 'BOOKED' },
+    { code: 'COL_BOOKING_STATUS_UPDATE', label: 'Update Booking Status', tone: 'primary', targetStatusCode: 'BOOKED' },
+  ],
+};
+
 /**
  * Get role-specific actions from the workflow config
  */
-export const getActionsForRole = (actions = {}, roleCode) => actions[roleCode] || [];
+export const getActionsForRole = (actions = {}, roleCode) => {
+  const fromConfig = actions[roleCode] || [];
+  return fromConfig.length ? fromConfig : (FALLBACK_ACTIONS[roleCode] || []);
+};
 
 /**
  * Action button tone → CSS class

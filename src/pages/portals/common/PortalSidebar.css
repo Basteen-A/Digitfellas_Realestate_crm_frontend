@@ -126,8 +126,8 @@
 }
 
 .portal-sidebar__brand {
-  height: 72px; /* Slightly taller for more presence */
-  padding: 0 16px;
+  height: var(--portal-header-height, 72px);
+  padding: 0 var(--portal-header-x-padding, 16px);
   display: flex;
   align-items: center;
   justify-content: center; /* Center the logo */
@@ -309,6 +309,8 @@
 }
 
 .portal-layout {
+  --portal-header-height: 72px;
+  --portal-header-x-padding: 16px;
   display: flex;
   height: 100vh;
 }
@@ -331,12 +333,12 @@
 }
 
 .portal-topbar {
-  height: 56px;
+  height: var(--portal-header-height, 72px);
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-primary);
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 var(--portal-header-x-padding, 16px);
   gap: 16px;
   flex-shrink: 0;
 }

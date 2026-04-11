@@ -17,6 +17,7 @@ import Dashboard from '../pages/dashboard';
 import Profile from '../pages/profile/Profile';
 import ChangePassword from '../pages/profile/ChangePassword';
 import LeadDetailsPage from '../pages/portals/common/LeadDetailsPage';
+import PortalWorkspaceShell from '../pages/portals/common/PortalWorkspaceShell';
 import NotFound from '../pages/NotFound';
 
 import Locations from '../pages/superadmin/Locations';
@@ -80,6 +81,33 @@ const AppRoutes = () => {
 
           <Route element={<RoleRoute allowedRoles={['COL', 'SA', 'ADM']} />}>
             <Route path="/collection/leads" element={<CollectionWorkspace />} />
+          </Route>
+
+          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'SA', 'ADM']} />}>
+            <Route
+              path="/portal/lead/:id"
+              element={(
+                <PortalWorkspaceShell>
+                  <LeadDetailsPage />
+                </PortalWorkspaceShell>
+              )}
+            />
+            <Route
+              path="/portal/profile"
+              element={(
+                <PortalWorkspaceShell defaultScreen="dashboard">
+                  <Profile />
+                </PortalWorkspaceShell>
+              )}
+            />
+            <Route
+              path="/portal/profile/change-password"
+              element={(
+                <PortalWorkspaceShell defaultScreen="dashboard">
+                  <ChangePassword />
+                </PortalWorkspaceShell>
+              )}
+            />
           </Route>
         </Route>
       </Route>
