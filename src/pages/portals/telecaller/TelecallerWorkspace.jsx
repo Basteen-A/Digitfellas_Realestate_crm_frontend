@@ -8,7 +8,7 @@ import TelecallerFollowUps from './TelecallerFollowUps';
 import TelecallerCallLog from './TelecallerCallLog';
 import TelecallerPullRequests from './TelecallerPullRequests';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
-import HandoffLeadsPage from '../common/HandoffLeadsPage';
+// import HandoffLeadsPage from '../common/HandoffLeadsPage'; (Removed as per requirement)
 import { telecallerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const TelecallerWorkspace = () => {
@@ -48,9 +48,9 @@ const TelecallerWorkspace = () => {
           {activeScreen === 'pullrequests' && (
             <TelecallerPullRequests user={user} />
           )}
-          {activeScreen === 'handoffs' && (
+          {/* {activeScreen === 'handoffs' && (
             <HandoffLeadsPage workspaceRole="TC" />
-          )}
+          )} */}
         </>
       )}
     </PortalLayout>

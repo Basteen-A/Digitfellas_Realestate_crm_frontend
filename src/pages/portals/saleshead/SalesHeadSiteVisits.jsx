@@ -177,7 +177,7 @@ const SalesHeadSiteVisits = () => {
         </div>
       )}
 
-      {/* Visit Detail Modal (reused similarly from SM page) */}
+      {/* Visit Detail Modal */}
       {selectedVisit && (
         <div className="col-modal-overlay" onClick={() => setSelectedVisit(null)}>
           <div className="col-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
@@ -187,17 +187,39 @@ const SalesHeadSiteVisits = () => {
             </div>
             <div className="col-modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Number</div><div style={{ fontWeight: 700 }}>{selectedVisit.visit_number || '—'}</div></div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || formatTime(selectedVisit.scheduled_date) || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
+                {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{'★'.repeat(selectedVisit.rating)}{'☆'.repeat(5 - selectedVisit.rating)}</span></div>}
+                {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
+                {selectedVisit.interested_after_visit !== null && selectedVisit.interested_after_visit !== undefined && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Interested After Visit</div>{selectedVisit.interested_after_visit ? '✅ Yes' : '❌ No'}</div>}
               </div>
               {selectedVisit.feedback && (
                 <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Feedback</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Feedback / Note</div>
                   <div style={{ fontSize: 13 }}>{selectedVisit.feedback}</div>
+                </div>
+              )}
+              {selectedVisit.remarks && (
+                <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Remarks</div>
+                  <div style={{ fontSize: 13 }}>{selectedVisit.remarks}</div>
+                </div>
+              )}
+              {selectedVisit.requirement_details && (
+                <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Requirement Details</div>
+                  <div style={{ fontSize: 13 }}>{selectedVisit.requirement_details}</div>
+                </div>
+              )}
+              {selectedVisit.geo_lat && (
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  📍 Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
                 </div>
               )}
             </div>

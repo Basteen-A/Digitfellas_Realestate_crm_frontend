@@ -16,6 +16,10 @@ const dashboardApi = {
     const { data } = await api.get('/dashboard/telecaller');
     return data;
   },
+  getTelecallerDetailed: async () => {
+    const { data } = await api.get('/dashboard/telecaller-detailed');
+    return data;
+  },
 
   getSalesManagerStats: async () => {
     const { data } = await api.get('/dashboard/sales-manager');

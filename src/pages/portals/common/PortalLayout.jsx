@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useThemeContext } from '../../../contexts/ThemeContext';
 import { logout } from '../../../redux/slices/authSlice';
@@ -32,18 +32,31 @@ const SCREEN_TITLES = {
   inventory: 'Inventory',
 };
 
-const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, searchPlaceholder }) => {
+const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, searchPlaceholder, onNavigateOverride }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
-  const [activeScreen, setActiveScreen] = useState(defaultScreen || 'dashboard');
+  
+  const [activeScreen, setActiveScreen] = useState(() => location.state?.screen || defaultScreen || 'dashboard');
   const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const topbarMenuRef = useRef(null);
 
+  useEffect(() => {
+    if (location.state?.screen) {
+      setActiveScreen(location.state.screen);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.screen, location.pathname, navigate]);
+
   const handleNavigate = (key) => {
-    setActiveScreen(key);
+    if (onNavigateOverride) {
+      onNavigateOverride(key);
+    } else {
+      setActiveScreen(key);
+    }
     // Auto-collapse sidebar on desktop after navigating
     if (window.innerWidth >= 1024) {
       setSidebarCollapsed(true);

@@ -6,12 +6,17 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
-import CalendarPicker from '../../../components/common/CalendarPicker';
+
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getRoleCode } from '../../../utils/permissions';
 import { getActionsForRole } from './workflowConfig';
 import './LeadDetailsPage.css';
+
+const QUICK_REMARKS = [
+  'Interested', 'Shared Details', 'Callback Later', 'Busy', 
+  'Not Reachable', 'RNR', 'Wrong Number', 'Follow-up Scheduled'
+];
 
 const STAGE_FLOW = ['LEAD', 'CONTACTED', 'QUALIFIED', 'SITE_VISIT', 'OPPORTUNITY', 'BOOKING', 'CLOSED_WON', 'CLOSED_LOST'];
 const STAGE_LABELS = {
@@ -99,7 +104,15 @@ const LeadDetailsPage = () => {
   const [quickAssignableUsers, setQuickAssignableUsers] = useState([]);
   const [quickClosureReasons, setQuickClosureReasons] = useState([]);
   const [quickActionSaving, setQuickActionSaving] = useState(false);
-  const [quickCustomFollowUpAt, setQuickCustomFollowUpAt] = useState('');
+  const [quickActionActivities, setQuickActionActivities] = useState([]);
+  const [customerProfileForm, setCustomerProfileForm] = useState({
+    date_of_birth: '', marital_status: '', purchase_type: '',
+    occupation: '', current_post: '',
+    pan_number: '', aadhar_number: '',
+    current_address: '', current_city: '', current_state: '', current_pincode: '',
+    sameAsCurrent: true,
+    permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: ''
+  });
 
   const roleActions = useMemo(() => getActionsForRole(workflowConfig?.actions || {}, roleCode), [workflowConfig, roleCode]);
   const selectedAction = useMemo(() => roleActions.find((a) => a.code === actionCode) || null, [roleActions, actionCode]);
@@ -217,9 +230,10 @@ const LeadDetailsPage = () => {
   };
 
   const loadActionDependencies = useCallback(async (action, setUsers, setReasons) => {
-    if (action.needsAssignee || action.needsSvDetails || action.code === 'TC_SV_DONE') {
+    if (action.needsAssignee || action.needsSvDetails || action.code === 'TC_SV_DONE' || action.needsCustomerProfile || action.code === 'SH_BOOKING') {
       try {
-        const resp = await leadWorkflowApi.getAssignableUsers(getAssigneeRoleForAction(action, roleCode));
+        const roleTarget = (action.needsCustomerProfile || action.code === 'SH_BOOKING') ? 'COL' : getAssigneeRoleForAction(action, roleCode);
+        const resp = await leadWorkflowApi.getAssignableUsers(roleTarget);
         setUsers(resp.data || []);
       } catch {
         setUsers([]);
@@ -246,7 +260,6 @@ const LeadDetailsPage = () => {
     setQuickActionForm(actionInitialState);
     setQuickAssignableUsers([]);
     setQuickClosureReasons([]);
-    setQuickCustomFollowUpAt('');
   }, []);
 
   const handleActionPick = async (code) => {
@@ -394,8 +407,11 @@ const LeadDetailsPage = () => {
     if (!lead?.id || !quickSelectedAction) return;
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
-      toast.error('This action needs full customer profile. Use workspace booking flow.');
-      return;
+      const pF = customerProfileForm;
+      if (!pF.date_of_birth || !pF.pan_number || !pF.aadhar_number || !pF.current_address || !pF.occupation) {
+        toast.error('Please fill all mandatory (*) customer profile fields (DOB, PAN, Aadhar, Address, Occupation).');
+        return;
+      }
     }
 
     const needsInput = Boolean(
@@ -410,6 +426,35 @@ const LeadDetailsPage = () => {
       note: quickActionForm.note.trim() || undefined,
     };
 
+    if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
+      const pF = customerProfileForm;
+      const permAddr = pF.sameAsCurrent ? {
+        permanent_address: pF.current_address,
+        permanent_city: pF.current_city,
+        permanent_state: pF.current_state,
+        permanent_pincode: pF.current_pincode,
+      } : {
+        permanent_address: pF.permanent_address,
+        permanent_city: pF.permanent_city,
+        permanent_state: pF.permanent_state,
+        permanent_pincode: pF.permanent_pincode,
+      };
+      payload.customerProfile = {
+        date_of_birth: pF.date_of_birth ? new Date(pF.date_of_birth).toISOString() : undefined,
+        pan_number: pF.pan_number,
+        aadhar_number: pF.aadhar_number,
+        occupation: pF.occupation,
+        current_post: pF.current_post,
+        purchase_type: pF.purchase_type,
+        marital_status: pF.marital_status,
+        current_address: pF.current_address,
+        current_city: pF.current_city,
+        current_state: pF.current_state,
+        current_pincode: pF.current_pincode,
+        ...permAddr,
+      };
+    }
+
     if (quickSelectedAction.needsFollowUp) {
       if (!quickActionForm.nextFollowUpAt) {
         toast.error('Follow-up date & time is required');
@@ -418,7 +463,7 @@ const LeadDetailsPage = () => {
       payload.nextFollowUpAt = new Date(quickActionForm.nextFollowUpAt).toISOString();
     }
 
-    if (quickSelectedAction.needsAssignee) {
+    if (quickSelectedAction.needsAssignee || quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
       if (!quickActionForm.assignToUserId) {
         toast.error(getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Please select Sales Head negotiator' : 'Please select assignee');
         return;
@@ -517,7 +562,15 @@ const LeadDetailsPage = () => {
           <button
             type="button"
             className="lead-details-quick-btn"
-            onClick={() => setQuickActionsOpen(true)}
+            onClick={async () => {
+              setQuickActionsOpen(true);
+              try {
+                const actResp = await leadWorkflowApi.getLeadActivities(lead.id);
+                setQuickActionActivities(actResp.data || []);
+              } catch {
+                setQuickActionActivities([]);
+              }
+            }}
             title="Quick actions"
           >
             +
@@ -632,6 +685,49 @@ const LeadDetailsPage = () => {
                 <div className="lead-details-info-item"><span className="lead-details-label">Configuration</span><span className="lead-details-value">{lead.configuration || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Purpose</span><span className="lead-details-value">{lead.purpose || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Source / Medium</span><span className="lead-details-value">{lead.source || '-'} / {lead.subSource || '-'}</span></div>
+                {lead.motivationType && (
+                  <div className="lead-details-info-item">
+                    <span className="lead-details-label">Buying Motivation</span>
+                    <span className="lead-details-value">
+                      <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                        {lead.motivationType}
+                      </span>
+                    </span>
+                  </div>
+                )}
+                {lead.primaryRequirement && (
+                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                    <span className="lead-details-label">Primary Requirement</span>
+                    <span className="lead-details-value">{lead.primaryRequirement}</span>
+                  </div>
+                )}
+                {lead.secondaryRequirement && (
+                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                    <span className="lead-details-label">Secondary / Site Remarks</span>
+                    <span className="lead-details-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{lead.secondaryRequirement}</span>
+                  </div>
+                )}
+                {lead.timeSpent != null && (
+                  <div className="lead-details-info-item">
+                    <span className="lead-details-label">Time Spent (mins)</span>
+                    <span className="lead-details-value">{lead.timeSpent}</span>
+                  </div>
+                )}
+                {lead.geoLat && (
+                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                    <span className="lead-details-label">Creation Location</span>
+                    <span className="lead-details-value">
+                      <a
+                        href={`https://www.google.com/maps?q=${lead.geoLat},${lead.geoLong}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                      >
+                        📍 View Location on Map
+                      </a>
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -1024,247 +1120,326 @@ const LeadDetailsPage = () => {
         </div>
       </div>
 
+      {/* Quick Action Modal */}
       {quickActionsOpen && (
         <div className="lead-quick-modal" onClick={closeQuickActionsModal}>
-          <div className="lead-quick-modal__panel" onClick={(e) => e.stopPropagation()}>
-            <div className="lead-quick-modal__head">
-              <h3>Quick Actions</h3>
-              <button type="button" onClick={closeQuickActionsModal}>✕</button>
+          <div className="qa-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="qa-header">
+              <div>
+                <h2>⚡ Quick Actions</h2>
+                <small style={{ color: '#94a3b8', fontSize: '12px' }}>{lead?.fullName || lead?.full_name} · {lead?.phone}</small>
+              </div>
+              <button className="qa-header-close" onClick={closeQuickActionsModal}>×</button>
             </div>
 
-            <div className="lead-quick-modal__body">
-              <div className="lead-quick-modal__section">
-                <h4>Single Click Follow-Up</h4>
-                <div className="lead-quick-modal__chips">
-                  <button type="button" disabled={quickBusy || quickActionSaving} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 14, 0), 'Today 2:00 PM')}>Today 2:00 PM</button>
-                  <button type="button" disabled={quickBusy || quickActionSaving} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 18, 0), 'Today 6:00 PM')}>Today 6:00 PM</button>
-                  <button type="button" disabled={quickBusy || quickActionSaving} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 11, 0), 'Tomorrow 11:00 AM')}>Tomorrow 11:00 AM</button>
-                  <button type="button" disabled={quickBusy || quickActionSaving} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 16, 0), 'Tomorrow 4:00 PM')}>Tomorrow 4:00 PM</button>
-                </div>
-                <div className="lead-quick-modal__custom-followup">
-                  <CalendarPicker
-                    type="datetime"
-                    value={quickCustomFollowUpAt}
-                    onChange={setQuickCustomFollowUpAt}
-                    placeholder="Pick custom date & time..."
-                    minDate={new Date().toISOString()}
-                  />
-                  <button
-                    type="button"
-                    disabled={!quickCustomFollowUpAt || quickBusy || quickActionSaving}
-                    onClick={() => handleQuickFollowUp(quickCustomFollowUpAt, 'custom date & time')}
-                  >
-                    Set Custom Follow-Up
-                  </button>
-                </div>
-              </div>
+            <div className="qa-body">
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 300px', gap: '24px' }}>
+                {/* Left Column: Actions and Forms */}
+                <div>
+                  {/* Workflow Transitions */}
+                  <div className="qa-section">
+                    <div className="qa-section-title">🚀 Workflow Transitions</div>
+                    <div className="qa-action-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                      {roleActions.filter(a => a.tone !== 'danger').map((action) => {
+                        let icon = '📋';
+                        if (action.code.includes('RNR')) icon = '🔄';
+                        else if (action.code.includes('SV_DONE') || action.code.includes('SITE_VISIT')) icon = '✅';
+                        else if (action.code.includes('SCHEDULE') || action.code.includes('REVISIT')) icon = '📅';
+                        else if (action.code.includes('FOLLOW_UP')) icon = '📞';
+                        else if (action.code.includes('NEGOTIATION')) icon = '🤝';
+                        else if (action.code.includes('BOOKING')) icon = '🎉';
+                        else if (action.code.includes('PAYMENT')) icon = '💸';
 
-              <div className="lead-quick-modal__section">
-                {roleCode === 'SM' && (
-                  <button
-                    type="button"
-                    className="quick-action-custom-btn sm-sv-btn"
-                    style={{
-                      width: '100%', padding: '12px', borderRadius: 10, border: 'none',
-                      background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff',
-                      fontWeight: 700, marginBottom: 16, cursor: 'pointer', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', gap: 8,
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-                    }}
-                    onClick={() => {
-                      handleQuickActionPick('SM_SITE_VISIT');
-                    }}
-                  >
-                    🏠 Record Site Visit
-                  </button>
-                )}
-                <h4>Other Workflow Actions</h4>
-                {roleActions.length === 0 ? (
-                  <p className="lead-details-empty">No actions available.</p>
-                ) : (
-                  <div className="lead-quick-modal__actions">
-                    {roleActions.map((action) => (
-                      <button
-                        key={action.code}
-                        type="button"
-                        className={quickActionCode === action.code ? 'is-active' : ''}
-                        disabled={quickBusy || quickActionSaving}
-                        onClick={() => handleQuickActionPick(action.code)}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <p className="lead-actions-hint">Select an action below and submit directly from this popup.</p>
-              </div>
-
-              {quickSelectedAction && (
-                <div className="lead-actions-form lead-quick-modal__inline-form">
-                  <div className="lead-actions-meta">
-                    <strong>{quickSelectedAction.label}</strong>
-                    <span>{quickSelectedAction.code}</span>
+                        return (
+                          <button
+                            key={action.code}
+                            type="button"
+                            className={`qa-btn-card ${quickActionCode === action.code ? 'active' : ''}`}
+                            disabled={quickBusy || quickActionSaving}
+                            onClick={() => handleQuickActionPick(action.code)}
+                          >
+                            <span className="icon">{icon}</span>
+                            <span className="label">{action.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {quickSelectedAction.needsFollowUp && (
-                    <label className="lead-actions-label">
-                      Follow-Up Date & Time *
-                      <input
-                        type="datetime-local"
-                        value={quickActionForm.nextFollowUpAt}
-                        onChange={(e) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
-                      />
-                    </label>
-                  )}
-
-                  {(quickSelectedAction.needsAssignee || quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') && (
-                    <label className="lead-actions-label">
-                      {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
-                      <select
-                        value={quickActionForm.assignToUserId}
-                        onChange={(e) => setQuickActionForm((p) => ({ ...p, assignToUserId: e.target.value }))}
-                      >
-                        <option value="">{getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Select Sales Head...' : 'Select user...'}</option>
-                        {quickAssignableUsers.map((item) => (
-                          <option key={item.id} value={item.id}>{item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim()}</option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-
-                  {(quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') && (
-                    <div className="lead-actions-grid">
-                      <label className="lead-actions-label">
-                        Site Visit Date *
-                        <input
-                          type="date"
-                          value={quickActionForm.svDate}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, svDate: e.target.value }))}
-                        />
-                      </label>
-
-                      <label className="lead-actions-label">
-                        Project Visited *
-                        <select
-                          value={quickActionForm.svProjectId}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                  {/* Disqualification */}
+                  <div className="qa-section">
+                    <div className="qa-section-title" style={{ color: '#dc2626' }}>⚠️ Disqualification</div>
+                    <div className="qa-disqual-row">
+                      {roleActions.filter(a => a.tone === 'danger').map((action) => (
+                        <button
+                          key={action.code}
+                          type="button"
+                          className={`qa-btn-disqual ${quickActionCode === action.code ? 'active' : ''}`}
+                          disabled={quickBusy || quickActionSaving}
+                          onClick={() => handleQuickActionPick(action.code)}
                         >
-                          <option value="">Select project...</option>
-                          {projectOptions.map((project) => (
-                            <option key={project.id} value={project.id}>{project.project_name}</option>
-                          ))}
-                        </select>
-                      </label>
+                          {action.code.includes('JUNK') ? '🗑️' : action.code.includes('SPAM') ? '🚫' : '💔'} {action.label}
+                        </button>
+                      ))}
+                      {roleActions.filter(a => a.tone === 'danger').length === 0 && (
+                        <div style={{ padding: '8px', gridColumn: '1 / -1', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>No disqualification actions available for your role.</div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
-                  {quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && (
-                    <div className="lead-actions-grid">
-                      <label className="lead-actions-label">
-                        Motivation
-                        <input
-                          value={quickActionForm.motivationType}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, motivationType: e.target.value }))}
-                          placeholder="Necessity / Comfort / Emotional"
-                        />
-                      </label>
+                  {/* Dynamic Action Form */}
+                  {quickSelectedAction && (
+                    <div className="qa-section" style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-primary)', marginTop: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                        <div style={{ width: '4px', height: '16px', background: 'var(--accent-blue)', borderRadius: '2px' }} />
+                        <span style={{ fontSize: '13px', fontWeight: '800' }}>Configure: {quickSelectedAction.label}</span>
+                      </div>
 
-                      <label className="lead-actions-label">
-                        Time Spent (mins)
-                        <input
-                          type="number"
-                          min="0"
-                          value={quickActionForm.timeSpent}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
-                          placeholder="30"
-                        />
-                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        {quickSelectedAction.needsFollowUp && (
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Next Follow-up *</label>
+                            <input
+                              type="datetime-local"
+                              value={quickActionForm.nextFollowUpAt}
+                              onChange={(e) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
+                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                            />
+                          </div>
+                        )}
 
-                      <label className="lead-actions-label">
-                        Latitude
-                        <input
-                          value={quickActionForm.latitude}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, latitude: e.target.value }))}
-                          placeholder="17.3850"
-                        />
-                      </label>
+                        {(quickSelectedAction.needsAssignee || quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE' || quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') && (
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                              {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Assign To Sales Head *' : 
+                               (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') ? 'Assign To Collection Manager *' : 'Assign To *'}
+                            </label>
+                            <select
+                              value={quickActionForm.assignToUserId}
+                              onChange={(e) => setQuickActionForm((p) => ({ ...p, assignToUserId: e.target.value }))}
+                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                            >
+                              <option value="">Select user...</option>
+                              {quickAssignableUsers.map((item) => (
+                                <option key={item.id} value={item.id}>{item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim()}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
-                      <label className="lead-actions-label">
-                        Longitude
-                        <input
-                          value={quickActionForm.longitude}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, longitude: e.target.value }))}
-                          placeholder="78.4867"
-                        />
-                      </label>
-                    </div>
-                  )}
+                        {(quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') && (
+                          <>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Visit Date *</label>
+                              <input
+                                type="date"
+                                value={quickActionForm.svDate}
+                                onChange={(e) => setQuickActionForm((p) => ({ ...p, svDate: e.target.value }))}
+                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Project *</label>
+                              <select
+                                value={quickActionForm.svProjectId}
+                                onChange={(e) => setQuickActionForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                              >
+                                {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+                              </select>
+                            </div>
+                          </>
+                        )}
 
-                  {quickSelectedAction.needsReason && (
-                    <>
-                      <label className="lead-actions-label">
-                        Closure Reason
-                        <select
-                          value={quickActionForm.closureReasonId}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, closureReasonId: e.target.value }))}
-                        >
-                          <option value="">Select reason...</option>
-                          {quickClosureReasons.map((reason) => (
-                            <option key={reason.id} value={reason.id}>{reason.reason || reason.reason_text || reason.label || 'Reason'}</option>
-                          ))}
-                        </select>
-                      </label>
+                        {(quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') && (
+                          <div style={{ gridColumn: 'span 2', backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-primary)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏆 Customer Profile Details</div>
+                            
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>👤 Personal Details</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                Date of Birth *
+                                <input type="date" value={customerProfileForm.date_of_birth} onChange={(e) => setCustomerProfileForm(p => ({ ...p, date_of_birth: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                Marital Status
+                                <select value={customerProfileForm.marital_status} onChange={(e) => setCustomerProfileForm(p => ({ ...p, marital_status: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                                  <option value="">Select...</option>
+                                  <option value="Single">Single</option>
+                                  <option value="Married">Married</option>
+                                  <option value="Divorced">Divorced</option>
+                                  <option value="Widowed">Widowed</option>
+                                </select>
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                Purchase Type
+                                <select value={customerProfileForm.purchase_type} onChange={(e) => setCustomerProfileForm(p => ({ ...p, purchase_type: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                                  <option value="">Select...</option>
+                                  <option value="Investment">Investment</option>
+                                  <option value="Self Use">Self Use</option>
+                                  <option value="Rental">Rental</option>
+                                  <option value="Gift">Gift</option>
+                                </select>
+                              </label>
+                            </div>
 
-                      <label className="lead-actions-label">
-                        Reason Note
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                Occupation *
+                                <input type="text" value={customerProfileForm.occupation} onChange={(e) => setCustomerProfileForm(p => ({ ...p, occupation: e.target.value }))} placeholder="e.g. Business, Salaried" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                Current Post
+                                <input type="text" value={customerProfileForm.current_post} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_post: e.target.value }))} placeholder="e.g. Manager" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                            </div>
+
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>🪪 Identity Documents</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                PAN Number *
+                                <input type="text" maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', textTransform: 'uppercase', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                Aadhar Number *
+                                <input type="text" maxLength={12} value={customerProfileForm.aadhar_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, aadhar_number: e.target.value.replace(/\D/g, '') }))} placeholder="1234 5678 9012" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                            </div>
+
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>📍 Current Address *</div>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                              Address
+                              <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                            </label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>City
+                                <input type="text" value={customerProfileForm.current_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_city: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>State
+                                <input type="text" value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Pincode
+                                <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                              </label>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, flex: 1 }}>🏠 Permanent Address</div>
+                              <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 12 }}>
+                                <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
+                              </label>
+                            </div>
+                            
+                            {!customerProfileForm.sameAsCurrent && (
+                              <>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                  Address
+                                  <textarea rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                                </label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>City
+                                    <input type="text" value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                                  </label>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>State
+                                    <input type="text" value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                                  </label>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Pincode
+                                    <input type="text" maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
+                                  </label>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
+                        {quickSelectedAction.needsReason && (
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Closure Reason *</label>
+                            <select
+                              value={quickActionForm.closureReasonId}
+                              onChange={(e) => setQuickActionForm((p) => ({ ...p, closureReasonId: e.target.value }))}
+                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                            >
+                              <option value="">Select reason...</option>
+                              {quickClosureReasons.map(r => <option key={r.id} value={r.id}>{r.reason || r.reason_text}</option>)}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Remarks</label>
+                          <div className="qa-remarks-wrap" style={{ margin: 0 }}>
+                            {QUICK_REMARKS.slice(0, 3).map(chip => (
+                              <button key={chip} type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, note: p.note ? `${p.note}, ${chip}` : chip }))}>+ {chip}</button>
+                            ))}
+                          </div>
+                        </div>
                         <textarea
                           rows={2}
-                          value={quickActionForm.reason}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, reason: e.target.value }))}
-                          placeholder="Enter reason details..."
+                          value={quickActionForm.note}
+                          onChange={(e) => setQuickActionForm(p => ({ ...p, note: e.target.value }))}
+                          style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                         />
-                      </label>
-                    </>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                        <button
+                          className="lead-details-action-btn lead-details-action-btn--primary"
+                          style={{ flex: 1, padding: '12px', borderRadius: '10px', fontWeight: '800' }}
+                          onClick={handleQuickActionSubmit}
+                          disabled={quickActionSaving}
+                        >
+                          {quickActionSaving ? 'Saving...' : 'Submit Action'}
+                        </button>
+                        <button
+                          className="lead-details-action-btn lead-details-action-btn--secondary"
+                          style={{ padding: '12px 20px', borderRadius: '10px' }}
+                          onClick={() => { setQuickActionCode(''); setQuickActionForm(actionInitialState); }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
                   )}
-
-                  <label className="lead-actions-label">
-                    Action Note
-                    <textarea
-                      rows={2}
-                      value={quickActionForm.note}
-                      onChange={(e) => setQuickActionForm((p) => ({ ...p, note: e.target.value }))}
-                      placeholder="Add remarks for this action..."
-                    />
-                  </label>
-
-                  <div className="lead-actions-row">
-                    <button
-                      type="button"
-                      className="lead-details-action-btn lead-details-action-btn--secondary"
-                      onClick={() => {
-                        setQuickActionCode('');
-                        setQuickActionForm(actionInitialState);
-                        setQuickAssignableUsers([]);
-                        setQuickClosureReasons([]);
-                      }}
-                      disabled={quickActionSaving}
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      className="lead-details-action-btn lead-details-action-btn--primary"
-                      onClick={handleQuickActionSubmit}
-                      disabled={quickActionSaving}
-                    >
-                      {quickActionSaving ? 'Processing...' : 'Submit Action'}
-                    </button>
-                  </div>
                 </div>
-              )}
+
+                {/* Right Column: Follow-ups & History */}
+                <div style={{ borderLeft: '1px solid var(--border-primary)', paddingLeft: '24px' }}>
+                  <div className="qa-section">
+                    <div className="qa-section-title">📅 Quick Follow-up</div>
+                    <div className="qa-remarks-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 14, 0), 'Today 2PM')}>Today 2PM</button>
+                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 18, 0), 'Today 6PM')}>Today 6PM</button>
+                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 11, 0), 'Tomorrow 11AM')}>Tomorrow 11AM</button>
+                    </div>
+                  </div>
+
+                  <div className="qa-section" style={{ marginTop: '24px' }}>
+                    <div className="qa-section-title">📝 Activity History</div>
+                    <div className="qa-timeline">
+                      {quickActionActivities.slice(0, 5).map((act) => (
+                        <div key={act.id} className="qa-timeline-item" style={{ gap: '12px' }}>
+                          <div className="qa-timeline-dot">
+                            {act.type === 'NOTE_ADDED' ? '📝' : '🔄'}
+                          </div>
+                          <div className="qa-timeline-content">
+                            <div className="qa-timeline-header">
+                              <span className="qa-timeline-title">{act.title}</span>
+                            </div>
+                            <span className="qa-timeline-time">{formatDateTime(act.at || act.created_at)}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {quickActionActivities.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No recent history</span>}
+                    </div>
+                  </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

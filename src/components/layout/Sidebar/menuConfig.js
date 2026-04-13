@@ -94,7 +94,6 @@ export const telecallerMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: '📊', badge: null },
   { label: 'Leads', key: 'leads', icon: '👥', badgeColor: 'blue' },
-  { label: 'Handoff Leads', key: 'handoffs', icon: '🤝', badgeColor: 'purple' },
   { label: "Today's Follow Ups", key: 'followups', icon: '📞', badgeColor: 'orange' },
   { label: 'Pipeline Board', key: 'pipeline', icon: '📋', badge: null },
   { group: 'Quick Actions' },

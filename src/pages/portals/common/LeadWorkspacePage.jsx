@@ -6,7 +6,7 @@ import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
-import leadTypeApi from '../../../api/leadTypeApi';
+import projectTypeApi from '../../../api/projectTypeApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
@@ -21,6 +21,11 @@ import {
 } from './workflowConfig';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import './LeadWorkspacePage.css';
+
+const QUICK_REMARKS = [
+  'Interested', 'Shared Details', 'Callback Later', 'Busy', 
+  'Not Reachable', 'RNR', 'Wrong Number', 'Follow-up Scheduled'
+];
 
 const initialNewLead = {
   full_name: '',
@@ -43,20 +48,14 @@ const initialNewLead = {
   nextFollowUpAt: '',
   lead_status_id: '',
   motivationType: '',
+  motivationNote: '',
   primaryRequirement: '',
   secondaryRequirement: '',
   latitude: null,
   longitude: null,
   assigned_to: '', // '' = unassigned, user.id = assigned to that user
-};
-
-const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50, 75, 100];
-const BUDGET_MAX_VAL = BUDGET_STEPS.length - 1;
-const budgetLabel = (idx) => {
-  const v = BUDGET_STEPS[idx];
-  if (v === 0) return '0';
-  if (v >= 100) return '1 Cr+';
-  return `${v}L`;
+  closure_reason_id: '',
+  remark: '',
 };
 
 const toDateTimeLocalValue = (value) => {
@@ -145,7 +144,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Quick Action Popup ──
   const [quickActionLead, setQuickActionLead] = useState(null);
-  const [quickFollowUpDate, setQuickFollowUpDate] = useState('');
+  const [quickActionActivities, setQuickActionActivities] = useState([]);
+  const [quickReassignUserId, setQuickReassignUserId] = useState('');
+  const [quickReassignNote, setQuickReassignNote] = useState('');
   const [quickActionLoading, setQuickActionLoading] = useState(false);
   const [quickWorkflowAction, setQuickWorkflowAction] = useState(null);
   const [quickActionSiteVisits, setQuickActionSiteVisits] = useState([]);
@@ -157,6 +158,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     reason: '',
     svDate: '',
     svProjectId: '',
+    motivationType: '',
+    primaryRequirement: '',
+    secondaryRequirement: '',
+    latitude: null,
+    longitude: null,
+    timeSpent: '',
   });
 
   // ── Tabs for TC ──
@@ -174,9 +181,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const projectDropdownRef = useRef(null);
   const [projectSearch, setProjectSearch] = useState('');
-  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
-  const locationDropdownRef = useRef(null);
-  const [locationSearch, setLocationSearch] = useState('');
   const [creating, setCreating] = useState(false);
 
   // ── Workflow actions ──
@@ -440,6 +444,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
   }, [filters, workspaceRole, selectedLeadId, activeTab]);
 
+  // Load closure reasons for new lead form when a terminal status is selected
+  useEffect(() => {
+    if (!newLeadOpen || !newLeadForm.lead_status_id) return;
+    
+    const selectedStatus = statusOptions.find(st => st.id === newLeadForm.lead_status_id || st.value === newLeadForm.lead_status_id);
+    if (!selectedStatus) return;
+
+    let category = null;
+    if (selectedStatus.value === 'LOST') category = 'COLD';
+    if (selectedStatus.value === 'JUNK') category = 'JUNK';
+    if (selectedStatus.value === 'SPAM') category = 'SPAM';
+
+    if (category) {
+      const fetchReasons = async () => {
+        try {
+          const resp = await leadWorkflowApi.getClosureReasons(category);
+          setClosureReasons(resp.data?.rows || resp.data || []);
+        } catch {
+          setClosureReasons([]);
+        }
+      };
+      fetchReasons();
+    } else {
+      setClosureReasons([]);
+    }
+  }, [newLeadOpen, newLeadForm.lead_status_id, statusOptions]);
+
   // ── Duplicate Phone Check ──
   const checkDuplicatePhone = async (phone, type) => {
     if (!phone || phone.length < 10) {
@@ -526,16 +557,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (createOptionsLoading) return;
     setCreateOptionsLoading(true);
     try {
-      const [pResp, lResp, sResp, ltResp] = await Promise.all([
+      const [pResp, lResp, sResp, ptResp] = await Promise.all([
         projectApi.getDropdown(),
         locationApi.getDropdown(),
         leadSourceApi.getWithSubSources().catch(() => leadSourceApi.getDropdown()),
-        leadTypeApi.getDropdown().catch(() => ({ data: [] })),
+        projectTypeApi.getDropdown().catch(() => ({ data: [] })),
       ]);
       const projects = pResp.data || [];
       const locations = lResp.data || [];
       const sources = sResp.data || [];
-      const leadTypes = ltResp.data || [];
+      const projectTypes = ptResp.data || [];
       const map = {};
       sources.forEach((s) => { map[s.id] = s.subSources || []; });
 
@@ -551,7 +582,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       setProjectOptions(projects);
       setLocationOptions(locations);
       setSourceOptions(sources);
-      setLeadTypeOptions(leadTypes);
+      setLeadTypeOptions(projectTypes);
       setSubSourceMap(map);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load options'));
@@ -579,9 +610,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target)) {
         setProjectDropdownOpen(false); setProjectSearch('');
       }
-      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target)) {
-        setLocationDropdownOpen(false); setLocationSearch('');
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -601,34 +629,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     [newLeadForm.project_ids, projectOptions]
   );
 
-  const toggleLocation = (locId) => {
-    setNewLeadForm((prev) => {
-      const ids = (prev.location_ids || []).includes(locId)
-        ? prev.location_ids.filter((id) => id !== locId)
-        : [...(prev.location_ids || []), locId];
-      return { ...prev, location_ids: ids, location_id: ids[0] || '' };
-    });
-  };
-
-  const selectedLocationNames = useMemo(
-    () => (newLeadForm.location_ids || []).map((id) => {
-      const l = locationOptions.find((loc) => loc.id === id);
-      return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
-    }).filter(Boolean),
-    [newLeadForm.location_ids, locationOptions]
-  );
 
   const filteredProjectOptions = useMemo(() => {
-    if (!projectSearch.trim()) return projectOptions;
+    let opts = projectOptions;
+    if (newLeadForm.location_id) {
+      opts = opts.filter((p) => String(p.location_id) === String(newLeadForm.location_id));
+    }
+    if (!projectSearch.trim()) return opts;
     const s = projectSearch.toLowerCase();
-    return projectOptions.filter((p) => (p.project_name || '').toLowerCase().includes(s) || (p.project_code || '').toLowerCase().includes(s));
-  }, [projectOptions, projectSearch]);
+    return opts.filter((p) => (p.project_name || '').toLowerCase().includes(s) || (p.project_code || '').toLowerCase().includes(s));
+  }, [projectOptions, projectSearch, newLeadForm.location_id]);
 
-  const filteredLocationOptions = useMemo(() => {
-    if (!locationSearch.trim()) return locationOptions;
-    const s = locationSearch.toLowerCase();
-    return locationOptions.filter((l) => (l.location_name || '').toLowerCase().includes(s) || (l.city || '').toLowerCase().includes(s));
-  }, [locationOptions, locationSearch]);
 
   // ── Handlers ──
   const handleCreateLead = async (e) => {
@@ -641,6 +652,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (!newLeadForm.lead_sub_source_id) { toast.error('Lead sub-source is required'); return; }
       if (!newLeadForm.nextFollowUpAt) { toast.error('Next follow up date is required'); return; }
       if (!newLeadForm.lead_status_id) { toast.error('Lead status is required'); return; }
+
+      // Validation for terminal statuses
+      const selectedStatus = statusOptions.find(st => st.id === newLeadForm.lead_status_id || st.value === newLeadForm.lead_status_id);
+      if (selectedStatus) {
+        if (['JUNK', 'SPAM'].includes(selectedStatus.value) && !newLeadForm.remark?.trim()) {
+          toast.error(`A reason/remark is mandatory when marking a lead as ${selectedStatus.label}`);
+          return;
+        }
+      }
     }
 
     const budgetMin = newLeadForm.budgetMin ? Number(newLeadForm.budgetMin) : null;
@@ -685,6 +705,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         nextFollowUpAt: newLeadForm.nextFollowUpAt ? new Date(newLeadForm.nextFollowUpAt).toISOString() : undefined,
         lead_status_id: newLeadForm.lead_status_id || undefined,
         assigned_to: assignedToValue,
+        closure_reason_id: newLeadForm.closure_reason_id || undefined,
+        remark: newLeadForm.remark || undefined,
       });
       toast.success('Lead created successfully');
       setNewLeadForm({ ...initialNewLead, latitude: null, longitude: null });
@@ -1041,6 +1063,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       reason: '',
       svDate: '',
       svProjectId: '',
+      motivationType: '',
+      primaryRequirement: '',
+      secondaryRequirement: '',
+      latitude: null,
+      longitude: null,
+      timeSpent: '',
     });
   }, []);
 
@@ -1052,9 +1080,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       await leadWorkflowApi.transitionLead(quickActionLead.id, action.code, payload);
       toast.success(`${action.label} updated successfully`);
       resetQuickWorkflowForm();
-      setQuickFollowUpDate('');
       setQuickActionLead(null);
       setSelectedLeadId(null);
+      setQuickReassignUserId('');
+      setQuickReassignNote('');
       loadLeads({ silent: true });
     } catch (err) {
       toast.error(getErrorMessage(err, `Failed to ${action.label.toLowerCase()}`));
@@ -1085,6 +1114,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (action.needsAssignee) {
       loadAssignableUsers(targetAssigneeRole);
     }
+    if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
+      loadAssignableUsers('COL');
+    }
 
     if (action.needsSvDetails || action.code === 'TC_SV_DONE') {
       loadAssignableUsers(targetAssigneeRole);
@@ -1093,7 +1125,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
     if (action.needsReason && action.reasonCategory) {
       try {
-        const resp = await leadWorkflowApi.getClosureReasons(action.reasonCategory);
+        // Fetch specific category if not 'LOST', otherwise fetch all active reasons
+        const category = action.reasonCategory === 'LOST' ? '' : action.reasonCategory;
+        const resp = await leadWorkflowApi.getClosureReasons(category);
         setClosureReasons(resp.data?.rows || resp.data || []);
       } catch {
         setClosureReasons([]);
@@ -1101,70 +1135,129 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
 
     setQuickWorkflowAction(action);
+    setQuickReassignUserId('');
+    setQuickReassignNote('');
+    // Pre-load TCs for reassignment dropdown
+    loadAssignableUsers('TC');
+
     setQuickWorkflowForm({
       note: '',
       nextFollowUpAt: '',
       assignToUserId: '',
       closureReasonId: '',
       reason: '',
-      svDate: '',
-      svProjectId: '',
+      svDate: new Date().toISOString().split('T')[0],
+      svProjectId: quickActionLead?.projectId || '',
+      motivationType: quickActionLead?.motivationType || '',
+      primaryRequirement: quickActionLead?.primaryRequirement || '',
+      secondaryRequirement: quickActionLead?.secondaryRequirement || '',
+      latitude: quickActionLead?.geoLat || null,
+      longitude: quickActionLead?.geoLong || null,
+      timeSpent: '',
     });
   };
 
   const handleQuickWorkflowSubmit = async () => {
-    if (!quickActionLead || !quickWorkflowAction) return;
+    if (!quickActionLead) return;
+    setQuickActionLoading(true);
 
-    if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
-      toast.error('Please complete booking approval from the lead details page.');
-      return;
-    }
+    try {
+      const f = quickWorkflowForm;
 
-    const payload = {
-      note: quickWorkflowForm.note.trim() || undefined,
-    };
+      // 1. Handle Reassignment if selected
+      if (quickReassignUserId) {
+        await leadWorkflowApi.assignLead(quickActionLead.id, quickReassignUserId, quickReassignNote.trim());
+      }
 
-    if (quickWorkflowAction.needsFollowUp) {
-      if (!quickWorkflowForm.nextFollowUpAt) {
-        toast.error('Follow-up date is required');
+      // 2. Handle Workflow Transition if action selected
+      if (quickWorkflowAction) {
+        // Validation: Customer Profile for specific actions
+        if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
+          const cpF = customerProfileForm;
+          if (!cpF.date_of_birth || !cpF.pan_number || !cpF.aadhar_number || !cpF.current_address || !cpF.occupation) {
+            toast.error('Please fill all mandatory (*) customer profile fields (DOB, PAN, Aadhar, Address, Occupation).');
+            setQuickActionLoading(false);
+            return;
+          }
+        }
+
+        // Validation: Manual reason for Spam/Junk
+        const isManualReasonOnly = ['TC_SPAM', 'TC_JUNK'].includes(quickWorkflowAction.code);
+        if (isManualReasonOnly && !f.reason.trim() && !f.note.trim()) {
+          toast.error('Please enter a reason for ' + quickWorkflowAction.label);
+          setQuickActionLoading(false);
+          return;
+        }
+
+        const payload = {
+          note: f.note.trim() || undefined,
+          nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : undefined,
+          assignToUserId: f.assignToUserId || undefined,
+          closureReasonId: f.closureReasonId || undefined,
+          reason: f.reason.trim() || undefined,
+          svDate: f.svDate || undefined,
+          svProjectId: f.svProjectId || undefined,
+          motivationType: f.motivationType || undefined,
+          primaryRequirement: f.primaryRequirement || undefined,
+          secondaryRequirement: f.secondaryRequirement || undefined,
+          latitude: f.latitude || undefined,
+          longitude: f.longitude || undefined,
+          timeSpent: f.timeSpent || undefined,
+        };
+
+        // Enrich payload with customer profile if needed
+        if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
+          const pF = customerProfileForm;
+          const permAddr = pF.sameAsCurrent ? {
+            permanent_address: pF.current_address,
+            permanent_city: pF.current_city,
+            permanent_state: pF.current_state,
+            permanent_pincode: pF.current_pincode,
+          } : {
+            permanent_address: pF.permanent_address,
+            permanent_city: pF.permanent_city,
+            permanent_state: pF.permanent_state,
+            permanent_pincode: pF.permanent_pincode,
+          };
+          payload.customerProfile = {
+            date_of_birth: pF.date_of_birth ? new Date(pF.date_of_birth).toISOString() : undefined,
+            pan_number: pF.pan_number,
+            aadhar_number: pF.aadhar_number,
+            occupation: pF.occupation,
+            current_post: pF.current_post,
+            purchase_type: pF.purchase_type,
+            marital_status: pF.marital_status,
+            current_address: pF.current_address,
+            current_city: pF.current_city,
+            current_state: pF.current_state,
+            current_pincode: pF.current_pincode,
+            ...permAddr,
+            assignToUserId: pF.assignToUserId,
+            note: pF.note,
+          };
+        }
+
+        await leadWorkflowApi.transitionLead(quickActionLead.id, quickWorkflowAction.code, payload);
+      }
+
+      if (!quickReassignUserId && !quickWorkflowAction) {
+        toast.info('No changes selected');
+        setQuickActionLoading(false);
         return;
       }
-      payload.nextFollowUpAt = new Date(quickWorkflowForm.nextFollowUpAt).toISOString();
-    }
 
-    if (quickWorkflowAction.needsAssignee || quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') {
-      const assigneeRole = getAssigneeRoleForAction(quickWorkflowAction, workspaceRole);
-      if (!quickWorkflowForm.assignToUserId) {
-        toast.error(assigneeRole === 'SH' ? 'Please select Sales Head negotiator' : 'Please select user to assign');
-        return;
-      }
-      payload.assignToUserId = quickWorkflowForm.assignToUserId;
+      toast.success('Lead updated successfully');
+      resetQuickWorkflowForm();
+      setQuickActionLead(null);
+      setSelectedLeadId(null);
+      setQuickReassignUserId('');
+      setQuickReassignNote('');
+      loadLeads({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update lead'));
+    } finally {
+      setQuickActionLoading(false);
     }
-
-    if (quickWorkflowAction.needsReason) {
-      if (!quickWorkflowForm.closureReasonId && !quickWorkflowForm.reason.trim()) {
-        toast.error('A closure reason is mandatory');
-        return;
-      }
-      payload.closureReasonId = quickWorkflowForm.closureReasonId || undefined;
-      payload.reason = quickWorkflowForm.reason.trim() || undefined;
-      if (!payload.note) payload.note = payload.reason;
-    }
-
-    if (quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') {
-      if (!quickWorkflowForm.svDate) {
-        toast.error('Site Visit date is mandatory');
-        return;
-      }
-      if (!quickWorkflowForm.svProjectId) {
-        toast.error('Project visited is mandatory');
-        return;
-      }
-      payload.svDate = new Date(quickWorkflowForm.svDate).toISOString();
-      payload.svProjectId = quickWorkflowForm.svProjectId;
-    }
-
-    await runQuickWorkflowAction(quickWorkflowAction, payload);
   };
 
 
@@ -1255,16 +1348,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             placeholder="Search leads by name, phone, email..."
           />
         </div>
-        <FilterDropdown
-          label="Stages"
-          options={toolbarStageOptions}
-          selectedValues={multiFilters.stageCodes}
-          onToggle={(value) => toggleMultiFilter('stageCodes', value)}
-          onClear={() => setMultiFilters((prev) => ({ ...prev, stageCodes: [] }))}
-        />
+        {workspaceRole !== 'TC' && (
+          <FilterDropdown
+            label="Stages"
+            options={toolbarStageOptions}
+            selectedValues={multiFilters.stageCodes}
+            onToggle={(value) => toggleMultiFilter('stageCodes', value)}
+            onClear={() => setMultiFilters((prev) => ({ ...prev, stageCodes: [] }))}
+          />
+        )}
         <FilterDropdown
           label="Statuses"
-          options={statusOptions}
+          options={workspaceRole === 'TC' ? statusOptions.filter(opt => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(opt.value)) : statusOptions}
           selectedValues={multiFilters.statusCodes}
           onToggle={(value) => toggleMultiFilter('statusCodes', value)}
           onClear={() => setMultiFilters((prev) => ({ ...prev, statusCodes: [] }))}
@@ -1421,10 +1516,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           setQuickActionLead(lead);
                           // Load site visits for this lead
                           try {
-                            const svResp = await siteVisitApi.getAll({ lead_id: lead.id });
+                            const [svResp, actResp] = await Promise.all([
+                              siteVisitApi.getAll({ lead_id: lead.id }),
+                              leadWorkflowApi.getLeadActivities(lead.id)
+                            ]);
                             setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
+                            setQuickActionActivities(actResp.data || []);
                           } catch {
                             setQuickActionSiteVisits([]);
+                            setQuickActionActivities([]);
                           }
                         }}
                       >
@@ -1590,6 +1690,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               <div className="lead-detail__info-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{selectedLead.secondaryRequirement}</div>
                             </div>
                           )}
+                          {selectedLead.timeSpent != null && (
+                            <div className="lead-detail__info-item">
+                              <div className="crm-form-label">Time Spent (mins)</div>
+                              <div className="lead-detail__info-value">{selectedLead.timeSpent}</div>
+                            </div>
+                          )}
                           {selectedLead.geoLat && (
                             <div className="lead-detail__info-item" style={{ gridColumn: 'span 2' }}>
                               <div className="crm-form-label">Creation Location</div>
@@ -1615,30 +1721,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <h3 className="lead-detail__section-title">Quick Actions</h3>
                         <div className="lead-detail__quick-actions">
                           <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote}>📞 Log Call</button>
-                          {workspaceRole === 'SM' && (
-                            <button
-                              className="crm-btn crm-btn-primary crm-btn-sm"
-                              onClick={() => {
-                                setRecordSvForm({
-                                  svDate: new Date().toISOString().split('T')[0],
-                                  svProjectId: selectedLead.projectId || '',
-                                  assignToUserId: '',
-                                  motivationType: selectedLead.motivationType || '',
-                                  primaryRequirement: selectedLead.primaryRequirement || '',
-                                  secondaryRequirement: selectedLead.secondaryRequirement || '',
-                                  latitude: null,
-                                  longitude: null,
-                                  timeSpent: '',
-                                  note: '',
-                                });
-                                setRecordSvModalOpen(true);
-                                loadAssignableUsers('SH');
-                                if (!projectOptions.length) loadCreateOptions();
-                              }}
-                            >
-                              🏠 Record Site Visit
-                            </button>
-                          )}
+                          {/* SV Recording moved to roleActions in drawer */}
                           <button className="crm-btn crm-btn-ghost crm-btn-sm">💬 WhatsApp</button>
                           <button className="crm-btn crm-btn-ghost crm-btn-sm">📧 Email</button>
                           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()}>📝 Add Note</button>
@@ -1957,7 +2040,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </div>
 
               <div className="lead-workspace__new-form-section">Lead Classification</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <label>
                   Lead Type
                   <select value={newLeadForm.lead_type_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
@@ -1967,7 +2050,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     ))}
                   </select>
                 </label>
-                {workspaceRole === 'TC' && (
+                {workspaceRole === 'TC' ? (
                   <label>
                     Lead Status*
                     <select
@@ -1977,18 +2060,92 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       style={{ borderColor: !newLeadForm.lead_status_id ? '#fca5a5' : undefined }}
                     >
                       <option value="">Select lead status</option>
+                      {statusOptions.filter(st => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'].includes(st.value)).map((st) => (
+                        <option key={st.value} value={st.value}>{st.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label>
+                    Lead Status
+                    <select value={newLeadForm.lead_status_id} onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_status_id: e.target.value }))}>
+                      <option value="">Select lead status</option>
                       {statusOptions.map((st) => (
                         <option key={st.value} value={st.value}>{st.label}</option>
                       ))}
                     </select>
                   </label>
                 )}
+                <label>
+                  Priority
+                  <select value={newLeadForm.priority} onChange={(e) => setNewLeadForm((p) => ({ ...p, priority: e.target.value }))}>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </label>
               </div>
 
-              <div className="lead-workspace__new-form-section">Source & Project</div>
-              {/* Multi-select Project for TC, single select for others */}
+              {/* Conditional Closure Reason / Remark for Lead Creation */}
+              {(['LOST', 'JUNK', 'SPAM'].includes(statusOptions.find(s => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value)) && (
+                <div style={{ 
+                  gridColumn: '1 / -1', 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr', 
+                  gap: 16, 
+                  marginTop: 12, 
+                  padding: '16px', 
+                  background: '#fef2f2', 
+                  borderRadius: 8, 
+                  border: '1px solid #fee2e2',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                }}>
+                  <label style={{ gridColumn: 'span 1' }}>
+                    <span style={{ display: 'block', marginBottom: 6 }}>Closure Reason {statusOptions.find(s => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value === 'LOST' ? '' : '*'}</span>
+                    <select
+                      value={newLeadForm.closure_reason_id}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, closure_reason_id: e.target.value })}
+                      style={{ width: '100%', height: 38 }}
+                    >
+                      <option value="">Select Reason...</option>
+                      {closureReasons.map(r => (
+                        <option key={r.id} value={r.id}>{r.reason_name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label style={{ gridColumn: 'span 1' }}>
+                    <span style={{ display: 'block', marginBottom: 6 }}>Remarks / Context *</span>
+                    <textarea
+                      rows={1}
+                      value={newLeadForm.remark}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, remark: e.target.value })}
+                      placeholder="Why is this lead being closed/disqualified?"
+                      style={{ width: '100%', height: 38, resize: 'none', padding: '8px 12px' }}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div className="lead-workspace__new-form-section">Location & Project</div>
+              
+              <label>
+                Location*
+                <select
+                  value={newLeadForm.location_id}
+                  onChange={(e) => setNewLeadForm((p) => ({ ...p, location_id: e.target.value, project_ids: [] }))}
+                  required
+                >
+                  <option value="">Select location</option>
+                  {locationOptions.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                  ))}
+                </select>
+              </label>
+            
               {/* Searchable Multi-Select Project */}
-              <div ref={projectDropdownRef} style={{ position: 'relative', gridColumn: 'span 2' }}>
+              <div ref={projectDropdownRef} style={{ position: 'relative' }}>
                 <label style={{ display: 'block', marginBottom: 4 }}>Project (Multi-Select)</label>
                 <div
                   onClick={() => setProjectDropdownOpen((p) => !p)}
@@ -2049,88 +2206,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   ))}
                 </select>
               </label>
-              {/* Searchable Multi-Select Location */}
-              <div ref={locationDropdownRef} style={{ position: 'relative', gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', marginBottom: 4 }}>Location (Multi-Select)</label>
-                <div
-                  onClick={() => setLocationDropdownOpen((p) => !p)}
-                  style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '6px 10px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, background: 'var(--bg-primary, #fff)', fontSize: 13 }}
-                >
-                  {selectedLocationNames.length === 0 && <span style={{ color: '#94a3b8' }}>Select locations...</span>}
-                  {selectedLocationNames.map((name, i) => (
-                    <span key={i} style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {name}
-                      <span onClick={(ev) => { ev.stopPropagation(); toggleLocation((newLeadForm.location_ids || [])[i]); }} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</span>
-                    </span>
-                  ))}
-                </div>
-                {locationDropdownOpen && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: 240, marginTop: 4 }}>
-                    <div style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>
-                      <input type="text" placeholder="Search locations..." value={locationSearch} onChange={(e) => setLocationSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, outline: 'none' }} />
-                    </div>
-                    <div style={{ maxHeight: 220, overflowY: 'auto', padding: 12 }}>
-                      <div className="checkbox-grid">
-                        {filteredLocationOptions.map((loc) => (
-                          <label key={loc.id} className="checkbox-item">
-                            <input type="checkbox" checked={(newLeadForm.location_ids || []).includes(loc.id)} onChange={() => toggleLocation(loc.id)} />
-                            <span>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {filteredLocationOptions.length === 0 && <div style={{ padding: 12, color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>No locations found</div>}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <div className="lead-workspace__new-form-section">Lead Source</div>
 
-              <div className="lead-workspace__new-form-section">Budget & Priority</div>
-              {/* Budget Range Slider */}
-              <div className="lead-workspace__new-form-span" style={{ padding: '4px 0' }}>
-                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Budget Range: <strong>{budgetLabel(newLeadForm.budgetMinIdx || 0)} – {budgetLabel(newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)}</strong></div>
-                <div style={{ position: 'relative', height: 40, display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                  <div style={{ position: 'absolute', left: 8, right: 8, height: 6, borderRadius: 3, background: '#e2e8f0' }} />
-                  <div style={{ position: 'absolute', left: `calc(${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% + 8px)`, right: `calc(${(1 - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}% + 8px)`, height: 6, borderRadius: 3, background: 'var(--accent-blue, #3b82f6)' }} />
-                  <input type="range" min={0} max={BUDGET_MAX_VAL} value={newLeadForm.budgetMinIdx || 0}
-                    onChange={(e) => {
-                      const v = Math.min(Number(e.target.value), (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) - 1);
-                      setNewLeadForm((p) => ({ ...p, budgetMinIdx: v, budgetMin: BUDGET_STEPS[v] * 100000 }));
-                    }}
-                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 40, opacity: 0, cursor: 'pointer', zIndex: 3 }}
-                  />
-                  <input type="range" min={0} max={BUDGET_MAX_VAL} value={newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL}
-                    onChange={(e) => {
-                      const v = Math.max(Number(e.target.value), (newLeadForm.budgetMinIdx || 0) + 1);
-                      setNewLeadForm((p) => ({ ...p, budgetMaxIdx: v, budgetMax: BUDGET_STEPS[v] * 100000 }));
-                    }}
-                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 40, opacity: 0, cursor: 'pointer', zIndex: 4 }}
-                  />
-                  <div style={{ position: 'absolute', left: `calc(${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.2)', zIndex: 5, pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', left: `calc(${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.2)', zIndex: 5, pointerEvents: 'none' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94a3b8', padding: '0 8px' }}>
-                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 100 ? '1Cr' : `${v}L`}</span>)}
-                </div>
-              </div>
-              <label>
-                Priority
-                <select value={newLeadForm.priority} onChange={(e) => setNewLeadForm((p) => ({ ...p, priority: e.target.value }))}>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Urgent">Urgent</option>
-                </select>
-              </label>
+              <div className="lead-workspace__new-form-section">Budget</div>
 
               {/* Next Follow Up Date — CalendarPicker for TC */}
               {workspaceRole === 'TC' && (
                 <div className="lead-workspace__new-form-span">
                   <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Next Follow Up Date*</div>
                   <CalendarPicker
-                    type="datetime"
+                    type={workspaceRole === 'TC' ? 'date' : 'datetime'}
                     value={newLeadForm.nextFollowUpAt}
                     onChange={(val) => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                    placeholder="Select Date & Time..."
+                    placeholder={workspaceRole === 'TC' ? 'Select follow-up date...' : 'Select Date & Time...'}
                     minDate={new Date().toISOString()}
                   />
                 </div>
@@ -2153,6 +2241,32 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </small>
                 </div>
               )}
+
+              {/* General Note for all roles in creation */}
+              <div className="lead-workspace__new-form-span">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>Note / Remarks</label>
+                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+                    {QUICK_REMARKS.map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setNewLeadForm(p => ({ ...p, secondaryRequirement: p.secondaryRequirement ? `${p.secondaryRequirement}, ${chip}` : chip }))}
+                        style={{ padding: '4px 10px', fontSize: 11, borderRadius: 20, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  rows={2}
+                  value={newLeadForm.secondaryRequirement}
+                  onChange={(e) => setNewLeadForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
+                  placeholder="Primary requirements or general remarks..."
+                  style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid var(--border-primary)', minHeight: 60 }}
+                />
+              </div>
 
               {/* SM Behavioral Metadata */}
               {workspaceRole === 'SM' && (
@@ -2182,12 +2296,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     />
                   </label>
                   <label className="lead-workspace__new-form-span">
-                    Secondary Requirements & Site Remarks
+                    Motivation Note (Optional)
                     <textarea
                       rows={2}
-                      value={newLeadForm.secondaryRequirement}
-                      onChange={(e) => setNewLeadForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
-                      placeholder="Additional requirements or site visit remarks"
+                      value={newLeadForm.motivationNote || ''}
+                      onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationNote: e.target.value }))}
+                      placeholder="Specific motivation details..."
                     />
                   </label>
 
@@ -2722,389 +2836,562 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         </div>
       )}
 
-      {/* Quick Action Drawer */}
+      {/* Quick Action Drawer Modal */}
       {quickActionLead && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 999
-        }} onClick={() => {
+        <div className="lead-workspace__modal" role="dialog" aria-modal="true" onClick={() => {
           setQuickActionLead(null);
-          setQuickFollowUpDate('');
-          resetQuickWorkflowForm();
+              resetQuickWorkflowForm();
         }}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'fixed', top: 0, right: 0, bottom: 0, width: 400, maxWidth: '100vw',
-              background: 'var(--bg-card)', boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
-              zIndex: 1000, display: 'flex', flexDirection: 'column',
-              animation: 'slideInRight 0.2s ease-out'
-            }}>
-            <style>{`@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+          <div className="qa-modal-panel" onClick={(e) => e.stopPropagation()}>
+            {/* Drawer Handle */}
+            <div className="qa-drawer-handle" />
 
-            {/* Header */}
-            <div style={{
-              padding: '16px 20px', borderBottom: '1px solid var(--border-primary)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: 'linear-gradient(135deg, #1e293b, #334155)'
-            }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, color: '#fff' }}>⚡ Quick Actions</h3>
-                <small style={{ color: '#94a3b8' }}>{quickActionLead.fullName} · {quickActionLead.phone}</small>
+            {/* ── Drawer Header: Avatar + Name + Meta + Close ── */}
+            <div className="qa-drawer-header">
+              <div className="qa-drawer-header-left">
+                <div
+                  className="qa-drawer-avatar"
+                  style={{
+                    background: '#E3EEFB',
+                    color: '#1A5FA8',
+                  }}
+                >
+                  {(quickActionLead.fullName || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div className="qa-drawer-name">{quickActionLead.fullName}</div>
+                  <div className="qa-drawer-meta">
+                    {quickActionLead.phone}
+                    {quickActionLead.project ? ` · ${quickActionLead.project}` : ''}
+                    {quickActionLead.location ? ` - ${quickActionLead.location}` : ''}
+                  </div>
+                  <div className="qa-drawer-budget">
+                    {quickActionLead.source || 'No Source'}
+                    {quickActionLead.subSource ? ` · ${quickActionLead.subSource}` : ''}
+                    {(quickActionLead.budgetMin || quickActionLead.budgetMax) && (
+                      <span style={{ opacity: 0.8, marginLeft: 8 }}>
+                        ({quickActionLead.budgetMin ? formatCurrency(quickActionLead.budgetMin) : ''}{quickActionLead.budgetMax ? `–${formatCurrency(quickActionLead.budgetMax)}` : ''})
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  setQuickActionLead(null);
-                  setQuickFollowUpDate('');
-                  resetQuickWorkflowForm();
-                }}
-                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', fontSize: 18, cursor: 'pointer', color: '#fff', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                ×
-              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button 
+                  className="qa-drawer-close"
+                  style={{ background: '#DCFCE7', color: '#166534', fontSize: '14px', border: 'none' }}
+                  title={`Call ${quickActionLead.phone}`}
+                  onClick={() => window.open(`tel:${quickActionLead.phone}`)}
+                >
+                  📞
+                </button>
+                <button 
+                  className="qa-drawer-close"
+                  style={{ background: '#E8F8EF', color: '#1A7A43', fontSize: '14px', border: 'none' }}
+                  title="WhatsApp"
+                  onClick={() => window.open(`https://wa.me/${(quickActionLead.whatsappNumber || quickActionLead.phone || '').replace(/\D/g, '')}`, '_blank')}
+                >
+                  💬
+                </button>
+                <button
+                  className="qa-drawer-close"
+                  onClick={() => {
+                    setQuickActionLead(null);
+                                  resetQuickWorkflowForm();
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            <div style={{ flex: 1, padding: 0, overflowY: 'auto' }}>
-              {/* Lead Summary Card */}
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary, #e2e8f0)', background: 'var(--bg-secondary, #f8fafc)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: 12 }}>
-                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Stage:</span> <span style={{ color: quickActionLead.stageColor || 'var(--text-primary)', fontWeight: 600 }}>{quickActionLead.stageLabel || '-'}</span></div>
-                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Status:</span> <span style={{ color: quickActionLead.statusColor || 'var(--text-primary)', fontWeight: 600 }}>{quickActionLead.statusLabel || '-'}</span></div>
-                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Source:</span> {quickActionLead.source || '-'}</div>
-                  <div><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Project:</span> {quickActionLead.project || '-'}</div>
-                </div>
+            {/* ── Scrollable Drawer Body ── */}
+            <div className="qa-drawer-body">
+
+              {/* ── Update Status (Status Grid) ── */}
+              {!quickActionLead.isClosed && (
+                <>
+                  <div className="qa-drawer-section">Update status</div>
+                  <div className="qa-drawer-status-grid">
+                    {roleActions.filter(a => a.tone !== 'danger').map((action) => {
+                      let icon = '📋';
+                      let selClass = 'sel-default';
+                      if (action.code.includes('RNR')) { icon = '🔄'; selClass = 'sel-rnr'; }
+                      else if (action.code.includes('SV_DONE') || action.code.includes('SITE_VISIT')) { icon = '✅'; selClass = 'sel-sv-done'; }
+                      else if (action.code.includes('SCHEDULE') || action.code.includes('REVISIT')) { icon = '📅'; selClass = 'sel-sv-scheduled'; }
+                      else if (action.code.includes('FOLLOW_UP')) { icon = '📞'; selClass = 'sel-follow-up'; }
+                      else if (action.code.includes('NEGOTIATION')) { icon = '🤝'; selClass = 'sel-negotiation'; }
+                      else if (action.code.includes('BOOKING')) { icon = '🎉'; selClass = 'sel-booking'; }
+                      else if (action.code.includes('PAYMENT')) { icon = '💸'; selClass = 'sel-booking'; }
+
+                      return (
+                        <button
+                          key={action.code}
+                          type="button"
+                          className={`qa-drawer-st-btn ${quickWorkflowAction?.code === action.code ? selClass : ''}`}
+                          disabled={quickActionLoading}
+                          onClick={() => handleQuickWorkflowActionSelect(action)}
+                        >
+                          <div className="qa-drawer-st-icon">{icon}</div>
+                          <div className="qa-drawer-st-label">{action.label}</div>
+                        </button>
+                      );
+                    })}
+                    {/* Danger / Disqualification actions in the grid */}
+                    {roleActions.filter(a => a.tone === 'danger').map((action) => (
+                      <button
+                        key={action.code}
+                        type="button"
+                        className={`qa-drawer-st-btn ${quickWorkflowAction?.code === action.code ? 'sel-junk' : ''}`}
+                        disabled={quickActionLoading}
+                        onClick={() => handleQuickWorkflowActionSelect(action)}
+                      >
+                        <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? '🚫' : action.code.includes('SPAM') ? '🗑️' : '⚠️'}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── Reassign to TC (Independent but related) ── */}
+                  <div className="qa-drawer-ctx-block" style={{ marginTop: 16 }}>
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Reassign Lead to Telecaller</div>
+                    <select
+                      className="qa-drawer-field-select"
+                      value={quickReassignUserId}
+                      onChange={(e) => setQuickReassignUserId(e.target.value)}
+                      style={{ width: '100%', marginBottom: 8 }}
+                    >
+                      <option value="">No change (keep current user)...</option>
+                      {(assignableUsers['TC'] || []).map(u => (
+                        <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
+                      ))}
+                    </select>
+                    {quickReassignUserId && (
+                      <textarea
+                        className="qa-drawer-remark-ta"
+                        rows={1}
+                        value={quickReassignNote}
+                        onChange={(e) => setQuickReassignNote(e.target.value)}
+                        placeholder="Optional reassignment note..."
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* ── Quick Remarks ── */}
+              <div className="qa-drawer-section">Quick remarks — tap to fill</div>
+              <div className="qa-drawer-rchip-row">
+                {QUICK_REMARKS.map(chip => (
+                  <button
+                    key={chip}
+                    type="button"
+                    className={`qa-drawer-rchip ${quickWorkflowForm.note === chip ? 'sel' : ''}`}
+                    onClick={() => setQuickWorkflowForm(p => ({ ...p, note: chip }))}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+              <div className="qa-drawer-remark-wrap">
+                <textarea
+                  className="qa-drawer-remark-ta"
+                  rows={2}
+                  value={quickWorkflowForm.note}
+                  onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))}
+                  placeholder="What was discussed? What's the next step?"
+                />
               </div>
 
-              {/* Claim Lead (for unassigned) */}
-              {workspaceRole === 'TC' && !quickActionLead.assignedToUserId && (
-                <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
-                  <button
-                    className="crm-btn crm-btn-primary"
-                    style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 600, borderRadius: 10, background: 'linear-gradient(135deg, #059669, #10b981)' }}
-                    disabled={quickActionLoading}
-                    onClick={async () => {
-                      setQuickActionLoading(true);
-                      try {
-                        await leadWorkflowApi.assignLead(quickActionLead.id, user.id, 'Self-assigned from pool');
-                        toast.success('Lead claimed! Added to My Leads.');
-                        setQuickActionLead(null);
-                        resetQuickWorkflowForm();
-                        setSelectedLeadId(null);
-                        setActiveTab('mine');
-                      } catch (err) {
-                        toast.error(getErrorMessage(err, 'Failed to claim lead'));
-                      } finally {
-                        setQuickActionLoading(false);
-                      }
-                    }}
-                  >
-                    {quickActionLoading ? 'Claiming...' : '🙋 Claim This Lead (Assign to Me)'}
-                  </button>
+              {/* ── Contextual: Follow-up Date (when action needs follow-up) ── */}
+              {quickWorkflowAction?.needsFollowUp && (
+                <div className="qa-drawer-ctx-block">
+                  <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2PM</button>
+                    <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6PM</button>
+                    <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tmrw 11AM</button>
+                    <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(2, 11, 0) }))}>In 2 days</button>
+                    <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(7, 11, 0) }))}>Next week</button>
+                  </div>
+                  <CalendarPicker
+                    type="datetime"
+                    value={quickWorkflowForm.nextFollowUpAt}
+                    onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
+                    placeholder="Select follow-up date & time..."
+                    minDate={new Date().toISOString()}
+                  />
                 </div>
               )}
 
-              {/* Workflow Actions */}
-              {!quickActionLead.isClosed && (
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
-                  {workspaceRole === 'SM' && (
-                    <button
-                      className="crm-btn crm-btn-success crm-btn-sm"
-                      style={{
-                        width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 10,
-                        fontSize: 13, fontWeight: 700, marginBottom: 16,
-                        background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff',
-                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', border: 'none'
-                      }}
-                      onClick={() => {
-                        setSelectedLeadId(quickActionLead.id);
-                        setRecordSvForm({
-                          svDate: new Date().toISOString().split('T')[0],
-                          svProjectId: quickActionLead.projectId || '',
-                          assignToUserId: '',
-                          motivationType: quickActionLead.motivationType || '',
-                          primaryRequirement: quickActionLead.primaryRequirement || '',
-                          secondaryRequirement: quickActionLead.secondaryRequirement || '',
-                          latitude: null,
-                          longitude: null,
-                          timeSpent: '',
-                          note: '',
-                        });
-                        setRecordSvModalOpen(true);
-                        setQuickActionLead(null);
-                        loadAssignableUsers('SH');
-                      }}
+              {/* ── Contextual: Closure Reason (when action needs reason) ── */}
+              {quickWorkflowAction?.needsReason && (
+                <div className="qa-drawer-ctx-block">
+                  <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>
+                    {['TC_SPAM', 'TC_JUNK'].includes(quickWorkflowAction.code) ? 'Reason *' : 'Closure reason'}
+                  </div>
+                  {!['TC_SPAM', 'TC_JUNK'].includes(quickWorkflowAction.code) && (
+                    <select
+                      className="qa-drawer-field-select"
+                      value={quickWorkflowForm.closureReasonId}
+                      onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, closureReasonId: e.target.value }))}
+                      style={{ width: '100%', marginBottom: 8 }}
                     >
-                      🏠 Record Site Visit
-                    </button>
+                      <option value="">Select a reason...</option>
+                      {closureReasons.map(r => (
+                        <option key={r.id} value={r.id}>{r.reason_name || r.reason_text || r.reason}</option>
+                      ))}
+                    </select>
                   )}
+                  <textarea
+                    className="qa-drawer-remark-ta"
+                    rows={2}
+                    value={quickWorkflowForm.reason}
+                    onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, reason: e.target.value }))}
+                    placeholder="Add reason details..."
+                  />
+                </div>
+              )}
 
-                  <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Workflow Actions</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {roleActions.filter(a => a.tone === 'primary' || a.tone === 'success').map((action) => (
-                      <button
-                        key={action.code}
-                        className={`crm-btn crm-btn-${action.tone === 'success' ? 'success' : 'primary'} crm-btn-sm`}
-                        style={{ width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500 }}
-                        disabled={quickActionLoading}
-                        onClick={() => handleQuickWorkflowActionSelect(action)}
-                      >
-                        {action.tone === 'success' ? '✅' : '📋'} {action.label}
-                      </button>
+              {/* ── Contextual: Assignee (when action needs assignee or SV details) ── */}
+              {(quickWorkflowAction?.needsAssignee || quickWorkflowAction?.needsSvDetails || quickWorkflowAction?.code === 'TC_SV_DONE') && (
+                <div className="qa-drawer-ctx-block">
+                  <label className="qa-drawer-field-label">
+                    {getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
+                  </label>
+                  <select
+                    className="qa-drawer-field-select"
+                    value={quickWorkflowForm.assignToUserId}
+                    onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, assignToUserId: e.target.value }))}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">
+                      {getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head...' :
+                       getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
+                    </option>
+                    {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || []).map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
+                      </option>
                     ))}
-                    {roleActions.filter(a => a.tone === 'secondary').map((action) => (
-                      <button
-                        key={action.code}
-                        className="crm-btn crm-btn-ghost crm-btn-sm"
-                        style={{ width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, border: '1px solid var(--border-primary)' }}
-                        disabled={quickActionLoading}
-                        onClick={() => handleQuickWorkflowActionSelect(action)}
+                  </select>
+                </div>
+              )}
+
+              {/* ── Contextual: Site Visit Details ── */}
+              {(quickWorkflowAction?.needsSvDetails || quickWorkflowAction?.code === 'TC_SV_DONE') && (
+                <div className="qa-drawer-ctx-block">
+                  <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
+                  <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <label className="qa-drawer-field-label">Visit Date *</label>
+                      <input
+                        type="date"
+                        className="qa-drawer-field-input"
+                        value={quickWorkflowForm.svDate}
+                        onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svDate: e.target.value }))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className="qa-drawer-field-label">Project *</label>
+                      <select
+                        className="qa-drawer-field-select"
+                        value={quickWorkflowForm.svProjectId}
+                        onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                        style={{ width: '100%' }}
                       >
-                        🔄 {action.label}
-                      </button>
-                    ))}
+                        <option value="">Select...</option>
+                        {projectOptions.map((p) => (
+                          <option key={p.id} value={p.id}>{p.project_name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  {quickWorkflowAction && (
-                    <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 10, background: 'var(--bg-secondary, #f8fafc)' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>
-                        {quickWorkflowAction.label}
-                      </div>
-
-                      {quickWorkflowAction.needsFollowUp && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Follow-up Date & Time *</div>
-                          <CalendarPicker
-                            type="datetime"
-                            value={quickWorkflowForm.nextFollowUpAt}
-                            onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                            placeholder="Select follow-up date & time..."
-                            minDate={new Date().toISOString()}
+                  {quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && (
+                    <>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Motivation</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.motivationType}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, motivationType: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            <option value="End Use">End Use</option>
+                            <option value="Investment">Investment</option>
+                            <option value="Rental">Rental</option>
+                            <option value="Expansion">Expansion</option>
+                            <option value="Gift">Gift</option>
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Time Spent (min)</label>
+                          <input
+                            type="number"
+                            className="qa-drawer-field-input"
+                            placeholder="e.g. 45"
+                            value={quickWorkflowForm.timeSpent}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, timeSpent: e.target.value }))}
+                            style={{ width: '100%' }}
                           />
                         </div>
-                      )}
-
-                      {(quickWorkflowAction.needsAssignee || quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') && (
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
-                          {getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
-                          <select
-                            value={quickWorkflowForm.assignToUserId}
-                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, assignToUserId: e.target.value }))}
-                            style={{ width: '100%', marginTop: 4 }}
-                          >
-                            <option value="">{getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head...' : 'Select user...'}</option>
-                            {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || []).map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-
-                      {(quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') && (
-                        <>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
-                            Site Visit Date *
-                            <input
-                              type="date"
-                              value={quickWorkflowForm.svDate}
-                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svDate: e.target.value }))}
-                              style={{ width: '100%', marginTop: 4 }}
-                            />
-                          </label>
-
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
-                            Project Visited *
-                            <select
-                              value={quickWorkflowForm.svProjectId}
-                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svProjectId: e.target.value }))}
-                              style={{ width: '100%', marginTop: 4 }}
-                            >
-                              <option value="">Select project...</option>
-                              {projectOptions.map((p) => (
-                                <option key={p.id} value={p.id}>{p.project_name}</option>
-                              ))}
-                            </select>
-                          </label>
-                        </>
-                      )}
-
-                      {quickWorkflowAction.needsReason && (
-                        <>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
-                            Closure Reason
-                            <select
-                              value={quickWorkflowForm.closureReasonId}
-                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, closureReasonId: e.target.value }))}
-                              style={{ width: '100%', marginTop: 4 }}
-                            >
-                              <option value="">Select reason...</option>
-                              {closureReasons.map((r) => (
-                                <option key={r.id} value={r.id}>{r.reason || r.reason_text || r.label || 'Reason'}</option>
-                              ))}
-                            </select>
-                          </label>
-
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
-                            Reason Note
-                            <textarea
-                              rows={2}
-                              value={quickWorkflowForm.reason}
-                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, reason: e.target.value }))}
-                              placeholder="Enter reason..."
-                              style={{ width: '100%', marginTop: 4 }}
-                            />
-                          </label>
-                        </>
-                      )}
-
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
-                        Note
-                        <textarea
-                          rows={2}
-                          value={quickWorkflowForm.note}
-                          onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))}
-                          placeholder="Add a note..."
-                          style={{ width: '100%', marginTop: 4 }}
-                        />
-                      </label>
-
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          type="button"
-                          className="crm-btn crm-btn-ghost crm-btn-sm"
-                          style={{ flex: 1 }}
-                          onClick={resetQuickWorkflowForm}
-                          disabled={quickActionLoading}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          className="crm-btn crm-btn-primary crm-btn-sm"
-                          style={{ flex: 1 }}
-                          onClick={handleQuickWorkflowSubmit}
-                          disabled={quickActionLoading}
-                        >
-                          {quickActionLoading ? 'Saving...' : 'Submit Action'}
-                        </button>
                       </div>
-                    </div>
+
+                      <div style={{ marginBottom: 10 }}>
+                        <label className="qa-drawer-field-label">Requirement (Primary)</label>
+                        <input
+                          type="text"
+                          className="qa-drawer-field-input"
+                          placeholder="e.g. 3BHK, East facing"
+                          value={quickWorkflowForm.primaryRequirement}
+                          onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: 10 }}>
+                        <label className="qa-drawer-field-label">Requirements / Remarks</label>
+                        <textarea
+                          className="qa-drawer-remark-ta"
+                          rows={2}
+                          placeholder="Specific preferences, configuration, budget notes..."
+                          value={quickWorkflowForm.secondaryRequirement}
+                          onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <label className="qa-drawer-field-label" style={{ marginBottom: 0 }}>Geo-Location</label>
+                          <button
+                            type="button"
+                            className="qa-drawer-rchip"
+                            style={{ fontSize: '10px', padding: '4px 10px' }}
+                            onClick={() => {
+                              if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition((pos) => {
+                                  setQuickWorkflowForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                                  toast.success('Location captured!');
+                                }, () => toast.error('Check location permissions'));
+                              }
+                            }}
+                          >
+                            🎯 Get Position
+                          </button>
+                        </div>
+                        <div className="qa-drawer-field-row">
+                          <input type="number" step="any" placeholder="Latitude" className="qa-drawer-field-input"
+                            value={quickWorkflowForm.latitude || ''}
+                            onChange={(e) => setQuickWorkflowForm(p => ({ ...p, latitude: e.target.value }))}
+                          />
+                          <input type="number" step="any" placeholder="Longitude" className="qa-drawer-field-input"
+                            value={quickWorkflowForm.longitude || ''}
+                            onChange={(e) => setQuickWorkflowForm(p => ({ ...p, longitude: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
-
-                  {/* Divider */}
-                  <div style={{ borderTop: '1px dashed var(--border-primary, #e2e8f0)', margin: '12px 0', position: 'relative' }}>
-                    <span style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', padding: '0 8px', fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Disqualify</span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {roleActions.filter(a => a.tone === 'danger' || a.tone === 'warning').map((action) => (
-                      <button
-                        key={action.code}
-                        className="crm-btn crm-btn-sm"
-                        style={{ flex: '1 1 45%', textAlign: 'center', padding: '8px 10px', borderRadius: 8, fontSize: 12, fontWeight: 500, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
-                        disabled={quickActionLoading}
-                        onClick={() => handleQuickWorkflowActionSelect(action)}
-                      >
-                        ❌ {action.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               )}
 
-              {/* Schedule Follow-Up */}
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📅 Schedule Follow-Up</div>
-                <CalendarPicker
-                  type="datetime"
-                  value={quickFollowUpDate}
-                  onChange={setQuickFollowUpDate}
-                  placeholder="Select date & time..."
-                  minDate={new Date().toISOString()}
-                />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(0, 14, 0))}>Today 2PM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(0, 18, 0))}>Today 6PM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(1, 11, 0))}>Tmrw 11AM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setQuickFollowUpDate(getQuickFollowUpValue(1, 16, 0))}>Tmrw 4PM</button>
+              {/* ── Contextual: Customer Profile ── */}
+              {(quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && (
+                <div className="qa-drawer-profile-block">
+                  <div className="qa-drawer-profile-section">🏆 Customer Profile Details</div>
+
+                  <div className="qa-drawer-profile-section">👤 Personal Details</div>
+                  <div className="qa-drawer-profile-grid-3">
+                    <div>
+                      <label className="qa-drawer-field-label">Date of Birth *</label>
+                      <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.date_of_birth} onChange={(e) => setCustomerProfileForm(p => ({ ...p, date_of_birth: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="qa-drawer-field-label">Marital Status</label>
+                      <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.marital_status} onChange={(e) => setCustomerProfileForm(p => ({ ...p, marital_status: e.target.value }))}>
+                        <option value="">Select...</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Divorced">Divorced</option>
+                        <option value="Widowed">Widowed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="qa-drawer-field-label">Purchase Type</label>
+                      <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.purchase_type} onChange={(e) => setCustomerProfileForm(p => ({ ...p, purchase_type: e.target.value }))}>
+                        <option value="">Select...</option>
+                        <option value="Investment">Investment</option>
+                        <option value="Self Use">Self Use</option>
+                        <option value="Rental">Rental</option>
+                        <option value="Gift">Gift</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="qa-drawer-profile-grid">
+                    <div>
+                      <label className="qa-drawer-field-label">Occupation *</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.occupation} onChange={(e) => setCustomerProfileForm(p => ({ ...p, occupation: e.target.value }))} placeholder="e.g. Business, Salaried" />
+                    </div>
+                    <div>
+                      <label className="qa-drawer-field-label">Current Post</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_post} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_post: e.target.value }))} placeholder="e.g. Manager" />
+                    </div>
+                  </div>
+
+                  <div className="qa-drawer-profile-section">🪪 Identity Documents</div>
+                  <div className="qa-drawer-profile-grid">
+                    <div>
+                      <label className="qa-drawer-field-label">PAN Number *</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%', textTransform: 'uppercase' }} maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" />
+                    </div>
+                    <div>
+                      <label className="qa-drawer-field-label">Aadhar Number *</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={12} value={customerProfileForm.aadhar_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, aadhar_number: e.target.value.replace(/\D/g, '') }))} placeholder="1234 5678 9012" />
+                    </div>
+                  </div>
+
+                  <div className="qa-drawer-profile-section">📍 Current Address *</div>
+                  <div>
+                    <label className="qa-drawer-field-label">Address</label>
+                    <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
+                  </div>
+                  <div className="qa-drawer-profile-grid-3">
+                    <div>
+                      <label className="qa-drawer-field-label">City</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_city: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="qa-drawer-field-label">State</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="qa-drawer-field-label">Pincode</label>
+                      <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="qa-drawer-profile-section" style={{ flex: 1, marginBottom: 0 }}>🏠 Permanent Address</div>
+                    <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
+                    </label>
+                  </div>
+                  {!customerProfileForm.sameAsCurrent && (
+                    <>
+                      <div>
+                        <label className="qa-drawer-field-label">Address</label>
+                        <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
+                      </div>
+                      <div className="qa-drawer-profile-grid-3">
+                        <div>
+                          <label className="qa-drawer-field-label">City</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">State</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                {quickFollowUpDate && (
-                  <button
-                    className="crm-btn crm-btn-primary crm-btn-sm"
-                    style={{ width: '100%', marginTop: 10, padding: '10px', borderRadius: 8, fontSize: 13 }}
-                    disabled={quickActionLoading}
-                    onClick={async () => {
-                      setQuickActionLoading(true);
-                      try {
-                        await leadWorkflowApi.transitionLead(quickActionLead.id, roleActions.find(a => a.needsFollowUp)?.code || 'TC_RNR', {
-                          nextFollowUpAt: new Date(quickFollowUpDate).toISOString(),
-                        });
-                        toast.success('Follow-up scheduled!');
-                        resetQuickWorkflowForm();
-                        setQuickActionLead(null);
-                        setQuickFollowUpDate('');
-                        loadLeads({ silent: true });
-                      } catch (err) {
-                        toast.error(getErrorMessage(err, 'Failed to schedule follow-up'));
-                      } finally {
-                        setQuickActionLoading(false);
-                      }
-                    }}
-                  >
-                    {quickActionLoading ? 'Saving...' : '💾 Save Follow-Up'}
-                  </button>
+              )}
+
+              <div className="qa-drawer-divider" />
+
+              {/* ── Follow-up History Timeline ── */}
+              <div className="qa-drawer-section">Follow-up history</div>
+              <div className="qa-drawer-history">
+                {quickActionActivities.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
+                ) : (
+                  quickActionActivities.slice(0, 5).map((act, i) => {
+                    const isStage = act.type === 'STAGE_CHANGE';
+                    const isNote = act.type === 'NOTE_ADDED';
+                    const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
+                    const dotBg = isStage ? '#EEE9FC' : isNote ? '#FEF3C7' : '#E3EEFB';
+                    return (
+                      <div key={act.id} className="qa-drawer-hist-item">
+                        <div className="qa-drawer-hist-col">
+                          <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
+                          {i < Math.min(quickActionActivities.length, 5) - 1 && <div className="qa-drawer-hist-line" />}
+                        </div>
+                        <div className="qa-drawer-hist-right">
+                          <div className="qa-drawer-hist-header">
+                            <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
+                            <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
+                          </div>
+                          {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
+                          <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
-              {/* Site Visit History */}
+              {/* ── Site Visit History ── */}
               {quickActionSiteVisits.length > 0 && (
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏠 Site Visit History ({quickActionSiteVisits.length})</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {quickActionSiteVisits.slice(0, 3).map((sv) => (
-                      <div key={sv.id} style={{ padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: 12 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <strong>{sv.project?.project_name || 'Unknown Project'}</strong>
-                          <span style={{ color: sv.status === 'Completed' ? '#059669' : '#d97706', fontWeight: 600 }}>{sv.status}</span>
+                <>
+                  <div className="qa-drawer-divider" />
+                  <div className="qa-drawer-section">🏠 Recent site visits</div>
+                  <div style={{ padding: '0 20px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {quickActionSiteVisits.slice(0, 4).map((sv) => (
+                      <div key={sv.id} style={{ padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <strong style={{ fontSize: 12 }}>{sv.project?.project_name || 'Unknown'}</strong>
+                          <span style={{ fontSize: 10, color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7' }}>{sv.status}</span>
                         </div>
                         <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
-                          {sv.actual_visit_date ? `Visited: ${formatDateTime(sv.actual_visit_date)}` : `Scheduled: ${formatDateTime(sv.scheduled_date)}`}
+                          {sv.actual_visit_date ? `✓ ${formatDateTime(sv.actual_visit_date)}` : `📅 ${formatDateTime(sv.scheduled_date)}`}
                         </div>
                         {sv.attendedBy && (
-                          <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
-                            By: {sv.attendedBy.first_name} {sv.attendedBy.last_name}
+                          <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 3 }}>
+                            By {sv.attendedBy.first_name} {sv.attendedBy.last_name}
                           </div>
                         )}
                       </div>
                     ))}
-                    {quickActionSiteVisits.length > 3 && (
-                      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)' }}>
-                        +{quickActionSiteVisits.length - 3} more site visits
-                      </div>
-                    )}
                   </div>
-                </div>
+                  {quickActionSiteVisits.length > 4 && (
+                    <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      +{quickActionSiteVisits.length - 4} more
+                    </div>
+                  )}
+                </>
               )}
+            </div>
 
-              {/* Quick Communication */}
-              <div style={{ padding: '16px 20px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Communication</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ flex: 1, borderRadius: 8, padding: '10px' }}>
-                    📞 Call
-                  </button>
-                  <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ flex: 1, borderRadius: 8, padding: '10px' }}>
-                    💬 WhatsApp
-                  </button>
-                  <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ flex: 1, borderRadius: 8, padding: '10px' }}>
-                    📧 Email
-                  </button>
-                </div>
-              </div>
+            {/* ── Save Row (sticky bottom) ── */}
+            <div className="qa-drawer-save-row">
+              <button
+                className="qa-drawer-skip-btn"
+                onClick={() => {
+                  setQuickActionLead(null);
+                              resetQuickWorkflowForm();
+                }}
+              >
+                Close
+              </button>
+              <button
+                className="qa-drawer-save-btn"
+                disabled={quickActionLoading || !quickWorkflowAction}
+                onClick={handleQuickWorkflowSubmit}
+              >
+                {quickActionLoading ? 'Saving...' : 'Save & update →'}
+              </button>
             </div>
           </div>
         </div>
-      )}
+        )}
     </section>
   );
 };

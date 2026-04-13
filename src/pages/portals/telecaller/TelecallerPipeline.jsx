@@ -26,8 +26,9 @@ const TelecallerPipeline = ({ user, onNavigate }) => {
 
       // Handle stages data
       const allStages = configResp?.data?.stages || [];
-      // Filter for TC role (stage order 1-5) or ownerRole === 'TC'
-      const tcStages = allStages.filter(s => s.ownerRole === 'TC' || (s.stage_order >= 1 && s.stage_order <= 5));
+      // Filter for specific TC role stages
+      const tcWhitelist = ['LEAD', 'CONTACTED', 'QUALIFIED', 'SITE_VISIT'];
+      const tcStages = allStages.filter(s => tcWhitelist.includes(s.stage_code));
       setStages(tcStages);
 
     } catch (err) {
@@ -39,7 +40,15 @@ const TelecallerPipeline = ({ user, onNavigate }) => {
 
   useEffect(() => { load(); }, [load]);
 
-  const getLeadsByStage = (stageCode) => leads.filter(l => l.stageCode === stageCode);
+  const getLeadsByStage = (stageCode) => {
+    if (stageCode === 'QUALIFIED') {
+      return leads.filter(l => l.stageCode === 'QUALIFIED' && l.statusCode !== 'SV_SCHEDULED');
+    }
+    if (stageCode === 'SITE_VISIT') {
+      return leads.filter(l => l.statusCode === 'SV_SCHEDULED');
+    }
+    return leads.filter(l => l.stageCode === stageCode);
+  };
 
   return (
     <div className="telecaller-pipeline">
@@ -62,12 +71,13 @@ const TelecallerPipeline = ({ user, onNavigate }) => {
         <div className="kanban" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12, minHeight: 'calc(100vh - 220px)' }}>
           {stages.map((stage) => {
             const stageLeads = getLeadsByStage(stage.stage_code);
+            const stageDisplayName = stage.stage_code === 'SITE_VISIT' ? 'Site Visit Scheduled' : stage.stage_name;
             return (
               <div className="kanban-col" key={stage.id} style={{ minWidth: 280, maxWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary, #f8fafc)', borderRadius: 12, border: '1px solid var(--border-primary, #e2e8f0)' }}>
                 <div className="kanban-col-header" style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card, #fff)', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
                   <div className="kanban-col-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
                     <span className="col-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color_code || '#94a3b8' }}></span>
-                    {stage.stage_name}
+                    {stageDisplayName}
                   </div>
                   <div className="kanban-col-count" style={{ fontSize: 11, fontWeight: 700, background: 'var(--bg-primary, #f1f5f9)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: 10 }}>
                     {stageLeads.length}

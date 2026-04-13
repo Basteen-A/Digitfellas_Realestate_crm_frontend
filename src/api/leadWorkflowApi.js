@@ -139,6 +139,10 @@ const leadWorkflowApi = {
     const { data } = await api.get(`/leads/user/${userId}/score`);
     return data;
   },
+  getLeadActivities: async (leadId) => {
+    const { data } = await api.get(`/leads/${leadId}/activities`);
+    return data;
+  },
 };
 
 export default leadWorkflowApi;
