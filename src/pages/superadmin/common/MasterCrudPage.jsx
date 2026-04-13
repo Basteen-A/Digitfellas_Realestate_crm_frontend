@@ -87,9 +87,15 @@ const MasterCrudPage = ({ config }) => {
     setLoading(true);
     try {
       const response = await config.api.getAll(query);
-      setRows(response.data || []);
-      setMeta(response.meta || { page: 1, limit: query.limit, total: 0, totalPages: 1 });
+      
+      // Handle both response structures: { data: [...], meta: ... } and { success, data: [...], meta: ... }
+      const rows = response.data?.data || response.data || [];
+      const meta = response.data?.meta || { page: 1, limit: query.limit, total: 0, totalPages: 1 };
+      
+      setRows(rows);
+      setMeta(meta);
     } catch (error) {
+      console.error('Error loading list:', error);
       toast.error(error.response?.data?.message || `Unable to load ${config.title}`);
     } finally {
       setLoading(false);

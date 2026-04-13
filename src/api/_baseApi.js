@@ -17,7 +17,9 @@ const createBaseApi = (basePath) => {
      * @param {object} params - { page, limit, search, sort, is_active, ...filters }
      */
     getAll: async (params = {}) => {
-      const { data } = await api.get(basePath, { params });
+      // Add cache-busting timestamp
+      const cacheBuster = { ...params, _t: Date.now() };
+      const { data } = await api.get(basePath, { params: cacheBuster });
       return data;
     },
 
@@ -25,7 +27,9 @@ const createBaseApi = (basePath) => {
      * Get active items for dropdown selects
      */
     getDropdown: async (params = {}) => {
-      const { data } = await api.get(`${basePath}/dropdown`, { params });
+      // Add cache-busting timestamp
+      const cacheBuster = { ...params, _t: Date.now() };
+      const { data } = await api.get(`${basePath}/dropdown`, { params: cacheBuster });
       return data;
     },
 

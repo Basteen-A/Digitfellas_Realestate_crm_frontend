@@ -1157,6 +1157,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     });
   };
 
+  const handleQuickReassign = async (newUserId) => {
+    if (!quickActionLead || !newUserId) return;
+    setQuickActionLoading(true);
+    try {
+      await leadWorkflowApi.assignLead(quickActionLead.id, newUserId, quickReassignNote.trim());
+      toast.success('Lead reassigned successfully');
+      setQuickActionLead(null);
+      resetQuickWorkflowForm();
+      setQuickReassignUserId('');
+      setQuickReassignNote('');
+      loadLeads({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to reassign lead'));
+    } finally {
+      setQuickActionLoading(false);
+    }
+  };
+
   const handleQuickWorkflowSubmit = async () => {
     if (!quickActionLead) return;
     setQuickActionLoading(true);
@@ -1171,6 +1189,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
       // 2. Handle Workflow Transition if action selected
       if (quickWorkflowAction) {
+        // Validation: Follow-up date is required for certain actions
+        if (quickWorkflowAction.needsFollowUp && !f.nextFollowUpAt) {
+          toast.error('Please select a follow-up date');
+          setQuickActionLoading(false);
+          return;
+        }
+
         // Validation: Customer Profile for specific actions
         if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
           const cpF = customerProfileForm;
@@ -2877,33 +2902,31 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button 
-                  className="qa-drawer-close"
-                  style={{ background: '#DCFCE7', color: '#166534', fontSize: '14px', border: 'none' }}
-                  title={`Call ${quickActionLead.phone}`}
-                  onClick={() => window.open(`tel:${quickActionLead.phone}`)}
-                >
-                  📞
-                </button>
-                <button 
-                  className="qa-drawer-close"
-                  style={{ background: '#E8F8EF', color: '#1A7A43', fontSize: '14px', border: 'none' }}
-                  title="WhatsApp"
-                  onClick={() => window.open(`https://wa.me/${(quickActionLead.whatsappNumber || quickActionLead.phone || '').replace(/\D/g, '')}`, '_blank')}
-                >
-                  💬
-                </button>
-                <button
-                  className="qa-drawer-close"
-                  onClick={() => {
-                    setQuickActionLead(null);
-                                  resetQuickWorkflowForm();
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                className="qa-drawer-close"
+                onClick={() => {
+                  setQuickActionLead(null);
+                  resetQuickWorkflowForm();
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* ── Call / WhatsApp Action Row ── */}
+            <div className="qa-drawer-action-row">
+              <button 
+                className="qa-drawer-action-btn qa-drawer-btn-call"
+                onClick={() => window.open(`tel:${quickActionLead.phone}`)}
+              >
+                📞 Call now
+              </button>
+              <button 
+                className="qa-drawer-action-btn qa-drawer-btn-wa"
+                onClick={() => window.open(`https://wa.me/${(quickActionLead.whatsappNumber || quickActionLead.phone || '').replace(/\D/g, '')}`, '_blank')}
+              >
+                💬 WhatsApp
+              </button>
             </div>
 
             {/* ── Scrollable Drawer Body ── */}
@@ -2948,6 +2971,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         onClick={() => handleQuickWorkflowActionSelect(action)}
                       >
                         <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? '🚫' : action.code.includes('SPAM') ? '🗑️' : '⚠️'}</div>
+                        <div className="qa-drawer-st-label">{action.label}</div>
                       </button>
                     ))}
                   </div>
@@ -2958,7 +2982,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <select
                       className="qa-drawer-field-select"
                       value={quickReassignUserId}
-                      onChange={(e) => setQuickReassignUserId(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setQuickReassignUserId(val);
+                        if (val) handleQuickReassign(val);
+                      }}
                       style={{ width: '100%', marginBottom: 8 }}
                     >
                       <option value="">No change (keep current user)...</option>
@@ -3379,14 +3407,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               resetQuickWorkflowForm();
                 }}
               >
-                Close
+                Skip
               </button>
               <button
                 className="qa-drawer-save-btn"
-                disabled={quickActionLoading || !quickWorkflowAction}
+                disabled={quickActionLoading || !quickWorkflowAction || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)}
                 onClick={handleQuickWorkflowSubmit}
               >
-                {quickActionLoading ? 'Saving...' : 'Save & update →'}
+                {quickActionLoading ? 'Saving...' : 'Save & next lead →'}
               </button>
             </div>
           </div>

@@ -50,13 +50,13 @@ export const buildStatusOptions = (statuses = []) =>
 
 const FALLBACK_ACTIONS = {
   TC: [
-    { code: 'TC_RNR', label: 'RnR', tone: 'secondary', targetStageCode: 'CONTACTED', targetStatusCode: 'RNR', needsFollowUp: true },
-    { code: 'TC_LEAD_QUALIFIED', label: 'Lead Qualified', tone: 'primary', targetStageCode: 'QUALIFIED', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
+    { code: 'TC_LEAD_QUALIFIED', label: 'Follow Up', tone: 'primary', targetStageCode: 'QUALIFIED', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
     { code: 'TC_SV_SCHEDULED', label: 'SV Scheduled', tone: 'success', targetStageCode: 'QUALIFIED', targetStatusCode: 'SV_SCHEDULED', needsFollowUp: true },
     { code: 'TC_SV_DONE', label: 'SV Done', tone: 'success', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true },
-    { code: 'TC_JUNK', label: 'Junk', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'JUNK' },
-    { code: 'TC_SPAM', label: 'Mark as Spam', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'SPAM' },
-    { code: 'TC_LOST', label: 'Lost', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'LOST' },
+    { code: 'TC_RNR', label: 'RnR', tone: 'secondary', targetStageCode: 'CONTACTED', targetStatusCode: 'RNR', needsFollowUp: true },
+    { code: 'TC_SPAM', label: 'Mark as Spam', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'SPAM', needsFollowUp: true },
+    { code: 'TC_JUNK', label: 'Junk', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'JUNK', needsFollowUp: true },
+    { code: 'TC_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'LOST', needsFollowUp: true },
   ],
   SM: [
     { code: 'SM_SITE_VISIT', label: 'Record Site Visit', tone: 'primary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsSvDetails: true },
