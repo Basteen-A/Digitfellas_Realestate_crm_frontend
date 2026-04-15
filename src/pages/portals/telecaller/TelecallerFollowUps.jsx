@@ -1,16 +1,42 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import followUpApi from '../../../api/followUpApi';
+import projectApi from '../../../api/projectApi';
+import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import leadStatusApi from '../../../api/leadStatusApi';
+import statusRemarkApi from '../../../api/statusRemarkApi';
 import { formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+
+const FOLLOW_UP_STATUS_CODES = new Set(['FOLLOW_UP', 'SV_SCHEDULED', 'RNR']);
+const SV_DONE_STATUS_CODES = new Set(['SV_DONE']);
+const CLOSURE_STATUS_CODES = new Set(['SPAM', 'JUNK', 'LOST', 'COLD', 'COLD_LOST', 'CLOSED_LOST']);
 
 const TelecallerFollowUps = ({ user }) => {
   const [followUps, setFollowUps] = useState([]);
   const [overdue, setOverdue] = useState([]);
   const [filter, setFilter] = useState('pending');
   const [loading, setLoading] = useState(true);
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [remarkOptions, setRemarkOptions] = useState([]);
+  const [remarkLoading, setRemarkLoading] = useState(false);
+  const [projectOptions, setProjectOptions] = useState([]);
+  const [smUsers, setSmUsers] = useState([]);
+  const [closureReasons, setClosureReasons] = useState([]);
   const [completing, setCompleting] = useState(null);
-  const [completeForm, setCompleteForm] = useState({ outcome: '', notes: '', call_disposition: '' });
+  const [completeForm, setCompleteForm] = useState({
+    outcome: '',
+    notes: '',
+    call_disposition: '',
+    lead_status_id: '',
+    statusRemarkText: '',
+    statusRemarkResponseType: '',
+    nextFollowUpAt: '',
+    assignToUserId: '',
+    svDate: '',
+    svProjectId: '',
+    closureReasonId: '',
+  });
 
   /* ── Extract data safely from API responses ── */
   const extractRows = (resp) => {
@@ -49,16 +75,163 @@ const TelecallerFollowUps = ({ user }) => {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const loadStatusOptions = async () => {
+      try {
+        const resp = await leadStatusApi.getDropdown();
+        const statuses = resp.data || [];
+        const allowed = statuses.filter((status) => {
+          const code = String(status.status_code || '').toUpperCase();
+          return FOLLOW_UP_STATUS_CODES.has(code) || SV_DONE_STATUS_CODES.has(code) || CLOSURE_STATUS_CODES.has(code);
+        });
+        setStatusOptions(allowed.length ? allowed : statuses);
+      } catch {
+        setStatusOptions([]);
+      }
+    };
+
+    const loadSupportingData = async () => {
+      try {
+        const [projectsResp, smUsersResp] = await Promise.all([
+          projectApi.getDropdown().catch(() => ({ data: [] })),
+          leadWorkflowApi.getAssignableUsers('SM').catch(() => ({ data: [] })),
+        ]);
+        setProjectOptions(projectsResp.data || []);
+        setSmUsers(smUsersResp.data || []);
+      } catch {
+        setProjectOptions([]);
+        setSmUsers([]);
+      }
+    };
+
+    loadStatusOptions();
+    loadSupportingData();
+  }, []);
+
+  const selectedStatus = statusOptions.find((item) => item.id === completeForm.lead_status_id);
+  const selectedStatusCode = String(selectedStatus?.status_code || '').toUpperCase();
+  const requiresFollowUpDate = FOLLOW_UP_STATUS_CODES.has(selectedStatusCode);
+  const requiresSvDoneFields = SV_DONE_STATUS_CODES.has(selectedStatusCode);
+  const requiresClosureReason = CLOSURE_STATUS_CODES.has(selectedStatusCode);
+  const requiresCallResponse = !requiresClosureReason;
+
+  useEffect(() => {
+    const loadClosureReasons = async () => {
+      if (!completing || !requiresClosureReason) {
+        setClosureReasons([]);
+        return;
+      }
+
+      const category = selectedStatusCode === 'SPAM'
+        ? 'SPAM'
+        : selectedStatusCode === 'JUNK'
+          ? 'JUNK'
+          : selectedStatusCode === 'COLD' || selectedStatusCode === 'COLD_LOST'
+            ? 'COLD'
+            : '';
+
+      try {
+        const resp = await leadWorkflowApi.getClosureReasons(category);
+        setClosureReasons(resp.data?.rows || resp.data || []);
+      } catch {
+        setClosureReasons([]);
+      }
+    };
+
+    loadClosureReasons();
+  }, [completing, requiresClosureReason, selectedStatusCode]);
+
+  const loadRemarksForStatus = useCallback(async (statusId) => {
+    const status = statusOptions.find((item) => item.id === statusId);
+    if (!status?.status_code) {
+      setRemarkOptions([]);
+      return;
+    }
+
+    setRemarkLoading(true);
+    try {
+      const resp = await statusRemarkApi.getByStatusCode(status.status_code);
+      setRemarkOptions(resp.data?.remarks || []);
+    } catch {
+      setRemarkOptions([]);
+    } finally {
+      setRemarkLoading(false);
+    }
+  }, [statusOptions]);
+
+  useEffect(() => {
+    if (!completing) {
+      setRemarkOptions([]);
+      return;
+    }
+
+    if (completeForm.lead_status_id) {
+      loadRemarksForStatus(completeForm.lead_status_id);
+    } else {
+      setRemarkOptions([]);
+    }
+  }, [completing, completeForm.lead_status_id, loadRemarksForStatus]);
+
   const handleComplete = async (id) => {
-    if (!completeForm.outcome) {
-      toast.error('Please select an outcome');
+    if (!completeForm.lead_status_id) {
+      toast.error('Please select a follow-up status');
+      return;
+    }
+    if (requiresFollowUpDate && !completeForm.nextFollowUpAt) {
+      toast.error('Please select a follow-up date');
+      return;
+    }
+    if (requiresSvDoneFields && !completeForm.assignToUserId) {
+      toast.error('Please select a Sales Manager');
+      return;
+    }
+    if (requiresSvDoneFields && !completeForm.svDate) {
+      toast.error('Please select the site visit date');
+      return;
+    }
+    if (requiresSvDoneFields && !completeForm.svProjectId) {
+      toast.error('Please select the project visited');
+      return;
+    }
+    if (requiresClosureReason && !completeForm.closureReasonId) {
+      toast.error('Please select a closure reason');
+      return;
+    }
+    if (requiresCallResponse && !completeForm.statusRemarkResponseType) {
+      toast.error('Please select call answered / not answered');
       return;
     }
     try {
-      await followUpApi.complete(id, completeForm);
+      const payload = {
+        outcome: completeForm.outcome || undefined,
+        notes: completeForm.notes?.trim() || undefined,
+        call_disposition: completeForm.call_disposition || undefined,
+        lead_status_id: completeForm.lead_status_id || undefined,
+        statusRemarkText: completeForm.statusRemarkText || undefined,
+        statusRemarkResponseType: completeForm.statusRemarkResponseType || undefined,
+        next_follow_up_date: completeForm.nextFollowUpAt || undefined,
+        assignToUserId: completeForm.assignToUserId || undefined,
+        svDate: completeForm.svDate || undefined,
+        svProjectId: completeForm.svProjectId || undefined,
+        closureReasonId: completeForm.closureReasonId || undefined,
+      };
+      await followUpApi.complete(id, payload);
       toast.success('Follow-up completed');
       setCompleting(null);
-      setCompleteForm({ outcome: '', notes: '', call_disposition: '' });
+      setRemarkOptions([]);
+      setCompleteForm({
+        outcome: '',
+        notes: '',
+        call_disposition: '',
+        lead_status_id: '',
+        statusRemarkText: '',
+        statusRemarkResponseType: '',
+        nextFollowUpAt: '',
+        assignToUserId: '',
+        svDate: '',
+        svProjectId: '',
+        closureReasonId: '',
+      });
       load();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to complete follow-up'));
@@ -258,25 +431,178 @@ const TelecallerFollowUps = ({ user }) => {
                   {!fu.is_completed && completing === fu.id && (
                     <div style={{ marginTop: 12, background: 'var(--bg-primary, #f8fafc)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 10, padding: 14 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Complete Follow-up</div>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Outcome *</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Follow-up Status *</div>
                           <select
-                            value={completeForm.outcome}
-                            onChange={(e) => setCompleteForm((p) => ({ ...p, outcome: e.target.value }))}
+                            value={completeForm.lead_status_id}
+                            onChange={(e) => setCompleteForm((p) => ({
+                              ...p,
+                              lead_status_id: e.target.value,
+                              statusRemarkText: '',
+                              notes: '',
+                              nextFollowUpAt: '',
+                              assignToUserId: '',
+                              svDate: '',
+                              svProjectId: '',
+                              closureReasonId: '',
+                              statusRemarkResponseType: '',
+                            }))}
                             className="crm-form-select"
                             style={{ width: '100%' }}
                           >
-                            <option value="">Select outcome...</option>
-                            <option value="Interested">✅ Interested</option>
-                            <option value="Not Interested">❌ Not Interested</option>
-                            <option value="Callback">📞 Callback Requested</option>
-                            <option value="Not Reachable">📵 Not Reachable</option>
-                            <option value="Wrong Number">🚫 Wrong Number</option>
-                            <option value="Voicemail">📧 Voicemail</option>
-                            <option value="SV Scheduled">🏠 Site Visit Scheduled</option>
+                            <option value="">Select status...</option>
+                            {statusOptions.map((item) => (
+                              <option key={item.id} value={item.id}>{item.status_name || item.status_code}</option>
+                            ))}
                           </select>
                         </div>
+
+                        {requiresCallResponse && (
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Call Answered?</div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                type="button"
+                                className="crm-btn crm-btn-sm"
+                                style={{
+                                  flex: 1,
+                                  background: completeForm.statusRemarkResponseType === 'Answered' ? '#E0F4EE' : 'transparent',
+                                  borderColor: completeForm.statusRemarkResponseType === 'Answered' ? '#0F7B5C' : undefined,
+                                  color: completeForm.statusRemarkResponseType === 'Answered' ? '#0F7B5C' : undefined,
+                                }}
+                                onClick={() => setCompleteForm((p) => ({ ...p, statusRemarkResponseType: 'Answered' }))}
+                              >
+                                Answered
+                              </button>
+                              <button
+                                type="button"
+                                className="crm-btn crm-btn-sm"
+                                style={{
+                                  flex: 1,
+                                  background: completeForm.statusRemarkResponseType === 'Not-Answered' ? '#FEF3C7' : 'transparent',
+                                  borderColor: completeForm.statusRemarkResponseType === 'Not-Answered' ? '#B45309' : undefined,
+                                  color: completeForm.statusRemarkResponseType === 'Not-Answered' ? '#B45309' : undefined,
+                                }}
+                                onClick={() => setCompleteForm((p) => ({ ...p, statusRemarkResponseType: 'Not-Answered' }))}
+                              >
+                                Not Answered
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {requiresFollowUpDate && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Next Follow-up Date *</div>
+                          <input
+                            type="datetime-local"
+                            className="crm-form-input"
+                            style={{ width: '100%' }}
+                            value={completeForm.nextFollowUpAt}
+                            onChange={(e) => setCompleteForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
+                          />
+                        </div>
+                      )}
+
+                      {requiresSvDoneFields && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Sales Manager *</div>
+                            <select
+                              value={completeForm.assignToUserId}
+                              onChange={(e) => setCompleteForm((p) => ({ ...p, assignToUserId: e.target.value }))}
+                              className="crm-form-select"
+                              style={{ width: '100%' }}
+                            >
+                              <option value="">Select Sales Manager...</option>
+                              {smUsers.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Site Visit Date *</div>
+                            <input
+                              type="datetime-local"
+                              className="crm-form-input"
+                              style={{ width: '100%' }}
+                              value={completeForm.svDate}
+                              onChange={(e) => setCompleteForm((p) => ({ ...p, svDate: e.target.value }))}
+                            />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Project Visited *</div>
+                            <select
+                              value={completeForm.svProjectId}
+                              onChange={(e) => setCompleteForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                              className="crm-form-select"
+                              style={{ width: '100%' }}
+                            >
+                              <option value="">Select project...</option>
+                              {projectOptions.map((project) => (
+                                <option key={project.id} value={project.id}>{project.project_name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {requiresClosureReason && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Closure Reason *</div>
+                          <select
+                            value={completeForm.closureReasonId}
+                            onChange={(e) => setCompleteForm((p) => ({ ...p, closureReasonId: e.target.value }))}
+                            className="crm-form-select"
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select reason...</option>
+                            {closureReasons.map((reason) => (
+                              <option key={reason.id} value={reason.id}>{reason.reason_name || reason.reason}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {selectedStatus?.status_code && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Action Remarks</div>
+                          {remarkLoading ? (
+                            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Loading remarks...</div>
+                          ) : remarkOptions.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {remarkOptions.map((remark) => (
+                                <button
+                                  key={remark.id}
+                                  type="button"
+                                  className="crm-btn crm-btn-ghost crm-btn-sm"
+                                  style={{
+                                    background: completeForm.statusRemarkText === remark.remark_text ? '#dbeafe' : 'transparent',
+                                    borderColor: completeForm.statusRemarkText === remark.remark_text ? '#60a5fa' : undefined,
+                                  }}
+                                  onClick={() => setCompleteForm((p) => ({
+                                    ...p,
+                                    statusRemarkText: remark.remark_text,
+                                    notes: remark.remark_text,
+                                    statusRemarkResponseType: remark.has_ans_non_ans ? (remark.ans_non_ans_default || 'Answered') : p.statusRemarkResponseType,
+                                  }))}
+                                >
+                                  {remark.remark_text}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>No remarks configured for this status.</div>
+                          )}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Disposition</div>
                           <select
@@ -293,23 +619,28 @@ const TelecallerFollowUps = ({ user }) => {
                             <option value="Invalid Number">Invalid Number</option>
                           </select>
                         </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Action Remarks</div>
+                          <textarea
+                            placeholder="What was discussed and what happens next?"
+                            value={completeForm.notes}
+                            onChange={(e) => setCompleteForm((p) => ({ ...p, notes: e.target.value }))}
+                            className="crm-form-input"
+                            rows={2}
+                            style={{ width: '100%', resize: 'vertical' }}
+                          />
+                        </div>
                       </div>
-                      <div style={{ marginBottom: 10 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Notes</div>
-                        <textarea
-                          placeholder="Completion notes..."
-                          value={completeForm.notes}
-                          onChange={(e) => setCompleteForm((p) => ({ ...p, notes: e.target.value }))}
-                          className="crm-form-input"
-                          rows={2}
-                          style={{ width: '100%', resize: 'vertical' }}
-                        />
-                      </div>
+
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { setCompleting(null); setCompleteForm({ outcome: '', notes: '', call_disposition: '' }); }}>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-ghost crm-btn-sm"
+                          onClick={() => { setCompleting(null); setRemarkOptions([]); setCompleteForm({ outcome: '', notes: '', call_disposition: '', lead_status_id: '', statusRemarkText: '', statusRemarkResponseType: '' }); }}
+                        >
                           Cancel
                         </button>
-                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => handleComplete(fu.id)}>
+                        <button type="button" className="crm-btn crm-btn-success crm-btn-sm" onClick={() => handleComplete(fu.id)}>
                           ✓ Mark Complete
                         </button>
                       </div>
@@ -322,7 +653,22 @@ const TelecallerFollowUps = ({ user }) => {
                   {!fu.is_completed && completing !== fu.id && (
                     <button
                       className="crm-btn crm-btn-primary crm-btn-sm"
-                      onClick={() => { setCompleting(fu.id); setCompleteForm({ outcome: '', notes: '', call_disposition: '' }); }}
+                      onClick={() => {
+                        setCompleting(fu.id);
+                        setCompleteForm({
+                          outcome: '',
+                          notes: fu.notes || '',
+                          call_disposition: '',
+                          lead_status_id: fu.lead?.status?.id || '',
+                          statusRemarkText: '',
+                          statusRemarkResponseType: '',
+                          nextFollowUpAt: '',
+                          assignToUserId: '',
+                          svDate: '',
+                          svProjectId: '',
+                          closureReasonId: '',
+                        });
+                      }}
                     >
                       ✓ Complete
                     </button>
@@ -331,6 +677,7 @@ const TelecallerFollowUps = ({ user }) => {
                     <div>
                       <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 12, background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>✓ Completed</span>
                       {fu.outcome && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{fu.outcome}</div>}
+                      {fu.call_disposition && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Call: {fu.call_disposition}</div>}
                       {fu.completed_at && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{formatDateTime(fu.completed_at)}</div>}
                     </div>
                   )}

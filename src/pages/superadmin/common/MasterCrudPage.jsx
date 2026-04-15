@@ -181,7 +181,11 @@ const MasterCrudPage = ({ config }) => {
 
   const handleToggleStatus = async (row) => {
     try {
-      await config.api.toggleStatus(row.id);
+      if (typeof config.api.toggleStatus === 'function') {
+        await config.api.toggleStatus(row.id, row.is_active);
+      } else {
+        await config.api.update(row.id, { is_active: !Boolean(row.is_active) });
+      }
       toast.success('Status updated');
       loadList();
     } catch (error) {

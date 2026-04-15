@@ -35,6 +35,7 @@ import BookingStatuses from '../pages/superadmin/BookingStatuses';
 import LeadStages from '../pages/superadmin/LeadStages';
 import ClosedLostReasons from '../pages/superadmin/ClosedLostReasons';
 import BookingCancelReasons from '../pages/superadmin/BookingCancelReasons';
+import StatusRemarks from '../pages/superadmin/StatusRemarks';
 import WorkflowActions from '../pages/superadmin/WorkflowActions/WorkflowActionList';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
@@ -139,6 +140,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/lead-stages" element={<LeadStages />} />
             <Route path="/super-admin/closed-lost-reasons" element={<ClosedLostReasons />} />
             <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />
+            <Route path="/super-admin/status-remarks" element={<StatusRemarks />} />
             <Route path="/super-admin/workflow-actions" element={<WorkflowActions />} />
           </Route>
 

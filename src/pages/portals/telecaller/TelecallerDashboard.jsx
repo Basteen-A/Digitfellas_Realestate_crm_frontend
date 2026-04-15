@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
+import followUpApi from '../../../api/followUpApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
 import './TelecallerDashboard.css';
@@ -8,7 +9,7 @@ import './TelecallerDashboard.css';
 const TelecallerDashboard = ({ user, onNavigate }) => {
   const [stats, setStats] = useState(null);
   const [unassignedLeads, setUnassignedLeads] = useState([]);
-  const [myLeads, setMyLeads] = useState([]);
+  const [missedFollowUps, setMissedFollowUps] = useState([]);
   const [todayFollowUps, setTodayFollowUps] = useState([]);
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +17,10 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await dashboardApi.getTelecallerDetailed();
+      const [resp, overdueResp] = await Promise.all([
+        dashboardApi.getTelecallerDetailed(),
+        followUpApi.getOverdue(),
+      ]);
       const d = resp?.data || resp || {};
 
       const ensureArray = (arr) => {
@@ -28,14 +32,14 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
 
       setStats(d.stats || null);
       setUnassignedLeads(ensureArray(d.unassignedLeads));
-      setMyLeads(ensureArray(d.myRecentLeads));
+      setMissedFollowUps(ensureArray(overdueResp));
       setTodayFollowUps(ensureArray(d.todaysFollowUps));
       setUpcomingVisits(ensureArray(d.upcomingVisits));
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to update dashboard'));
       // Ensure we have empty arrays on error to avoid map crashes
       setUnassignedLeads([]);
-      setMyLeads([]);
+      setMissedFollowUps([]);
       setTodayFollowUps([]);
       setUpcomingVisits([]);
     } finally {
@@ -59,7 +63,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const statCardsData = [
-    { label: 'Total Leads', value: stats?.totalSystemLeads ?? 0, icon: '👥', color: 'var(--accent-purple)' },
+    { label: 'New Leads', value: stats?.unassignedLeads ?? stats?.unassignedLeadCount ?? unassignedLeads.length, icon: '👥', color: 'var(--accent-purple)' },
     { label: 'My Leads', value: stats?.myLeads ?? 0, icon: '👤', color: 'var(--accent-blue)' },
     { label: "Today's FU", value: stats?.todaysFollowUps ?? 0, icon: '📞', color: 'var(--accent-green)' },
     { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: '🏠', color: 'var(--accent-cyan)' },
@@ -127,26 +131,28 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
           </div>
         </div>
 
-        {/* My Leads */}
+        {/* Missed Follow-ups */}
         <div className="td-card">
           <div className="td-card-header">
-            <div className="td-card-title">👤 My Leads</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('leads')}>View All →</span>
+            <div className="td-card-title">⚠️ Missed Follow-ups</div>
+            <span className="view-all-link" onClick={() => onNavigate?.('followups')}>View All →</span>
           </div>
           <div className="td-card-body">
-            {myLeads.length === 0 ? (
-              <div className="empty-msg">You don't have any assigned leads yet.</div>
+            {missedFollowUps.length === 0 ? (
+              <div className="empty-msg">No missed follow-ups. Great work!</div>
             ) : (
-              myLeads.map(lead => (
-                <div key={lead.id} className="td-list-item" onClick={() => handleLeadClick(lead.id)}>
+              missedFollowUps.map((fu) => (
+                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.lead_id || fu.lead?.id)}>
                   <div className="td-item-info">
-                    <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
+                    <div className="td-item-name">
+                      {fu.lead?.fullName || fu.fullName || (fu.lead?.first_name ? `${fu.lead.first_name} ${fu.lead.last_name || ''}`.trim() : 'Unknown Lead')}
+                    </div>
                     <div className="td-item-meta">
-                      <span className={`td-badge`} style={{ background: (lead.stageColor || '#e2e8f0') + '30', color: lead.stageColor || '#64748b' }}>{lead.stageName || 'Lead'}</span>
-                      <span>{lead.phone}</span>
+                      <span className="td-badge" style={{ background: '#fee2e2', color: '#b91c1c' }}>Overdue</span>
+                      <span>{fu.lead?.phone || fu.phone || 'N/A'}</span>
                     </div>
                   </div>
-                  <span className="td-item-date">{formatDateTime(lead.updatedAt)}</span>
+                  <span className="td-item-date">{formatDateTime(fu.scheduled_at || fu.updated_at)}</span>
                 </div>
               ))
             )}

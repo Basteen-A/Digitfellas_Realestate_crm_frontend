@@ -13,6 +13,7 @@ import bookingStatusApi from '../../../api/bookingStatusApi';
 import leadStageApi from '../../../api/leadStageApi';
 import closedLostReasonApi from '../../../api/closedLostReasonApi';
 import bookingCancelReasonApi from '../../../api/bookingCancelReasonApi';
+import statusRemarkApi from '../../../api/statusRemarkApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -54,6 +55,11 @@ const loadLeadStageOptions = async () => {
 const loadLeadStatusOptions = async () => {
   const response = await leadStatusApi.getDropdown();
   return asOptions(response.data, (item) => `${item.status_name} (${item.status_code})`, 'status_code');
+};
+
+const loadLeadStatusIdOptions = async () => {
+  const response = await leadStatusApi.getDropdown();
+  return asOptions(response.data, (item) => `${item.status_name} (${item.status_code})`);
 };
 
 const commonSimpleColumns = [
@@ -571,6 +577,47 @@ export const masterConfigs = {
       { name: 'needsCustomerProfile', label: 'Needs Customer Profile', type: 'checkbox' },
       { name: 'displayOrder', label: 'Display Order', type: 'number' },
       { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  statusRemarks: {
+    title: 'Quick Remarks',
+    api: statusRemarkApi,
+    columns: [
+      { header: 'Status', path: 'status.status_name' },
+      { header: 'Status Code', path: 'status.status_code' },
+      { header: 'Remark', path: 'remark_text' },
+      { header: 'Ans/Non-Ans', path: 'has_ans_non_ans', type: 'boolean' },
+      {
+        header: 'Default',
+        render: (row) => row.ans_non_ans_default || '-',
+      },
+      { header: 'Locked', path: 'ans_non_ans_disabled', type: 'boolean' },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      {
+        name: 'lead_status_id',
+        label: 'Lead Status',
+        type: 'select',
+        required: true,
+        loadOptions: loadLeadStatusIdOptions,
+      },
+      { name: 'remark_text', label: 'Remark Text', required: true },
+      { name: 'has_ans_non_ans', label: 'Has Ans/Non-Ans Toggle', type: 'checkbox', defaultValue: true },
+      {
+        name: 'ans_non_ans_default',
+        label: 'Default Response',
+        type: 'select',
+        options: [
+          { value: 'Answered', label: 'Answered' },
+          { value: 'Not-Answered', label: 'Not-Answered' },
+        ],
+      },
+      { name: 'ans_non_ans_disabled', label: 'Lock Response Type', type: 'checkbox', defaultValue: false },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },
 };

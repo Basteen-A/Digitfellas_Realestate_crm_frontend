@@ -1734,52 +1734,36 @@ textarea.crm-form-input {
   background: var(--border-primary, #e2e8f0);
 }
 
-/* ── Call / WhatsApp Action Row ── */
-.qa-drawer-action-row {
-  padding: 12px 20px 6px;
+.qa-header-comms {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-.qa-drawer-action-btn {
-  flex: 1;
-  padding: 10px 8px;
-  border-radius: 10px;
-  border: 1px solid;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
+.qa-header-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  background: var(--bg-secondary, #f1f5f9);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: all 0.15s;
-  font-family: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
 }
 
-.qa-drawer-action-btn:active {
-  transform: scale(0.97);
+.qa-header-icon-btn:hover {
+  background: var(--border-primary, #e2e8f0);
+  transform: translateY(-2px);
 }
 
-.qa-drawer-btn-call {
-  background: #E3EEFB;
-  color: #1A5FA8;
-  border-color: #93C5E8;
+.qa-header-icon-btn:active {
+  transform: scale(0.95);
 }
 
-.qa-drawer-btn-call:hover {
-  background: #cce0f5;
-}
 
-.qa-drawer-btn-wa {
-  background: #E8F8EF;
-  color: #1A7A43;
-  border-color: #7ECFA0;
-}
-
-.qa-drawer-btn-wa:hover {
-  background: #d4f0df;
-}
 
 /* ── Section titles inside drawer ── */
 .qa-drawer-section {
@@ -1795,7 +1779,7 @@ textarea.crm-form-input {
 .qa-drawer-status-grid {
   padding: 0 20px 10px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 

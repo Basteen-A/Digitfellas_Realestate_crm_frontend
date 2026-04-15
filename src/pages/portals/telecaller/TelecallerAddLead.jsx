@@ -5,16 +5,16 @@ import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
-import leadTypeApi from '../../../api/leadTypeApi';
+
 import { getErrorMessage } from '../../../utils/helpers';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 
-const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50, 75, 100];
+const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50];
 const BUDGET_MAX_VAL = BUDGET_STEPS.length - 1;
 const budgetLabel = (idx) => {
   const v = BUDGET_STEPS[idx];
   if (v === 0) return '0';
-  if (v >= 100) return '1 Cr+';
+  if (v >= 50) return '50L+';
   return `${v}L`;
 };
 
@@ -25,7 +25,6 @@ const initialForm = {
   whatsapp_number: '',
   alternate_phone: '',
   email: '',
-  lead_type_id: '',
   lead_source_id: '',
   lead_sub_source_id: '',
   project_ids: [],
@@ -34,7 +33,8 @@ const initialForm = {
   budgetMin: '',
   budgetMax: '',
   budgetRange: '',
-  priority: 'Medium',
+  budgetMinIdx: 0,
+  budgetMaxIdx: BUDGET_MAX_VAL,
   nextFollowUpAt: '',
   lead_status_id: '',
 };
@@ -46,7 +46,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
   const [projectOptions, setProjectOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
-  const [leadTypeOptions, setLeadTypeOptions] = useState([]);
+
   const [statusOptions, setStatusOptions] = useState([]);
   const [subSourceMap, setSubSourceMap] = useState({});
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -76,18 +76,16 @@ const TelecallerAddLead = ({ onNavigate }) => {
     const loadOptions = async () => {
       setLoadingOptions(true);
       try {
-        const [pResp, lResp, sResp, ltResp, wfResp] = await Promise.all([
+        const [pResp, lResp, sResp, wfResp] = await Promise.all([
           projectApi.getDropdown(),
           locationApi.getDropdown(),
           leadSourceApi.getWithSubSources().catch(() => leadSourceApi.getDropdown()),
-          leadTypeApi.getDropdown().catch(() => ({ data: [] })),
           leadWorkflowApi.getWorkflowConfig().catch(() => ({ data: null })),
         ]);
 
         const projects = pResp.data || [];
         const locations = lResp.data || [];
         const sources = sResp.data || [];
-        const leadTypes = ltResp.data || [];
         const statuses = wfResp.data?.statuses || [];
 
         const map = {};
@@ -108,7 +106,6 @@ const TelecallerAddLead = ({ onNavigate }) => {
         setProjectOptions(projects);
         setLocationOptions(locations);
         setSourceOptions(sources);
-        setLeadTypeOptions(leadTypes);
         setStatusOptions(statuses);
         setSubSourceMap(map);
       } catch (error) {
@@ -207,6 +204,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
         ...form,
         budgetMin,
         budgetMax,
+        budgetRange: `${budgetLabel(form.budgetMinIdx || 0)} - ${budgetLabel(form.budgetMaxIdx ?? BUDGET_MAX_VAL)}`,
         whatsapp_number: form.whatsappSameAsPhone ? form.phone : form.whatsapp_number,
         lead_source_id: form.lead_source_id || null,
         lead_sub_source_id: form.lead_sub_source_id || null,
@@ -245,7 +243,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
       <div className="crm-card">
         <div className="crm-card-body">
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ alignItems: 'start' }}>
               <div className="md:col-span-2">
                 <label className="crm-form-label">Full Name *</label>
                 <input className="crm-form-input" value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))} required placeholder="Enter buyer full name" />
@@ -281,13 +279,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
               <div className="crm-form-group"><label className="crm-form-label">Alternate Phone (Optional)</label><input className="crm-form-input" value={form.alternate_phone} onChange={(e) => setForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Secondary contact number" /></div>
               <div className="crm-form-group"><label className="crm-form-label">Email (Optional)</label><input className="crm-form-input" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" /></div>
 
-              <div className="crm-form-group">
-                <label className="crm-form-label">Lead Type</label>
-                <select className="crm-form-select" value={form.lead_type_id} onChange={(e) => setForm((p) => ({ ...p, lead_type_id: e.target.value }))}>
-                  <option value="">Select lead type</option>
-                  {leadTypeOptions.map((item) => <option key={item.id} value={item.id}>{item.type_name}</option>)}
-                </select>
-              </div>
+
 
               <div className="crm-form-group">
                 <label className="crm-form-label">Lead Status *</label>
@@ -320,7 +312,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   onClick={() => setProjectDropdownOpen((p) => !p)}
                   style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 8px' }}
                 >
-                  {selectedProjectNames.length === 0 && <span style={{ color: '#94a3b8', fontSize: 13 }}>Select projects...</span>}
+                  {selectedProjectNames.length === 0 && <span style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13 }}>Select projects...</span>}
                   {selectedProjectNames.map((name, i) => (
                     <span key={i} style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {name}
@@ -329,21 +321,21 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   ))}
                 </div>
                 {projectDropdownOpen && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: 240, marginTop: 4 }}>
-                    <div style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>
-                      <input type="text" placeholder="Search projects..." value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, outline: 'none' }} />
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 240, marginTop: 4 }}>
+                    <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                      <input type="text" placeholder="Search projects..." value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, outline: 'none', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)' }} />
                     </div>
                     <div style={{ maxHeight: 180, overflowY: 'auto' }}>
                       {filteredProjectOptions.map((project) => (
-                        <label key={project.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f1f5f9' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                        <label key={project.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border-primary, #f1f5f9)', color: 'var(--text-primary, #0f172a)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <input type="checkbox" checked={form.project_ids.includes(project.id)} onChange={() => toggleProject(project.id)} />
                           {project.project_name}{project.project_code ? ` (${project.project_code})` : ''}
                         </label>
                       ))}
-                      {filteredProjectOptions.length === 0 && <div style={{ padding: '12px', color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>No projects found</div>}
+                      {filteredProjectOptions.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No projects found</div>}
                     </div>
                   </div>
                 )}
@@ -357,7 +349,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   onClick={() => setLocationDropdownOpen((p) => !p)}
                   style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 8px' }}
                 >
-                  {selectedLocationNames.length === 0 && <span style={{ color: '#94a3b8', fontSize: 13 }}>Select locations...</span>}
+                  {selectedLocationNames.length === 0 && <span style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13 }}>Select locations...</span>}
                   {selectedLocationNames.map((name, i) => (
                     <span key={i} style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {name}
@@ -366,21 +358,21 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   ))}
                 </div>
                 {locationDropdownOpen && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: 240, marginTop: 4 }}>
-                    <div style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>
-                      <input type="text" placeholder="Search locations..." value={locationSearch} onChange={(e) => setLocationSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, outline: 'none' }} />
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 240, marginTop: 4 }}>
+                    <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                      <input type="text" placeholder="Search locations..." value={locationSearch} onChange={(e) => setLocationSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, outline: 'none', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)' }} />
                     </div>
                     <div style={{ maxHeight: 180, overflowY: 'auto' }}>
                       {filteredLocationOptions.map((loc) => (
-                        <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f1f5f9' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                        <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border-primary, #f1f5f9)', color: 'var(--text-primary, #0f172a)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <input type="checkbox" checked={(form.location_ids || []).includes(loc.id)} onChange={() => toggleLocation(loc.id)} />
                           {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
                         </label>
                       ))}
-                      {filteredLocationOptions.length === 0 && <div style={{ padding: '12px', color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>No locations found</div>}
+                      {filteredLocationOptions.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No locations found</div>}
                     </div>
                   </div>
                 )}
@@ -390,40 +382,32 @@ const TelecallerAddLead = ({ onNavigate }) => {
               <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="crm-form-label">Budget Range: <strong>{budgetLabel(form.budgetMinIdx || 0)} – {budgetLabel(form.budgetMaxIdx || BUDGET_MAX_VAL)}</strong></label>
                 <div style={{ position: 'relative', height: 40, display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                  <div style={{ position: 'absolute', left: 8, right: 8, height: 6, borderRadius: 3, background: '#e2e8f0' }} />
+                  <div style={{ position: 'absolute', left: 8, right: 8, height: 6, borderRadius: 3, background: 'var(--border-primary, #e2e8f0)' }} />
                   <div style={{ position: 'absolute', left: `calc(${((form.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% + 8px)`, right: `calc(${(1 - (form.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}% + 8px)`, height: 6, borderRadius: 3, background: 'var(--accent-blue, #3b82f6)' }} />
                   <input type="range" min={0} max={BUDGET_MAX_VAL} value={form.budgetMinIdx || 0}
                     onChange={(e) => {
                       const v = Math.min(Number(e.target.value), (form.budgetMaxIdx ?? BUDGET_MAX_VAL) - 1);
-                      setForm((p) => ({ ...p, budgetMinIdx: v, budgetMin: BUDGET_STEPS[v] * 100000 }));
+                      setForm((p) => ({ ...p, budgetMinIdx: v, budgetMin: BUDGET_STEPS[v] * 100000, budgetRange: `${budgetLabel(v)} - ${budgetLabel(p.budgetMaxIdx ?? BUDGET_MAX_VAL)}` }));
                     }}
                     style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 40, opacity: 0, cursor: 'pointer', zIndex: 3 }}
                   />
                   <input type="range" min={0} max={BUDGET_MAX_VAL} value={form.budgetMaxIdx ?? BUDGET_MAX_VAL}
                     onChange={(e) => {
                       const v = Math.max(Number(e.target.value), (form.budgetMinIdx || 0) + 1);
-                      setForm((p) => ({ ...p, budgetMaxIdx: v, budgetMax: BUDGET_STEPS[v] * 100000 }));
+                      setForm((p) => ({ ...p, budgetMaxIdx: v, budgetMax: BUDGET_STEPS[v] * 100000, budgetRange: `${budgetLabel(p.budgetMinIdx || 0)} - ${budgetLabel(v)}` }));
                     }}
                     style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 40, opacity: 0, cursor: 'pointer', zIndex: 4 }}
                   />
                   {/* Thumb indicators */}
-                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.2)', zIndex: 5, pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.2)', zIndex: 5, pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94a3b8', padding: '0 8px' }}>
-                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 100 ? '1Cr' : `${v}L`}</span>)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary, #94a3b8)', padding: '0 8px' }}>
+                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 50 ? '50L+' : `${v}L`}</span>)}
                 </div>
               </div>
 
-              <div className="crm-form-group">
-                <label className="crm-form-label">Priority</label>
-                <select className="crm-form-select" value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))}>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Urgent">Urgent</option>
-                </select>
-              </div>
+
 
               {/* Next Follow Up Date — CalendarPicker */}
               <div className="crm-form-group">

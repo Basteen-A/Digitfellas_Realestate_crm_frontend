@@ -25,6 +25,7 @@ export const SUPER_ADMIN_MASTER_ROUTES = [
   { path: 'customer-types', label: 'Customer Types' },
   { path: 'score-master', label: 'Score Master' },
   { path: 'lead-statuses', label: 'Lead Status' },
+  { path: 'status-remarks', label: 'Quick Remarks' },
   { path: 'booking-statuses', label: 'Booking Status' },
   { path: 'lead-stages', label: 'Lead Stage' },
   { path: 'closed-lost-reasons', label: 'Closed-Lost Reasons' },

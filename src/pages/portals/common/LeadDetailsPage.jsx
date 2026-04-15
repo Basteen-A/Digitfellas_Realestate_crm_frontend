@@ -114,6 +114,7 @@ const LeadDetailsPage = () => {
     permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: ''
   });
 
+
   const roleActions = useMemo(() => getActionsForRole(workflowConfig?.actions || {}, roleCode), [workflowConfig, roleCode]);
   const selectedAction = useMemo(() => roleActions.find((a) => a.code === actionCode) || null, [roleActions, actionCode]);
   const quickSelectedAction = useMemo(() => roleActions.find((a) => a.code === quickActionCode) || null, [roleActions, quickActionCode]);
@@ -476,6 +477,11 @@ const LeadDetailsPage = () => {
         toast.error('Reason is required for this action');
         return;
       }
+      // Ensure closure reason for Lost/Cold
+      if (quickSelectedAction.code === 'TC_LOST' && !quickActionForm.closureReasonId) {
+        toast.error('Please select a closure reason');
+        return;
+      }
       payload.closureReasonId = quickActionForm.closureReasonId || undefined;
       payload.reason = quickActionForm.reason.trim() || undefined;
       if (!payload.note) payload.note = payload.reason;
@@ -509,22 +515,38 @@ const LeadDetailsPage = () => {
       payload.time_spent = quickActionForm.timeSpent ? Number(quickActionForm.timeSpent) : undefined;
     }
 
+    if (['TC_SPAM', 'TC_JUNK'].includes(quickSelectedAction.code) && !quickActionForm.reason.trim() && !quickActionForm.note.trim()) {
+      toast.error('Please enter a reason for ' + quickSelectedAction.label);
+      return;
+    }
+
     if (!needsInput && !payload.note) {
       payload.note = `Quick action: ${quickSelectedAction.label}`;
     }
 
     setQuickActionSaving(true);
     try {
-      await leadWorkflowApi.transitionLead(lead.id, quickSelectedAction.code, payload);
-      toast.success(`${quickSelectedAction.label} completed`);
+      if (quickSelectedAction.code === 'TC_REASSIGN') {
+        if (!quickActionForm.assignToUserId) {
+          toast.error('Please select a telecaller to reassign');
+          return;
+        }
+        await leadWorkflowApi.assignLead(lead.id, quickActionForm.assignToUserId, quickActionForm.note.trim() || 'Telecaller manual reassignment');
+        toast.success('Lead reassigned successfully');
+      } else {
+        await leadWorkflowApi.transitionLead(lead.id, quickSelectedAction.code, payload);
+        toast.success(`${quickSelectedAction.label} completed`);
+      }
       closeQuickActionsModal();
       await loadLeadData();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to run action'));
     } finally {
       setQuickActionSaving(false);
     }
   };
+
+
+
+
 
   if (loading) {
     return (
@@ -565,7 +587,9 @@ const LeadDetailsPage = () => {
             onClick={async () => {
               setQuickActionsOpen(true);
               try {
-                const actResp = await leadWorkflowApi.getLeadActivities(lead.id);
+                const [actResp] = await Promise.all([
+                  leadWorkflowApi.getLeadActivities(lead.id)
+                ]);
                 setQuickActionActivities(actResp.data || []);
               } catch {
                 setQuickActionActivities([]);
@@ -1129,7 +1153,25 @@ const LeadDetailsPage = () => {
                 <h2>⚡ Quick Actions</h2>
                 <small style={{ color: '#94a3b8', fontSize: '12px' }}>{lead?.fullName || lead?.full_name} · {lead?.phone}</small>
               </div>
-              <button className="qa-header-close" onClick={closeQuickActionsModal}>×</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="qa-header-comms" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button 
+                    className="qa-header-icon-btn"
+                    title="Call Now"
+                    onClick={() => window.open(`tel:${lead.phone || lead.phone_number}`)}
+                  >
+                    📞
+                  </button>
+                  <button 
+                    className="qa-header-icon-btn"
+                    title="WhatsApp"
+                    onClick={() => window.open(`https://wa.me/${(lead.whatsappNumber || lead.phone || '').replace(/\D/g, '')}`, '_blank')}
+                  >
+                    💬
+                  </button>
+                </div>
+                <button className="qa-header-close" onClick={closeQuickActionsModal}>×</button>
+              </div>
             </div>
 
             <div className="qa-body">
@@ -1139,7 +1181,7 @@ const LeadDetailsPage = () => {
                   {/* Workflow Transitions */}
                   <div className="qa-section">
                     <div className="qa-section-title">🚀 Workflow Transitions</div>
-                    <div className="qa-action-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                    <div className="qa-action-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                       {roleActions.filter(a => a.tone !== 'danger').map((action) => {
                         let icon = '📋';
                         if (action.code.includes('RNR')) icon = '🔄';
@@ -1149,6 +1191,7 @@ const LeadDetailsPage = () => {
                         else if (action.code.includes('NEGOTIATION')) icon = '🤝';
                         else if (action.code.includes('BOOKING')) icon = '🎉';
                         else if (action.code.includes('PAYMENT')) icon = '💸';
+                        else if (action.code.includes('REASSIGN')) icon = '👤';
 
                         return (
                           <button
@@ -1416,8 +1459,10 @@ const LeadDetailsPage = () => {
                     </div>
                   </div>
 
+
+
                   <div className="qa-section" style={{ marginTop: '24px' }}>
-                    <div className="qa-section-title">📝 Activity History</div>
+                    <div className="qa-section-title">📝 Lead Activity</div>
                     <div className="qa-timeline">
                       {quickActionActivities.slice(0, 5).map((act) => (
                         <div key={act.id} className="qa-timeline-item" style={{ gap: '12px' }}>
@@ -1432,10 +1477,10 @@ const LeadDetailsPage = () => {
                           </div>
                         </div>
                       ))}
-                      {quickActionActivities.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No recent history</span>}
+                      {quickActionActivities.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No recent activity</span>}
                     </div>
                   </div>
-              </div>
+                </div>
             </div>
           </div>
         </div>

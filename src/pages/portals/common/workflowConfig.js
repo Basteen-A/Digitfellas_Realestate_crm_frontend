@@ -53,10 +53,11 @@ const FALLBACK_ACTIONS = {
     { code: 'TC_LEAD_QUALIFIED', label: 'Follow Up', tone: 'primary', targetStageCode: 'QUALIFIED', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
     { code: 'TC_SV_SCHEDULED', label: 'SV Scheduled', tone: 'success', targetStageCode: 'QUALIFIED', targetStatusCode: 'SV_SCHEDULED', needsFollowUp: true },
     { code: 'TC_SV_DONE', label: 'SV Done', tone: 'success', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true },
+    { code: 'TC_REASSIGN', label: 'Reassign', tone: 'secondary', needsAssignee: true, assigneeRole: 'TC' },
     { code: 'TC_RNR', label: 'RnR', tone: 'secondary', targetStageCode: 'CONTACTED', targetStatusCode: 'RNR', needsFollowUp: true },
-    { code: 'TC_SPAM', label: 'Mark as Spam', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'SPAM', needsFollowUp: true },
-    { code: 'TC_JUNK', label: 'Junk', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'JUNK', needsFollowUp: true },
-    { code: 'TC_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'LOST', needsFollowUp: true },
+    { code: 'TC_SPAM', label: 'Mark as Spam', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'SPAM', needsFollowUp: false },
+    { code: 'TC_JUNK', label: 'Junk', tone: 'danger', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'JUNK', needsFollowUp: false },
+    { code: 'TC_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'LOST', needsFollowUp: false },
   ],
   SM: [
     { code: 'SM_SITE_VISIT', label: 'Record Site Visit', tone: 'primary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsSvDetails: true },
@@ -80,8 +81,38 @@ const FALLBACK_ACTIONS = {
  * Get role-specific actions from the workflow config
  */
 export const getActionsForRole = (actions = {}, roleCode) => {
-  const fromConfig = actions[roleCode] || [];
-  return fromConfig.length ? fromConfig : (FALLBACK_ACTIONS[roleCode] || []);
+  const fromConfig = (actions[roleCode] || []).map((a) => {
+    if (['TC_LEAD_QUALIFIED', 'TC_SV_SCHEDULED', 'TC_RNR', 'SM_FOLLOW_UP', 'SM_SCHEDULE_REVISIT', 'SH_FOLLOW_UP'].includes(a.code)) {
+      return { ...a, needsFollowUp: true };
+    }
+
+    if (a.code === 'TC_SV_DONE') {
+      return { ...a, needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true };
+    }
+
+    if (['TC_SPAM', 'TC_JUNK'].includes(a.code)) {
+      return { ...a, needsReason: true, reasonCategory: a.code === 'TC_SPAM' ? 'SPAM' : 'JUNK', needsFollowUp: false };
+    }
+
+    if (a.code === 'TC_LOST') {
+      return { ...a, needsReason: true, reasonCategory: 'LOST', needsFollowUp: false };
+    }
+
+    return a;
+  });
+  
+  const fallbacks = FALLBACK_ACTIONS[roleCode] || [];
+
+  if (fromConfig.length) {
+    // Merge mandatory actions from fallback if they are missing from config
+    const mandatoryCodes = ['TC_REASSIGN'];
+    const existingCodes = new Set(fromConfig.map(a => a.code));
+    const missingMandatory = fallbacks.filter(a => mandatoryCodes.includes(a.code) && !existingCodes.has(a.code));
+    
+    return [...fromConfig, ...missingMandatory];
+  }
+
+  return fallbacks;
 };
 
 /**

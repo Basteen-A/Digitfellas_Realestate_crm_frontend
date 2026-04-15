@@ -46,6 +46,7 @@ const adminSidebar = [
       { label: 'Score Master', path: '/super-admin/score-master' },
       { label: 'Lead Stages', path: '/super-admin/lead-stages' },
       { label: 'Lead Statuses', path: '/super-admin/lead-statuses' },
+      { label: 'Quick Remarks', path: '/super-admin/status-remarks' },
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
