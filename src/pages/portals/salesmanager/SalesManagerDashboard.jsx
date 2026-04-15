@@ -3,26 +3,70 @@ import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import siteVisitApi from '../../../api/siteVisitApi';
+import leadWorkflowApi from '../../../api/leadWorkflowApi';
 
 const SalesManagerDashboard = ({ onNavigate }) => {
   const [stats, setStats] = useState(null);
   const [upcomingVisits, setUpcomingVisits] = useState([]);
+  const [incomingPendingCount, setIncomingPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsResp, visitsResp] = await Promise.all([
+      const [statsResp, visitsResp, handoffsResp, revisitsResp] = await Promise.all([
         dashboardApi.getSalesManagerStats().catch(() => ({ data: {} })),
         siteVisitApi.getUpcoming().catch(() => ({ data: { data: [] } })),
+        leadWorkflowApi.getHandoffs({
+          type: 'incoming',
+          stageCode: 'SITE_VISIT',
+          statusCode: 'SV_DONE',
+          currentOnly: true,
+          pendingAcceptance: true,
+          limit: 100,
+        }).catch(() => ({ data: [], meta: { total: 0 } })),
+        leadWorkflowApi.getLeads({
+          roleCode: 'SM',
+          statusCode: 'REVISIT',
+          limit: 100,
+        }).catch(() => ({ data: [] })),
       ]);
 
       setStats(statsResp?.data || {});
       const svData = visitsResp?.data?.data || visitsResp?.data || [];
-      const sortedVisits = Array.isArray(svData)
+      const sortedSiteVisits = Array.isArray(svData)
         ? [...svData].sort((a, b) => new Date(a.scheduled_date || 0) - new Date(b.scheduled_date || 0))
         : [];
-      setUpcomingVisits(sortedVisits);
+
+      const revisitLeads = Array.isArray(revisitsResp?.data) ? revisitsResp.data : [];
+      const now = new Date();
+      const revisitAsVisits = revisitLeads
+        .filter((lead) => lead?.nextFollowUpAt && new Date(lead.nextFollowUpAt) >= now)
+        .map((lead) => ({
+          id: `revisit-${lead.id}`,
+          scheduled_date: lead.nextFollowUpAt,
+          scheduled_time_slot: null,
+          status: 'Revisit',
+          pickup_required: false,
+          lead: {
+            first_name: lead.firstName || lead.fullName?.split(' ')?.[0] || '',
+            last_name: lead.lastName || lead.fullName?.split(' ')?.slice(1).join(' ') || '',
+            status: { status_code: lead.statusCode || '' },
+          },
+          project: {
+            project_name: lead.project || 'N/A',
+          },
+        }));
+
+      const mergedUpcoming = [...sortedSiteVisits, ...revisitAsVisits]
+        .sort((a, b) => new Date(a.scheduled_date || 0) - new Date(b.scheduled_date || 0));
+      setUpcomingVisits(mergedUpcoming);
+
+      const incomingTotal = Number(statsResp?.data?.incomingLeads ?? 0);
+      const resolvedPending = Number(
+        handoffsResp?.meta?.total ?? (Array.isArray(handoffsResp?.data) ? handoffsResp.data.length : 0)
+      );
+      setIncomingPendingCount(Number.isFinite(resolvedPending) ? resolvedPending : incomingTotal);
 
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load dashboard'));
@@ -43,7 +87,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'Active Leads', value: stats?.activeLeads ?? stats?.totalLeads ?? 0, icon: '👥', iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', change: `↑ ${stats?.incomingLeads ?? 0} incoming`, changeType: 'up' },
+    { label: 'Active Leads', value: stats?.activeLeads ?? stats?.totalLeads ?? 0, icon: '👥', iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', change: `↑ ${incomingPendingCount} incoming`, changeType: 'up' },
     { label: 'Due Today', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, icon: '📌', iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: `${stats?.overdueActions ?? stats?.missedActions ?? 0} overdue`, changeType: (stats?.overdueActions ?? stats?.missedActions ?? 0) > 0 ? 'down' : 'neutral' },
     { label: 'Upcoming Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, icon: '🏠', iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, changeType: 'neutral' },
     { label: 'Revisits', value: stats?.revisits ?? 0, icon: '🔄', iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In revisit stage', changeType: 'neutral' },
@@ -76,11 +120,11 @@ const SalesManagerDashboard = ({ onNavigate }) => {
   return (
     <div>
       {/* Handoff Banner */}
-      {(stats?.incomingLeads ?? 0) > 0 && (
+      {incomingPendingCount > 0 && (
         <div className="handoff-banner" style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a' }}>
           <div className="handoff-banner-icon" style={{ fontSize: 24 }}>📥</div>
           <div className="handoff-banner-text">
-            <div className="handoff-banner-title" style={{ color: '#92400e', fontWeight: 700 }}>{stats.incomingLeads} incoming lead{stats.incomingLeads > 1 ? 's' : ''} awaiting your review</div>
+            <div className="handoff-banner-title" style={{ color: '#92400e', fontWeight: 700 }}>{incomingPendingCount} incoming lead{incomingPendingCount > 1 ? 's' : ''} awaiting your review</div>
             <div className="handoff-banner-desc" style={{ color: '#b45309' }}>Leads handed off from telecallers are ready for your action.</div>
           </div>
           <button className="crm-btn crm-btn-warning crm-btn-sm" style={{ fontWeight: 700 }} onClick={() => onNavigate?.('incoming')}>Review Now →</button>
@@ -138,7 +182,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
                       {isHot && <span className="crm-badge badge-hot" style={{ fontSize: 9, padding: '1px 4px' }}>🔥 Hot</span>}
                     </div>
                     <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                      📍 {sv.project?.project_name || 'N/A'} {sv.pickup_required && '· 🚗 Pickup Needed'}
+                      📍 {sv.project?.project_name || 'N/A'} {sv.status === 'Revisit' ? '· 🔄 Revisit' : ''} {sv.pickup_required && '· 🚗 Pickup Needed'}
                     </div>
                   </div>
                   <button className="crm-btn crm-btn-ghost-primary crm-btn-sm" onClick={() => onNavigate?.('visits')}>Open</button>

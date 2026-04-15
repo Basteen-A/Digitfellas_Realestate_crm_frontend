@@ -69,7 +69,7 @@ const FALLBACK_ACTIONS = {
   ],
   SH: [
     { code: 'SH_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
-    { code: 'SH_BOOKING', label: 'Booking (Token Received)', tone: 'success', targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true },
+    { code: 'SH_BOOKING', label: 'Booking (Token Received)', tone: 'success', targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' },
   ],
   COL: [
     { code: 'COL_PAYMENT_UPDATE', label: 'Update Payment Milestone', tone: 'secondary', targetStatusCode: 'BOOKED' },
@@ -96,6 +96,10 @@ export const getActionsForRole = (actions = {}, roleCode) => {
 
     if (a.code === 'TC_LOST') {
       return { ...a, needsReason: true, reasonCategory: 'LOST', needsFollowUp: false };
+    }
+
+    if (a.code === 'SH_BOOKING') {
+      return { ...a, needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' };
     }
 
     return a;

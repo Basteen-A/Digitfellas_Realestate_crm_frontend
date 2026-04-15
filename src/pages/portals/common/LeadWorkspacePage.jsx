@@ -3383,11 +3383,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           {getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head...' :
                            getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
                         </option>
-                        {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || []).map((u) => (
+                        {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || [])
+                          .filter((u) => {
+                            if (quickWorkflowAction?.code !== 'TC_REASSIGN') return true;
+                            const currentAssigneeId = quickActionLead?.assignedToUserId || selectedLead?.assignedToUserId || null;
+                            return !currentAssigneeId || u.id !== currentAssigneeId;
+                          })
+                          .map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
                           </option>
-                        ))}
+                          ))}
                       </select>
                     </div>
                   )}
@@ -3790,6 +3796,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 disabled={
                   quickActionLoading
                   || !quickWorkflowAction
+                  || ((quickWorkflowAction?.needsAssignee
+                    || quickWorkflowAction?.code === 'TC_SV_DONE'
+                    || quickWorkflowAction?.code === 'TC_REASSIGN')
+                    && !quickWorkflowForm.assignToUserId)
                   || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)
                   || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
                 }

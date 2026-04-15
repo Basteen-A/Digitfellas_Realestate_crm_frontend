@@ -62,6 +62,14 @@ const leadWorkflowApi = {
   },
 
   /**
+   * PATCH /leads/:id/accept-incoming
+   */
+  acceptIncomingLead: async (leadId, payload) => {
+    const { data } = await api.patch(`/leads/${leadId}/accept-incoming`, payload);
+    return data;
+  },
+
+  /**
    * PATCH /leads/:id/transition
    */
   transitionLead: async (leadId, actionCode, payload = {}) => {
