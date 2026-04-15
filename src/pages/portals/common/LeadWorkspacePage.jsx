@@ -25,6 +25,15 @@ import './LeadWorkspacePage.css';
 const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50];
 const BUDGET_MAX_VAL = BUDGET_STEPS.length - 1;
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
+
+const hasValidPhoneLength = (value) => {
+  const len = sanitizePhoneNumberInput(value).length;
+  return len >= 10 && len <= 12;
+};
+
 const budgetLabel = (idx) => {
   const v = BUDGET_STEPS[idx];
   if (v === 0) return '0';
@@ -61,6 +70,7 @@ const initialNewLead = {
   assigned_to: '', // '' = unassigned, user.id = assigned to that user
   closure_reason_id: '',
   remark: '',
+  callResult: 'Answered',
 };
 
 const toDateTimeLocalValue = (value) => {
@@ -117,82 +127,6 @@ const getClosureReasonCategoryForAction = (action) => {
   }
 };
 
-const SectionLabel = ({ children }) => (
-  <div
-    style={{
-      fontSize: 10,
-      fontWeight: 700,
-      letterSpacing: '0.09em',
-      color: 'var(--text-secondary, #64748b)',
-      textTransform: 'uppercase',
-      padding: '14px 0 10px',
-      borderBottom: '1px solid var(--border-primary, #e2e8f0)',
-      marginBottom: 14,
-    }}
-  >
-    {children}
-  </div>
-);
-
-const FieldWrap = ({ label, required, optional, children }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-    <label
-      style={{
-        fontSize: 11.5,
-        fontWeight: 500,
-        color: 'var(--text-secondary, #64748b)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 3,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {label}
-      {required && <span style={{ color: 'var(--accent-red, #ef4444)' }}>*</span>}
-      {optional && <span style={{ color: 'var(--text-muted, #94a3b8)', fontWeight: 400, fontSize: 11 }}>(optional)</span>}
-    </label>
-    {children}
-  </div>
-);
-
-const inputStyle = (borderColor) => ({
-  width: '100%',
-  height: 36,
-  background: 'var(--bg-primary, #fff)',
-  border: `1px solid ${borderColor || 'var(--border-primary, #e2e8f0)'}`,
-  borderRadius: 7,
-  color: 'var(--text-primary, #0f172a)',
-  fontSize: 12.5,
-  padding: '0 10px',
-  outline: 'none',
-  fontFamily: 'inherit',
-  transition: 'border-color 0.15s',
-});
-
-const selectStyle = (borderColor, disabled) => ({
-  width: '100%',
-  height: 36,
-  background: 'var(--bg-primary, #fff)',
-  border: `1px solid ${borderColor || 'var(--border-primary, #e2e8f0)'}`,
-  borderRadius: 7,
-  color: disabled ? 'var(--text-muted, #94a3b8)' : 'var(--text-primary, #0f172a)',
-  fontSize: 12.5,
-  padding: '0 10px',
-  outline: 'none',
-  fontFamily: 'inherit',
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.5 : 1,
-  transition: 'border-color 0.15s',
-});
-
-const validationMsg = (type) => ({
-  fontSize: 10,
-  fontWeight: 600,
-  color: type === 'error' ? 'var(--accent-red, #ef4444)' : 'var(--accent-green, #22c55e)',
-  marginTop: 2,
-  display: 'block',
-});
-
 const FilterDropdown = ({ label, options, selectedValues, onToggle, onClear }) => (
   <details className="lead-filter-dropdown">
     <summary className="lead-filter-dropdown__summary">
@@ -231,6 +165,10 @@ const FilterDropdown = ({ label, options, selectedValues, onToggle, onClear }) =
 );
 
 const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
+  const CALL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
+
+  const shouldShowCallStatus = (statusCode) => CALL_STATUS_CODES.includes(statusCode);
+
   const navigate = useNavigate();
   const wsTitle = getWorkspaceTitle(workspaceRole);
 
@@ -270,6 +208,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     latitude: null,
     longitude: null,
     timeSpent: '',
+    callResult: 'Answered',
   });
 
   // ── Dynamic Status Remarks ──
@@ -300,11 +239,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Stage Transition Popup ──
   const [stagePopupOpen, setStagePopupOpen] = useState(false);
-  const [stagePopupData, setStagePopupData] = useState({ actionCode: '', stageLabel: '', followUpAt: '', reason: '', needsFollowUp: false });
+  const [stagePopupData, setStagePopupData] = useState({ actionCode: '', stageLabel: '', followUpAt: '', reason: '', needsFollowUp: false, callResult: 'Answered' });
 
   // ── SV Done Modal (TC Handoff) ──
   const [svDoneModalOpen, setSvDoneModalOpen] = useState(false);
-  const [svDoneForm, setSvDoneForm] = useState({ assignToUserId: '', svDate: '', svProjectId: '', note: '' });
+  const [svDoneForm, setSvDoneForm] = useState({ assignToUserId: '', svDate: '', svProjectId: '', budgetMin: '', budgetMax: '', note: '' });
 
   // ── Record Site Visit Modal (SM Analysis) ──
   const [recordSvModalOpen, setRecordSvModalOpen] = useState(false);
@@ -312,6 +251,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     svDate: new Date().toISOString().split('T')[0],
     svProjectId: '',
     assignToUserId: '',
+    budgetMin: '',
+    budgetMax: '',
     motivationType: '',
     primaryRequirement: '',
     secondaryRequirement: '',
@@ -330,6 +271,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [phoneCheck, setPhoneCheck] = useState({ status: 'idle', leadInfo: null, duplicateLead: null });
   const [altPhoneCheck, setAltPhoneCheck] = useState({ status: 'idle', leadInfo: null, duplicateLead: null });
   const [reengageLeadId, setReengageLeadId] = useState(null);
+  const [newLeadStatusRemarks, setNewLeadStatusRemarks] = useState([]);
+  const [remarksLoading, setRemarksLoading] = useState(false);
+  const [lastActiveBudgetHandle, setLastActiveBudgetHandle] = useState('min');
 
   // ── Customer Profile Modal (SH Close Won) ──
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
@@ -390,6 +334,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       };
     }), [roleActions, selectedLead?.stageCode, stageByCode]);
 
+  const stagePopupAction = useMemo(
+    () => roleActions.find((action) => action.code === stagePopupData.actionCode) || null,
+    [roleActions, stagePopupData.actionCode]
+  );
+
   const toolbarStageOptions = useMemo(() => {
     if (workspaceRole === 'SM') {
       return stageOptions.filter((o) => ['SITE_VISIT', 'OPPORTUNITY'].includes(o.value));
@@ -420,8 +369,22 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const filteredLeads = useMemo(() => {
     const searchText = (filters.search || '').trim().toLowerCase();
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowStart = new Date(todayStart.getTime() + 86400000);
 
     return leads.filter((lead) => {
+      if (workspaceRole === 'TC' && activeTab === 'mine') {
+        if (lead.isClosed) return false;
+
+        const followUpAt = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null;
+        if (!followUpAt || Number.isNaN(followUpAt.getTime())) return false;
+
+        const isTodayFollowUp = followUpAt >= todayStart && followUpAt < tomorrowStart;
+        const isMissedFollowUp = followUpAt < now;
+        if (!isTodayFollowUp && !isMissedFollowUp) return false;
+      }
+
       if (searchText) {
         const haystack = [
           lead.fullName,
@@ -450,12 +413,79 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
       return true;
     });
-  }, [leads, filters.search, multiFilters]);
+  }, [leads, filters.search, multiFilters, activeTab, workspaceRole]);
 
   const selectedSourceSubSources = useMemo(
     () => subSourceMap[newLeadForm.lead_source_id] || [],
     [subSourceMap, newLeadForm.lead_source_id]
   );
+
+  const selectedNewLeadStatusCode = useMemo(() => {
+    const selected = statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id);
+    return selected?.value || '';
+  }, [statusOptions, newLeadForm.lead_status_id]);
+
+  const tcStatusNeedsFullDetails = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
+  const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
+
+  const newLeadValidation = useMemo(() => {
+    const errors = [];
+    const primaryPhone = sanitizePhoneNumberInput(newLeadForm.phone);
+    const alternatePhone = sanitizePhoneNumberInput(newLeadForm.alternate_phone);
+    const whatsappPhone = sanitizePhoneNumberInput(newLeadForm.whatsapp_number);
+    const budgetMin = newLeadForm.budgetMin !== '' && newLeadForm.budgetMin !== null ? Number(newLeadForm.budgetMin) : null;
+    const budgetMax = newLeadForm.budgetMax !== '' && newLeadForm.budgetMax !== null ? Number(newLeadForm.budgetMax) : null;
+
+    if (!newLeadForm.full_name?.trim()) errors.push('Full name is required');
+    if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 10 to 12 digits');
+
+    if (alternatePhone && !hasValidPhoneLength(alternatePhone)) {
+      errors.push('Alternate phone number must be 10 to 12 digits');
+    }
+
+    if (!newLeadForm.whatsappSameAsPhone && whatsappPhone && !hasValidPhoneLength(whatsappPhone)) {
+      errors.push('WhatsApp number must be 10 to 12 digits');
+    }
+
+    if (newLeadForm.email?.trim() && !EMAIL_REGEX.test(newLeadForm.email.trim())) {
+      errors.push('Please enter a valid email address');
+    }
+
+    if (!newLeadForm.lead_source_id) errors.push('Lead source is required');
+
+    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
+      errors.push('Budget Max must be greater than or equal to Budget Min');
+    }
+
+    if (workspaceRole === 'TC') {
+      if (!newLeadForm.lead_sub_source_id) errors.push('Lead sub-source is required');
+      if (!newLeadForm.lead_status_id) errors.push('Lead status is required');
+
+      if (tcStatusNeedsFullDetails) {
+        if (!newLeadForm.location_id) errors.push('Location is required');
+        if (!newLeadForm.project_ids?.length) errors.push('At least one project is required');
+        if (!newLeadForm.nextFollowUpAt) errors.push('Next follow up date is required');
+        if (!newLeadForm.callResult) errors.push('Call status is required');
+      }
+
+      if (isTerminalCreateStatus) {
+        if (!newLeadForm.closure_reason_id) errors.push('Closure reason is required');
+        if (!newLeadForm.remark?.trim()) errors.push('Remarks are required for terminal statuses');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      sanitized: {
+        primaryPhone,
+        alternatePhone,
+        whatsappPhone,
+        budgetMin,
+        budgetMax,
+      },
+    };
+  }, [newLeadForm, workspaceRole, tcStatusNeedsFullDetails, isTerminalCreateStatus]);
 
   // ── Stats (Telecaller KPI cards) ──
   const computedStats = useMemo(() => {
@@ -577,6 +607,37 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     } else {
       setClosureReasons([]);
     }
+  }, [newLeadOpen, newLeadForm.lead_status_id, statusOptions]);
+
+  // Fetch status-specific remarks for New Lead creation chips
+  useEffect(() => {
+    if (!newLeadOpen || !newLeadForm.lead_status_id) {
+      setNewLeadStatusRemarks([]);
+      return;
+    }
+
+    const fetchRemarks = async () => {
+      setRemarksLoading(true);
+      try {
+        // Try to find status object to get code
+        const statusObj = statusOptions.find(st => st.id === newLeadForm.lead_status_id || st.value === newLeadForm.lead_status_id);
+        if (!statusObj) {
+          setRemarksLoading(false);
+          return;
+        }
+
+        const resp = await statusRemarkApi.getByStatusCode(statusObj.value);
+        // Correctly extract the remarks array from the response object
+        setNewLeadStatusRemarks(resp.data?.remarks || resp.data || []);
+      } catch (err) {
+        console.error('Failed to fetch new lead status remarks:', err);
+        setNewLeadStatusRemarks([]);
+      } finally {
+        setRemarksLoading(false);
+      }
+    };
+
+    fetchRemarks();
   }, [newLeadOpen, newLeadForm.lead_status_id, statusOptions]);
 
   // ── Duplicate Phone Check ──
@@ -815,44 +876,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Handlers ──
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    if (!newLeadForm.full_name || !newLeadForm.phone) { toast.error('Full name and phone are required'); return; }
-    if (!newLeadForm.lead_source_id) { toast.error('Lead source is required'); return; }
-
-    // TC-specific mandatory fields
-    if (workspaceRole === 'TC') {
-      if (!newLeadForm.lead_sub_source_id) { toast.error('Lead sub-source is required'); return; }
-      if (!newLeadForm.lead_status_id) { toast.error('Lead status is required'); return; }
-
-      // Validation for terminal statuses
-      const selectedStatus = statusOptions.find(st => st.id === newLeadForm.lead_status_id || st.value === newLeadForm.lead_status_id);
-      const isTerminal = selectedStatus && (['JUNK', 'SPAM', 'LOST', 'COLD_LOST'].includes(selectedStatus.value));
-
-      if (!isTerminal && !newLeadForm.nextFollowUpAt) {
-        toast.error('Next follow up date is required');
-        return;
-      }
-
-      if (isTerminal) {
-        if (['JUNK', 'SPAM'].includes(selectedStatus.value) && !newLeadForm.remark?.trim()) {
-          toast.error(`A reason/remark is mandatory when marking a lead as ${selectedStatus.label}`);
-          return;
-        }
-        if (selectedStatus.value === 'LOST' || selectedStatus.value === 'COLD_LOST') {
-          // Closure reason is handled by remark in creation form
-          if (!newLeadForm.remark?.trim() && !newLeadForm.note?.trim()) {
-            toast.error('Please enter a closure reason in remarks');
-            return;
-          }
-        }
-      }
-    }
-
-    const budgetMin = newLeadForm.budgetMin ? Number(newLeadForm.budgetMin) : null;
-    const budgetMax = newLeadForm.budgetMax ? Number(newLeadForm.budgetMax) : null;
-    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
-      toast.error('Budget Max must be greater than or equal to Budget Min');
+    if (!newLeadValidation.isValid) {
+      toast.error(newLeadValidation.errors[0] || 'Please complete all required fields');
       return;
     }
+
+    const { primaryPhone, alternatePhone, whatsappPhone, budgetMin, budgetMax } = newLeadValidation.sanitized;
 
     // For TC: use first selected project from multi-select
     const primaryProjectId = workspaceRole === 'TC'
@@ -874,9 +903,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
       await leadWorkflowApi.createLead({
         ...newLeadForm,
+        phone: primaryPhone,
+        alternate_phone: alternatePhone || undefined,
         budgetMin,
         budgetMax,
-        whatsapp_number: newLeadForm.whatsappSameAsPhone ? newLeadForm.phone : newLeadForm.whatsapp_number,
+        whatsapp_number: newLeadForm.whatsappSameAsPhone ? primaryPhone : (whatsappPhone || undefined),
         lead_source_id: newLeadForm.lead_source_id || null,
         lead_sub_source_id: newLeadForm.lead_sub_source_id || null,
         project_id: primaryProjectId,
@@ -888,6 +919,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         location: selectedLocation ? `${selectedLocation.location_name}${selectedLocation.city ? `, ${selectedLocation.city}` : ''}` : null,
         nextFollowUpAt: newLeadForm.nextFollowUpAt ? new Date(newLeadForm.nextFollowUpAt).toISOString() : undefined,
         lead_status_id: newLeadForm.lead_status_id || undefined,
+        callResult: newLeadForm.callResult,
+        motivationType: newLeadForm.motivationType,
         assigned_to: assignedToValue,
         closure_reason_id: newLeadForm.closure_reason_id || undefined,
         remark: newLeadForm.remark || undefined,
@@ -934,7 +967,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
     // SV Done: open SV Done modal instead of direct action
     if (action.code === 'TC_SV_DONE') {
-      setSvDoneForm({ assignToUserId: '', svDate: '', svProjectId: '', note: actionState.note || '' });
+      setSvDoneForm({
+        assignToUserId: '',
+        svDate: '',
+        svProjectId: '',
+        budgetMin: selectedLead.budgetMin ?? '',
+        budgetMax: selectedLead.budgetMax ?? '',
+        note: actionState.note || '',
+      });
       setSvDoneModalOpen(true);
       loadAssignableUsers('SM');
       if (!projectOptions.length) loadCreateOptions();
@@ -946,6 +986,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         svDate: new Date().toISOString().split('T')[0],
         svProjectId: selectedLead.projectId || '',
         assignToUserId: '',
+        budgetMin: selectedLead.budgetMin ?? '',
+        budgetMax: selectedLead.budgetMax ?? '',
         motivationType: selectedLead.motivationType || '',
         primaryRequirement: selectedLead.primaryRequirement || '',
         secondaryRequirement: selectedLead.secondaryRequirement || '',
@@ -1014,6 +1056,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!selectedLead) return;
     if (!recordSvForm.assignToUserId) { toast.error('Sales Head selection is mandatory'); return; }
     if (!recordSvForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
+    if (recordSvForm.budgetMin === '' || recordSvForm.budgetMax === '') { toast.error('Budget Min and Budget Max are mandatory'); return; }
+    if (Number(recordSvForm.budgetMax) < Number(recordSvForm.budgetMin)) { toast.error('Budget Max must be greater than or equal to Budget Min'); return; }
     if (!recordSvForm.motivationType) { toast.error('Buying Motivation is mandatory'); return; }
     if (!recordSvForm.latitude) { toast.error('Geo-location is mandatory'); return; }
 
@@ -1022,6 +1066,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         assignToUserId: recordSvForm.assignToUserId,
         svDate: recordSvForm.svDate,
         svProjectId: recordSvForm.svProjectId,
+        budgetMin: Number(recordSvForm.budgetMin),
+        budgetMax: Number(recordSvForm.budgetMax),
         motivationType: recordSvForm.motivationType,
         primaryRequirement: recordSvForm.primaryRequirement,
         secondaryRequirement: recordSvForm.secondaryRequirement,
@@ -1045,12 +1091,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!svDoneForm.assignToUserId) { toast.error('Sales Manager is mandatory'); return; }
     if (!svDoneForm.svDate) { toast.error('Site Visit date is mandatory'); return; }
     if (!svDoneForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
+    if (svDoneForm.budgetMin === '' || svDoneForm.budgetMax === '') { toast.error('Budget Min and Budget Max are mandatory'); return; }
+    if (Number(svDoneForm.budgetMax) < Number(svDoneForm.budgetMin)) { toast.error('Budget Max must be greater than or equal to Budget Min'); return; }
 
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'TC_SV_DONE', {
         assignToUserId: svDoneForm.assignToUserId,
         svDate: svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : undefined,
         svProjectId: svDoneForm.svProjectId,
+        budgetMin: Number(svDoneForm.budgetMin),
+        budgetMax: Number(svDoneForm.budgetMax),
         note: svDoneForm.note?.trim() || undefined,
       });
       toast.success('SV Done — Lead handed off to Sales Manager');
@@ -1143,6 +1193,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Open the stage transition popup when user selects a stage ──
   const openStagePopup = (actionCode) => {
     const option = stageTransitionOptions.find((o) => o.value === actionCode);
+    const action = roleActions.find((a) => a.code === actionCode);
+    const nextStatusCode = action?.targetStatusCode || '';
     if (!option) return;
     setStagePopupData({
       actionCode,
@@ -1150,6 +1202,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       followUpAt: '',
       reason: '',
       needsFollowUp: Boolean(option.needsFollowUp),
+      callResult: nextStatusCode === 'RNR' ? 'Not Answered' : 'Answered',
     });
     setStagePopupOpen(true);
   };
@@ -1183,6 +1236,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       await leadWorkflowApi.transitionLead(selectedLead.id, stagePopupData.actionCode, {
         note: stagePopupData.reason.trim(),
         nextFollowUpAt: stagePopupData.followUpAt ? new Date(stagePopupData.followUpAt).toISOString() : undefined,
+        callResult: shouldShowCallStatus(stagePopupAction?.targetStatusCode) ? stagePopupData.callResult : undefined,
       });
       toast.success('Stage updated successfully');
       setStagePopupOpen(false);
@@ -1255,6 +1309,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       reason: '',
       svDate: '',
       svProjectId: '',
+      budgetMin: '',
+      budgetMax: '',
       motivationType: '',
       primaryRequirement: '',
       secondaryRequirement: '',
@@ -1314,12 +1370,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       reason: '',
       svDate: new Date().toISOString().split('T')[0],
       svProjectId: quickActionLead?.projectId || '',
+      budgetMin: quickActionLead?.budgetMin ?? '',
+      budgetMax: quickActionLead?.budgetMax ?? '',
       motivationType: quickActionLead?.motivationType || '',
       primaryRequirement: quickActionLead?.primaryRequirement || '',
       secondaryRequirement: quickActionLead?.secondaryRequirement || '',
       latitude: quickActionLead?.geoLat || null,
       longitude: quickActionLead?.geoLong || null,
       timeSpent: '',
+      callResult: action.targetStatusCode === 'RNR' ? 'Not Answered' : 'Answered',
     });
 
     if (action.needsAssignee) {
@@ -1416,6 +1475,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           return;
         }
 
+        if (quickWorkflowAction.needsSvDetails && (f.budgetMin === '' || f.budgetMax === '')) {
+          toast.error('Please enter Budget Min and Budget Max');
+          setQuickActionLoading(false);
+          return;
+        }
+
+        if (quickWorkflowAction.needsSvDetails && Number(f.budgetMax) < Number(f.budgetMin)) {
+          toast.error('Budget Max must be greater than or equal to Budget Min');
+          setQuickActionLoading(false);
+          return;
+        }
+
         // Validation: Customer Profile for specific actions
         if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
           const cpF = customerProfileForm;
@@ -1440,9 +1511,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : undefined,
           assignToUserId: f.assignToUserId || undefined,
           closureReasonId: f.closureReasonId || undefined,
+          callResult: shouldShowCallStatus(quickWorkflowAction?.targetStatusCode) ? f.callResult : undefined,
           reason: f.reason.trim() || undefined,
           svDate: f.svDate || undefined,
           svProjectId: f.svProjectId || undefined,
+          budgetMin: f.budgetMin !== '' ? Number(f.budgetMin) : undefined,
+          budgetMax: f.budgetMax !== '' ? Number(f.budgetMax) : undefined,
           motivationType: f.motivationType || undefined,
           primaryRequirement: f.primaryRequirement || undefined,
           secondaryRequirement: f.secondaryRequirement || undefined,
@@ -1681,7 +1755,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <th>Source</th>
                   <th>Medium</th>
                   <th>Project/Location</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
+                  <th style={{ textAlign: 'right' }}>Followup</th>
                 </tr>
               </thead>
               <tbody>
@@ -1755,28 +1829,30 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           🙋 Claim
                         </button>
                       )}
-                      <button
-                        className="crm-btn crm-btn-primary crm-btn-sm"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          resetQuickWorkflowForm();
-                          setQuickActionLead(lead);
-                          // Load site visits for this lead
-                          try {
-                            const [svResp, actResp] = await Promise.all([
-                              siteVisitApi.getAll({ lead_id: lead.id }),
-                              leadWorkflowApi.getLeadActivities(lead.id)
-                            ]);
-                            setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
-                            setQuickActionActivities(actResp.data || []);
-                          } catch {
-                            setQuickActionSiteVisits([]);
-                            setQuickActionActivities([]);
-                          }
-                        }}
-                      >
-                        Action
-                      </button>
+                      {(lead.assignedToUserId || activeTab !== 'new') && (
+                        <button
+                          className="crm-btn crm-btn-primary crm-btn-sm"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            resetQuickWorkflowForm();
+                            setQuickActionLead(lead);
+                            // Load site visits for this lead
+                            try {
+                              const [svResp, actResp] = await Promise.all([
+                                siteVisitApi.getAll({ lead_id: lead.id }),
+                                leadWorkflowApi.getLeadActivities(lead.id)
+                              ]);
+                              setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
+                              setQuickActionActivities(actResp.data || []);
+                            } catch {
+                              setQuickActionSiteVisits([]);
+                              setQuickActionActivities([]);
+                            }
+                          }}
+                        >
+                          Followup
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -2057,7 +2133,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
                         <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
                         <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
-                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 16, 0))}>Tomorrow 4 PM</button>
+                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(6, 11, 0))}>This Sat 11 AM</button>
+                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(0, 11, 0))}>This Sun 11 AM</button>
                         <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
                       </div>
                     </div>
@@ -2112,6 +2189,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               <span className="tl-date">{formatDateTime(evt.at)}</span>
                             </div>
                             {evt.description && <div className="tl-text">{evt.description}</div>}
+                            {(evt.metadata?.statusRemarkResponseType || evt.metadata?.callResult || evt.metadata?.last_call_result) && (
+                              <div className="tl-text" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                Call Status: {(evt.metadata?.statusRemarkResponseType || evt.metadata?.callResult || evt.metadata?.last_call_result || '').replace('-', ' ')}
+                              </div>
+                            )}
                             <div className="tl-by">By {evt.by || 'System'}</div>
                           </div>
                         );
@@ -2154,13 +2236,35 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
-                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 16, 0) }))}>Tomorrow 4 PM</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11 AM</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11 AM</button>
                   <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: '' }))}>✕ Clear</button>
                 </div>
-                {stagePopupData.needsFollowUp && !stagePopupData.followUpAt && (
-                  <div className="followup-warning">⚠️ Follow-up date & time is required for this stage.</div>
-                )}
+                <div className="followup-warning">⚠️ Follow-up date & time is required for this stage.</div>
               </div>
+
+              {/* Call Result Toggle */}
+              {shouldShowCallStatus(stagePopupAction?.targetStatusCode) && (
+                <div className="call-result-wrap">
+                  <div className="call-result-label">Call Status</div>
+                  <div className="call-result-toggle">
+                    <button
+                      type="button"
+                      className={`call-result-btn ${stagePopupData.callResult === 'Answered' ? 'active' : ''}`}
+                      onClick={() => setStagePopupData(p => ({ ...p, callResult: 'Answered' }))}
+                    >
+                      Answered
+                    </button>
+                    <button
+                      type="button"
+                      className={`call-result-btn ${stagePopupData.callResult === 'Not Answered' ? 'active' : ''}`}
+                      onClick={() => setStagePopupData(p => ({ ...p, callResult: 'Not Answered' }))}
+                    >
+                      Not Answered
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Reason / Notes */}
               <div style={{ marginBottom: 18 }}>
@@ -2184,7 +2288,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{selectedLead.project || 'No project'} · {selectedLead.source || 'Unknown source'}</div>
                 </div>
               )}
-
+              
               {/* Action Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setStagePopupOpen(false)}>Cancel</button>
@@ -2205,509 +2309,645 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       {/* ── Create Lead Modal ── */}
       {newLeadOpen && (
         <div className="lead-workspace__modal" role="dialog" aria-modal="true">
-          <div
-            className="lead-workspace__modal-panel"
-            style={{
-              background: 'var(--bg-card, #fff)',
-              border: '1px solid var(--border-primary, #e2e8f0)',
-              borderRadius: 12,
-              width: '100%',
-              maxWidth: 780,
-              overflow: 'hidden',
-              fontFamily: 'inherit',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 24px',
-                borderBottom: '1px solid var(--border-primary, #e2e8f0)',
-              }}
-            >
-              <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary, #0f172a)', margin: 0 }}>Create New Lead</h2>
+          <div className="lead-workspace__modal-panel create-lead-panel">
+            {/* ── Gradient Header ── */}
+            <div className="create-lead-header">
+              <div className="create-lead-header__title">
+                <div className="create-lead-header__icon">➕</div>
+                <div>
+                  <h2>Create New Lead</h2>
+                  <div className="create-lead-header__subtitle">Fill in the details to register a new lead</div>
+                </div>
+              </div>
               <button
                 type="button"
+                className="create-lead-header__close"
                 onClick={() => {
                   setReengageLeadId(null);
                   setNewLeadOpen(false);
-                }}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 7,
-                  border: '1px solid var(--border-primary, #e2e8f0)',
-                  background: 'var(--bg-secondary, #f8fafc)',
-                  color: 'var(--text-secondary, #64748b)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 14,
                 }}
               >
                 ✕
               </button>
             </div>
 
-            <form className="lead-workspace__new-form" onSubmit={handleCreateLead} style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <SectionLabel>Contact Information</SectionLabel>
+            <form onSubmit={handleCreateLead}>
+              <div className="create-lead-body">
 
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.7fr auto', gap: 12, alignItems: 'end', marginBottom: 14 }}>
-                <FieldWrap label="Full Name" required>
-                  <input
-                    value={newLeadForm.full_name}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, full_name: e.target.value }))}
-                    required
-                    placeholder="Enter buyer full name"
-                    style={inputStyle()}
-                  />
-                </FieldWrap>
-
-                <FieldWrap label="Phone" required>
-                  <input
-                    value={newLeadForm.phone}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: e.target.value.replace(/[^0-9+]/g, '') }))}
-                    required
-                    placeholder="Primary contact number"
-                    style={inputStyle(phoneCheck.status === 'exists' ? 'var(--accent-red)' : phoneCheck.status === 'valid' ? 'var(--accent-green)' : undefined)}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                {/* ══ Section: Contact Information ══ */}
+                <div className="create-lead-section">
+                  <div className="create-lead-section__header">
+                    <div className="create-lead-section__icon create-lead-section__icon--contact">👤</div>
                     <div>
-                      {phoneCheck.status === 'exists' && <span style={validationMsg('error')}>⚠ Exists: {phoneCheck.leadInfo}</span>}
-                      {phoneCheck.status === 'valid' && <span style={validationMsg('success')}>✓ Valid</span>}
+                      <div className="create-lead-section__title">Contact Information</div>
+                      <div className="create-lead-section__subtitle">Primary contact details of the lead</div>
                     </div>
-                    {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && (
-                      <button
-                        type="button"
-                        onClick={() => prefillFormFromDuplicateLead(phoneCheck.duplicateLead)}
-                        style={{
-                          padding: '4px 8px',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: reengageLeadId === phoneCheck.duplicateLead.id ? 'var(--accent-blue, #2563eb)' : 'var(--bg-secondary, #f8fafc)',
-                          color: reengageLeadId === phoneCheck.duplicateLead.id ? '#fff' : 'var(--accent-blue, #2563eb)',
-                          border: reengageLeadId === phoneCheck.duplicateLead.id ? 'none' : '1px solid var(--accent-blue, #2563eb)',
-                          borderRadius: 4,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {reengageLeadId === phoneCheck.duplicateLead.id ? 'Reengage' : 'Use this lead'}
-                      </button>
-                    )}
                   </div>
-                </FieldWrap>
 
-                <div style={{ height: 36, display: 'flex', alignItems: 'center', paddingBottom: 0 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 500, color: 'var(--text-secondary, #64748b)', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
-                    <input
-                      type="checkbox"
-                      style={{ width: 14, height: 14, accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
-                      checked={newLeadForm.whatsappSameAsPhone}
-                      onChange={(e) =>
-                        setNewLeadForm((p) => ({
-                          ...p,
-                          whatsappSameAsPhone: e.target.checked,
-                          whatsapp_number: e.target.checked ? '' : p.whatsapp_number,
-                        }))
-                      }
-                    />
-                    WhatsApp same as phone
-                  </label>
-                </div>
-              </div>
-
-              {!newLeadForm.whatsappSameAsPhone && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                  <FieldWrap label="WhatsApp Number">
-                    <input
-                      value={newLeadForm.whatsapp_number}
-                      onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: e.target.value.replace(/[^0-9+]/g, '') }))}
-                      placeholder="Enter WhatsApp number"
-                      style={inputStyle()}
-                    />
-                  </FieldWrap>
-                  <div />
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14, alignItems: 'start' }}>
-                <FieldWrap label="Alternate Phone" optional>
-                  <input
-                    value={newLeadForm.alternate_phone}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: e.target.value.replace(/[^0-9+]/g, '') }))}
-                    placeholder="Secondary contact"
-                    style={inputStyle(altPhoneCheck.status === 'exists' ? 'var(--accent-red)' : altPhoneCheck.status === 'valid' ? 'var(--accent-green)' : undefined)}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                    <div>
-                      {altPhoneCheck.status === 'exists' && <span style={validationMsg('error')}>⚠ Already exists: {altPhoneCheck.leadInfo}</span>}
-                      {altPhoneCheck.status === 'valid' && <span style={validationMsg('success')}>✓ Valid Number</span>}
-                    </div>
-                    {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && (
-                      <button
-                        type="button"
-                        onClick={() => prefillFormFromDuplicateLead(altPhoneCheck.duplicateLead)}
-                        style={{
-                          padding: '4px 8px',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: reengageLeadId === altPhoneCheck.duplicateLead.id ? 'var(--accent-blue, #2563eb)' : 'var(--bg-secondary, #f8fafc)',
-                          color: reengageLeadId === altPhoneCheck.duplicateLead.id ? '#fff' : 'var(--accent-blue, #2563eb)',
-                          border: reengageLeadId === altPhoneCheck.duplicateLead.id ? 'none' : '1px solid var(--accent-blue, #2563eb)',
-                          borderRadius: 4,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {reengageLeadId === altPhoneCheck.duplicateLead.id ? 'Reengage' : 'Use this lead'}
-                      </button>
-                    )}
-                  </div>
-                </FieldWrap>
-
-                <FieldWrap label="Email" optional>
-                  <input
-                    type="email"
-                    value={newLeadForm.email}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))}
-                    placeholder="email@example.com"
-                    style={inputStyle()}
-                  />
-                </FieldWrap>
-              </div>
-
-              <SectionLabel>Lead Classification</SectionLabel>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <FieldWrap label="Lead Status" required>
-                  {workspaceRole === 'TC' ? (
-                    <select
-                      value={newLeadForm.lead_status_id}
-                      onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_status_id: e.target.value }))}
-                      required
-                      style={selectStyle(!newLeadForm.lead_status_id ? '#fca5a5' : undefined)}
-                    >
-                      <option value="">Select status</option>
-                      {statusOptions.filter((st) => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'].includes(st.value)).map((st) => (
-                        <option key={st.value} value={st.value}>{st.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      value={newLeadForm.lead_status_id}
-                      onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_status_id: e.target.value }))}
-                      style={selectStyle()}
-                    >
-                      <option value="">Select status</option>
-                      {statusOptions.map((st) => (
-                        <option key={st.value} value={st.value}>{st.label}</option>
-                      ))}
-                    </select>
-                  )}
-                </FieldWrap>
-                <div />
-              </div>
-
-              {['LOST', 'JUNK', 'SPAM'].includes(statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value) && (
-                <div style={{ background: 'var(--accent-red-bg, #fef2f2)', border: '1px solid var(--accent-red, #ef4444)', borderRadius: 8, padding: '14px 16px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', color: 'var(--accent-red, #ef4444)', textTransform: 'uppercase', marginBottom: 10 }}>
-                    Closure Details
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <FieldWrap label="Closure Reason" required>
-                      <select
-                        value={newLeadForm.closure_reason_id}
-                        onChange={(e) => setNewLeadForm({ ...newLeadForm, closure_reason_id: e.target.value })}
-                        style={selectStyle()}
-                      >
-                        <option value="">Select reason...</option>
-                        {closureReasons.map((r) => (
-                          <option key={r.id} value={r.id}>{r.reason_name}</option>
-                        ))}
-                      </select>
-                    </FieldWrap>
-
-                    <FieldWrap label="Remarks / Context" required>
-                      <textarea
-                        rows={1}
-                        value={newLeadForm.remark}
-                        onChange={(e) => setNewLeadForm({ ...newLeadForm, remark: e.target.value })}
-                        placeholder="Why is this lead being closed/disqualified?"
-                        style={{ ...inputStyle(), height: 36, resize: 'none', padding: '8px 10px' }}
+                  <div className="create-lead-grid create-lead-grid--3col">
+                    {/* Full Name */}
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Full Name <span className="create-lead-field__required">*</span>
+                      </label>
+                      <input
+                        className="create-lead-input"
+                        value={newLeadForm.full_name}
+                        onChange={(e) => setNewLeadForm((p) => ({ ...p, full_name: e.target.value }))}
+                        required
+                        placeholder="Enter buyer full name"
                       />
-                    </FieldWrap>
-                  </div>
-                </div>
-              )}
-
-              <SectionLabel>Location &amp; Projects</SectionLabel>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <FieldWrap label="Location" required>
-                  <select
-                    value={newLeadForm.location_id}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, location_id: e.target.value, project_ids: [] }))}
-                    required
-                    style={selectStyle()}
-                  >
-                    <option value="">Select location</option>
-                    {locationOptions.map((loc) => (
-                      <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
-                    ))}
-                  </select>
-                </FieldWrap>
-
-                <FieldWrap label="Project" required>
-                  <div ref={projectDropdownRef} style={{ position: 'relative' }}>
-                    <div
-                      onClick={() => setProjectDropdownOpen((p) => !p)}
-                      style={{ cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '0 10px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 7, background: 'var(--bg-primary, #fff)', fontSize: 12.5 }}
-                    >
-                      {selectedProjectNames.length === 0 && <span style={{ color: 'var(--text-secondary, #94a3b8)' }}>Select projects...</span>}
-                      {selectedProjectNames.map((name, i) => (
-                        <span key={i} style={{ background: 'var(--accent-blue-bg, #dbeafe)', color: 'var(--accent-blue, #2563eb)', padding: '2px 7px', borderRadius: 10, fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          {name}
-                          <span onClick={(ev) => { ev.stopPropagation(); toggleProject((newLeadForm.project_ids || [])[i]); }} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1, color: 'var(--accent-blue, #2563eb)' }}>×</span>
-                        </span>
-                      ))}
                     </div>
 
-                    {projectDropdownOpen && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', maxHeight: 240, marginTop: 4 }}>
-                        <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
-                          <input
-                            type="text"
-                            placeholder="Search projects..."
-                            value={projectSearch}
-                            onChange={(e) => setProjectSearch(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ width: '100%', height: 32, padding: '0 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)', outline: 'none' }}
-                          />
+                    {/* Phone */}
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Phone <span className="create-lead-field__required">*</span>
+                      </label>
+                      <input
+                        className={`create-lead-input ${phoneCheck.status === 'exists' ? 'create-lead-input--error' : phoneCheck.status === 'valid' ? 'create-lead-input--success' : ''}`}
+                        value={newLeadForm.phone}
+                        onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: sanitizePhoneNumberInput(e.target.value) }))}
+                        maxLength={12}
+                        required
+                        placeholder="Primary contact number"
+                      />
+                      <div className="create-lead-phone-status">
+                        <div>
+                          {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error">⚠ Exists: {phoneCheck.leadInfo}</span>}
+                          {phoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success">✓ Valid</span>}
                         </div>
-                        <div style={{ maxHeight: 200, overflowY: 'auto', padding: '6px 8px 8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                          {filteredProjectOptions.map((project) => (
-                            <label key={project.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-primary, #0f172a)', cursor: 'pointer', padding: '5px 6px', borderRadius: 5 }}>
-                              <input
-                                type="checkbox"
-                                style={{ width: 13, height: 13, accentColor: '#3b82f6', cursor: 'pointer', flexShrink: 0 }}
-                                checked={(newLeadForm.project_ids || []).includes(project.id)}
-                                onChange={() => toggleProject(project.id)}
-                              />
-                              <span>
-                                {project.project_name}
-                                {project.project_code ? ` (${project.project_code})` : ''}
-                              </span>
-                            </label>
+                        {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && (
+                          <button
+                            type="button"
+                            className={`create-lead-phone-status__btn ${reengageLeadId === phoneCheck.duplicateLead.id ? 'create-lead-phone-status__btn--active' : ''}`}
+                            onClick={() => prefillFormFromDuplicateLead(phoneCheck.duplicateLead)}
+                          >
+                            {reengageLeadId === phoneCheck.duplicateLead.id ? '✓ Reengage' : 'Use this lead'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* WhatsApp Toggle */}
+                    <label className="create-lead-whatsapp-toggle">
+                      <input
+                        type="checkbox"
+                        checked={newLeadForm.whatsappSameAsPhone}
+                        onChange={(e) =>
+                          setNewLeadForm((p) => ({
+                            ...p,
+                            whatsappSameAsPhone: e.target.checked,
+                            whatsapp_number: e.target.checked ? '' : p.whatsapp_number,
+                          }))
+                        }
+                      />
+                      WhatsApp same
+                    </label>
+                  </div>
+
+                  {/* WhatsApp Number (if different) */}
+                  {!newLeadForm.whatsappSameAsPhone && (
+                    <div className="create-lead-grid" style={{ marginTop: 16 }}>
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">WhatsApp Number</label>
+                        <input
+                          className="create-lead-input"
+                          value={newLeadForm.whatsapp_number}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, whatsapp_number: sanitizePhoneNumberInput(e.target.value) }))}
+                          maxLength={12}
+                          placeholder="Enter WhatsApp number"
+                        />
+                      </div>
+                      <div />
+                    </div>
+                  )}
+
+                  {/* Alternate Phone & Email */}
+                  <div className="create-lead-grid" style={{ marginTop: 16 }}>
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Alternate Phone <span className="create-lead-field__optional">(Optional)</span>
+                      </label>
+                      <input
+                        className={`create-lead-input ${altPhoneCheck.status === 'exists' ? 'create-lead-input--error' : altPhoneCheck.status === 'valid' ? 'create-lead-input--success' : ''}`}
+                        value={newLeadForm.alternate_phone}
+                        onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: sanitizePhoneNumberInput(e.target.value) }))}
+                        maxLength={12}
+                        placeholder="Secondary contact"
+                      />
+                      <div className="create-lead-phone-status">
+                        <div>
+                          {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error">⚠ Already exists: {altPhoneCheck.leadInfo}</span>}
+                          {altPhoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success">✓ Valid Number</span>}
+                        </div>
+                        {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && (
+                          <button
+                            type="button"
+                            className={`create-lead-phone-status__btn ${reengageLeadId === altPhoneCheck.duplicateLead.id ? 'create-lead-phone-status__btn--active' : ''}`}
+                            onClick={() => prefillFormFromDuplicateLead(altPhoneCheck.duplicateLead)}
+                          >
+                            {reengageLeadId === altPhoneCheck.duplicateLead.id ? '✓ Reengage' : 'Use this lead'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Email <span className="create-lead-field__optional">(Optional)</span>
+                      </label>
+                      <input
+                        type="email"
+                        className="create-lead-input"
+                        value={newLeadForm.email}
+                        onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))}
+                        placeholder="email@example.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ══ Section: Lead Classification ══ */}
+                <div className="create-lead-section">
+                  <div className="create-lead-section__header">
+                    <div className="create-lead-section__icon create-lead-section__icon--classify">🏷️</div>
+                    <div>
+                      <div className="create-lead-section__title">Lead Classification</div>
+                      <div className="create-lead-section__subtitle">Set status and source information</div>
+                    </div>
+                  </div>
+
+                  <div className="create-lead-grid">
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Lead Status <span className="create-lead-field__required">*</span>
+                      </label>
+                      {workspaceRole === 'TC' ? (
+                        <select
+                          className={`create-lead-select ${!newLeadForm.lead_status_id ? 'create-lead-select--highlight' : ''}`}
+                          value={newLeadForm.lead_status_id}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewLeadForm((p) => ({
+                              ...p,
+                              lead_status_id: val,
+                              callResult: val.includes('RNR') ? 'Not Answered' : p.callResult,
+                            }));
+                          }}
+                          required
+                        >
+                          <option value="">Select status</option>
+                          {statusOptions.filter((st) => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'].includes(st.value)).map((st) => (
+                            <option key={st.value} value={st.value}>{st.label}</option>
                           ))}
-                          {filteredProjectOptions.length === 0 && (
-                            <div style={{ padding: 12, color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center', gridColumn: '1/-1' }}>No projects found</div>
+                        </select>
+                      ) : (
+                        <select
+                          className="create-lead-select"
+                          value={newLeadForm.lead_status_id}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewLeadForm((p) => ({
+                              ...p,
+                              lead_status_id: val,
+                              callResult: val.includes('RNR') ? 'Not Answered' : p.callResult,
+                            }));
+                          }}
+                        >
+                          <option value="">Select status</option>
+                          {statusOptions.map((st) => (
+                            <option key={st.value} value={st.value}>{st.label}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    <div />
+                  </div>
+
+                  {/* Closure Details for terminal statuses */}
+                  {['LOST', 'JUNK', 'SPAM'].includes(statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value) && (
+                    <div className="create-lead-closure">
+                      <div className="create-lead-closure__title">⚠ Closure Details</div>
+                      <div className="create-lead-grid">
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">
+                            Closure Reason <span className="create-lead-field__required">*</span>
+                          </label>
+                          <select
+                            className="create-lead-select"
+                            value={newLeadForm.closure_reason_id}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, closure_reason_id: e.target.value }))}
+                          >
+                            <option value="">Select reason...</option>
+                            {closureReasons.map((r) => (
+                              <option key={r.id} value={r.id}>{r.reason_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ══ Section: Location & Source ══ */}
+                <div className="create-lead-section">
+                  <div className="create-lead-section__header">
+                    <div className="create-lead-section__icon create-lead-section__icon--location">📍</div>
+                    <div>
+                      <div className="create-lead-section__title">Location, Projects &amp; Source</div>
+                      <div className="create-lead-section__subtitle">Where the lead is interested and how they found us</div>
+                    </div>
+                  </div>
+
+                  {['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(
+                    statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
+                  ) && (
+                    <div className="create-lead-grid">
+                      {/* Location */}
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">
+                          Location <span className="create-lead-field__required">*</span>
+                        </label>
+                        <select
+                          className="create-lead-select"
+                          value={newLeadForm.location_id}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, location_id: e.target.value, project_ids: [] }))}
+                          required
+                        >
+                          <option value="">Select location</option>
+                          {locationOptions.map((loc) => (
+                            <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Project Multi-Select */}
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">
+                          Project <span className="create-lead-field__required">*</span>
+                        </label>
+                        <div ref={projectDropdownRef} style={{ position: 'relative' }}>
+                          <div
+                            className="create-lead-project-trigger"
+                            onClick={() => setProjectDropdownOpen((p) => !p)}
+                          >
+                            {selectedProjectNames.length === 0 && <span className="create-lead-project-trigger__placeholder">Select projects...</span>}
+                            {selectedProjectNames.map((name, i) => (
+                              <span key={i} className="create-lead-project-chip">
+                                {name}
+                                <span
+                                  className="create-lead-project-chip__remove"
+                                  onClick={(ev) => { ev.stopPropagation(); toggleProject((newLeadForm.project_ids || [])[i]); }}
+                                >×</span>
+                              </span>
+                            ))}
+                          </div>
+
+                          {projectDropdownOpen && (
+                            <div className="create-lead-project-dropdown" style={{ zIndex: 100 }}>
+                              <div className="create-lead-project-dropdown__search">
+                                <input
+                                  type="text"
+                                  placeholder="Search projects..."
+                                  value={projectSearch}
+                                  onChange={(e) => setProjectSearch(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="create-lead-project-dropdown__list">
+                                {filteredProjectOptions.map((project) => (
+                                  <label key={project.id} className="create-lead-project-dropdown__item">
+                                    <input
+                                      type="checkbox"
+                                      checked={(newLeadForm.project_ids || []).includes(project.id)}
+                                      onChange={() => toggleProject(project.id)}
+                                    />
+                                    <span>
+                                      {project.project_name}
+                                      {project.project_code ? ` (${project.project_code})` : ''}
+                                    </span>
+                                  </label>
+                                ))}
+                                {filteredProjectOptions.length === 0 && (
+                                  <div className="create-lead-project-dropdown__empty">No projects found</div>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                </FieldWrap>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <FieldWrap label="Lead Source" required>
-                  <select
-                    value={newLeadForm.lead_source_id}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_source_id: e.target.value, lead_sub_source_id: '' }))}
-                    required
-                    style={selectStyle()}
-                  >
-                    <option value="">Select lead source</option>
-                    {sourceOptions.map((s) => (
-                      <option key={s.id} value={s.id}>{s.source_name}</option>
-                    ))}
-                  </select>
-                </FieldWrap>
-
-                <FieldWrap label={`Lead Sub-Source${workspaceRole === 'TC' ? '' : ''}`} required={workspaceRole === 'TC'}>
-                  <select
-                    value={newLeadForm.lead_sub_source_id}
-                    onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_sub_source_id: e.target.value }))}
-                    disabled={!newLeadForm.lead_source_id || !selectedSourceSubSources.length}
-                    required={workspaceRole === 'TC'}
-                    style={selectStyle(
-                      workspaceRole === 'TC' && newLeadForm.lead_source_id && !newLeadForm.lead_sub_source_id ? '#fca5a5' : undefined,
-                      !newLeadForm.lead_source_id || !selectedSourceSubSources.length
-                    )}
-                  >
-                    <option value="">Select sub-source</option>
-                    {selectedSourceSubSources.map((s) => (
-                      <option key={s.id} value={s.id}>{s.sub_source_name}</option>
-                    ))}
-                  </select>
-                </FieldWrap>
-              </div>
-
-              <SectionLabel>Budget</SectionLabel>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary, #0f172a)', marginBottom: 8 }}>
-                  Budget Range: {budgetLabel(newLeadForm.budgetMinIdx || 0)} - {budgetLabel(newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)}
-                </div>
-                <div style={{ position: 'relative', height: 42, display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', left: 8, right: 8, height: 6, borderRadius: 3, background: 'var(--border-primary, #e2e8f0)' }} />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `calc(8px + ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL)} * (100% - 16px))`,
-                      right: `calc(8px + ${(1 - ((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL))} * (100% - 16px))`,
-                      height: 6,
-                      borderRadius: 3,
-                      background: 'var(--accent-blue, #3b82f6)',
-                    }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={BUDGET_MAX_VAL}
-                    value={newLeadForm.budgetMinIdx || 0}
-                    onChange={(e) => {
-                      const v = Math.min(Number(e.target.value), (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) - 1);
-                      setNewLeadForm((p) => ({
-                        ...p,
-                        budgetMinIdx: v,
-                        budgetMin: BUDGET_STEPS[v] * 100000,
-                        budgetRange: `${budgetLabel(v)} - ${budgetLabel(p.budgetMaxIdx ?? BUDGET_MAX_VAL)}`,
-                      }));
-                    }}
-                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 42, opacity: 0, cursor: 'pointer', zIndex: 3 }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={BUDGET_MAX_VAL}
-                    value={newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL}
-                    onChange={(e) => {
-                      const v = Math.max(Number(e.target.value), (newLeadForm.budgetMinIdx || 0) + 1);
-                      setNewLeadForm((p) => ({
-                        ...p,
-                        budgetMaxIdx: v,
-                        budgetMax: BUDGET_STEPS[v] * 100000,
-                        budgetRange: `${budgetLabel(p.budgetMinIdx || 0)} - ${budgetLabel(v)}`,
-                      }));
-                    }}
-                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 42, opacity: 0, cursor: 'pointer', zIndex: 4 }}
-                  />
-                  <div style={{ position: 'absolute', left: `calc(8px + ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL)} * (100% - 16px))`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', left: `calc(8px + ${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL)} * (100% - 16px))`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary, #94a3b8)', padding: '0 8px' }}>
-                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 50 ? '50L+' : `${v}L`}</span>)}
-                </div>
-              </div>
-
-              <SectionLabel>Follow-Up &amp; Assignment</SectionLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14, alignItems: 'start' }}>
-                {workspaceRole === 'TC' &&
-                  !['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(
-                    statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
-                  ) && (
-                    <FieldWrap label="Next Follow-Up Date" required>
-                      <CalendarPicker
-                        type="date"
-                        value={newLeadForm.nextFollowUpAt}
-                        onChange={(val) => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                        placeholder="Select follow-up date..."
-                        minDate={new Date().toISOString()}
-                      />
-                    </FieldWrap>
+                    </div>
                   )}
 
-                {workspaceRole === 'TC' && (
-                  <FieldWrap label="Assign To">
-                    <select
-                      value={newLeadForm.assigned_to}
-                      onChange={(e) => setNewLeadForm((p) => ({ ...p, assigned_to: e.target.value }))}
-                      style={selectStyle()}
+                  {/* Source & Sub-Source */}
+                  <div className="create-lead-grid" style={{ marginTop: 16 }}>
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Lead Source <span className="create-lead-field__required">*</span>
+                      </label>
+                      <select
+                        className="create-lead-select"
+                        value={newLeadForm.lead_source_id}
+                        onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_source_id: e.target.value, lead_sub_source_id: '' }))}
+                        required
+                      >
+                        <option value="">Select lead source</option>
+                        {sourceOptions.map((s) => (
+                          <option key={s.id} value={s.id}>{s.source_name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="create-lead-field">
+                      <label className="create-lead-field__label">
+                        Lead Sub-Source {workspaceRole === 'TC' && <span className="create-lead-field__required">*</span>}
+                      </label>
+                      <select
+                        className={`create-lead-select ${workspaceRole === 'TC' && newLeadForm.lead_source_id && !newLeadForm.lead_sub_source_id ? 'create-lead-select--highlight' : ''}`}
+                        value={newLeadForm.lead_sub_source_id}
+                        onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_sub_source_id: e.target.value }))}
+                        disabled={!newLeadForm.lead_source_id || !selectedSourceSubSources.length}
+                        required={workspaceRole === 'TC'}
+                      >
+                        <option value="">Select sub-source</option>
+                        {selectedSourceSubSources.map((s) => (
+                          <option key={s.id} value={s.id}>{s.sub_source_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ══ Section: Budget ══ */}
+                <div className="create-lead-section">
+                  <div className="create-lead-section__header">
+                    <div className="create-lead-section__icon create-lead-section__icon--budget">💰</div>
+                    <div>
+                      <div className="create-lead-section__title">Budget Range</div>
+                      <div className="create-lead-section__subtitle">Approximate budget of the buyer</div>
+                    </div>
+                  </div>
+
+                  <div className="create-lead-budget">
+                    <div className="create-lead-budget__label">
+                      Budget Range:
+                      <span className="create-lead-budget__value">
+                        {budgetLabel(newLeadForm.budgetMinIdx || 0)} — {budgetLabel(newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)}
+                      </span>
+                    </div>
+                    <div className="create-lead-budget__track"
+                      onPointerDown={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width;
+                        const hoveredIdx = Math.round(x * BUDGET_MAX_VAL);
+                        const distMin = Math.abs(hoveredIdx - (newLeadForm.budgetMinIdx || 0));
+                        const distMax = Math.abs(hoveredIdx - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL));
+                        setLastActiveBudgetHandle(distMax < distMin ? 'max' : 'min');
+                      }}
+                      onMouseMove={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width;
+                        const hoveredIdx = Math.round(x * BUDGET_MAX_VAL);
+                        const distMin = Math.abs(hoveredIdx - (newLeadForm.budgetMinIdx || 0));
+                        const distMax = Math.abs(hoveredIdx - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL));
+                        setLastActiveBudgetHandle(distMax < distMin ? 'max' : 'min');
+                      }}
+                      onTouchMove={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const touch = e.touches[0];
+                        const x = (touch.clientX - rect.left) / rect.width;
+                        const hoveredIdx = Math.round(x * BUDGET_MAX_VAL);
+                        const distMin = Math.abs(hoveredIdx - (newLeadForm.budgetMinIdx || 0));
+                        const distMax = Math.abs(hoveredIdx - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL));
+                        setLastActiveBudgetHandle(distMax < distMin ? 'max' : 'min');
+                      }}
                     >
-                      <option value="">- Unassigned (new lead pool) -</option>
-                      <option value="self">Assign to Me</option>
-                    </select>
-                    <span style={{ fontSize: 10, color: 'var(--text-secondary, #64748b)', marginTop: 3, display: 'block', minHeight: 14 }}>Leave unassigned to add to pool</span>
-                  </FieldWrap>
-                )}
+                      <div className="create-lead-budget__rail" />
+                      <div
+                        className="create-lead-budget__fill"
+                        style={{
+                          left: `calc(8px + ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% - ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 16}px)`,
+                          width: `calc(${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) - (newLeadForm.budgetMinIdx || 0)) / BUDGET_MAX_VAL * 100}% + ${(((newLeadForm.budgetMinIdx || 0) - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)) / BUDGET_MAX_VAL) * 16}px)`,
+                        }}
+                      />
+                      <input
+                        type="range"
+                        className="create-lead-budget__range-input"
+                        min={0}
+                        max={BUDGET_MAX_VAL}
+                        step={1}
+                        value={newLeadForm.budgetMinIdx || 0}
+                        onChange={(e) => {
+                          const v = Math.min(Number(e.target.value), (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) - 1);
+                          setLastActiveBudgetHandle('min');
+                          setNewLeadForm((p) => ({
+                            ...p,
+                            budgetMinIdx: v,
+                            budgetMin: BUDGET_STEPS[v] * 100000,
+                            budgetRange: `${budgetLabel(v)} - ${budgetLabel(p.budgetMaxIdx ?? BUDGET_MAX_VAL)}`,
+                          }));
+                        }}
+                        onMouseDown={() => setLastActiveBudgetHandle('min')}
+                        onTouchStart={() => setLastActiveBudgetHandle('min')}
+                        style={{ zIndex: lastActiveBudgetHandle === 'min' ? 15 : 13 }}
+                      />
+                      <input
+                        type="range"
+                        className="create-lead-budget__range-input"
+                        min={0}
+                        max={BUDGET_MAX_VAL}
+                        step={1}
+                        value={newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL}
+                        onChange={(e) => {
+                          const v = Math.max(Number(e.target.value), (newLeadForm.budgetMinIdx || 0) + 1);
+                          setLastActiveBudgetHandle('max');
+                          setNewLeadForm((p) => ({
+                            ...p,
+                            budgetMaxIdx: v,
+                            budgetMax: BUDGET_STEPS[v] * 100000,
+                            budgetRange: `${budgetLabel(p.budgetMinIdx || 0)} - ${budgetLabel(v)}`,
+                          }));
+                        }}
+                        onMouseDown={() => setLastActiveBudgetHandle('max')}
+                        onTouchStart={() => setLastActiveBudgetHandle('max')}
+                        style={{ zIndex: lastActiveBudgetHandle === 'max' ? 15 : 14 }}
+                      />
+                      <div
+                        className="create-lead-budget__thumb"
+                        style={{ left: `calc(8px + ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% - ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 16}px)` }}
+                      >
+                        <div className="create-lead-budget__thumb-label">
+                          {budgetLabel(newLeadForm.budgetMinIdx || 0)}
+                        </div>
+                      </div>
+                      <div
+                        className="create-lead-budget__thumb"
+                        style={{ left: `calc(8px + ${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}% - ${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 16}px)` }}
+                      >
+                        <div className="create-lead-budget__thumb-label">
+                          {budgetLabel(newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="create-lead-budget__ticks">
+                      {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 50 ? '50L+' : `${v}L`}</span>)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ══ Section: Follow-Up & Assignment ══ */}
+                <div className="create-lead-section">
+                  <div className="create-lead-section__header">
+                    <div className="create-lead-section__icon create-lead-section__icon--followup">📅</div>
+                    <div>
+                      <div className="create-lead-section__title">Follow-Up &amp; Assignment</div>
+                      <div className="create-lead-section__subtitle">Schedule next action and assign ownership</div>
+                    </div>
+                  </div>
+
+                  <div className="create-lead-grid">
+                    {workspaceRole === 'TC' &&
+                      ['NEW', 'RNR', 'SV_SCHEDULED', 'FOLLOW_UP'].includes(
+                        statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
+                      ) && (
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">
+                            Next Follow-Up Date <span className="create-lead-field__required">*</span>
+                          </label>
+                          <CalendarPicker
+                            type="datetime"
+                            value={newLeadForm.nextFollowUpAt}
+                            onChange={(val) => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: val }))}
+                            placeholder="Select follow-up date & time..."
+                            minDate={new Date().toISOString()}
+                          />
+                        </div>
+                      )}
+
+                      {/* Call Status Selection for New Lead */}
+                      {shouldShowCallStatus(
+                        statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
+                      ) && (
+                        <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
+                          <div className="call-result-label">Call Status</div>
+                          <div className="call-result-toggle">
+                            <button
+                              type="button"
+                              className={`call-result-btn ${newLeadForm.callResult === 'Answered' ? 'active' : ''}`}
+                              onClick={() => setNewLeadForm((p) => ({ ...p, callResult: 'Answered' }))}
+                            >
+                              Answered
+                            </button>
+                            <button
+                              type="button"
+                              className={`call-result-btn ${newLeadForm.callResult === 'Not Answered' ? 'active' : ''}`}
+                              onClick={() => setNewLeadForm((p) => ({ ...p, callResult: 'Not Answered' }))}
+                            >
+                              Not Answered
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    {workspaceRole === 'TC' && (
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">Assign To</label>
+                        <select
+                          className="create-lead-select"
+                          value={newLeadForm.assigned_to}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, assigned_to: e.target.value }))}
+                        >
+                          <option value="">— Unassigned (new lead pool) —</option>
+                          <option value="self">Assign to Me</option>
+                        </select>
+                        <span className="create-lead-assign-hint">ℹ️ Leave unassigned to add to pool</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ══ Section: Notes & Remarks ══ */}
+                <div className="create-lead-section">
+                  <div className="create-lead-section__header">
+                    <div className="create-lead-section__icon create-lead-section__icon--notes">📝</div>
+                    <div>
+                      <div className="create-lead-section__title">Notes &amp; Remarks</div>
+                      <div className="create-lead-section__subtitle">Add quick tags or custom notes</div>
+                    </div>
+                  </div>
+
+                  <div className="create-lead-chips">
+                    {remarksLoading ? (
+                      <div className="create-lead-remarks-loading">
+                        <div className="create-lead-shimmer" />
+                        <div className="create-lead-shimmer" />
+                        <div className="create-lead-shimmer" />
+                      </div>
+                    ) : (
+                      (() => {
+                        const chips = newLeadStatusRemarks.length > 0 
+                          ? newLeadStatusRemarks 
+                          : NEW_LEAD_REMARK_CHIPS.map(c => ({ remark_text: c }));
+                        
+                        return chips.map((remark, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className={`create-lead-chip ${newLeadForm.remark.includes(remark.remark_text) ? 'create-lead-chip--active' : ''}`}
+                            onClick={() => {
+                            const text = remark.remark_text;
+                            setNewLeadForm((p) => {
+                              const current = p.remark.trim();
+                              if (current.includes(text)) return p;
+                              return { ...p, remark: current ? `${current}, ${text}` : text };
+                            });
+                          }}
+                        >
+                          + {remark.remark_text}
+                        </button>
+                        ))
+                      })()
+                    )}
+                  </div>
+
+                  <textarea
+                    className="create-lead-textarea"
+                    rows={2}
+                    value={newLeadForm.remark}
+                    onChange={(e) => setNewLeadForm((p) => ({ ...p, remark: e.target.value }))}
+                    placeholder="Add notes or remarks about the lead..."
+                  />
+                </div>
+
               </div>
 
-              <SectionLabel>Notes &amp; Remarks</SectionLabel>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                {NEW_LEAD_REMARK_CHIPS.map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setNewLeadForm((p) => ({ ...p, remark: chip }))}
-                    style={{
-                      padding: '5px 10px',
-                      fontSize: 11,
-                      fontWeight: 500,
-                      borderRadius: 20,
-                      border: '1px solid var(--border-primary, #e2e8f0)',
-                      background: newLeadForm.remark === chip ? 'var(--accent-blue-bg, #dbeafe)' : 'var(--bg-secondary, #f8fafc)',
-                      color: newLeadForm.remark === chip ? 'var(--accent-blue, #2563eb)' : 'var(--text-secondary, #64748b)',
-                      borderColor: newLeadForm.remark === chip ? 'var(--accent-blue, #3b82f6)' : 'var(--border-primary, #e2e8f0)',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.15s',
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    + {chip}
-                  </button>
-                ))}
-              </div>
-
-              <textarea
-                rows={2}
-                value={newLeadForm.remark}
-                onChange={(e) => setNewLeadForm((p) => ({ ...p, remark: e.target.value }))}
-                placeholder="Add notes or remarks..."
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 7,
-                  border: '1px solid var(--border-primary, #e2e8f0)',
-                  background: 'var(--bg-primary, #fff)',
-                  color: 'var(--text-primary, #0f172a)',
-                  fontSize: 12.5,
-                  minHeight: 64,
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  outline: 'none',
-                  marginBottom: 4,
-                }}
-              />
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, paddingTop: 16, marginTop: 6, borderTop: '1px solid var(--border-primary, #e2e8f0)' }}>
+              {/* ── Footer ── */}
+              <div className="create-lead-footer">
                 <button
                   type="button"
+                  className="create-lead-footer__cancel"
                   onClick={() => {
                     setReengageLeadId(null);
                     setNewLeadOpen(false);
                   }}
-                  style={{ height: 36, padding: '0 20px', borderRadius: 8, border: '1px solid var(--border-primary, #e2e8f0)', background: 'var(--bg-secondary, #f8fafc)', color: 'var(--text-secondary, #64748b)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  className="create-lead-footer__submit"
                   disabled={
                     creating
+                    || !newLeadValidation.isValid
                     || ((phoneCheck.status === 'exists' || altPhoneCheck.status === 'exists')
                       && ![
                         phoneCheck.duplicateLead?.id,
                         altPhoneCheck.duplicateLead?.id,
                       ].filter(Boolean).includes(reengageLeadId))
-                    || (workspaceRole === 'TC' && !newLeadForm.lead_status_id)
                   }
-                  style={{ height: 36, padding: '0 20px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
-                  {creating ? 'Creating...' : 'Create Lead'}
+                  {creating ? '⏳ Creating...' : '✓ Create Lead'}
                 </button>
               </div>
             </form>
@@ -2784,6 +3024,31 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </select>
               </label>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <label>
+                  Budget Min *
+                  <input
+                    type="number"
+                    min="0"
+                    value={recordSvForm.budgetMin}
+                    onChange={(e) => setRecordSvForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                    style={{ width: '100%' }}
+                    placeholder="Minimum budget"
+                  />
+                </label>
+                <label>
+                  Budget Max *
+                  <input
+                    type="number"
+                    min="0"
+                    value={recordSvForm.budgetMax}
+                    onChange={(e) => setRecordSvForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                    style={{ width: '100%' }}
+                    placeholder="Maximum budget"
+                  />
+                </label>
+              </div>
+
               <label style={{ marginBottom: 14 }}>
                 Primary Requirement
                 <input type="text" value={recordSvForm.primaryRequirement} onChange={(e) => setRecordSvForm(p => ({ ...p, primaryRequirement: e.target.value }))} placeholder="Key highlight" style={{ width: '100%' }} />
@@ -2827,7 +3092,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   type="button"
                   className="workspace-btn workspace-btn--primary"
                   onClick={handleRecordSvSubmit}
-                  disabled={!recordSvForm.assignToUserId || !recordSvForm.latitude || !recordSvForm.svProjectId || !recordSvForm.motivationType}
+                  disabled={!recordSvForm.assignToUserId || !recordSvForm.latitude || !recordSvForm.svProjectId || !recordSvForm.motivationType || recordSvForm.budgetMin === '' || recordSvForm.budgetMax === ''}
                 >
                   ✓ Record Visit
                 </button>
@@ -2952,6 +3217,31 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </select>
               </label>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label>
+                  Budget Min *
+                  <input
+                    type="number"
+                    min="0"
+                    value={svDoneForm.budgetMin}
+                    onChange={(e) => setSvDoneForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                    style={{ width: '100%' }}
+                    placeholder="Minimum budget"
+                  />
+                </label>
+                <label>
+                  Budget Max *
+                  <input
+                    type="number"
+                    min="0"
+                    value={svDoneForm.budgetMax}
+                    onChange={(e) => setSvDoneForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                    style={{ width: '100%' }}
+                    placeholder="Maximum budget"
+                  />
+                </label>
+              </div>
+
               <label>
                 Notes (optional)
                 <textarea
@@ -2968,7 +3258,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   type="button"
                   className="workspace-btn workspace-btn--primary"
                   onClick={handleSvDoneSubmit}
-                  disabled={!svDoneForm.assignToUserId || !svDoneForm.svDate || !svDoneForm.svProjectId}
+                  disabled={!svDoneForm.assignToUserId || !svDoneForm.svDate || !svDoneForm.svProjectId || svDoneForm.budgetMin === '' || svDoneForm.budgetMax === ''}
                 >
                   ✓ Confirm SV Done & Handoff
                 </button>
@@ -3280,7 +3570,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <>
                   <div className="qa-drawer-section">Update status</div>
                   <div className="qa-drawer-status-grid">
-                    {roleActions.filter(a => a.tone !== 'danger').map((action) => {
+                    {roleActions.filter((a) => {
+                      const isNegotiation = a.code.includes('NEGOTIATION');
+                      const isHotNegotiation = a.code.includes('NEGOTIATION_HOT') || a.targetStatusCode === 'NEGOTIATION_HOT';
+                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && (!isNegotiation || isHotNegotiation);
+                    }).map((action) => {
                       let icon = '📋';
                       let selClass = 'sel-default';
                       if (action.code.includes('RNR')) { icon = '🔄'; selClass = 'sel-rnr'; }
@@ -3326,6 +3620,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               {/* ── Dynamic Form: Shows only after selecting a status ── */}
               {quickWorkflowAction && (
                 <div style={{ animation: 'qa-fade-in 0.3s ease' }}>
+                  {shouldShowCallStatus(quickWorkflowAction?.targetStatusCode) && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="call-result-label">Call Status</div>
+                      <div className="call-result-toggle">
+                        <button
+                          type="button"
+                          className={`call-result-btn ${quickWorkflowForm.callResult === 'Answered' ? 'active' : ''}`}
+                          onClick={() => setQuickWorkflowForm((p) => ({ ...p, callResult: 'Answered' }))}
+                        >
+                          Answered
+                        </button>
+                        <button
+                          type="button"
+                          className={`call-result-btn ${quickWorkflowForm.callResult === 'Not Answered' ? 'active' : ''}`}
+                          onClick={() => setQuickWorkflowForm((p) => ({ ...p, callResult: 'Not Answered' }))}
+                        >
+                          Not Answered
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ── Contextual: Follow-up Date (when action needs follow-up) ── */}
                   {quickWorkflowAction?.needsFollowUp && (
                     <div className="qa-drawer-ctx-block">
@@ -3426,6 +3742,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               <option key={p.id} value={p.id}>{p.project_name}</option>
                             ))}
                           </select>
+                        </div>
+                      </div>
+
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Budget Min *</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="qa-drawer-field-input"
+                            placeholder="Minimum budget"
+                            value={quickWorkflowForm.budgetMin}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Budget Max *</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="qa-drawer-field-input"
+                            placeholder="Maximum budget"
+                            value={quickWorkflowForm.budgetMax}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
                         </div>
                       </div>
 
@@ -3735,9 +4078,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
                           </div>
                           {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
-                          {act.metadata?.statusRemarkResponseType && (
+                          {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
                             <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                              Response: {act.metadata.statusRemarkResponseType}
+                              Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
                             </div>
                           )}
                           <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>

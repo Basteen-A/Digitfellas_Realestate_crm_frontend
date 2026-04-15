@@ -50,6 +50,33 @@ const getAssigneeRoleForAction = (action, roleCode) => {
   return 'SM';
 };
 
+const toDateTimeLocalValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
+  const date = new Date();
+  date.setSeconds(0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return toDateTimeLocalValue(date.toISOString());
+};
+
+const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
+  const date = new Date();
+  date.setSeconds(0, 0);
+  const currentDay = date.getDay();
+  const dayOffset = (weekday - currentDay + 7) % 7;
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return toDateTimeLocalValue(date.toISOString());
+};
+
 const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
   const date = new Date();
   date.setSeconds(0, 0);
@@ -72,6 +99,7 @@ const actionInitialState = {
   latitude: '',
   longitude: '',
   timeSpent: '',
+  callResult: 'Answered',
 };
 
 const LeadDetailsPage = () => {
@@ -265,13 +293,16 @@ const LeadDetailsPage = () => {
 
   const handleActionPick = async (code) => {
     setActionCode(code);
-    setActionForm(actionInitialState);
+    const action = roleActions.find((item) => item.code === code);
+    setActionForm((p) => ({
+      ...actionInitialState,
+      callResult: action?.code.includes('RNR') ? 'Not Answered' : 'Answered',
+    }));
     setAssignableUsers([]);
     setClosureReasons([]);
 
     if (!code) return;
 
-    const action = roleActions.find((item) => item.code === code);
     if (!action) return;
 
     await loadActionDependencies(action, setAssignableUsers, setClosureReasons);
@@ -287,6 +318,7 @@ const LeadDetailsPage = () => {
 
     const payload = {
       note: actionForm.note.trim() || undefined,
+      callResult: actionForm.callResult,
     };
 
     if (selectedAction.needsFollowUp) {
@@ -391,15 +423,13 @@ const LeadDetailsPage = () => {
   };
 
   const handleQuickActionPick = async (code) => {
-    setQuickActionCode(code);
-    setQuickActionForm(actionInitialState);
-    setQuickAssignableUsers([]);
-    setQuickClosureReasons([]);
-
-    if (!code) return;
-
     const action = roleActions.find((item) => item.code === code);
     if (!action) return;
+
+    setQuickActionForm((p) => ({
+      ...actionInitialState,
+      callResult: action.code.includes('RNR') ? 'Not Answered' : 'Answered',
+    }));
 
     await loadActionDependencies(action, setQuickAssignableUsers, setQuickClosureReasons);
   };
@@ -425,6 +455,7 @@ const LeadDetailsPage = () => {
 
     const payload = {
       note: quickActionForm.note.trim() || undefined,
+      callResult: quickActionForm.callResult,
     };
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -838,7 +869,14 @@ const LeadDetailsPage = () => {
                               type="datetime-local"
                               value={actionForm.nextFollowUpAt}
                               onChange={(e) => setActionForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
+                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                             />
+                            <div className="qa-remarks-wrap" style={{ marginTop: 8 }}>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6PM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11AM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11AM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11AM</button>
+                            </div>
                           </label>
                         )}
 
@@ -982,6 +1020,31 @@ const LeadDetailsPage = () => {
                             {actionSaving ? 'Processing...' : 'Run Action'}
                           </button>
                         </div>
+
+                        {/* Call Result Selection for Tab Action */}
+                        {selectedAction && selectedAction.code !== 'TC_SV_DONE' && selectedAction.code !== 'SM_SITE_VISIT' && (
+                          <div className="call-result-wrap" style={{ marginTop: 14 }}>
+                            <div className="call-result-label">Call Result</div>
+                            <div className="call-result-toggle">
+                              <button
+                                type="button"
+                                className={`call-result-btn ${actionForm.callResult === 'Answered' ? 'active' : ''}`}
+                                onClick={() => setActionForm(p => ({ ...p, callResult: 'Answered' }))}
+                                disabled={selectedAction.code.includes('RNR')}
+                              >
+                                Answered
+                              </button>
+                              <button
+                                type="button"
+                                className={`call-result-btn ${actionForm.callResult === 'Not Answered' ? 'active' : ''}`}
+                                onClick={() => setActionForm(p => ({ ...p, callResult: 'Not Answered' }))}
+                                disabled={selectedAction.code.includes('RNR')}
+                              >
+                                Not Answered
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         <p className="lead-actions-hint">All required fields for selected action are shown here. No popup needed.</p>
                       </div>
                     )}
@@ -1248,6 +1311,12 @@ const LeadDetailsPage = () => {
                               onChange={(e) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
                               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                             />
+                            <div className="qa-remarks-wrap" style={{ marginTop: 8 }}>
+                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6PM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11AM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11AM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11AM</button>
+                            </div>
                           </div>
                         )}
 
@@ -1427,6 +1496,31 @@ const LeadDetailsPage = () => {
                         />
                       </div>
 
+                      {/* Call Result Toggle */}
+                      {quickSelectedAction.code !== 'TC_SV_DONE' && quickSelectedAction.code !== 'SM_SITE_VISIT' && (
+                        <div className="call-result-wrap" style={{ marginTop: '16px' }}>
+                          <div className="call-result-label">Call Result</div>
+                          <div className="call-result-toggle">
+                            <button
+                              type="button"
+                              className={`call-result-btn ${quickActionForm.callResult === 'Answered' ? 'active' : ''}`}
+                              onClick={() => setQuickActionForm(p => ({ ...p, callResult: 'Answered' }))}
+                              disabled={quickSelectedAction.code.includes('RNR')}
+                            >
+                              Answered
+                            </button>
+                            <button
+                              type="button"
+                              className={`call-result-btn ${quickActionForm.callResult === 'Not Answered' ? 'active' : ''}`}
+                              onClick={() => setQuickActionForm(p => ({ ...p, callResult: 'Not Answered' }))}
+                              disabled={quickSelectedAction.code.includes('RNR')}
+                            >
+                              Not Answered
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                         <button
                           className="lead-details-action-btn lead-details-action-btn--primary"
@@ -1434,7 +1528,7 @@ const LeadDetailsPage = () => {
                           onClick={handleQuickActionSubmit}
                           disabled={quickActionSaving}
                         >
-                          {quickActionSaving ? 'Saving...' : 'Submit Action'}
+                          {quickActionSaving ? 'Saving...' : 'Submit Followup'}
                         </button>
                         <button
                           className="lead-details-action-btn lead-details-action-btn--secondary"
@@ -1456,6 +1550,8 @@ const LeadDetailsPage = () => {
                       <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 14, 0), 'Today 2PM')}>Today 2PM</button>
                       <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 18, 0), 'Today 6PM')}>Today 6PM</button>
                       <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 11, 0), 'Tomorrow 11AM')}>Tomorrow 11AM</button>
+                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(6, 11, 0), 'This Sat 11AM')}>This Sat 11AM</button>
+                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(0, 11, 0), 'This Sun 11AM')}>This Sun 11AM</button>
                     </div>
                   </div>
 
