@@ -155,6 +155,14 @@ const LeadDetailsPage = () => {
   const selectedAction = useMemo(() => roleActions.find((a) => a.code === actionCode) || null, [roleActions, actionCode]);
   const quickSelectedAction = useMemo(() => roleActions.find((a) => a.code === quickActionCode) || null, [roleActions, quickActionCode]);
   const timeline = useMemo(() => lead?.timeline || [], [lead?.timeline]);
+  const isSmHandoffReadOnly = useMemo(() => {
+    if (roleCode !== 'SM' || !lead || !authUser?.id) return false;
+    const assignedToOtherUser = lead.assignedToUserId && String(lead.assignedToUserId) !== String(authUser.id);
+    return assignedToOtherUser
+      && lead.assignedRole === 'SH'
+      && lead.previousAssignedTo
+      && String(lead.previousAssignedTo) === String(authUser.id);
+  }, [authUser?.id, lead, roleCode]);
 
   const followUpEvents = useMemo(
     () => timeline.filter((evt) => {
@@ -256,6 +264,10 @@ const LeadDetailsPage = () => {
 
   const handleAddNote = async () => {
     if (!noteDraft.trim() || !lead?.id) return;
+    if (isSmHandoffReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     try {
       await leadWorkflowApi.addNote(lead.id, noteDraft.trim());
       setNoteDraft('');
@@ -357,6 +369,10 @@ const LeadDetailsPage = () => {
 
   const handleRunAction = async () => {
     if (!lead?.id || !selectedAction) return;
+    if (isSmHandoffReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     if (selectedAction.needsCustomerProfile || selectedAction.code === 'SH_BOOKING') {
       toast.error('This action needs full customer profile. Use workspace booking flow.');
@@ -455,6 +471,10 @@ const LeadDetailsPage = () => {
 
   const handleQuickFollowUp = async (dateValue, label) => {
     if (!lead?.id) return;
+    if (isSmHandoffReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     const targetDate = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
     if (!targetDate || Number.isNaN(targetDate.getTime())) {
       toast.error('Please select a valid follow-up date & time');
@@ -505,6 +525,10 @@ const LeadDetailsPage = () => {
 
   const handleQuickActionSubmit = async () => {
     if (!lead?.id || !quickSelectedAction) return;
+    if (isSmHandoffReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
       const pF = customerProfileForm;
@@ -695,9 +719,24 @@ const LeadDetailsPage = () => {
           </div>
         </div>
         <div className="lead-details-header-right">
+          {isSmHandoffReadOnly && (
+            <span
+              className="lead-details-status"
+              style={{
+                backgroundColor: '#FEF3C7',
+                color: '#B45309',
+                border: '1px solid #FCD34D',
+                fontWeight: 700,
+              }}
+              title="You can view this lead but cannot update it after handoff to Sales Head"
+            >
+              Read-Only
+            </span>
+          )}
           <button
             type="button"
             className="lead-details-quick-btn"
+            disabled={isSmHandoffReadOnly}
             onClick={async () => {
               setQuickActionsOpen(true);
               try {
@@ -924,13 +963,16 @@ const LeadDetailsPage = () => {
           <div className="lead-details-tab-content">
             {activeTab === 'actions' && (
               <div className="lead-actions-panel">
+                {isSmHandoffReadOnly && (
+                  <p className="lead-actions-hint" style={{ marginBottom: 12 }}>This lead is currently view-only for you after handoff to Sales Head.</p>
+                )}
                 {roleActions.length === 0 ? (
                   <p className="lead-details-empty">No workflow actions configured for your role.</p>
                 ) : (
                   <>
                     <label className="lead-actions-label">
                       Select Action
-                      <select value={actionCode} onChange={(e) => handleActionPick(e.target.value)}>
+                      <select value={actionCode} onChange={(e) => handleActionPick(e.target.value)} disabled={isSmHandoffReadOnly}>
                         <option value="">Choose an action...</option>
                         {roleActions.map((action) => (
                           <option key={action.code} value={action.code}>{action.label}</option>
@@ -1145,7 +1187,7 @@ const LeadDetailsPage = () => {
                               setAssignableUsers([]);
                               setClosureReasons([]);
                             }}
-                            disabled={actionSaving}
+                            disabled={actionSaving || isSmHandoffReadOnly}
                           >
                             Reset
                           </button>
@@ -1153,7 +1195,7 @@ const LeadDetailsPage = () => {
                             type="button"
                             className="lead-details-action-btn lead-details-action-btn--primary"
                             onClick={handleRunAction}
-                            disabled={actionSaving}
+                            disabled={actionSaving || isSmHandoffReadOnly}
                           >
                             {actionSaving ? 'Processing...' : 'Run Action'}
                           </button>
@@ -1168,7 +1210,7 @@ const LeadDetailsPage = () => {
                                 type="button"
                                 className={`call-result-btn ${actionForm.callResult === 'Answered' ? 'active' : ''}`}
                                 onClick={() => setActionForm(p => ({ ...p, callResult: 'Answered' }))}
-                                disabled={selectedAction.code.includes('RNR')}
+                                disabled={selectedAction.code.includes('RNR') || isSmHandoffReadOnly}
                               >
                                 Answered
                               </button>
@@ -1176,7 +1218,7 @@ const LeadDetailsPage = () => {
                                 type="button"
                                 className={`call-result-btn ${actionForm.callResult === 'Not Answered' ? 'active' : ''}`}
                                 onClick={() => setActionForm(p => ({ ...p, callResult: 'Not Answered' }))}
-                                disabled={selectedAction.code.includes('RNR')}
+                                disabled={selectedAction.code.includes('RNR') || isSmHandoffReadOnly}
                               >
                                 Not Answered
                               </button>
@@ -1216,8 +1258,8 @@ const LeadDetailsPage = () => {
             {activeTab === 'comments' && (
               <div className="lead-details-comments">
                 <div className="lead-details-comment-form">
-                  <textarea placeholder="Add a comment..." value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} />
-                  <button onClick={handleAddNote} disabled={!noteDraft.trim()}>Post Comment</button>
+                  <textarea placeholder="Add a comment..." value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} disabled={isSmHandoffReadOnly} />
+                  <button onClick={handleAddNote} disabled={!noteDraft.trim() || isSmHandoffReadOnly}>Post Comment</button>
                 </div>
                 <div className="lead-details-note-list">
                   {(lead.notes || []).length === 0 ? (
@@ -1382,6 +1424,9 @@ const LeadDetailsPage = () => {
                   {/* Workflow Transitions */}
                   <div className="qa-section">
                     <div className="qa-section-title">🚀 Workflow Transitions</div>
+                    {isSmHandoffReadOnly && (
+                      <p style={{ gridColumn: '1 / -1', margin: '0 0 10px', color: 'var(--text-muted)', fontSize: 12 }}>View-only: actions are disabled after handoff to Sales Head.</p>
+                    )}
                     <div className="qa-action-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                       {roleActions.filter(a => a.tone !== 'danger').map((action) => {
                         let icon = '📋';
@@ -1399,7 +1444,7 @@ const LeadDetailsPage = () => {
                             key={action.code}
                             type="button"
                             className={`qa-btn-card ${quickActionCode === action.code ? 'active' : ''}`}
-                            disabled={quickBusy || quickActionSaving}
+                            disabled={quickBusy || quickActionSaving || isSmHandoffReadOnly}
                             onClick={() => handleQuickActionPick(action.code)}
                           >
                             <span className="icon">{icon}</span>
@@ -1419,7 +1464,7 @@ const LeadDetailsPage = () => {
                           key={action.code}
                           type="button"
                           className={`qa-btn-disqual ${quickActionCode === action.code ? 'active' : ''}`}
-                          disabled={quickBusy || quickActionSaving}
+                          disabled={quickBusy || quickActionSaving || isSmHandoffReadOnly}
                           onClick={() => handleQuickActionPick(action.code)}
                         >
                           {action.code.includes('JUNK') ? '🗑️' : action.code.includes('SPAM') ? '🚫' : '💔'} {action.label}
@@ -1691,7 +1736,7 @@ const LeadDetailsPage = () => {
                               type="button"
                               className={`call-result-btn ${quickActionForm.callResult === 'Answered' ? 'active' : ''}`}
                               onClick={() => setQuickActionForm(p => ({ ...p, callResult: 'Answered' }))}
-                              disabled={quickSelectedAction.code.includes('RNR')}
+                              disabled={quickSelectedAction.code.includes('RNR') || isSmHandoffReadOnly}
                             >
                               Answered
                             </button>
@@ -1699,7 +1744,7 @@ const LeadDetailsPage = () => {
                               type="button"
                               className={`call-result-btn ${quickActionForm.callResult === 'Not Answered' ? 'active' : ''}`}
                               onClick={() => setQuickActionForm(p => ({ ...p, callResult: 'Not Answered' }))}
-                              disabled={quickSelectedAction.code.includes('RNR')}
+                              disabled={quickSelectedAction.code.includes('RNR') || isSmHandoffReadOnly}
                             >
                               Not Answered
                             </button>
@@ -1712,7 +1757,7 @@ const LeadDetailsPage = () => {
                           className="lead-details-action-btn lead-details-action-btn--primary"
                           style={{ flex: 1, padding: '12px', borderRadius: '10px', fontWeight: '800' }}
                           onClick={handleQuickActionSubmit}
-                          disabled={quickActionSaving}
+                          disabled={quickActionSaving || isSmHandoffReadOnly}
                         >
                           {quickActionSaving ? 'Saving...' : 'Submit Followup'}
                         </button>
@@ -1733,11 +1778,11 @@ const LeadDetailsPage = () => {
                   <div className="qa-section">
                     <div className="qa-section-title">📅 Quick Follow-up</div>
                     <div className="qa-remarks-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 14, 0), 'Today 2PM')}>Today 2PM</button>
-                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 18, 0), 'Today 6PM')}>Today 6PM</button>
-                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 11, 0), 'Tomorrow 11AM')}>Tomorrow 11AM</button>
-                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(6, 11, 0), 'This Sat 11AM')}>This Sat 11AM</button>
-                      <button type="button" className="qa-remark-chip" onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(0, 11, 0), 'This Sun 11AM')}>This Sun 11AM</button>
+                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 14, 0), 'Today 2PM')}>Today 2PM</button>
+                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 18, 0), 'Today 6PM')}>Today 6PM</button>
+                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 11, 0), 'Tomorrow 11AM')}>Tomorrow 11AM</button>
+                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(6, 11, 0), 'This Sat 11AM')}>This Sat 11AM</button>
+                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(0, 11, 0), 'This Sun 11AM')}>This Sun 11AM</button>
                     </div>
                   </div>
 

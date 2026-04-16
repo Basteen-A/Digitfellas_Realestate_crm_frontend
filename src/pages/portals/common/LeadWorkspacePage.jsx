@@ -340,6 +340,25 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     [roleActions, stagePopupData.actionCode]
   );
 
+  const isSmHandoffReadOnlyLead = useCallback((lead) => {
+    if (workspaceRole !== 'SM' || !lead || !user?.id) return false;
+    const assignedToOtherUser = lead.assignedToUserId && String(lead.assignedToUserId) !== String(user.id);
+    return assignedToOtherUser
+      && lead.assignedRole === 'SH'
+      && lead.previousAssignedTo
+      && String(lead.previousAssignedTo) === String(user.id);
+  }, [workspaceRole, user?.id]);
+
+  const selectedLeadReadOnly = useMemo(
+    () => isSmHandoffReadOnlyLead(selectedLead),
+    [isSmHandoffReadOnlyLead, selectedLead]
+  );
+
+  const quickActionLeadReadOnly = useMemo(
+    () => isSmHandoffReadOnlyLead(quickActionLead),
+    [isSmHandoffReadOnlyLead, quickActionLead]
+  );
+
   const toolbarStageOptions = useMemo(() => {
     if (workspaceRole === 'SM') {
       return stageOptions.filter((o) => ['SITE_VISIT', 'OPPORTUNITY'].includes(o.value));
@@ -938,6 +957,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleAddNote = async () => {
     if (!selectedLead || !noteDraft.trim()) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     try {
       await leadWorkflowApi.addNote(selectedLead.id, noteDraft.trim());
       setNoteDraft('');
@@ -951,6 +974,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleAction = async (action) => {
     if (!selectedLead) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     // SV Done: open SV Done modal instead of direct action
     if (action.code === 'TC_SV_DONE') {
@@ -1041,6 +1068,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleRecordSvSubmit = async () => {
     if (!selectedLead) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     if (!recordSvForm.assignToUserId) { toast.error('Sales Head selection is mandatory'); return; }
     if (!recordSvForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
     if (recordSvForm.budgetMin === '' || recordSvForm.budgetMax === '') { toast.error('Budget Min and Budget Max are mandatory'); return; }
@@ -1102,6 +1133,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Closure reason submit ──
   const handleClosureSubmit = async () => {
     if (!selectedLead || !closureModalAction) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     if (!closureForm.closureReasonId && !closureForm.reason.trim()) {
       toast.error('A closure reason is mandatory');
       return;
@@ -1166,7 +1201,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           ...permAddr,
         },
       });
-      toast.success('Booking approved! Customer profile saved. Lead returned to Sales Manager.');
+      toast.success('Booking approved! Customer profile saved. Lead transferred to Collection Manager.');
       setCustomerProfileOpen(false);
       setSelectedLeadId(null);
       loadLeads({ silent: true });
@@ -1197,6 +1232,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Confirm stage transition from popup ──
   const handleStagePopupConfirm = async () => {
     if (!selectedLead || !stagePopupData.actionCode) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     const popupAction = roleActions.find((a) => a.code === stagePopupData.actionCode);
     if (popupAction?.needsCustomerProfile || popupAction?.code === 'SH_BOOKING') {
@@ -1239,6 +1278,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleManualStatusUpdate = async () => {
     if (!selectedLead) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     const statusChanged = manualStatus && manualStatus !== selectedLead.statusCode;
     const followUpChanged = Boolean(manualNextFollowUpAt)
@@ -1271,6 +1314,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleAssignLead = async () => {
     if (!selectedLead || !assignTarget.userId) return;
+    if (selectedLeadReadOnly) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     try {
       await leadWorkflowApi.assignLead(selectedLead.id, assignTarget.userId, assignTarget.note?.trim() || '');
       toast.success('Lead assigned successfully');
@@ -1309,6 +1356,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const runQuickWorkflowAction = useCallback(async (action, payload = {}) => {
     if (!quickActionLead || !action) return;
+    if (isSmHandoffReadOnlyLead(quickActionLead)) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     setQuickActionLoading(true);
     try {
@@ -1323,10 +1374,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     } finally {
       setQuickActionLoading(false);
     }
-  }, [quickActionLead, loadLeads, resetQuickWorkflowForm]);
+  }, [quickActionLead, loadLeads, resetQuickWorkflowForm, isSmHandoffReadOnlyLead]);
 
   const handleQuickWorkflowActionSelect = async (action) => {
     if (!action) return;
+    if (isSmHandoffReadOnlyLead(quickActionLead)) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
 
     const targetAssigneeRole = getAssigneeRoleForAction(action, workspaceRole);
 
@@ -1425,6 +1480,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleQuickWorkflowSubmit = async () => {
     if (!quickActionLead) return;
+    if (isSmHandoffReadOnlyLead(quickActionLead)) {
+      toast.error('This lead is view-only after handoff to Sales Head.');
+      return;
+    }
     if (!quickWorkflowAction) {
       toast.error('Please select an action button first');
       return;
@@ -1819,6 +1878,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       {(lead.assignedToUserId || activeTab !== 'new') && (
                         <button
                           className="crm-btn crm-btn-primary crm-btn-sm"
+                          disabled={isSmHandoffReadOnlyLead(lead)}
                           onClick={async (e) => {
                             e.stopPropagation();
                             resetQuickWorkflowForm();
@@ -1860,6 +1920,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {selectedLeadReadOnly && (
+                    <span
+                      className="crm-badge"
+                      style={{ backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', fontWeight: 700 }}
+                      title="You can view this lead but cannot update it after handoff to Sales Head"
+                    >
+                      Read-Only
+                    </span>
+                  )}
                   <span className="crm-badge" style={{ backgroundColor: selectedLead.stageColor + '22', color: selectedLead.stageColor }}>
                     <span className="crm-badge-dot" style={{ background: selectedLead.stageColor }} />
                     {selectedLead.stageLabel}
@@ -2029,14 +2098,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     {!selectedLead.isClosed && (
                       <>
                         <h3 className="lead-detail__section-title">Quick Actions</h3>
+                        {selectedLeadReadOnly && (
+                          <p style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)' }}>This lead is currently view-only for you after handoff to Sales Head.</p>
+                        )}
                         <div className="lead-detail__quick-actions">
-                          <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote}>📞 Log Call</button>
+                          <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote} disabled={selectedLeadReadOnly}>📞 Log Call</button>
                           {/* SV Recording moved to roleActions in drawer */}
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm">💬 WhatsApp</button>
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm">📧 Email</button>
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()}>📝 Add Note</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={selectedLeadReadOnly}>💬 WhatsApp</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={selectedLeadReadOnly}>📧 Email</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()} disabled={selectedLeadReadOnly}>📝 Add Note</button>
                           <button
                             className="crm-btn crm-btn-warning crm-btn-sm"
+                            disabled={selectedLeadReadOnly}
                             onClick={() => {
                               setAssignModalOpen(true);
                               ['TC', 'SM', 'SH', 'COL'].forEach((r) => loadAssignableUsers(r));
@@ -2055,6 +2128,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <select
                           className="crm-form-select"
                           value=""
+                          disabled={selectedLeadReadOnly}
                           onChange={(e) => {
                             const ac = e.target.value;
                             if (!ac) return;
@@ -2090,7 +2164,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <div className="lead-detail__update-grid">
                       <div>
                         <div className="crm-form-label">Stage</div>
-                        <select className="crm-form-select" value="" onChange={(e) => { if (e.target.value) openStagePopup(e.target.value); }}>
+                        <select className="crm-form-select" value="" disabled={selectedLeadReadOnly} onChange={(e) => { if (e.target.value) openStagePopup(e.target.value); }}>
                           <option value="">{selectedLead.stageLabel} (current)</option>
                           {stageTransitionOptions.map((option) => (
                             <option key={option.value} value={option.value}>{option.stageLabel}</option>
@@ -2099,7 +2173,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </div>
                       <div>
                         <div className="crm-form-label">Status</div>
-                        <select className="crm-form-select" value={manualStatus} onChange={(e) => setManualStatus(e.target.value)}>
+                        <select className="crm-form-select" value={manualStatus} disabled={selectedLeadReadOnly} onChange={(e) => setManualStatus(e.target.value)}>
                           <option value="">Select status</option>
                           {statusOptions.map((o) => (
                             <option key={o.value} value={o.value}>{o.label}{o.value === selectedLead.statusCode ? ' (current)' : ''}</option>
@@ -2115,25 +2189,26 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         onChange={(val) => setManualNextFollowUpAt(val ? val.slice(0, 16) : '')}
                         placeholder="Select Date & Time..."
                         className="lead-detail__calendar-input"
+                        disabled={selectedLeadReadOnly}
                       />
                       <div className="lead-detail__calendar-shortcuts">
-                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
-                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
-                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
-                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(6, 11, 0))}>This Sat 11 AM</button>
-                        <button type="button" className="calendar-shortcut-btn" onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(0, 11, 0))}>This Sun 11 AM</button>
-                        <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(6, 11, 0))}>This Sat 11 AM</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(0, 11, 0))}>This Sun 11 AM</button>
+                        <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
                       </div>
                     </div>
                     <div style={{ marginTop: 16 }}>
                       <div className="crm-form-label">Notes</div>
-                      <textarea id="note-input" className="crm-form-input" rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add notes..." />
+                      <textarea id="note-input" className="crm-form-input" rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add notes..." disabled={selectedLeadReadOnly} />
                     </div>
                     <div className="lead-detail__save-bar">
                       {noteDraft.trim() && (
-                        <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote}>📝 Save Note</button>
+                        <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote} disabled={selectedLeadReadOnly}>📝 Save Note</button>
                       )}
-                      <button type="button" className="workspace-btn workspace-btn--primary" onClick={handleManualStatusUpdate} disabled={manualUpdateSaving}>
+                      <button type="button" className="workspace-btn workspace-btn--primary" onClick={handleManualStatusUpdate} disabled={manualUpdateSaving || selectedLeadReadOnly}>
                         {manualUpdateSaving ? 'Saving...' : '💾 Save Changes'}
                       </button>
                     </div>
@@ -3504,6 +3579,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </div>
                 <div>
                   <div className="qa-drawer-name">{quickActionLead.fullName}</div>
+                  {quickActionLeadReadOnly && (
+                    <div>
+                      <span
+                        className="crm-badge"
+                        style={{ backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', fontWeight: 700, marginTop: 4 }}
+                        title="You can view this lead but cannot update it after handoff to Sales Head"
+                      >
+                        Read-Only
+                      </span>
+                    </div>
+                  )}
                   <div className="qa-drawer-meta">
                     {quickActionLead.phone}
                     {quickActionLead.project ? ` · ${quickActionLead.project}` : ''}
@@ -3559,6 +3645,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               {!quickActionLead.isClosed && (
                 <>
                   <div className="qa-drawer-section">Update status</div>
+                  {quickActionLeadReadOnly && (
+                    <p style={{ margin: '0 20px 8px', fontSize: 12, color: 'var(--text-muted)' }}>This lead is view-only for you after handoff to Sales Head.</p>
+                  )}
                   <div className="qa-drawer-status-grid">
                     {roleActions.filter((a) => {
                       const isNegotiation = a.code.includes('NEGOTIATION');
@@ -3581,7 +3670,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           key={action.code}
                           type="button"
                           className={`qa-drawer-st-btn ${quickWorkflowAction?.code === action.code ? selClass : ''}`}
-                          disabled={quickActionLoading}
+                          disabled={quickActionLoading || quickActionLeadReadOnly}
                           onClick={() => handleQuickWorkflowActionSelect(action)}
                         >
                           <div className="qa-drawer-st-icon">{icon}</div>
@@ -3595,7 +3684,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         key={action.code}
                         type="button"
                         className={`qa-drawer-st-btn ${quickWorkflowAction?.code === action.code ? 'sel-junk' : ''}`}
-                        disabled={quickActionLoading}
+                        disabled={quickActionLoading || quickActionLeadReadOnly}
                         onClick={() => handleQuickWorkflowActionSelect(action)}
                       >
                         <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? '🚫' : action.code.includes('SPAM') ? '🗑️' : '⚠️'}</div>
@@ -4106,6 +4195,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 className="qa-drawer-save-btn"
                 disabled={
                   quickActionLoading
+                  || quickActionLeadReadOnly
                   || !quickWorkflowAction
                   || ((quickWorkflowAction?.needsAssignee
                     || quickWorkflowAction?.code === 'TC_SV_DONE'
