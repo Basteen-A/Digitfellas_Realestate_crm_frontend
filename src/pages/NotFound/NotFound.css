@@ -15,10 +15,10 @@
 .not-found__button {
   margin-top: 8px;
   justify-self: center;
-  border: 1px solid #3b82f655;
+  border: 1px solid rgba(98, 90, 250, 0.35);
   border-radius: var(--border-radius-md);
-  color: #bfdbfe;
+  color: var(--accent-blue);
   text-decoration: none;
   padding: 10px 14px;
-  background: #1d4ed826;
+  background: rgba(98, 90, 250, 0.15);
 }

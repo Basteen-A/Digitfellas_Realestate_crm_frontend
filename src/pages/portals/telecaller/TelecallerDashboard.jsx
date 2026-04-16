@@ -21,20 +21,22 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         dashboardApi.getTelecallerDetailed(),
         followUpApi.getOverdue(),
       ]);
-      const d = resp?.data || resp || {};
 
-      const ensureArray = (arr) => {
-        if (Array.isArray(arr)) return arr;
-        if (arr && Array.isArray(arr.data)) return arr.data;
-        if (arr && Array.isArray(arr.rows)) return arr.rows;
+      const ensureArray = (value) => {
+        if (Array.isArray(value)) return value;
+        if (value && Array.isArray(value.data)) return value.data;
+        if (value && Array.isArray(value.rows)) return value.rows;
         return [];
       };
 
-      setStats(d.stats || null);
-      setUnassignedLeads(ensureArray(d.unassignedLeads));
-      setMissedFollowUps(ensureArray(overdueResp));
-      setTodayFollowUps(ensureArray(d.todaysFollowUps));
-      setUpcomingVisits(ensureArray(d.upcomingVisits));
+      const dashboardData = resp?.data?.data || resp?.data || resp || {};
+      const overdueData = overdueResp?.data?.data || overdueResp?.data || overdueResp || {};
+
+      setStats(dashboardData.stats || null);
+      setUnassignedLeads(ensureArray(dashboardData.unassignedLeads));
+      setMissedFollowUps(ensureArray(overdueData));
+      setTodayFollowUps(ensureArray(dashboardData.todaysFollowUps));
+      setUpcomingVisits(ensureArray(dashboardData.upcomingVisits));
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to update dashboard'));
       // Ensure we have empty arrays on error to avoid map crashes

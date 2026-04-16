@@ -37,16 +37,17 @@
   /* ── Border Colors (Light Default) ── */
   --border-primary: #dbe3ee;
   --border-secondary: #edf2f7;
-  --border-focus: #3b82f6;
+  --border-focus: #625afa;
   --border-error: #ef4444;
   --border-success: #22c55e;
   --border-input: #cbd5e1;
 
   /* ── Accent Colors (Shared) ── */
-  --accent-blue: #3b82f6;
-  --accent-blue-hover: #2563eb;
-  --accent-blue-light: #60a5fa;
-  --accent-blue-bg: rgba(59, 130, 246, 0.1);
+  --accent-blue: #625afa;
+  --accent-blue-hover: #4f46e5;
+  --accent-blue-dark: #4f46e5;
+  --accent-blue-light: #857dff;
+  --accent-blue-bg: rgba(98, 90, 250, 0.12);
   --accent-green: #22c55e;
   --accent-green-hover: #16a34a;
   --accent-green-bg: rgba(34, 197, 94, 0.1);
@@ -66,7 +67,7 @@
   --accent-pink-bg: rgba(236, 72, 153, 0.1);
 
   /* ── Gradient (Light Default) ── */
-  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --gradient-primary: linear-gradient(135deg, #625afa 0%, #4f46e5 100%);
   --gradient-header: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   --gradient-sidebar: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   --gradient-card: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
@@ -79,7 +80,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.12), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
   --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.14), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
   --shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.2);
-  --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.3);
+  --shadow-glow-blue: 0 0 20px rgba(98, 90, 250, 0.35);
   --shadow-glow-green: 0 0 20px rgba(34, 197, 94, 0.3);
   --shadow-sidebar: 4px 0 24px rgba(15, 23, 42, 0.08);
 
@@ -142,7 +143,7 @@
 
   --border-primary: #334155;
   --border-secondary: #1e293b;
-  --border-focus: #3b82f6;
+  --border-focus: #625afa;
   --border-input: #334155;
 
   --gradient-header: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
