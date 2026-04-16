@@ -6,6 +6,7 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
+import statusRemarkApi from '../../../api/statusRemarkApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
@@ -91,8 +92,11 @@ const actionInitialState = {
   closureReasonId: '',
   reason: '',
   note: '',
+  statusRemarkText: '',
   svDate: '',
   svProjectId: '',
+  budgetMin: '',
+  budgetMax: '',
   motivationType: '',
   primaryRequirement: '',
   secondaryRequirement: '',
@@ -131,6 +135,10 @@ const LeadDetailsPage = () => {
   const [quickActionForm, setQuickActionForm] = useState(actionInitialState);
   const [quickAssignableUsers, setQuickAssignableUsers] = useState([]);
   const [quickClosureReasons, setQuickClosureReasons] = useState([]);
+  const [actionStatusRemarks, setActionStatusRemarks] = useState([]);
+  const [actionRemarkAnsNonAns, setActionRemarkAnsNonAns] = useState(null);
+  const [quickStatusRemarks, setQuickStatusRemarks] = useState([]);
+  const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null);
   const [quickActionSaving, setQuickActionSaving] = useState(false);
   const [quickActionActivities, setQuickActionActivities] = useState([]);
   const [customerProfileForm, setCustomerProfileForm] = useState({
@@ -289,23 +297,62 @@ const LeadDetailsPage = () => {
     setQuickActionForm(actionInitialState);
     setQuickAssignableUsers([]);
     setQuickClosureReasons([]);
+    setQuickStatusRemarks([]);
+    setQuickRemarkAnsNonAns(null);
+  }, []);
+
+  const loadStatusRemarks = useCallback(async (action, setRemarks, setAnsNonAns) => {
+    if (!action?.targetStatusCode) {
+      setRemarks([]);
+      setAnsNonAns(null);
+      return;
+    }
+
+    try {
+      const resp = await statusRemarkApi.getByStatusCode(action.targetStatusCode);
+      const remarks = resp.data?.remarks || [];
+      setRemarks(remarks);
+
+      const firstRemark = remarks.find((item) => item.has_ans_non_ans);
+      setAnsNonAns(firstRemark ? (firstRemark.ans_non_ans_default || 'Answered') : null);
+    } catch {
+      setRemarks([]);
+      setAnsNonAns(null);
+    }
   }, []);
 
   const handleActionPick = async (code) => {
     setActionCode(code);
     const action = roleActions.find((item) => item.code === code);
+    const needsInput = Boolean(
+      action?.needsFollowUp
+      || action?.needsAssignee
+      || action?.needsReason
+      || action?.needsSvDetails
+      || action?.needsCustomerProfile
+      || action?.code === 'TC_SV_DONE'
+    );
     setActionForm((p) => ({
       ...actionInitialState,
-      callResult: action?.code.includes('RNR') ? 'Not Answered' : 'Answered',
+      budgetMin: lead?.budgetMin ?? '',
+      budgetMax: lead?.budgetMax ?? '',
+      callResult: action?.targetStatusCode === 'RNR' || action?.code.includes('RNR') ? 'Not Answered' : 'Answered',
     }));
     setAssignableUsers([]);
     setClosureReasons([]);
+    setActionStatusRemarks([]);
+    setActionRemarkAnsNonAns(null);
 
     if (!code) return;
 
     if (!action) return;
 
     await loadActionDependencies(action, setAssignableUsers, setClosureReasons);
+    await loadStatusRemarks(action, setActionStatusRemarks, setActionRemarkAnsNonAns);
+
+    if (!needsInput) {
+      setActionForm((p) => ({ ...p, note: `Quick action: ${action.label}` }));
+    }
   };
 
   const handleRunAction = async () => {
@@ -319,6 +366,8 @@ const LeadDetailsPage = () => {
     const payload = {
       note: actionForm.note.trim() || undefined,
       callResult: actionForm.callResult,
+      statusRemarkText: actionForm.statusRemarkText.trim() || undefined,
+      statusRemarkResponseType: actionRemarkAnsNonAns || undefined,
     };
 
     if (selectedAction.needsFollowUp) {
@@ -364,9 +413,21 @@ const LeadDetailsPage = () => {
         toast.error('Project visited is required');
         return;
       }
+      if (selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE') {
+        if (actionForm.budgetMin === '' || actionForm.budgetMax === '') {
+          toast.error('Budget Min and Budget Max are required');
+          return;
+        }
+        if (Number(actionForm.budgetMax) < Number(actionForm.budgetMin)) {
+          toast.error('Budget Max must be greater than or equal to Budget Min');
+          return;
+        }
+      }
       payload.assignToUserId = actionForm.assignToUserId || payload.assignToUserId;
       payload.svDate = new Date(actionForm.svDate).toISOString();
       payload.svProjectId = actionForm.svProjectId;
+      payload.budgetMin = selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && actionForm.budgetMin !== '' ? Number(actionForm.budgetMin) : undefined;
+      payload.budgetMax = selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && actionForm.budgetMax !== '' ? Number(actionForm.budgetMax) : undefined;
       payload.motivationType = actionForm.motivationType || undefined;
       payload.primaryRequirement = actionForm.primaryRequirement || undefined;
       payload.secondaryRequirement = actionForm.secondaryRequirement || undefined;
@@ -426,12 +487,20 @@ const LeadDetailsPage = () => {
     const action = roleActions.find((item) => item.code === code);
     if (!action) return;
 
+    setQuickActionCode(code);
+
     setQuickActionForm((p) => ({
       ...actionInitialState,
-      callResult: action.code.includes('RNR') ? 'Not Answered' : 'Answered',
+      budgetMin: lead?.budgetMin ?? '',
+      budgetMax: lead?.budgetMax ?? '',
+      callResult: action.targetStatusCode === 'RNR' || action.code.includes('RNR') ? 'Not Answered' : 'Answered',
     }));
 
+    setQuickStatusRemarks([]);
+    setQuickRemarkAnsNonAns(null);
+
     await loadActionDependencies(action, setQuickAssignableUsers, setQuickClosureReasons);
+    await loadStatusRemarks(action, setQuickStatusRemarks, setQuickRemarkAnsNonAns);
   };
 
   const handleQuickActionSubmit = async () => {
@@ -456,6 +525,8 @@ const LeadDetailsPage = () => {
     const payload = {
       note: quickActionForm.note.trim() || undefined,
       callResult: quickActionForm.callResult,
+      statusRemarkText: quickActionForm.statusRemarkText.trim() || undefined,
+      statusRemarkResponseType: quickRemarkAnsNonAns || undefined,
     };
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -535,9 +606,21 @@ const LeadDetailsPage = () => {
         toast.error('Project visited is required');
         return;
       }
+      if (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE') {
+        if (quickActionForm.budgetMin === '' || quickActionForm.budgetMax === '') {
+          toast.error('Budget Min and Budget Max are required');
+          return;
+        }
+        if (Number(quickActionForm.budgetMax) < Number(quickActionForm.budgetMin)) {
+          toast.error('Budget Max must be greater than or equal to Budget Min');
+          return;
+        }
+      }
       payload.assignToUserId = quickActionForm.assignToUserId || payload.assignToUserId;
       payload.svDate = new Date(quickActionForm.svDate).toISOString();
       payload.svProjectId = quickActionForm.svProjectId;
+      payload.budgetMin = quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMin !== '' ? Number(quickActionForm.budgetMin) : undefined;
+      payload.budgetMax = quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMax !== '' ? Number(quickActionForm.budgetMax) : undefined;
       payload.motivationType = quickActionForm.motivationType || undefined;
       payload.primaryRequirement = quickActionForm.primaryRequirement || undefined;
       payload.secondaryRequirement = quickActionForm.secondaryRequirement || undefined;
@@ -920,6 +1003,61 @@ const LeadDetailsPage = () => {
                             </label>
                           </div>
                         )}
+
+                        {selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && (
+                          <div className="lead-actions-grid">
+                            <label className="lead-actions-label">
+                              Budget Min *
+                              <input
+                                type="number"
+                                min="0"
+                                value={actionForm.budgetMin}
+                                onChange={(e) => setActionForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                                placeholder="5000000"
+                              />
+                            </label>
+                            <label className="lead-actions-label">
+                              Budget Max *
+                              <input
+                                type="number"
+                                min="0"
+                                value={actionForm.budgetMax}
+                                onChange={(e) => setActionForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                                placeholder="8000000"
+                              />
+                            </label>
+                          </div>
+                        )}
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <div className="lead-actions-label" style={{ marginBottom: 8 }}>Status Remarks</div>
+                          <div className="qa-remarks-wrap">
+                            {(actionStatusRemarks.length > 0 ? actionStatusRemarks : QUICK_REMARKS.map((remarkText) => ({ remark_text: remarkText }))).map((remark) => {
+                                const remarkText = remark.remark_text || remark.text || remark.label || '';
+                                if (!remarkText) return null;
+                                return (
+                                  <button
+                                    key={remark.id || remarkText}
+                                    type="button"
+                                    className={`qa-remark-chip ${actionForm.statusRemarkText === remarkText ? 'active' : ''}`}
+                                    onClick={() => {
+                                      setActionForm((p) => ({
+                                        ...p,
+                                        statusRemarkText: remarkText,
+                                        note: remarkText,
+                                        callResult: remark.has_ans_non_ans ? (remark.ans_non_ans_default || actionRemarkAnsNonAns || 'Answered') : p.callResult,
+                                      }));
+                                      if (remark.has_ans_non_ans) {
+                                        setActionRemarkAnsNonAns(remark.ans_non_ans_default || actionRemarkAnsNonAns || 'Answered');
+                                      }
+                                    }}
+                                  >
+                                    + {remarkText}
+                                  </button>
+                                );
+                            })}
+                          </div>
+                        </div>
 
                         {selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && (
                           <div className="lead-actions-grid">
@@ -1365,6 +1503,31 @@ const LeadDetailsPage = () => {
 
                         {(quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') && (
                           <div style={{ gridColumn: 'span 2', backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-primary)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                        {quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && (
+                          <>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Budget Min *</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={quickActionForm.budgetMin}
+                                onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Budget Max *</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={quickActionForm.budgetMax}
+                                onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                              />
+                            </div>
+                          </>
+                        )}
                             <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏆 Customer Profile Details</div>
                             
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>👤 Personal Details</div>
@@ -1463,7 +1626,7 @@ const LeadDetailsPage = () => {
                             )}
                           </div>
                         )}
-                        
+
                         {quickSelectedAction.needsReason && (
                           <div style={{ gridColumn: 'span 2' }}>
                             <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Closure Reason *</label>
@@ -1477,21 +1640,44 @@ const LeadDetailsPage = () => {
                             </select>
                           </div>
                         )}
+
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Status Remarks</label>
+                          <div className="qa-remarks-wrap" style={{ margin: 0 }}>
+                            {(quickStatusRemarks.length > 0 ? quickStatusRemarks : QUICK_REMARKS.map((remarkText) => ({ remark_text: remarkText }))).map((remark) => {
+                              const remarkText = remark.remark_text || remark.text || remark.label || '';
+                              if (!remarkText) return null;
+                              return (
+                                <button
+                                  key={remark.id || remarkText}
+                                  type="button"
+                                  className={`qa-remark-chip ${quickActionForm.statusRemarkText === remarkText ? 'active' : ''}`}
+                                  onClick={() => {
+                                    setQuickActionForm((p) => ({
+                                      ...p,
+                                      statusRemarkText: remarkText,
+                                      note: remarkText,
+                                      callResult: remark.has_ans_non_ans ? (remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered') : p.callResult,
+                                    }));
+                                    if (remark.has_ans_non_ans) {
+                                      setQuickRemarkAnsNonAns(remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered');
+                                    }
+                                  }}
+                                >
+                                  + {remarkText}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
 
                       <div style={{ marginTop: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Remarks</label>
-                          <div className="qa-remarks-wrap" style={{ margin: 0 }}>
-                            {QUICK_REMARKS.slice(0, 3).map(chip => (
-                              <button key={chip} type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, note: p.note ? `${p.note}, ${chip}` : chip }))}>+ {chip}</button>
-                            ))}
-                          </div>
-                        </div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Remarks</label>
                         <textarea
                           rows={2}
                           value={quickActionForm.note}
-                          onChange={(e) => setQuickActionForm(p => ({ ...p, note: e.target.value }))}
+                          onChange={(e) => setQuickActionForm((p) => ({ ...p, note: e.target.value }))}
                           style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                         />
                       </div>

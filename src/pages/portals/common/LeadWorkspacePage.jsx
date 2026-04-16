@@ -37,6 +37,7 @@ const hasValidPhoneLength = (value) => {
 const budgetLabel = (idx) => {
   const v = BUDGET_STEPS[idx];
   if (v === 0) return '0';
+  if (v === 40) return '50L';
   if (v >= 50) return '50L+';
   return `${v}L`;
 };
@@ -67,7 +68,7 @@ const initialNewLead = {
   secondaryRequirement: '',
   latitude: null,
   longitude: null,
-  assigned_to: '', // '' = unassigned, user.id = assigned to that user
+  assigned_to: 'self', // default to current user; '' = unassigned, user.id = assigned to that user
   closure_reason_id: '',
   remark: '',
   callResult: 'Answered',
@@ -427,6 +428,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const tcStatusNeedsFullDetails = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
+  const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
 
   const newLeadValidation = useMemo(() => {
     const errors = [];
@@ -468,9 +470,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         if (!newLeadForm.callResult) errors.push('Call status is required');
       }
 
+      if (needsRemark && !newLeadForm.remark?.trim()) {
+        errors.push('Notes & Remarks are required');
+      }
+
       if (isTerminalCreateStatus) {
         if (!newLeadForm.closure_reason_id) errors.push('Closure reason is required');
-        if (!newLeadForm.remark?.trim()) errors.push('Remarks are required for terminal statuses');
       }
     }
 
@@ -485,7 +490,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         budgetMax,
       },
     };
-  }, [newLeadForm, workspaceRole, tcStatusNeedsFullDetails, isTerminalCreateStatus]);
+  }, [newLeadForm, workspaceRole, tcStatusNeedsFullDetails, isTerminalCreateStatus, needsRemark]);
 
   // ── Stats (Telecaller KPI cards) ──
   const computedStats = useMemo(() => {
@@ -698,32 +703,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       || lead.full_name
       || `${lead.firstName || lead.first_name || ''} ${lead.lastName || lead.last_name || ''}`.trim()
     ).trim();
+    const leadPhone = lead.phone || lead.phone_number || lead.mobile || '';
+    const leadEmail = lead.email || '';
     
     setNewLeadForm((prev) => ({
       ...prev,
       full_name: fullName || prev.full_name,
-      email: lead.email || prev.email,
-      whatsapp_number: lead.whatsapp_number || prev.whatsapp_number,
-      lead_source_id: lead.lead_source_id || lead.leadSourceId || prev.lead_source_id,
-      lead_sub_source_id: lead.lead_sub_source_id || lead.leadSubSourceId || prev.lead_sub_source_id,
-      project_ids: lead.interested_projects && lead.interested_projects.length > 0 
-        ? lead.interested_projects 
-        : (lead.interestedProjects && lead.interestedProjects.length > 0
-          ? lead.interestedProjects
-          : (lead.project_id || lead.projectId ? [lead.project_id || lead.projectId] : prev.project_ids)),
-      location_ids: lead.interested_locations || lead.interestedLocations || prev.location_ids,
-      location_id: lead.interested_locations && lead.interested_locations.length > 0 
-        ? lead.interested_locations[0]
-        : (lead.interestedLocations && lead.interestedLocations.length > 0
-          ? lead.interestedLocations[0]
-          : prev.location_id),
-      budgetMin: lead.budget_min || lead.budgetMin || prev.budgetMin,
-      budgetMax: lead.budget_max || lead.budgetMax || prev.budgetMax,
-      motivationType: lead.motivation_type || lead.motivationType || prev.motivationType,
-      motivationNote: lead.motivation_note || lead.motivationNote || prev.motivationNote,
-      primaryRequirement: lead.primary_requirement || lead.primaryRequirement || prev.primaryRequirement,
-      secondaryRequirement: lead.secondary_requirement || lead.secondaryRequirement || prev.secondaryRequirement,
-      remarks: lead.remarks || '',
+      phone: leadPhone || prev.phone,
+      email: leadEmail || prev.email,
     }));
 
     setReengageLeadId(lead.id || null);
@@ -2791,7 +2778,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </div>
                     </div>
                     <div className="create-lead-budget__ticks">
-                      {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 50 ? '50L+' : `${v}L`}</span>)}
+                      {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{budgetLabel(BUDGET_STEPS.indexOf(v))}</span>)}
                     </div>
                   </div>
                 </div>
@@ -2811,10 +2798,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       ['NEW', 'RNR', 'SV_SCHEDULED', 'FOLLOW_UP'].includes(
                         statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
                       ) && (
-                        <div className="create-lead-field">
+                        <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
                           <label className="create-lead-field__label">
                             Next Follow-Up Date <span className="create-lead-field__required">*</span>
                           </label>
+                          <div className="create-lead-followup-chips" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
+                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
+                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
+                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
+                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11 AM</button>
+                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11 AM</button>
+                          </div>
                           <CalendarPicker
                             type="datetime"
                             value={newLeadForm.nextFollowUpAt}
@@ -2872,7 +2866,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <div className="create-lead-section__header">
                     <div className="create-lead-section__icon create-lead-section__icon--notes">📝</div>
                     <div>
-                      <div className="create-lead-section__title">Notes &amp; Remarks</div>
+                        <div className="create-lead-section__title">Notes &amp; Remarks{needsRemark ? ' *' : ''}</div>
                       <div className="create-lead-section__subtitle">Add quick tags or custom notes</div>
                     </div>
                   </div>
@@ -2894,14 +2888,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <button
                             key={idx}
                             type="button"
-                            className={`create-lead-chip ${newLeadForm.remark.includes(remark.remark_text) ? 'create-lead-chip--active' : ''}`}
+                            className={`create-lead-chip ${newLeadForm.remark.trim() === remark.remark_text ? 'create-lead-chip--active' : ''}`}
                             onClick={() => {
-                            const text = remark.remark_text;
-                            setNewLeadForm((p) => {
-                              const current = p.remark.trim();
-                              if (current.includes(text)) return p;
-                              return { ...p, remark: current ? `${current}, ${text}` : text };
-                            });
+                              const text = remark.remark_text;
+                              setNewLeadForm((p) => ({ ...p, remark: p.remark.trim() === text ? '' : text }));
                           }}
                         >
                           + {remark.remark_text}
@@ -4124,7 +4114,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)
                   || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
                 }
-                onClick={handleQuickWorkflowSubmit}
+                onClick={handleQuickWorkflowSubmit} style={{ backgroundColor: '#625afa' }}
               >
                 {quickActionLoading ? 'Saving...' : 'Save'}
               </button>

@@ -417,7 +417,7 @@ const MasterCrudPage = ({ config }) => {
                 <button type="button" className="master-page__secondary" onClick={closeModal}>
                   Cancel
                 </button>
-                <button type="submit" className="master-page__primary" disabled={submitting}>
+                <button type="submit" className="master-page__primary" disabled={submitting} style={{ backgroundColor: '#625afa' }}>
                   {submitting ? 'Saving...' : 'Save'}
                 </button>
               </footer>

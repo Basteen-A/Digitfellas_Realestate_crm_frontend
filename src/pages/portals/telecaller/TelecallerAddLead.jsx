@@ -11,9 +11,57 @@ import CalendarPicker from '../../../components/common/CalendarPicker';
 
 const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50];
 const BUDGET_MAX_VAL = BUDGET_STEPS.length - 1;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'];
+const FULL_DETAIL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
+
+const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
+
+const hasValidPhoneLength = (value) => {
+  const len = sanitizePhoneNumberInput(value).length;
+  return len >= 10 && len <= 12;
+};
+
+const getStatusCode = (status) => status?.status_code || status?.value || status?.id || '';
+
+const getClosureReasonCategoryForStatus = (statusCode) => {
+  if (statusCode === 'LOST') return 'COLD';
+  if (statusCode === 'JUNK') return 'JUNK';
+  if (statusCode === 'SPAM') return 'SPAM';
+  return null;
+};
+
+const toDateTimeLocalValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (number) => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
+  const date = new Date();
+  date.setSeconds(0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return toDateTimeLocalValue(date.toISOString());
+};
+
+const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
+  const date = new Date();
+  date.setSeconds(0, 0);
+  const currentDay = date.getDay();
+  const dayOffset = (weekday - currentDay + 7) % 7;
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return toDateTimeLocalValue(date.toISOString());
+};
+
 const budgetLabel = (idx) => {
   const v = BUDGET_STEPS[idx];
   if (v === 0) return '0';
+  if (v === 40) return '50L';
   if (v >= 50) return '50L+';
   return `${v}L`;
 };
@@ -37,6 +85,9 @@ const initialForm = {
   budgetMaxIdx: BUDGET_MAX_VAL,
   nextFollowUpAt: '',
   lead_status_id: '',
+  callResult: 'Answered',
+  closure_reason_id: '',
+  remark: '',
 };
 
 const TelecallerAddLead = ({ onNavigate }) => {
@@ -48,6 +99,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
   const [sourceOptions, setSourceOptions] = useState([]);
 
   const [statusOptions, setStatusOptions] = useState([]);
+  const [closureReasons, setClosureReasons] = useState([]);
   const [subSourceMap, setSubSourceMap] = useState({});
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const projectDropdownRef = useRef(null);
@@ -57,6 +109,77 @@ const TelecallerAddLead = ({ onNavigate }) => {
   const [locationSearch, setLocationSearch] = useState('');
 
   const subSources = useMemo(() => subSourceMap[form.lead_source_id] || [], [subSourceMap, form.lead_source_id]);
+  const selectedStatus = useMemo(
+    () => statusOptions.find((item) => item.id === form.lead_status_id || item.value === form.lead_status_id || item.status_code === form.lead_status_id) || null,
+    [statusOptions, form.lead_status_id]
+  );
+  const selectedStatusCode = getStatusCode(selectedStatus) || form.lead_status_id;
+  const tcStatusNeedsFullDetails = FULL_DETAIL_STATUS_CODES.includes(selectedStatusCode);
+  const isTerminalStatus = ['LOST', 'JUNK', 'SPAM'].includes(selectedStatusCode);
+  const needsRemark = selectedStatusCode && selectedStatusCode !== 'NEW';
+  const visibleStatusOptions = useMemo(
+    () => statusOptions.filter((item) => ALLOWED_STATUS_CODES.includes(getStatusCode(item))),
+    [statusOptions]
+  );
+
+  const newLeadValidation = useMemo(() => {
+    const errors = [];
+    const primaryPhone = sanitizePhoneNumberInput(form.phone);
+    const alternatePhone = sanitizePhoneNumberInput(form.alternate_phone);
+    const whatsappPhone = sanitizePhoneNumberInput(form.whatsapp_number);
+    const budgetMin = form.budgetMin !== '' && form.budgetMin !== null ? Number(form.budgetMin) : null;
+    const budgetMax = form.budgetMax !== '' && form.budgetMax !== null ? Number(form.budgetMax) : null;
+
+    if (!form.full_name?.trim()) errors.push('Full name is required');
+    if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 10 to 12 digits');
+
+    if (alternatePhone && !hasValidPhoneLength(alternatePhone)) {
+      errors.push('Alternate phone number must be 10 to 12 digits');
+    }
+
+    if (!form.whatsappSameAsPhone && whatsappPhone && !hasValidPhoneLength(whatsappPhone)) {
+      errors.push('WhatsApp number must be 10 to 12 digits');
+    }
+
+    if (form.email?.trim() && !EMAIL_REGEX.test(form.email.trim())) {
+      errors.push('Please enter a valid email address');
+    }
+
+    if (!form.lead_source_id) errors.push('Lead source is required');
+    if (!form.lead_sub_source_id) errors.push('Lead sub-source is required');
+    if (!form.lead_status_id) errors.push('Lead status is required');
+
+    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
+      errors.push('Budget Max must be greater than or equal to Budget Min');
+    }
+
+    if (tcStatusNeedsFullDetails) {
+      if (!form.location_ids?.length) errors.push('At least one location is required');
+      if (!form.project_ids?.length) errors.push('At least one project is required');
+      if (!form.nextFollowUpAt) errors.push('Next follow up date is required');
+      if (!form.callResult) errors.push('Call status is required');
+    }
+
+    if (needsRemark && !form.remark?.trim()) {
+      errors.push('Notes & Remarks are required');
+    }
+
+    if (isTerminalStatus) {
+      if (!form.closure_reason_id) errors.push('Closure reason is required');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      sanitized: {
+        primaryPhone,
+        alternatePhone,
+        whatsappPhone,
+        budgetMin,
+        budgetMax,
+      },
+    };
+  }, [form, tcStatusNeedsFullDetails, isTerminalStatus, needsRemark]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -86,7 +209,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
         const projects = pResp.data || [];
         const locations = lResp.data || [];
         const sources = sResp.data || [];
-        const statuses = wfResp.data?.statuses || [];
+        const statuses = wfResp.data?.statuses || wfResp.data?.data?.statuses || [];
 
         const map = {};
         sources.forEach((source) => { map[source.id] = source.subSources || []; });
@@ -117,6 +240,34 @@ const TelecallerAddLead = ({ onNavigate }) => {
 
     loadOptions();
   }, []);
+
+  useEffect(() => {
+    const category = getClosureReasonCategoryForStatus(selectedStatusCode);
+
+    if (!category) {
+      setClosureReasons([]);
+      if (form.closure_reason_id) {
+        setForm((prev) => ({ ...prev, closure_reason_id: '', remark: prev.remark }));
+      }
+      return;
+    }
+
+    let isMounted = true;
+    const loadClosureReasons = async () => {
+      try {
+        const resp = await leadWorkflowApi.getClosureReasons(category === 'LOST' ? '' : category);
+        if (!isMounted) return;
+        setClosureReasons(resp.data?.rows || resp.data || []);
+      } catch {
+        if (isMounted) setClosureReasons([]);
+      }
+    };
+
+    loadClosureReasons();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedStatusCode, form.closure_reason_id]);
 
   const toggleProject = (projectId) => {
     setForm((prev) => {
@@ -164,34 +315,12 @@ const TelecallerAddLead = ({ onNavigate }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.full_name || !form.phone) {
-      toast.error('Full name and phone are required');
-      return;
-    }
-    if (!form.lead_source_id) {
-      toast.error('Lead source is required');
-      return;
-    }
-    if (!form.lead_sub_source_id) {
-      toast.error('Lead sub-source is required');
-      return;
-    }
-    if (!form.nextFollowUpAt) {
-      toast.error('Next follow up date is required');
-      return;
-    }
-    if (!form.lead_status_id) {
-      toast.error('Lead status is required');
+    if (!newLeadValidation.isValid) {
+      toast.error(newLeadValidation.errors[0] || 'Please complete all required fields');
       return;
     }
 
-    const budgetMin = form.budgetMin ? Number(form.budgetMin) : null;
-    const budgetMax = form.budgetMax ? Number(form.budgetMax) : null;
-    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
-      toast.error('Budget Max must be greater than or equal to Budget Min');
-      return;
-    }
-
+    const { primaryPhone, alternatePhone, whatsappPhone, budgetMin, budgetMax } = newLeadValidation.sanitized;
     const selectedSource = sourceOptions.find((source) => source.id === form.lead_source_id) || null;
     const selectedLocation = locationOptions.find((location) => location.id === form.location_id) || null;
     // Use first selected project as primary project_id
@@ -202,14 +331,17 @@ const TelecallerAddLead = ({ onNavigate }) => {
       setSaving(true);
       await leadWorkflowApi.createLead({
         ...form,
+        full_name: form.full_name.trim(),
+        phone: primaryPhone,
+        alternate_phone: alternatePhone || undefined,
         budgetMin,
         budgetMax,
         budgetRange: `${budgetLabel(form.budgetMinIdx || 0)} - ${budgetLabel(form.budgetMaxIdx ?? BUDGET_MAX_VAL)}`,
-        whatsapp_number: form.whatsappSameAsPhone ? form.phone : form.whatsapp_number,
+        whatsapp_number: form.whatsappSameAsPhone ? primaryPhone : (whatsappPhone || undefined),
         lead_source_id: form.lead_source_id || null,
         lead_sub_source_id: form.lead_sub_source_id || null,
         project_id: primaryProjectId,
-        project_ids: form.project_ids,
+        project_ids: form.project_ids?.length ? form.project_ids : undefined,
         location_id: form.location_ids?.[0] || form.location_id || null,
         location_ids: form.location_ids?.length ? form.location_ids : undefined,
         source: selectedSource?.source_name || null,
@@ -219,6 +351,9 @@ const TelecallerAddLead = ({ onNavigate }) => {
           : null,
         nextFollowUpAt: form.nextFollowUpAt ? new Date(form.nextFollowUpAt).toISOString() : null,
         lead_status_id: form.lead_status_id || null,
+        callResult: form.callResult,
+        closure_reason_id: form.closure_reason_id || undefined,
+        remark: form.remark || undefined,
       });
 
       toast.success('Lead created successfully');
@@ -251,7 +386,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
               
               <div className="crm-form-group">
                 <label className="crm-form-label">Phone Number *</label>
-                <input className="crm-form-input" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} required placeholder="Primary contact number" />
+                <input className="crm-form-input" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: sanitizePhoneNumberInput(e.target.value) }))} required placeholder="Primary contact number" inputMode="numeric" maxLength={12} />
               </div>
 
               <div className="crm-form-group">
@@ -269,23 +404,25 @@ const TelecallerAddLead = ({ onNavigate }) => {
                     <input 
                       className="crm-form-input" 
                       value={form.whatsapp_number} 
-                      onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: e.target.value }))} 
+                      onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: sanitizePhoneNumberInput(e.target.value) }))} 
                       placeholder="Enter WhatsApp number"
+                      inputMode="numeric"
+                      maxLength={12}
                     />
                   )}
                 </div>
               </div>
 
-              <div className="crm-form-group"><label className="crm-form-label">Alternate Phone (Optional)</label><input className="crm-form-input" value={form.alternate_phone} onChange={(e) => setForm((p) => ({ ...p, alternate_phone: e.target.value }))} placeholder="Secondary contact number" /></div>
+              <div className="crm-form-group"><label className="crm-form-label">Alternate Phone (Optional)</label><input className="crm-form-input" value={form.alternate_phone} onChange={(e) => setForm((p) => ({ ...p, alternate_phone: sanitizePhoneNumberInput(e.target.value) }))} placeholder="Secondary contact number" inputMode="numeric" maxLength={12} /></div>
               <div className="crm-form-group"><label className="crm-form-label">Email (Optional)</label><input className="crm-form-input" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" /></div>
 
 
 
               <div className="crm-form-group">
                 <label className="crm-form-label">Lead Status *</label>
-                <select className="crm-form-select" value={form.lead_status_id} onChange={(e) => setForm((p) => ({ ...p, lead_status_id: e.target.value }))} required style={{ borderColor: !form.lead_status_id ? '#fca5a5' : undefined }}>
+                <select className="crm-form-select" value={form.lead_status_id} onChange={(e) => setForm((p) => ({ ...p, lead_status_id: e.target.value, closure_reason_id: '', remark: '', callResult: e.target.value === 'RNR' ? 'Not Answered' : 'Answered' }))} required style={{ borderColor: !form.lead_status_id ? '#fca5a5' : undefined }}>
                   <option value="">Select lead status</option>
-                  {statusOptions.map((item) => <option key={item.status_code || item.id} value={item.status_code || item.id}>{item.status_name || item.label}</option>)}
+                  {visibleStatusOptions.map((item) => <option key={item.status_code || item.id} value={item.status_code || item.value || item.id}>{item.status_name || item.label}</option>)}
                 </select>
               </div>
 
@@ -306,7 +443,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
 
               {/* Searchable Multi-Select Project */}
               <div className="crm-form-group" ref={projectDropdownRef} style={{ position: 'relative' }}>
-                <label className="crm-form-label">Project (Multi-Select)</label>
+                <label className="crm-form-label">Project (Multi-Select){tcStatusNeedsFullDetails ? ' *' : ''}</label>
                 <div
                   className="crm-form-select"
                   onClick={() => setProjectDropdownOpen((p) => !p)}
@@ -343,7 +480,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
 
               {/* Searchable Multi-Select Location */}
               <div className="crm-form-group" ref={locationDropdownRef} style={{ position: 'relative' }}>
-                <label className="crm-form-label">Location (Multi-Select)</label>
+                <label className="crm-form-label">Location (Multi-Select){tcStatusNeedsFullDetails ? ' *' : ''}</label>
                 <div
                   className="crm-form-select"
                   onClick={() => setLocationDropdownOpen((p) => !p)}
@@ -403,15 +540,19 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   <div style={{ position: 'absolute', left: `calc(${((form.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary, #94a3b8)', padding: '0 8px' }}>
-                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{v >= 50 ? '50L+' : `${v}L`}</span>)}
+                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{budgetLabel(BUDGET_STEPS.indexOf(v))}</span>)}
                 </div>
               </div>
 
-
-
-              {/* Next Follow Up Date — CalendarPicker */}
-              <div className="crm-form-group">
-                <label className="crm-form-label">Next Follow Up Date *</label>
+              <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="crm-form-label">Next Follow Up Date {tcStatusNeedsFullDetails ? '*' : ''}</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11 AM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11 AM</button>
+                </div>
                 <CalendarPicker
                   type="datetime"
                   value={form.nextFollowUpAt}
@@ -420,13 +561,65 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   minDate={new Date().toISOString()}
                 />
               </div>
+
+              {tcStatusNeedsFullDetails && (
+                <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
+                  <div className="call-result-label">Call Status</div>
+                  <div className="call-result-toggle">
+                    <button
+                      type="button"
+                      className={`call-result-btn ${form.callResult === 'Answered' ? 'active' : ''}`}
+                      onClick={() => setForm((p) => ({ ...p, callResult: 'Answered' }))}
+                    >
+                      Answered
+                    </button>
+                    <button
+                      type="button"
+                      className={`call-result-btn ${form.callResult === 'Not Answered' ? 'active' : ''}`}
+                      onClick={() => setForm((p) => ({ ...p, callResult: 'Not Answered' }))}
+                    >
+                      Not Answered
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {needsRemark && (
+                <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="crm-form-label">Notes & Remarks *</label>
+                  <textarea
+                    className="crm-form-input"
+                    value={form.remark}
+                    onChange={(e) => setForm((p) => ({ ...p, remark: e.target.value }))}
+                    placeholder="Enter notes / remarks"
+                    rows={3}
+                  />
+                </div>
+              )}
+
+              {isTerminalStatus && (
+                <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="crm-form-label">Closure Reason *</label>
+                  <select
+                    className="crm-form-select"
+                    value={form.closure_reason_id}
+                    onChange={(e) => setForm((p) => ({ ...p, closure_reason_id: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select reason...</option>
+                    {closureReasons.map((reason) => (
+                      <option key={reason.id} value={reason.id}>{reason.reason_name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
               <button type="button" className="crm-btn crm-btn-ghost" onClick={() => onNavigate?.('leads')}>
                 Cancel
               </button>
-              <button type="submit" className="crm-btn crm-btn-primary" disabled={saving || loadingOptions}>
+              <button type="submit" className="crm-btn crm-btn-primary" disabled={saving || loadingOptions || !newLeadValidation.isValid}>
                 {saving ? 'Saving...' : loadingOptions ? 'Loading...' : 'Save Lead'}
               </button>
             </div>
