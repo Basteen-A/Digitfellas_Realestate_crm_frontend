@@ -1107,18 +1107,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const handleSvDoneSubmit = async () => {
     if (!selectedLead) return;
     if (!svDoneForm.assignToUserId) { toast.error('Sales Manager is mandatory'); return; }
-    if (!svDoneForm.svDate) { toast.error('Site Visit date is mandatory'); return; }
     if (!svDoneForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
-    if (svDoneForm.budgetMin === '' || svDoneForm.budgetMax === '') { toast.error('Budget Min and Budget Max are mandatory'); return; }
-    if (Number(svDoneForm.budgetMax) < Number(svDoneForm.budgetMin)) { toast.error('Budget Max must be greater than or equal to Budget Min'); return; }
+    if ((svDoneForm.budgetMin !== '' || svDoneForm.budgetMax !== '') && (svDoneForm.budgetMin === '' || svDoneForm.budgetMax === '')) { toast.error('Budget Min and Budget Max must both be provided when entering budget details'); return; }
+    if (svDoneForm.budgetMin !== '' && svDoneForm.budgetMax !== '' && Number(svDoneForm.budgetMax) < Number(svDoneForm.budgetMin)) { toast.error('Budget Max must be greater than or equal to Budget Min'); return; }
 
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'TC_SV_DONE', {
         assignToUserId: svDoneForm.assignToUserId,
         svDate: svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : undefined,
         svProjectId: svDoneForm.svProjectId,
-        budgetMin: Number(svDoneForm.budgetMin),
-        budgetMax: Number(svDoneForm.budgetMax),
+        budgetMin: svDoneForm.budgetMin !== '' ? Number(svDoneForm.budgetMin) : undefined,
+        budgetMax: svDoneForm.budgetMax !== '' ? Number(svDoneForm.budgetMax) : undefined,
         note: svDoneForm.note?.trim() || undefined,
       });
       toast.success('SV Done — Lead handed off to Sales Manager');
@@ -1515,7 +1514,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && !f.svProjectId) {
+        if ((quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') && !f.svProjectId) {
           toast.error('Please select the project visited');
           setQuickActionLoading(false);
           return;
@@ -1560,7 +1559,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           callResult: undefined,
           reason: f.reason.trim() || undefined,
           svDate: quickWorkflowAction.code !== 'TC_SV_DONE' ? (f.svDate || undefined) : undefined,
-          svProjectId: quickWorkflowAction.code !== 'TC_SV_DONE' ? (f.svProjectId || undefined) : undefined,
+          svProjectId: f.svProjectId || undefined,
           budgetMin: (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && f.budgetMin !== '') ? Number(f.budgetMin) : undefined,
           budgetMax: (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && f.budgetMax !== '') ? Number(f.budgetMax) : undefined,
           motivationType: f.motivationType || undefined,
@@ -3091,7 +3090,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <label>
-                  Budget Min *
+                  Budget Min
                   <input
                     type="number"
                     min="0"
@@ -3102,7 +3101,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   />
                 </label>
                 <label>
-                  Budget Max *
+                  Budget Max
                   <input
                     type="number"
                     min="0"
@@ -3260,7 +3259,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </label>
 
               <label>
-                Date of Site Visit *
+                Date of Site Visit
                 <CalendarPicker
                   type="date"
                   value={svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : ''}
@@ -3284,7 +3283,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <label>
-                  Budget Min *
+                  Budget Min
                   <input
                     type="number"
                     min="0"
@@ -3295,7 +3294,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   />
                 </label>
                 <label>
-                  Budget Max *
+                  Budget Max
                   <input
                     type="number"
                     min="0"
@@ -3323,7 +3322,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   type="button"
                   className="workspace-btn workspace-btn--primary"
                   onClick={handleSvDoneSubmit}
-                  disabled={!svDoneForm.assignToUserId || !svDoneForm.svDate || !svDoneForm.svProjectId || svDoneForm.budgetMin === '' || svDoneForm.budgetMax === ''}
+                  disabled={!svDoneForm.assignToUserId || !svDoneForm.svProjectId || svDoneForm.budgetMin === '' || svDoneForm.budgetMax === ''}
                 >
                   ✓ Confirm SV Done & Handoff
                 </button>
@@ -3768,6 +3767,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           </option>
                           ))}
                       </select>
+                    </div>
+                  )}
+
+                  {quickWorkflowAction?.code === 'TC_SV_DONE' && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Project Visited *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.svProjectId}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {projectOptions.map((p) => (
+                              <option key={p.id} value={p.id}>{p.project_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   )}
 

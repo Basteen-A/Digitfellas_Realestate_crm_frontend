@@ -421,7 +421,7 @@ const LeadDetailsPage = () => {
         toast.error('Please select Sales Head negotiator');
         return;
       }
-      if (!actionForm.svDate) {
+      if (selectedAction.code !== 'TC_SV_DONE' && !actionForm.svDate) {
         toast.error('Site visit date is required');
         return;
       }
@@ -430,17 +430,19 @@ const LeadDetailsPage = () => {
         return;
       }
       if (selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE') {
-        if (actionForm.budgetMin === '' || actionForm.budgetMax === '') {
-          toast.error('Budget Min and Budget Max are required');
+        if ((actionForm.budgetMin !== '' || actionForm.budgetMax !== '') && (actionForm.budgetMin === '' || actionForm.budgetMax === '')) {
+          toast.error('Budget Min and Budget Max must both be provided when entering budget details');
           return;
         }
-        if (Number(actionForm.budgetMax) < Number(actionForm.budgetMin)) {
+        if (actionForm.budgetMin !== '' && actionForm.budgetMax !== '' && Number(actionForm.budgetMax) < Number(actionForm.budgetMin)) {
           toast.error('Budget Max must be greater than or equal to Budget Min');
           return;
         }
       }
       payload.assignToUserId = actionForm.assignToUserId || payload.assignToUserId;
-      payload.svDate = new Date(actionForm.svDate).toISOString();
+      if (actionForm.svDate) {
+        payload.svDate = new Date(actionForm.svDate).toISOString();
+      }
       payload.svProjectId = actionForm.svProjectId;
       payload.budgetMin = selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && actionForm.budgetMin !== '' ? Number(actionForm.budgetMin) : undefined;
       payload.budgetMax = selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && actionForm.budgetMax !== '' ? Number(actionForm.budgetMax) : undefined;
@@ -622,7 +624,7 @@ const LeadDetailsPage = () => {
         toast.error('Please select Sales Head negotiator');
         return;
       }
-      if (!quickActionForm.svDate) {
+      if (quickSelectedAction.code !== 'TC_SV_DONE' && !quickActionForm.svDate) {
         toast.error('Site visit date is required');
         return;
       }
@@ -631,17 +633,19 @@ const LeadDetailsPage = () => {
         return;
       }
       if (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE') {
-        if (quickActionForm.budgetMin === '' || quickActionForm.budgetMax === '') {
-          toast.error('Budget Min and Budget Max are required');
+        if ((quickActionForm.budgetMin !== '' || quickActionForm.budgetMax !== '') && (quickActionForm.budgetMin === '' || quickActionForm.budgetMax === '')) {
+          toast.error('Budget Min and Budget Max must both be provided when entering budget details');
           return;
         }
-        if (Number(quickActionForm.budgetMax) < Number(quickActionForm.budgetMin)) {
+        if (quickActionForm.budgetMin !== '' && quickActionForm.budgetMax !== '' && Number(quickActionForm.budgetMax) < Number(quickActionForm.budgetMin)) {
           toast.error('Budget Max must be greater than or equal to Budget Min');
           return;
         }
       }
       payload.assignToUserId = quickActionForm.assignToUserId || payload.assignToUserId;
-      payload.svDate = new Date(quickActionForm.svDate).toISOString();
+      if (quickActionForm.svDate) {
+        payload.svDate = new Date(quickActionForm.svDate).toISOString();
+      }
       payload.svProjectId = quickActionForm.svProjectId;
       payload.budgetMin = quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMin !== '' ? Number(quickActionForm.budgetMin) : undefined;
       payload.budgetMax = quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMax !== '' ? Number(quickActionForm.budgetMax) : undefined;
@@ -1023,7 +1027,7 @@ const LeadDetailsPage = () => {
                         {(selectedAction.needsSvDetails || selectedAction.code === 'TC_SV_DONE') && (
                           <div className="lead-actions-grid">
                             <label className="lead-actions-label">
-                              Site Visit Date *
+                              Site Visit Date
                               <input
                                 type="date"
                                 value={actionForm.svDate}
@@ -1525,7 +1529,7 @@ const LeadDetailsPage = () => {
                         {(quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') && (
                           <>
                             <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Visit Date *</label>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Visit Date</label>
                               <input
                                 type="date"
                                 value={quickActionForm.svDate}
