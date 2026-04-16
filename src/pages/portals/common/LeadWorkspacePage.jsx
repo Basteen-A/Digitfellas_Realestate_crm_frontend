@@ -1659,8 +1659,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         </div>
       </header>
 
-      {/* ── Stats (KPI cards) - Hide for Telecaller ── */}
-      {workspaceRole !== 'TC' && workspaceRole !== 'SM' && (
+      {/* ── Stats (KPI cards) - shown only for admin workspaces ── */}
+      {workspaceRole !== 'TC' && workspaceRole !== 'SM' && workspaceRole !== 'SH' && workspaceRole !== 'COL' && (
         <div className="lead-workspace__stats">
           <article className="workspace-stat-card">
             <div className="stat-card__header">
