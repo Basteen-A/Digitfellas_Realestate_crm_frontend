@@ -1388,7 +1388,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       loadAssignableUsers('COL');
     }
 
-    if (action.needsSvDetails || action.code === 'TC_SV_DONE') {
+    if (action.needsSvDetails && action.code !== 'TC_SV_DONE') {
       loadAssignableUsers(targetAssigneeRole);
       if (!projectOptions.length) loadCreateOptions();
     }
@@ -1463,25 +1463,25 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && !f.svDate) {
+        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && !f.svDate) {
           toast.error('Please select the site visit date');
           setQuickActionLoading(false);
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && !f.svProjectId) {
+        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && !f.svProjectId) {
           toast.error('Please select the project visited');
           setQuickActionLoading(false);
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && (f.budgetMin === '' || f.budgetMax === '')) {
+        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && (f.budgetMin === '' || f.budgetMax === '')) {
           toast.error('Please enter Budget Min and Budget Max');
           setQuickActionLoading(false);
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && Number(f.budgetMax) < Number(f.budgetMin)) {
+        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && Number(f.budgetMax) < Number(f.budgetMin)) {
           toast.error('Budget Max must be greater than or equal to Budget Min');
           setQuickActionLoading(false);
           return;
@@ -1511,12 +1511,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : undefined,
           assignToUserId: f.assignToUserId || undefined,
           closureReasonId: f.closureReasonId || undefined,
-          callResult: shouldShowCallStatus(quickWorkflowAction?.targetStatusCode) ? f.callResult : undefined,
+          callResult: undefined,
           reason: f.reason.trim() || undefined,
-          svDate: f.svDate || undefined,
-          svProjectId: f.svProjectId || undefined,
-          budgetMin: f.budgetMin !== '' ? Number(f.budgetMin) : undefined,
-          budgetMax: f.budgetMax !== '' ? Number(f.budgetMax) : undefined,
+          svDate: quickWorkflowAction.code !== 'TC_SV_DONE' ? (f.svDate || undefined) : undefined,
+          svProjectId: quickWorkflowAction.code !== 'TC_SV_DONE' ? (f.svProjectId || undefined) : undefined,
+          budgetMin: (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && f.budgetMin !== '') ? Number(f.budgetMin) : undefined,
+          budgetMax: (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && f.budgetMax !== '') ? Number(f.budgetMax) : undefined,
           motivationType: f.motivationType || undefined,
           primaryRequirement: f.primaryRequirement || undefined,
           secondaryRequirement: f.secondaryRequirement || undefined,
@@ -3620,28 +3620,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               {/* ── Dynamic Form: Shows only after selecting a status ── */}
               {quickWorkflowAction && (
                 <div style={{ animation: 'qa-fade-in 0.3s ease' }}>
-                  {shouldShowCallStatus(quickWorkflowAction?.targetStatusCode) && (
-                    <div className="qa-drawer-ctx-block">
-                      <div className="call-result-label">Call Status</div>
-                      <div className="call-result-toggle">
-                        <button
-                          type="button"
-                          className={`call-result-btn ${quickWorkflowForm.callResult === 'Answered' ? 'active' : ''}`}
-                          onClick={() => setQuickWorkflowForm((p) => ({ ...p, callResult: 'Answered' }))}
-                        >
-                          Answered
-                        </button>
-                        <button
-                          type="button"
-                          className={`call-result-btn ${quickWorkflowForm.callResult === 'Not Answered' ? 'active' : ''}`}
-                          onClick={() => setQuickWorkflowForm((p) => ({ ...p, callResult: 'Not Answered' }))}
-                        >
-                          Not Answered
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* ── Contextual: Follow-up Date (when action needs follow-up) ── */}
                   {quickWorkflowAction?.needsFollowUp && (
                     <div className="qa-drawer-ctx-block">
@@ -3715,7 +3693,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   )}
 
                   {/* ── Contextual: Site Visit Details ── */}
-                  {(quickWorkflowAction?.needsSvDetails || quickWorkflowAction?.code === 'TC_SV_DONE') && (
+                  {(quickWorkflowAction?.needsSvDetails && quickWorkflowAction?.code !== 'TC_SV_DONE') && (
                     <div className="qa-drawer-ctx-block">
                       <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
@@ -4148,7 +4126,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 }
                 onClick={handleQuickWorkflowSubmit}
               >
-                {quickActionLoading ? 'Saving...' : 'Save & next lead →'}
+                {quickActionLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
