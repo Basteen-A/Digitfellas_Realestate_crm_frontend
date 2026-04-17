@@ -5,7 +5,29 @@ import { useSelector } from 'react-redux';
 import dashboardApi from '../../api/dashboardApi';
 import { getRoleCode } from '../../utils/permissions';
 import { formatCurrency } from '../../utils/formatters';
+import {
+  UsersIcon,
+  ClipboardDocumentListIcon,
+  BanknotesIcon,
+  ComputerDesktopIcon,
+  ChartBarIcon,
+  PhoneIcon,
+  BuildingOfficeIcon,
+  BriefcaseIcon,
+  CurrencyRupeeIcon,
+  MapPinIcon,
+  SignalIcon,
+  Cog6ToothIcon,
+  ArrowPathIcon,
+  ArrowDownTrayIcon,
+  WrenchScrewdriverIcon,
+  DocumentTextIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline';
 import './Dashboard.css';
+
+const ICON_SIZE = { width: 22, height: 22 };
+const ICON_SM = { width: 18, height: 18 };
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -58,29 +80,29 @@ const Dashboard = () => {
   }
 
   const statCards = [
-    { label: 'Total Leads', value: adminStats?.totalLeads ?? 0, icon: '👥', iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: `↑ ${adminStats?.thisMonthLeads ?? 0} this month`, changeType: 'up' },
-    { label: 'Total Bookings', value: adminStats?.totalBookings ?? 0, icon: '📋', iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: 'Active bookings', changeType: 'up' },
-    { label: 'Total Revenue', value: formatCurrency(adminStats?.totalRevenue ?? 0), icon: '💰', iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Collected payments', changeType: 'up' },
-    { label: 'Active Users', value: adminStats?.activeUsers ?? stats?.masters?.activeUsers ?? 0, icon: '🧑‍💻', iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', change: (stats?.userDistribution || []).map(u => `${u.count} ${u.short_code}`).join(', ') || 'Team members', changeType: 'neutral' },
-    { label: 'Conversion Rate', value: `${adminStats?.conversionRate ?? 0}%`, icon: '📈', iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: 'Lead to booking', changeType: 'up' },
+    { label: 'Total Leads', value: adminStats?.totalLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: `↑ ${adminStats?.thisMonthLeads ?? 0} this month`, changeType: 'up' },
+    { label: 'Total Bookings', value: adminStats?.totalBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: 'Active bookings', changeType: 'up' },
+    { label: 'Total Revenue', value: formatCurrency(adminStats?.totalRevenue ?? 0), icon: <BanknotesIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Collected payments', changeType: 'up' },
+    { label: 'Active Users', value: adminStats?.activeUsers ?? stats?.masters?.activeUsers ?? 0, icon: <ComputerDesktopIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', change: (stats?.userDistribution || []).map(u => `${u.count} ${u.short_code}`).join(', ') || 'Team members', changeType: 'neutral' },
+    { label: 'Conversion Rate', value: `${adminStats?.conversionRate ?? 0}%`, icon: <ChartBarIcon style={ICON_SIZE} />, iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: 'Lead to booking', changeType: 'up' },
   ];
 
   const sourceColors = ['#ea580c', '#2563eb', '#d97706', '#16a34a', '#7c3aed', '#0891b2', '#db2777'];
 
   const workspaceLinks = [
-    { label: 'Telecaller Workspace', path: '/telecaller/leads', icon: '📞', desc: 'Manage telecaller leads', allowed: ['TC', 'SA', 'ADM'] },
-    { label: 'Sales Manager Workspace', path: '/sales-manager/leads', icon: '🏢', desc: 'Site visits & leads', allowed: ['SM', 'SH', 'SA', 'ADM'] },
-    { label: 'Sales Head Workspace', path: '/sales-head/leads', icon: '👔', desc: 'Negotiations & bookings', allowed: ['SH', 'SA', 'ADM'] },
-    { label: 'Collection Workspace', path: '/collection/leads', icon: '💰', desc: 'Payment tracking', allowed: ['COL', 'SA', 'ADM'] },
+    { label: 'Telecaller Workspace', path: '/telecaller/leads', icon: <PhoneIcon style={ICON_SM} />, desc: 'Manage telecaller leads', allowed: ['TC', 'SA', 'ADM'] },
+    { label: 'Sales Manager Workspace', path: '/sales-manager/leads', icon: <BuildingOfficeIcon style={ICON_SM} />, desc: 'Site visits & leads', allowed: ['SM', 'SH', 'SA', 'ADM'] },
+    { label: 'Sales Head Workspace', path: '/sales-head/leads', icon: <BriefcaseIcon style={ICON_SM} />, desc: 'Negotiations & bookings', allowed: ['SH', 'SA', 'ADM'] },
+    { label: 'Collection Workspace', path: '/collection/leads', icon: <CurrencyRupeeIcon style={ICON_SM} />, desc: 'Payment tracking', allowed: ['COL', 'SA', 'ADM'] },
   ].filter((item) => item.allowed.includes(roleCode));
 
   const quickLinks = [
-    { label: 'Users', path: '/super-admin/users', icon: '👥' },
-    { label: 'Projects', path: '/super-admin/projects', icon: '🏗️' },
-    { label: 'Locations', path: '/super-admin/locations', icon: '📍' },
-    { label: 'Lead Sources', path: '/super-admin/lead-sources', icon: '📡' },
-    { label: 'Lead Stages', path: '/super-admin/lead-stages', icon: '📋' },
-    { label: 'Settings', path: '/super-admin/lead-statuses', icon: '⚙️' },
+    { label: 'Users', path: '/super-admin/users', icon: <UsersIcon style={ICON_SM} /> },
+    { label: 'Projects', path: '/super-admin/projects', icon: <WrenchScrewdriverIcon style={ICON_SM} /> },
+    { label: 'Locations', path: '/super-admin/locations', icon: <MapPinIcon style={ICON_SM} /> },
+    { label: 'Lead Sources', path: '/super-admin/lead-sources', icon: <SignalIcon style={ICON_SM} /> },
+    { label: 'Lead Stages', path: '/super-admin/lead-stages', icon: <ClipboardDocumentListIcon style={ICON_SM} /> },
+    { label: 'Settings', path: '/super-admin/lead-statuses', icon: <Cog6ToothIcon style={ICON_SM} /> },
   ];
 
   const sourceStats = adminStats?.sourceStats || [];
@@ -91,12 +113,12 @@ const Dashboard = () => {
       {/* Header */}
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>Organization Overview ⚙️</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Organization Overview <Cog6ToothIcon style={{ width: 24, height: 24 }} /></h1>
           <p className="hidden sm:block">Complete business metrics across all teams</p>
         </div>
         <div className="page-header-actions flex-wrap">
-          <button className="crm-btn crm-btn-ghost" onClick={refresh}>↻ Refresh</button>
-          <button className="crm-btn crm-btn-primary">📥 Export</button>
+          <button className="crm-btn crm-btn-ghost" onClick={refresh} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
+          <button className="crm-btn crm-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowDownTrayIcon style={{ width: 16, height: 16 }} /> Export</button>
         </div>
       </div>
 
@@ -119,7 +141,7 @@ const Dashboard = () => {
         {/* Leads by Source */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">📡 Leads by Source</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SignalIcon style={ICON_SM} /> Leads by Source</div>
           </div>
           <div className="crm-card-body">
             {sourceStats.length === 0 ? (
@@ -144,7 +166,7 @@ const Dashboard = () => {
         {/* Project Inventory */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">🏗️ Project Inventory</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BuildingOfficeIcon style={ICON_SM} /> Project Inventory</div>
           </div>
           <div className="crm-card-body">
             {(adminStats?.projectInventory || []).length === 0 ? (
@@ -177,7 +199,7 @@ const Dashboard = () => {
       {/* Workspace Links */}
       {workspaceLinks.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>🎯 Role Workspaces</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><BriefcaseIcon style={ICON_SM} /> Role Workspaces</h2>
           <div className="crm-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {workspaceLinks.map((link) => (
               <Link key={link.path} to={link.path} className="admin-workspace-card">
@@ -196,7 +218,7 @@ const Dashboard = () => {
       {/* Quick Admin Links */}
       {['SA', 'ADM'].includes(roleCode) && (
         <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>⚙️ Configuration</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Cog6ToothIcon style={ICON_SM} /> Configuration</h2>
           <div className="crm-grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {quickLinks.map((link) => (
               <Link key={link.path} to={link.path} className="admin-config-card">
@@ -212,7 +234,7 @@ const Dashboard = () => {
       <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4 mt-4">
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">👥 User Distribution</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><UserGroupIcon style={ICON_SM} /> User Distribution</div>
           </div>
           <div className="crm-card-body">
             {(stats?.userDistribution || []).map((item) => (
@@ -232,7 +254,7 @@ const Dashboard = () => {
 
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">📜 Recent Activity</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><DocumentTextIcon style={ICON_SM} /> Recent Activity</div>
           </div>
           <div className="crm-card-body-flush">
             {(stats?.recentActivity || []).length === 0 && (

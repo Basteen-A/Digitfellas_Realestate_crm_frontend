@@ -23,7 +23,6 @@
   width: 70px;
 }
 
-.portal-sidebar.collapsed .portal-sidebar__brand-icon,
 .portal-sidebar.collapsed .portal-sidebar__label,
 .portal-sidebar.collapsed .portal-sidebar__group-label,
 .portal-sidebar.collapsed .s-badge,
@@ -547,4 +546,11 @@
 
 .portal-topbar__dropdown-item--danger:hover {
   background: var(--accent-red-bg);
+}
+
+/* ── Heroicon SVG sizing for portal sidebar ── */
+.portal-sidebar__hero-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }

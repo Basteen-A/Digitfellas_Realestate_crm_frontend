@@ -35,14 +35,21 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple, #8B5CF6) 100%);
-  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple, #8B5CF6) 100%);
+  color: #fff;
   font-weight: 800;
   font-size: 12px;
-  flex-shrink: 0;
+}
+
+.app-sidebar__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .app-sidebar__name {
@@ -236,4 +243,16 @@
 
 .app-sidebar__logout-btn:hover {
   background: var(--bg-card-hover);
+}
+
+/* ── Heroicon SVG sizing ── */
+.sidebar-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-icon--xs {
+  width: 14px;
+  height: 14px;
 }

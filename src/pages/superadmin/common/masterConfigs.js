@@ -14,6 +14,7 @@ import leadStageApi from '../../../api/leadStageApi';
 import closedLostReasonApi from '../../../api/closedLostReasonApi';
 import bookingCancelReasonApi from '../../../api/bookingCancelReasonApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
+import motivationApi from '../../../api/motivationApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -617,6 +618,25 @@ export const masterConfigs = {
       },
       { name: 'ans_non_ans_disabled', label: 'Lock Response Type', type: 'checkbox', defaultValue: false },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  motivations: {
+    title: 'Motivations',
+    api: motivationApi,
+    columns: [
+      { header: 'Name', path: 'motivation_name' },
+      { header: 'Code', path: 'short_code' },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'motivation_name', label: 'Motivation Name', required: true },
+      { name: 'short_code', label: 'Short Code' },
+      { name: 'color_code', label: 'Color', type: 'color' },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },

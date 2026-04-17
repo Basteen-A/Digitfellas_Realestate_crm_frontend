@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import siteVisitApi from '../../../api/siteVisitApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
+import customerTypeApi from '../../../api/customerTypeApi';
+import motivationApi from '../../../api/motivationApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 
 const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
@@ -22,10 +25,31 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     feedback: '',
     rating: '',
     interested_after_visit: null,
+    // New fields matching incoming leads SV capture
+    customer_type_id: '',
+    motivation_type: '',
+    primary_requirement: '',
+    secondary_requirement: '',
+    time_spent: '',
+    sales_head_id: '',
+    geo_lat: '',
+    geo_long: '',
   });
   const [projects, setProjects] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [customerTypes, setCustomerTypes] = useState([]);
+  const [motivations, setMotivations] = useState([]);
+  const [salesHeads, setSalesHeads] = useState([]);
   const [creating, setCreating] = useState(false);
+
+  // Phone search state
+  const [phoneSearch, setPhoneSearch] = useState('');
+  const [phoneResults, setPhoneResults] = useState([]);
+  const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
+  const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
+  const [selectedLeadInfo, setSelectedLeadInfo] = useState(null);
+  const phoneDropdownRef = useRef(null);
+  const phoneSearchTimer = useRef(null);
 
   const loadVisits = useCallback(async () => {
     setLoading(true);
@@ -42,6 +66,17 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   useEffect(() => { loadVisits(); }, [loadVisits]);
 
+  // Close phone dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (phoneDropdownRef.current && !phoneDropdownRef.current.contains(e.target)) {
+        setShowPhoneDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const filteredVisits = visits.filter(v => {
     if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
     if (filter === 'completed') return v.status === 'Completed';
@@ -54,14 +89,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   filteredVisits.forEach(v => {
     const leadId = v.lead?.id || 'unknown';
     if (!groupedByLead[leadId]) {
-      groupedByLead[leadId] = {
-        lead: v.lead,
-        visits: [],
-      };
+      groupedByLead[leadId] = { lead: v.lead, visits: [] };
     }
     groupedByLead[leadId].visits.push(v);
   });
-
   const leadGroups = Object.values(groupedByLead);
 
   const getStatusBadge = (status) => {
@@ -86,12 +117,19 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   const loadCreateOptions = async () => {
     try {
-      const [projResp, leadsResp] = await Promise.all([
+      const [projResp, leadsResp, ctResp, motResp, shResp] = await Promise.all([
         projectApi.getDropdown(),
-        leadWorkflowApi.getLeads({ roleCode: 'SM', limit: 100 }),
+        leadWorkflowApi.getLeads({ roleCode: 'SM', limit: 200 }),
+        customerTypeApi.getDropdown(),
+        motivationApi.getDropdown(),
+        leadWorkflowApi.getAssignableUsers('SH'),
       ]);
       setProjects(projResp.data || []);
-      setLeads(Array.isArray(leadsResp.data) ? leadsResp.data : []);
+      const leadsData = leadsResp.data?.rows || leadsResp.data || [];
+      setLeads(Array.isArray(leadsData) ? leadsData : []);
+      setCustomerTypes(ctResp.data || []);
+      setMotivations(motResp.data || []);
+      setSalesHeads(shResp.data || []);
     } catch (err) {
       console.error('Failed to load options:', err);
     }
@@ -99,34 +137,112 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   const handleOpenCreate = async () => {
     setShowCreateModal(true);
+    setPhoneSearch('');
+    setPhoneResults([]);
+    setSelectedLeadInfo(null);
     await loadCreateOptions();
+  };
+
+  // Phone number search with debounce
+  const handlePhoneSearchChange = (value) => {
+    setPhoneSearch(value);
+    setSelectedLeadInfo(null);
+    setCreateForm(p => ({ ...p, lead_id: '' }));
+
+    if (phoneSearchTimer.current) clearTimeout(phoneSearchTimer.current);
+
+    if (value.length < 3) {
+      setPhoneResults([]);
+      setShowPhoneDropdown(false);
+      return;
+    }
+
+    setPhoneSearchLoading(true);
+    phoneSearchTimer.current = setTimeout(async () => {
+      try {
+        // Search from loaded leads (already filtered to SITE_VISIT stage)
+        const localMatches = leads.filter(l => {
+          const phone = l.phone || l.phone_number || '';
+          const name = (l.fullName || l.first_name || '').toLowerCase();
+          return phone.includes(value) || name.includes(value.toLowerCase());
+        });
+
+        if (localMatches.length > 0) {
+          setPhoneResults(localMatches.slice(0, 10));
+        } else {
+          // Fallback: search via API (all SM leads)
+          try {
+            const resp = await leadWorkflowApi.getLeads({ roleCode: 'SM', search: value, limit: 10 });
+            const apiLeads = resp.data?.rows || resp.data || [];
+            setPhoneResults(Array.isArray(apiLeads) ? apiLeads : []);
+          } catch {
+            setPhoneResults([]);
+          }
+        }
+        setShowPhoneDropdown(true);
+      } finally {
+        setPhoneSearchLoading(false);
+      }
+    }, 300);
+  };
+
+  const handleSelectLead = (lead) => {
+    setSelectedLeadInfo(lead);
+    setPhoneSearch(lead.phone || lead.phone_number || '');
+    setCreateForm(p => ({
+      ...p,
+      lead_id: lead.id,
+      project_id: lead.projectId || lead.project_id || p.project_id,
+    }));
+    setShowPhoneDropdown(false);
   };
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    if (!createForm.lead_id || !createForm.project_id || !createForm.scheduled_date) {
-      toast.error('Lead, Project and Date are required');
-      return;
-    }
+    if (!createForm.lead_id) { toast.error('Please search and select a lead by phone number'); return; }
+    if (!createForm.project_id) { toast.error('Project is required'); return; }
+    if (!createForm.scheduled_date) { toast.error('Visit date is required'); return; }
+    if (!createForm.customer_type_id) { toast.error('Customer Type is required'); return; }
+    if (!createForm.motivation_type) { toast.error('Motivation is required'); return; }
+    if (!createForm.primary_requirement?.trim()) { toast.error('Primary Requirement is required'); return; }
+    if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
+    if (!createForm.sales_head_id) { toast.error('Sales Head is required'); return; }
+    if (!createForm.geo_lat || !createForm.geo_long) { toast.error('Please capture geo-location'); return; }
+
     setCreating(true);
     try {
       await siteVisitApi.create({
-        ...createForm,
+        lead_id: createForm.lead_id,
+        project_id: createForm.project_id,
+        scheduled_date: createForm.scheduled_date,
+        scheduled_time_slot: createForm.scheduled_time_slot || undefined,
+        attended_by: createForm.attended_by || undefined,
+        remarks: createForm.remarks || undefined,
+        feedback: createForm.feedback || undefined,
         rating: createForm.rating ? Number(createForm.rating) : null,
+        interested_after_visit: createForm.interested_after_visit,
+        customer_type_id: createForm.customer_type_id,
+        motivation_type: createForm.motivation_type,
+        primary_requirement: createForm.primary_requirement,
+        secondary_requirement: createForm.secondary_requirement || undefined,
+        time_spent: Number(createForm.time_spent),
+        sales_head_id: createForm.sales_head_id,
+        geo_lat: Number(createForm.geo_lat),
+        geo_long: Number(createForm.geo_long),
       });
       toast.success('Site visit created successfully');
       setShowCreateModal(false);
       setCreateForm({
-        lead_id: '',
-        project_id: '',
+        lead_id: '', project_id: '',
         scheduled_date: new Date().toISOString().split('T')[0],
-        scheduled_time_slot: '',
-        attended_by: '',
-        remarks: '',
-        feedback: '',
-        rating: '',
-        interested_after_visit: null,
+        scheduled_time_slot: '', attended_by: '', remarks: '', feedback: '',
+        rating: '', interested_after_visit: null,
+        customer_type_id: '', motivation_type: '', primary_requirement: '',
+        secondary_requirement: '', time_spent: '', sales_head_id: '',
+        geo_lat: '', geo_long: '',
       });
+      setSelectedLeadInfo(null);
+      setPhoneSearch('');
       loadVisits();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to create site visit'));
@@ -134,6 +250,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       setCreating(false);
     }
   };
+
+  const fieldLabelStyle = { display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 };
+  const fieldInputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, background: 'var(--bg-card, #fff)', color: 'var(--text-primary)' };
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -145,11 +264,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         <div className="page-header-actions flex-wrap">
           <div className="crm-btn-group">
             {['all', 'upcoming', 'completed', 'cancelled'].map(f => (
-              <button
-                key={f}
-                className={`crm-btn ${filter === f ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
-                onClick={() => setFilter(f)}
-              >
+              <button key={f} className={`crm-btn ${filter === f ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter(f)}>
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
@@ -315,113 +430,177 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* Create Site Visit Modal */}
+      {/* Create Site Visit Modal (wider, matching incoming leads fields) */}
       {showCreateModal && (
         <div className="col-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="col-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+          <div className="col-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 780 }}>
             <div className="col-modal-header">
               <h2>Add Site Visit</h2>
               <button className="col-modal-close" onClick={() => setShowCreateModal(false)}>×</button>
             </div>
             <form onSubmit={handleCreateSubmit}>
               <div className="col-modal-body">
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Lead *</label>
-                  <select
-                    value={createForm.lead_id}
-                    onChange={(e) => setCreateForm(p => ({ ...p, lead_id: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                    required
-                  >
-                    <option value="">Select lead...</option>
-                    {leads.map(l => (
-                      <option key={l.id} value={l.id}>{l.fullName || l.first_name} - {l.phone}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Project *</label>
-                  <select
-                    value={createForm.project_id}
-                    onChange={(e) => setCreateForm(p => ({ ...p, project_id: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                    required
-                  >
-                    <option value="">Select project...</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.project_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Visit Date *</label>
-                    <input
-                      type="date"
-                      value={createForm.scheduled_date}
-                      onChange={(e) => setCreateForm(p => ({ ...p, scheduled_date: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Time Slot</label>
-                    <input
-                      type="text"
-                      value={createForm.scheduled_time_slot}
-                      onChange={(e) => setCreateForm(p => ({ ...p, scheduled_time_slot: e.target.value }))}
-                      placeholder="e.g., 10:00 AM - 12:00 PM"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Rating (1-5)</label>
-                    <select
-                      value={createForm.rating}
-                      onChange={(e) => setCreateForm(p => ({ ...p, rating: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                    >
-                      <option value="">Select rating...</option>
-                      {[1,2,3,4,5].map(r => (
-                        <option key={r} value={r}>{'★'.repeat(r)}{'☆'.repeat(5-r)}</option>
+
+                {/* ── Phone Number Search ── */}
+                <div style={{ marginBottom: 16, position: 'relative' }} ref={phoneDropdownRef}>
+                  <label style={fieldLabelStyle}>Search Lead by Phone / Name *</label>
+                  <input
+                    type="text"
+                    value={phoneSearch}
+                    onChange={(e) => handlePhoneSearchChange(e.target.value)}
+                    onFocus={() => { if (phoneResults.length > 0) setShowPhoneDropdown(true); }}
+                    placeholder="Enter phone number or name to search..."
+                    style={{ ...fieldInputStyle, paddingRight: 40 }}
+                    autoComplete="off"
+                  />
+                  {phoneSearchLoading && (
+                    <div style={{ position: 'absolute', right: 12, top: 30, fontSize: 11, color: 'var(--text-muted)' }}>Searching...</div>
+                  )}
+                  {showPhoneDropdown && phoneResults.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary)', borderRadius: 8, zIndex: 100, maxHeight: 220, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+                      {phoneResults.map(lead => (
+                        <div key={lead.id} onClick={() => handleSelectLead(lead)}
+                          style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{lead.fullName || lead.first_name || 'Unnamed'}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.phone || lead.phone_number} · {lead.leadNumber || lead.lead_number || ''}</div>
+                          </div>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{lead.projectName || ''}</span>
+                        </div>
                       ))}
+                    </div>
+                  )}
+                  {showPhoneDropdown && phoneResults.length === 0 && phoneSearch.length >= 3 && !phoneSearchLoading && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary)', borderRadius: 8, zIndex: 100, padding: '14px', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+                      No leads found matching "{phoneSearch}"
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected lead info card */}
+                {selectedLeadInfo && (
+                  <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--accent-blue-bg)', borderRadius: 8, border: '1px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>
+                      {(selectedLeadInfo.fullName || selectedLeadInfo.first_name || '?')[0].toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{selectedLeadInfo.fullName || selectedLeadInfo.first_name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{selectedLeadInfo.phone || selectedLeadInfo.phone_number} · {selectedLeadInfo.leadNumber || selectedLeadInfo.lead_number || ''}</div>
+                    </div>
+                    <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text-muted)' }} onClick={() => { setSelectedLeadInfo(null); setPhoneSearch(''); setCreateForm(p => ({ ...p, lead_id: '' })); }}>×</button>
+                  </div>
+                )}
+
+                {/* ── Visit Details Grid (matching incoming leads) ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={fieldLabelStyle}>Visit Date *</label>
+                    <input type="date" value={createForm.scheduled_date} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_date: e.target.value }))} style={fieldInputStyle} required />
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Project *</label>
+                    <select value={createForm.project_id} onChange={(e) => setCreateForm(p => ({ ...p, project_id: e.target.value }))} style={fieldInputStyle} required>
+                      <option value="">Select project...</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.project_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Interested After Visit</label>
-                    <select
-                      value={createForm.interested_after_visit === null ? '' : createForm.interested_after_visit}
-                      onChange={(e) => setCreateForm(p => ({ ...p, interested_after_visit: e.target.value === '' ? null : e.target.value === 'true' }))}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                    >
+                    <label style={fieldLabelStyle}>Time Slot</label>
+                    <input type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10AM-12PM" style={fieldInputStyle} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={fieldLabelStyle}>Customer Type *</label>
+                    <select value={createForm.customer_type_id} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required>
+                      <option value="">Select...</option>
+                      {customerTypes.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Motivation *</label>
+                    <select value={createForm.motivation_type} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required>
+                      <option value="">Select...</option>
+                      {motivations.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Time Spent (mins) *</label>
+                    <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={fieldLabelStyle}>Primary Requirement *</label>
+                    <input value={createForm.primary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, primary_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required />
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Sales Head *</label>
+                    <select value={createForm.sales_head_id} onChange={(e) => setCreateForm(p => ({ ...p, sales_head_id: e.target.value }))} style={fieldInputStyle} required>
+                      <option value="">Select Sales Head...</option>
+                      {salesHeads.map(sh => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <label style={{ ...fieldLabelStyle, marginBottom: 0 }}>Geo-Location *</label>
+                    <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 10, padding: '4px 10px' }} onClick={() => {
+                      if (!navigator.geolocation) { toast.error('Geolocation not supported.'); return; }
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => { setCreateForm(p => ({ ...p, geo_lat: pos.coords.latitude, geo_long: pos.coords.longitude })); toast.success('Location captured!'); },
+                        () => toast.error('Unable to capture location.')
+                      );
+                    }}>
+                      <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <input type="number" step="any" placeholder="Latitude" value={createForm.geo_lat} onChange={(e) => setCreateForm(p => ({ ...p, geo_lat: e.target.value }))} style={fieldInputStyle} />
+                    <input type="number" step="any" placeholder="Longitude" value={createForm.geo_long} onChange={(e) => setCreateForm(p => ({ ...p, geo_long: e.target.value }))} style={fieldInputStyle} />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={fieldLabelStyle}>Secondary Requirement / Notes</label>
+                  <textarea value={createForm.secondary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, secondary_requirement: e.target.value }))} rows={2} placeholder="Additional details..." style={fieldInputStyle} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={fieldLabelStyle}>Rating (1-5)</label>
+                    <select value={createForm.rating} onChange={(e) => setCreateForm(p => ({ ...p, rating: e.target.value }))} style={fieldInputStyle}>
+                      <option value="">Select rating...</option>
+                      {[1,2,3,4,5].map(r => <option key={r} value={r}>{'★'.repeat(r)}{'☆'.repeat(5-r)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Interested After Visit</label>
+                    <select value={createForm.interested_after_visit === null ? '' : createForm.interested_after_visit} onChange={(e) => setCreateForm(p => ({ ...p, interested_after_visit: e.target.value === '' ? null : e.target.value === 'true' }))} style={fieldInputStyle}>
                       <option value="">Select...</option>
                       <option value="true">Yes</option>
                       <option value="false">No</option>
                     </select>
                   </div>
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Feedback</label>
-                  <textarea
-                    value={createForm.feedback}
-                    onChange={(e) => setCreateForm(p => ({ ...p, feedback: e.target.value }))}
-                    rows={3}
-                    placeholder="Enter feedback..."
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={fieldLabelStyle}>Feedback</label>
+                    <textarea value={createForm.feedback} onChange={(e) => setCreateForm(p => ({ ...p, feedback: e.target.value }))} rows={2} placeholder="Enter feedback..." style={fieldInputStyle} />
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Remarks</label>
+                    <textarea value={createForm.remarks} onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))} rows={2} placeholder="Additional remarks..." style={fieldInputStyle} />
+                  </div>
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Remarks</label>
-                  <textarea
-                    value={createForm.remarks}
-                    onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))}
-                    rows={2}
-                    placeholder="Additional remarks..."
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14 }}
-                  />
-                </div>
+
               </div>
               <div className="col-modal-footer">
                 <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setShowCreateModal(false)}>Cancel</button>

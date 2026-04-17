@@ -66,14 +66,17 @@ const FALLBACK_ACTIONS = {
     { code: 'SM_NEGOTIATION_HOT', label: 'Move to Negotiation (Hot)', tone: 'primary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_HOT', needsAssignee: true, assigneeRole: 'SH' },
     { code: 'SM_NEGOTIATION_WARM', label: 'Move to Negotiation (Warm)', tone: 'success', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_WARM', needsAssignee: true, assigneeRole: 'SH' },
     { code: 'SM_NEGOTIATION_COLD', label: 'Negotiation Cold', tone: 'secondary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'NEGOTIATION_COLD' },
+    { code: 'SM_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'COLD', needsFollowUp: false },
   ],
   SH: [
     { code: 'SH_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
     { code: 'SH_BOOKING', label: 'Booking (Token Received)', tone: 'success', targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' },
+    { code: 'SH_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'COLD', needsFollowUp: false },
   ],
   COL: [
     { code: 'COL_PAYMENT_UPDATE', label: 'Update Payment Milestone', tone: 'secondary', targetStatusCode: 'BOOKED' },
     { code: 'COL_BOOKING_STATUS_UPDATE', label: 'Update Booking Status', tone: 'primary', targetStatusCode: 'BOOKED' },
+    { code: 'COL_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'COLD', needsFollowUp: false },
   ],
 };
 
@@ -96,6 +99,10 @@ export const getActionsForRole = (actions = {}, roleCode) => {
 
     if (a.code === 'TC_LOST') {
       return { ...a, needsReason: true, reasonCategory: 'LOST', needsFollowUp: false };
+    }
+
+    if (['SM_LOST', 'SH_LOST', 'COL_LOST'].includes(a.code)) {
+      return { ...a, needsReason: true, reasonCategory: 'COLD', needsFollowUp: false };
     }
 
     if (a.code === 'SH_BOOKING') {

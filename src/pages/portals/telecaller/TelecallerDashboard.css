@@ -7,18 +7,34 @@
 /* Row 1: Stats Grid */
 .td-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
   margin-bottom: 24px;
+}
+
+@media (max-width: 1400px) {
+  .td-stats-grid {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .td-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
 }
 
 .td-stat-card {
   background: var(--bg-card);
-  padding: 16px;
+  padding: 12px;
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-primary);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, padding 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0; /* Allow shrinking */
 }
 
 .td-stat-card:hover {
@@ -28,16 +44,19 @@
 }
 
 .td-stat-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .td-stat-value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
 }

@@ -9,8 +9,6 @@ import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 
-const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50];
-const BUDGET_MAX_VAL = BUDGET_STEPS.length - 1;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'];
 const FULL_DETAIL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
@@ -58,14 +56,6 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const budgetLabel = (idx) => {
-  const v = BUDGET_STEPS[idx];
-  if (v === 0) return '0';
-  if (v === 40) return '50L';
-  if (v >= 50) return '50L+';
-  return `${v}L`;
-};
-
 const initialForm = {
   full_name: '',
   phone: '',
@@ -78,11 +68,6 @@ const initialForm = {
   project_ids: [],
   location_id: '',
   location_ids: [],
-  budgetMin: '',
-  budgetMax: '',
-  budgetRange: '',
-  budgetMinIdx: 0,
-  budgetMaxIdx: BUDGET_MAX_VAL,
   nextFollowUpAt: '',
   lead_status_id: '',
   callResult: 'Answered',
@@ -127,8 +112,6 @@ const TelecallerAddLead = ({ onNavigate }) => {
     const primaryPhone = sanitizePhoneNumberInput(form.phone);
     const alternatePhone = sanitizePhoneNumberInput(form.alternate_phone);
     const whatsappPhone = sanitizePhoneNumberInput(form.whatsapp_number);
-    const budgetMin = form.budgetMin !== '' && form.budgetMin !== null ? Number(form.budgetMin) : null;
-    const budgetMax = form.budgetMax !== '' && form.budgetMax !== null ? Number(form.budgetMax) : null;
 
     if (!form.full_name?.trim()) errors.push('Full name is required');
     if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 10 to 12 digits');
@@ -148,10 +131,6 @@ const TelecallerAddLead = ({ onNavigate }) => {
     if (!form.lead_source_id) errors.push('Lead source is required');
     if (!form.lead_sub_source_id) errors.push('Lead sub-source is required');
     if (!form.lead_status_id) errors.push('Lead status is required');
-
-    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
-      errors.push('Budget Max must be greater than or equal to Budget Min');
-    }
 
     if (tcStatusNeedsFullDetails) {
       if (!form.location_ids?.length) errors.push('At least one location is required');
@@ -175,8 +154,6 @@ const TelecallerAddLead = ({ onNavigate }) => {
         primaryPhone,
         alternatePhone,
         whatsappPhone,
-        budgetMin,
-        budgetMax,
       },
     };
   }, [form, tcStatusNeedsFullDetails, isTerminalStatus, needsRemark]);
@@ -320,7 +297,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
       return;
     }
 
-    const { primaryPhone, alternatePhone, whatsappPhone, budgetMin, budgetMax } = newLeadValidation.sanitized;
+    const { primaryPhone, alternatePhone, whatsappPhone } = newLeadValidation.sanitized;
     const selectedSource = sourceOptions.find((source) => source.id === form.lead_source_id) || null;
     const selectedLocation = locationOptions.find((location) => location.id === form.location_id) || null;
     // Use first selected project as primary project_id
@@ -334,9 +311,6 @@ const TelecallerAddLead = ({ onNavigate }) => {
         full_name: form.full_name.trim(),
         phone: primaryPhone,
         alternate_phone: alternatePhone || undefined,
-        budgetMin,
-        budgetMax,
-        budgetRange: `${budgetLabel(form.budgetMinIdx || 0)} - ${budgetLabel(form.budgetMaxIdx ?? BUDGET_MAX_VAL)}`,
         whatsapp_number: form.whatsappSameAsPhone ? primaryPhone : (whatsappPhone || undefined),
         lead_source_id: form.lead_source_id || null,
         lead_sub_source_id: form.lead_sub_source_id || null,
@@ -513,35 +487,6 @@ const TelecallerAddLead = ({ onNavigate }) => {
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Budget Range Slider */}
-              <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="crm-form-label">Budget Range: <strong>{budgetLabel(form.budgetMinIdx || 0)} – {budgetLabel(form.budgetMaxIdx || BUDGET_MAX_VAL)}</strong></label>
-                <div style={{ position: 'relative', height: 40, display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                  <div style={{ position: 'absolute', left: 8, right: 8, height: 6, borderRadius: 3, background: 'var(--border-primary, #e2e8f0)' }} />
-                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% + 8px)`, right: `calc(${(1 - (form.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}% + 8px)`, height: 6, borderRadius: 3, background: 'var(--accent-blue, #3b82f6)' }} />
-                  <input type="range" min={0} max={BUDGET_MAX_VAL} value={form.budgetMinIdx || 0}
-                    onChange={(e) => {
-                      const v = Math.min(Number(e.target.value), (form.budgetMaxIdx ?? BUDGET_MAX_VAL) - 1);
-                      setForm((p) => ({ ...p, budgetMinIdx: v, budgetMin: BUDGET_STEPS[v] * 100000, budgetRange: `${budgetLabel(v)} - ${budgetLabel(p.budgetMaxIdx ?? BUDGET_MAX_VAL)}` }));
-                    }}
-                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 40, opacity: 0, cursor: 'pointer', zIndex: 3 }}
-                  />
-                  <input type="range" min={0} max={BUDGET_MAX_VAL} value={form.budgetMaxIdx ?? BUDGET_MAX_VAL}
-                    onChange={(e) => {
-                      const v = Math.max(Number(e.target.value), (form.budgetMinIdx || 0) + 1);
-                      setForm((p) => ({ ...p, budgetMaxIdx: v, budgetMax: BUDGET_STEPS[v] * 100000, budgetRange: `${budgetLabel(p.budgetMinIdx || 0)} - ${budgetLabel(v)}` }));
-                    }}
-                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', height: 40, opacity: 0, cursor: 'pointer', zIndex: 4 }}
-                  />
-                  {/* Thumb indicators */}
-                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', left: `calc(${((form.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}%)`, transform: 'translateX(-50%)', width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-blue, #3b82f6)', border: '3px solid var(--bg-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 5, pointerEvents: 'none' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary, #94a3b8)', padding: '0 8px' }}>
-                  {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{budgetLabel(BUDGET_STEPS.indexOf(v))}</span>)}
-                </div>
               </div>
 
               <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>

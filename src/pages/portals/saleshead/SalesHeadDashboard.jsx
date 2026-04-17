@@ -3,6 +3,18 @@ import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  HandRaisedIcon,
+  ClipboardDocumentListIcon,
+  BanknotesIcon,
+  UsersIcon,
+  ClockIcon,
+  BriefcaseIcon,
+  FireIcon,
+} from '@heroicons/react/24/outline';
+
+const ICON_SIZE = { width: 22, height: 22 };
+const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
 
 const SalesHeadDashboard = ({ user, onNavigate }) => {
   const [stats, setStats] = useState(null);
@@ -32,11 +44,11 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'In Negotiation', value: stats?.inNegotiation ?? 0, icon: '🤝', iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: `₹${((stats?.pipelineValue || 0) / 10000000).toFixed(1)} Cr pipeline`, changeType: 'neutral' },
-    { label: 'Bookings', value: stats?.totalBookings ?? 0, icon: '📋', iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: `₹${((stats?.bookedValue || 0) / 10000000).toFixed(1)} Cr booked`, changeType: 'up' },
-    { label: 'Revenue Collected', value: formatCurrency(stats?.revenueCollected ?? 0), icon: '💰', iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'This month', changeType: 'up' },
-    { label: 'All Leads', value: stats?.allLeads ?? 0, icon: '👥', iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: 'Across pipeline', changeType: 'neutral' },
-    { label: 'Pending Approvals', value: stats?.pendingApprovals ?? 0, icon: '⏳', iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'Discount requests', changeType: 'neutral' },
+    { label: 'In Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: `₹${((stats?.pipelineValue || 0) / 10000000).toFixed(1)} Cr pipeline`, changeType: 'neutral' },
+    { label: 'Bookings', value: stats?.totalBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: `₹${((stats?.bookedValue || 0) / 10000000).toFixed(1)} Cr booked`, changeType: 'up' },
+    { label: 'Revenue Collected', value: formatCurrency(stats?.revenueCollected ?? 0), icon: <BanknotesIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'This month', changeType: 'up' },
+    { label: 'All Leads', value: stats?.allLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: 'Across pipeline', changeType: 'neutral' },
+    { label: 'Pending Approvals', value: stats?.pendingApprovals ?? 0, icon: <ClockIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'Discount requests', changeType: 'neutral' },
   ];
 
   return (
@@ -70,18 +82,18 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
         {/* Active Negotiations */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">🤝 Active Negotiations</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HandRaisedIcon style={ICON_SM} /> Active Negotiations</div>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate?.('negotiations')}>View All →</button>
           </div>
           <div className="crm-card-body-flush">
             <div className="followup-item">
               <div className="crm-avatar crm-avatar-sm crm-avatar-orange">VP</div>
               <div className="followup-content">
-                <div className="followup-name">Lead in Negotiation <span className="crm-badge badge-hot">🔥 Hot</span></div>
+                <div className="followup-name">Lead in Negotiation <span className="crm-badge badge-hot" style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><FireIcon style={{ width: 10, height: 10 }} /> Hot</span></div>
                 <div className="followup-note">Discussing pricing and terms</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <button className="crm-btn crm-btn-success crm-btn-xs" style={{ marginTop: 4 }}>📋 Book</button>
+                <button className="crm-btn crm-btn-success crm-btn-xs" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 3 }}><ClipboardDocumentListIcon style={{ width: 12, height: 12 }} /> Book</button>
               </div>
             </div>
             {(!stats?.inNegotiation || stats.inNegotiation === 0) && (
@@ -93,7 +105,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
         {/* Recent Bookings */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">📋 Recent Bookings</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ClipboardDocumentListIcon style={ICON_SM} /> Recent Bookings</div>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate?.('bookings')}>View All →</button>
           </div>
           <div className="crm-card-body-flush">
@@ -121,7 +133,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
       {/* Team Performance Table */}
       <div className="crm-card">
         <div className="crm-card-header">
-          <div className="crm-card-title">👔 Team Performance</div>
+          <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BriefcaseIcon style={ICON_SM} /> Team Performance</div>
         </div>
         <div className="crm-card-body-flush">
           <div className="crm-table-wrap">

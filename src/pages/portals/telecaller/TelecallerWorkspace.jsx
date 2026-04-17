@@ -4,7 +4,6 @@ import PortalLayout from '../common/PortalLayout';
 import TelecallerDashboard from './TelecallerDashboard';
 import TelecallerPipeline from './TelecallerPipeline';
 import TelecallerAddLead from './TelecallerAddLead';
-import TelecallerFollowUps from './TelecallerFollowUps';
 import TelecallerCallLog from './TelecallerCallLog';
 import TelecallerPullRequests from './TelecallerPullRequests';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
@@ -32,9 +31,6 @@ const TelecallerWorkspace = () => {
           )}
           {activeScreen === 'leads-addnew' && (
             <LeadWorkspacePage user={user} workspaceRole="TC" autoOpenCreate />
-          )}
-          {activeScreen === 'followups' && (
-            <TelecallerFollowUps user={user} onNavigate={setActiveScreen} />
           )}
           {activeScreen === 'pipeline' && (
             <TelecallerPipeline user={user} onNavigate={setActiveScreen} />

@@ -20,10 +20,36 @@ import {
   ROLE_LABELS,
 } from './workflowConfig';
 import CalendarPicker from '../../../components/common/CalendarPicker';
+import {
+  PlusCircleIcon,
+  XMarkIcon,
+  UserIcon,
+  TagIcon,
+  MapPinIcon,
+  CalendarDaysIcon,
+  PencilSquareIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
+  InformationCircleIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  PhoneIcon,
+  ChatBubbleLeftIcon,
+  ClipboardDocumentListIcon,
+  NoSymbolIcon,
+  TrashIcon,
+  HandRaisedIcon,
+  SparklesIcon,
+  BanknotesIcon,
+  HomeIcon,
+  HomeModernIcon,
+  IdentificationIcon,
+  TrophyIcon,
+  TableCellsIcon,
+  BoltIcon,
+  EyeIcon,
+} from '@heroicons/react/24/outline';
 import './LeadWorkspacePage.css';
-
-const BUDGET_STEPS = [0, 5, 8, 10, 15, 20, 25, 30, 40, 50];
-const BUDGET_MAX_VAL = BUDGET_STEPS.length - 1;
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,14 +58,6 @@ const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '
 const hasValidPhoneLength = (value) => {
   const len = sanitizePhoneNumberInput(value).length;
   return len >= 10 && len <= 12;
-};
-
-const budgetLabel = (idx) => {
-  const v = BUDGET_STEPS[idx];
-  if (v === 0) return '0';
-  if (v === 40) return '50L';
-  if (v >= 50) return '50L+';
-  return `${v}L`;
 };
 
 const initialNewLead = {
@@ -55,11 +73,6 @@ const initialNewLead = {
   project_id: '',
   location_id: '',
   location_ids: [],
-  budgetMin: '',
-  budgetMax: '',
-  budgetRange: '',
-  budgetMinIdx: 0,
-  budgetMaxIdx: BUDGET_MAX_VAL,
   nextFollowUpAt: '',
   lead_status_id: '',
   motivationType: '',
@@ -216,7 +229,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [quickStatusRemarks, setQuickStatusRemarks] = useState([]);
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null); // 'Answered' | 'Not-Answered' | null
   const [closureReasons, setClosureReasons] = useState([]);
-  const [activeTab, setActiveTab] = useState('mine'); // 'all' | 'new' | 'mine'
+  const [activeTab, setActiveTab] = useState('today'); // 'all' | 'new' | 'today' | 'missed'
+  const [qaActiveTab, setQaActiveTab] = useState('activity'); // 'activity' | 'history'
 
   // ── Create lead ──
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -274,7 +288,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [reengageLeadId, setReengageLeadId] = useState(null);
   const [newLeadStatusRemarks, setNewLeadStatusRemarks] = useState([]);
   const [remarksLoading, setRemarksLoading] = useState(false);
-  const [lastActiveBudgetHandle, setLastActiveBudgetHandle] = useState('min');
 
   // ── Customer Profile Modal (SH Close Won) ──
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
@@ -394,7 +407,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const tomorrowStart = new Date(todayStart.getTime() + 86400000);
 
     return leads.filter((lead) => {
-      if (workspaceRole === 'TC' && activeTab === 'mine') {
+      if (workspaceRole === 'TC' && !searchText) {
         if (lead.isClosed) return false;
 
         const followUpAt = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null;
@@ -402,7 +415,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
         const isTodayFollowUp = followUpAt >= todayStart && followUpAt < tomorrowStart;
         const isMissedFollowUp = followUpAt < now;
-        if (!isTodayFollowUp && !isMissedFollowUp) return false;
+
+        if (activeTab === 'today' && !isTodayFollowUp) return false;
+        if (activeTab === 'missed' && !isMissedFollowUp) return false;
+        if (activeTab !== 'today' && activeTab !== 'missed' && !isTodayFollowUp && !isMissedFollowUp) return false;
       }
 
       if (searchText) {
@@ -454,8 +470,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const primaryPhone = sanitizePhoneNumberInput(newLeadForm.phone);
     const alternatePhone = sanitizePhoneNumberInput(newLeadForm.alternate_phone);
     const whatsappPhone = sanitizePhoneNumberInput(newLeadForm.whatsapp_number);
-    const budgetMin = newLeadForm.budgetMin !== '' && newLeadForm.budgetMin !== null ? Number(newLeadForm.budgetMin) : null;
-    const budgetMax = newLeadForm.budgetMax !== '' && newLeadForm.budgetMax !== null ? Number(newLeadForm.budgetMax) : null;
 
     if (!newLeadForm.full_name?.trim()) errors.push('Full name is required');
     if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 10 to 12 digits');
@@ -473,10 +487,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
 
     if (!newLeadForm.lead_source_id) errors.push('Lead source is required');
-
-    if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
-      errors.push('Budget Max must be greater than or equal to Budget Min');
-    }
 
     if (workspaceRole === 'TC') {
       if (!newLeadForm.lead_sub_source_id) errors.push('Lead sub-source is required');
@@ -505,8 +515,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         primaryPhone,
         alternatePhone,
         whatsappPhone,
-        budgetMin,
-        budgetMax,
       },
     };
   }, [newLeadForm, workspaceRole, tcStatusNeedsFullDetails, isTerminalCreateStatus, needsRemark]);
@@ -580,7 +588,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         if (activeTab === 'new') {
           queryParams.unassigned = true;
         } else {
-          // 'mine' (default) — only show leads assigned to this user
+          // Assigned lead tabs (today / missed) — only show leads assigned to this user
           queryParams.assignedToMe = true;
         }
       }
@@ -609,7 +617,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // Load closure reasons for new lead form when a terminal status is selected
   useEffect(() => {
     if (!newLeadOpen || !newLeadForm.lead_status_id) return;
-    
+
     const selectedStatus = statusOptions.find(st => st.id === newLeadForm.lead_status_id || st.value === newLeadForm.lead_status_id);
     if (!selectedStatus) return;
 
@@ -724,7 +732,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     ).trim();
     const leadPhone = lead.phone || lead.phone_number || lead.mobile || '';
     const leadEmail = lead.email || '';
-    
+
     setNewLeadForm((prev) => ({
       ...prev,
       full_name: fullName || prev.full_name,
@@ -733,7 +741,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }));
 
     setReengageLeadId(lead.id || null);
-    
+
     toast.success('Form pre-filled with duplicate lead details');
   }, []);
 
@@ -887,7 +895,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       return;
     }
 
-    const { primaryPhone, alternatePhone, whatsappPhone, budgetMin, budgetMax } = newLeadValidation.sanitized;
+    const { primaryPhone, alternatePhone, whatsappPhone } = newLeadValidation.sanitized;
 
     // For TC: use first selected project from multi-select
     const primaryProjectId = workspaceRole === 'TC'
@@ -911,8 +919,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         ...newLeadForm,
         phone: primaryPhone,
         alternate_phone: alternatePhone || undefined,
-        budgetMin,
-        budgetMax,
         whatsapp_number: newLeadForm.whatsappSameAsPhone ? primaryPhone : (whatsappPhone || undefined),
         lead_source_id: newLeadForm.lead_source_id || null,
         lead_sub_source_id: newLeadForm.lead_sub_source_id || null,
@@ -939,7 +945,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       setNewLeadOpen(false);
       setProjectDropdownOpen(false);
       if (workspaceRole === 'TC') {
-        const targetTab = assignedToValue ? 'mine' : 'new';
+        const targetTab = assignedToValue ? 'today' : 'new';
         if (activeTab !== targetTab) {
           setActiveTab(targetTab);
         } else {
@@ -1649,11 +1655,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <p>{wsTitle.subtitle}</p>
         </div>
         <div className="lead-workspace__header-actions">
-          <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => loadLeads({ silent: true })}>
-            {refreshing ? '↻ Refreshing...' : '↻ Refresh'}
+          <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => loadLeads({ silent: true })} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-          <button type="button" className="workspace-btn workspace-btn--primary" onClick={() => setNewLeadOpen(true)}>
-            + New Lead
+          <button type="button" className="workspace-btn workspace-btn--primary" onClick={() => setNewLeadOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <PlusCircleIcon style={{ width: 16, height: 16 }} /> New Lead
           </button>
         </div>
       </header>
@@ -1756,21 +1762,36 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
           {/* Tabs for TC */}
           {workspaceRole === 'TC' && (
-            <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px', borderBottom: '1px solid var(--border-secondary)' }}>
+            <div style={{ display: 'flex', gap: 4, padding: '10px 16px 12px', borderBottom: '1px solid var(--border-secondary)' }}>
               <button
-                onClick={() => setActiveTab('mine')}
+                onClick={() => setActiveTab('today')}
                 style={{
                   padding: '6px 12px',
                   borderRadius: 6,
                   border: 'none',
-                  background: activeTab === 'mine' ? 'var(--accent-blue)' : 'transparent',
-                  color: activeTab === 'mine' ? '#fff' : 'var(--text-secondary)',
+                  background: activeTab === 'today' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeTab === 'today' ? '#fff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   fontSize: 13,
                   fontWeight: 600,
                 }}
               >
-                My Leads
+                Today&apos;s Follow Ups
+              </button>
+              <button
+                onClick={() => setActiveTab('missed')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: activeTab === 'missed' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeTab === 'missed' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                Missed Follow Ups
               </button>
               <button
                 onClick={() => setActiveTab('new')}
@@ -1800,7 +1821,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <th>Source</th>
                   <th>Medium</th>
                   <th>Project/Location</th>
-                  <th style={{ textAlign: 'right' }}>Followup</th>
+                  <th style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
               </thead>
               <tbody>
@@ -1813,12 +1834,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 {!loading && filteredLeads.map((lead) => (
                   <tr
                     key={lead.id}
-                    onClick={() => navigate(`/portal/lead/${lead.id}`)}
                     className={selectedLeadId === lead.id ? 'is-selected' : ''}
                   >
                     <td>
                       <p className="lead-title">{lead.fullName}</p>
-                      <small>{lead.leadNumber}</small>
+                      <small>
+                        <a 
+                          href={`/portal/lead/${lead.id}`}
+                          onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
+                          style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
+                        >
+                          {lead.leadNumber}
+                        </a>
+                      </small>
                     </td>
                     <td>
                       <p>{lead.phone}</p>
@@ -1855,6 +1883,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       })()}
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        className="crm-btn crm-btn-sm"
+                        style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
+                      >
+                        <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> View
+                      </button>
                       {!lead.assignedToUserId && activeTab === 'new' && (
                         <button
                           className="crm-btn crm-btn-sm"
@@ -1865,7 +1900,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               await leadWorkflowApi.assignLead(lead.id, user.id, 'Self-assigned from pool');
                               toast.success(`Lead claimed: ${lead.fullName}`);
                               setSelectedLeadId(null);
-                              setActiveTab('mine');
+                              setActiveTab('today');
                             } catch (err) {
                               toast.error(getErrorMessage(err, 'Failed to claim lead'));
                             }
@@ -1882,21 +1917,37 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             e.stopPropagation();
                             resetQuickWorkflowForm();
                             setQuickActionLead(lead);
-                            // Load site visits for this lead
+                            setQaActiveTab('activity');
+                            // Load site visits and activities for this lead
+                            let activities = [];
                             try {
                               const [svResp, actResp] = await Promise.all([
                                 siteVisitApi.getAll({ lead_id: lead.id }),
                                 leadWorkflowApi.getLeadActivities(lead.id)
                               ]);
                               setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
-                              setQuickActionActivities(actResp.data || []);
+                              activities = actResp.data || [];
+                              setQuickActionActivities(activities);
                             } catch {
                               setQuickActionSiteVisits([]);
                               setQuickActionActivities([]);
                             }
+
+                            // Auto-select last action based on the lead's current status
+                            if (!lead.isClosed) {
+                              const leadStatus = lead.statusCode || '';
+                              if (leadStatus) {
+                                const matchingAction = roleActions.find(
+                                  (a) => a.targetStatusCode === leadStatus && a.tone !== 'danger'
+                                );
+                                if (matchingAction) {
+                                  setTimeout(() => handleQuickWorkflowActionSelect(matchingAction), 100);
+                                }
+                              }
+                            }
                           }}
                         >
-                          Followup
+                          <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
                         </button>
                       )}
                     </td>
@@ -2349,7 +2400,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{selectedLead.project || 'No project'} · {selectedLead.source || 'Unknown source'}</div>
                 </div>
               )}
-              
+
               {/* Action Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setStagePopupOpen(false)}>Cancel</button>
@@ -2374,7 +2425,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             {/* ── Gradient Header ── */}
             <div className="create-lead-header">
               <div className="create-lead-header__title">
-                <div className="create-lead-header__icon">➕</div>
+                <div className="create-lead-header__icon"><PlusCircleIcon style={{ width: 24, height: 24 }} /></div>
                 <div>
                   <h2>Create New Lead</h2>
                   <div className="create-lead-header__subtitle">Fill in the details to register a new lead</div>
@@ -2388,7 +2439,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   setNewLeadOpen(false);
                 }}
               >
-                ✕
+                <XMarkIcon style={{ width: 20, height: 20 }} />
               </button>
             </div>
 
@@ -2398,7 +2449,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 {/* ══ Section: Contact Information ══ */}
                 <div className="create-lead-section">
                   <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--contact">👤</div>
+                    <div className="create-lead-section__icon create-lead-section__icon--contact"><UserIcon style={{ width: 20, height: 20 }} /></div>
                     <div>
                       <div className="create-lead-section__title">Contact Information</div>
                       <div className="create-lead-section__subtitle">Primary contact details of the lead</div>
@@ -2435,8 +2486,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       />
                       <div className="create-lead-phone-status">
                         <div>
-                          {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error">⚠ Exists: {phoneCheck.leadInfo}</span>}
-                          {phoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success">✓ Valid</span>}
+                          {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Exists: {phoneCheck.leadInfo}</span>}
+                          {phoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid</span>}
                         </div>
                         {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && (
                           <button
@@ -2444,7 +2495,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             className={`create-lead-phone-status__btn ${reengageLeadId === phoneCheck.duplicateLead.id ? 'create-lead-phone-status__btn--active' : ''}`}
                             onClick={() => prefillFormFromDuplicateLead(phoneCheck.duplicateLead)}
                           >
-                            {reengageLeadId === phoneCheck.duplicateLead.id ? '✓ Reengage' : 'Use this lead'}
+                            {reengageLeadId === phoneCheck.duplicateLead.id ? <><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Reengage</> : 'Use this lead'}
                           </button>
                         )}
                       </div>
@@ -2499,8 +2550,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       />
                       <div className="create-lead-phone-status">
                         <div>
-                          {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error">⚠ Already exists: {altPhoneCheck.leadInfo}</span>}
-                          {altPhoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success">✓ Valid Number</span>}
+                          {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Already exists: {altPhoneCheck.leadInfo}</span>}
+                          {altPhoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid Number</span>}
                         </div>
                         {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && (
                           <button
@@ -2508,7 +2559,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             className={`create-lead-phone-status__btn ${reengageLeadId === altPhoneCheck.duplicateLead.id ? 'create-lead-phone-status__btn--active' : ''}`}
                             onClick={() => prefillFormFromDuplicateLead(altPhoneCheck.duplicateLead)}
                           >
-                            {reengageLeadId === altPhoneCheck.duplicateLead.id ? '✓ Reengage' : 'Use this lead'}
+                            {reengageLeadId === altPhoneCheck.duplicateLead.id ? <><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Reengage</> : 'Use this lead'}
                           </button>
                         )}
                       </div>
@@ -2532,7 +2583,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 {/* ══ Section: Lead Classification ══ */}
                 <div className="create-lead-section">
                   <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--classify">🏷️</div>
+                    <div className="create-lead-section__icon create-lead-section__icon--classify"><TagIcon style={{ width: 20, height: 20 }} /></div>
                     <div>
                       <div className="create-lead-section__title">Lead Classification</div>
                       <div className="create-lead-section__subtitle">Set status and source information</div>
@@ -2540,56 +2591,44 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </div>
 
                   <div className="create-lead-grid">
-                    <div className="create-lead-field">
+                    <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
                       <label className="create-lead-field__label">
                         Lead Status <span className="create-lead-field__required">*</span>
                       </label>
-                      {workspaceRole === 'TC' ? (
-                        <select
-                          className={`create-lead-select ${!newLeadForm.lead_status_id ? 'create-lead-select--highlight' : ''}`}
-                          value={newLeadForm.lead_status_id}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setNewLeadForm((p) => ({
-                              ...p,
-                              lead_status_id: val,
-                              callResult: val.includes('RNR') ? 'Not Answered' : p.callResult,
-                            }));
-                          }}
-                          required
-                        >
-                          <option value="">Select status</option>
-                          {statusOptions.filter((st) => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'].includes(st.value)).map((st) => (
-                            <option key={st.value} value={st.value}>{st.label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <select
-                          className="create-lead-select"
-                          value={newLeadForm.lead_status_id}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setNewLeadForm((p) => ({
-                              ...p,
-                              lead_status_id: val,
-                              callResult: val.includes('RNR') ? 'Not Answered' : p.callResult,
-                            }));
-                          }}
-                        >
-                          <option value="">Select status</option>
-                          {statusOptions.map((st) => (
-                            <option key={st.value} value={st.value}>{st.label}</option>
-                          ))}
-                        </select>
-                      )}
+                      <div className="create-lead-status-chips">
+                        {(workspaceRole === 'TC'
+                          ? statusOptions.filter((st) => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'].includes(st.value))
+                          : statusOptions
+                        ).map((st) => {
+                          const isSelected = newLeadForm.lead_status_id === st.value || newLeadForm.lead_status_id === st.id;
+                          const isTerminal = ['LOST', 'JUNK', 'SPAM'].includes(st.value);
+                          return (
+                            <button
+                              key={st.value}
+                              type="button"
+                              className={`status-chip-btn ${isSelected ? 'status-chip-btn--active' : ''} ${isTerminal ? 'status-chip-btn--terminal' : ''}`}
+                              onClick={() => {
+                                const val = st.value;
+                                setNewLeadForm((p) => ({
+                                  ...p,
+                                  lead_status_id: p.lead_status_id === val ? '' : val,
+                                  callResult: val.includes('RNR') ? 'Not Answered' : p.callResult,
+                                }));
+                              }}
+                            >
+                              {isSelected && <CheckCircleIcon style={{ width: 15, height: 15, flexShrink: 0 }} />}
+                              {st.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div />
                   </div>
 
                   {/* Closure Details for terminal statuses */}
                   {['LOST', 'JUNK', 'SPAM'].includes(statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value) && (
                     <div className="create-lead-closure">
-                      <div className="create-lead-closure__title">⚠ Closure Details</div>
+                      <div className="create-lead-closure__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExclamationTriangleIcon style={{ width: 18, height: 18 }} /> Closure Details</div>
                       <div className="create-lead-grid">
                         <div className="create-lead-field">
                           <label className="create-lead-field__label">
@@ -2614,7 +2653,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 {/* ══ Section: Location & Source ══ */}
                 <div className="create-lead-section">
                   <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--location">📍</div>
+                    <div className="create-lead-section__icon create-lead-section__icon--location"><MapPinIcon style={{ width: 20, height: 20 }} /></div>
                     <div>
                       <div className="create-lead-section__title">Location, Projects &amp; Source</div>
                       <div className="create-lead-section__subtitle">Where the lead is interested and how they found us</div>
@@ -2624,82 +2663,82 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(
                     statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
                   ) && (
-                    <div className="create-lead-grid">
-                      {/* Location */}
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">
-                          Location <span className="create-lead-field__required">*</span>
-                        </label>
-                        <select
-                          className="create-lead-select"
-                          value={newLeadForm.location_id}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, location_id: e.target.value, project_ids: [] }))}
-                          required
-                        >
-                          <option value="">Select location</option>
-                          {locationOptions.map((loc) => (
-                            <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Project Multi-Select */}
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">
-                          Project <span className="create-lead-field__required">*</span>
-                        </label>
-                        <div ref={projectDropdownRef} style={{ position: 'relative' }}>
-                          <div
-                            className="create-lead-project-trigger"
-                            onClick={() => setProjectDropdownOpen((p) => !p)}
+                      <div className="create-lead-grid">
+                        {/* Location */}
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">
+                            Location <span className="create-lead-field__required">*</span>
+                          </label>
+                          <select
+                            className="create-lead-select"
+                            value={newLeadForm.location_id}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, location_id: e.target.value, project_ids: [] }))}
+                            required
                           >
-                            {selectedProjectNames.length === 0 && <span className="create-lead-project-trigger__placeholder">Select projects...</span>}
-                            {selectedProjectNames.map((name, i) => (
-                              <span key={i} className="create-lead-project-chip">
-                                {name}
-                                <span
-                                  className="create-lead-project-chip__remove"
-                                  onClick={(ev) => { ev.stopPropagation(); toggleProject((newLeadForm.project_ids || [])[i]); }}
-                                >×</span>
-                              </span>
+                            <option value="">Select location</option>
+                            {locationOptions.map((loc) => (
+                              <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
                             ))}
-                          </div>
+                          </select>
+                        </div>
 
-                          {projectDropdownOpen && (
-                            <div className="create-lead-project-dropdown" style={{ zIndex: 100 }}>
-                              <div className="create-lead-project-dropdown__search">
-                                <input
-                                  type="text"
-                                  placeholder="Search projects..."
-                                  value={projectSearch}
-                                  onChange={(e) => setProjectSearch(e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                              <div className="create-lead-project-dropdown__list">
-                                {filteredProjectOptions.map((project) => (
-                                  <label key={project.id} className="create-lead-project-dropdown__item">
-                                    <input
-                                      type="checkbox"
-                                      checked={(newLeadForm.project_ids || []).includes(project.id)}
-                                      onChange={() => toggleProject(project.id)}
-                                    />
-                                    <span>
-                                      {project.project_name}
-                                      {project.project_code ? ` (${project.project_code})` : ''}
-                                    </span>
-                                  </label>
-                                ))}
-                                {filteredProjectOptions.length === 0 && (
-                                  <div className="create-lead-project-dropdown__empty">No projects found</div>
-                                )}
-                              </div>
+                        {/* Project Multi-Select */}
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">
+                            Project <span className="create-lead-field__required">*</span>
+                          </label>
+                          <div ref={projectDropdownRef} style={{ position: 'relative' }}>
+                            <div
+                              className="create-lead-project-trigger"
+                              onClick={() => setProjectDropdownOpen((p) => !p)}
+                            >
+                              {selectedProjectNames.length === 0 && <span className="create-lead-project-trigger__placeholder">Select projects...</span>}
+                              {selectedProjectNames.map((name, i) => (
+                                <span key={i} className="create-lead-project-chip">
+                                  {name}
+                                  <span
+                                    className="create-lead-project-chip__remove"
+                                    onClick={(ev) => { ev.stopPropagation(); toggleProject((newLeadForm.project_ids || [])[i]); }}
+                                  >×</span>
+                                </span>
+                              ))}
                             </div>
-                          )}
+
+                            {projectDropdownOpen && (
+                              <div className="create-lead-project-dropdown" style={{ zIndex: 100 }}>
+                                <div className="create-lead-project-dropdown__search">
+                                  <input
+                                    type="text"
+                                    placeholder="Search projects..."
+                                    value={projectSearch}
+                                    onChange={(e) => setProjectSearch(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                                <div className="create-lead-project-dropdown__list">
+                                  {filteredProjectOptions.map((project) => (
+                                    <label key={project.id} className="create-lead-project-dropdown__item">
+                                      <input
+                                        type="checkbox"
+                                        checked={(newLeadForm.project_ids || []).includes(project.id)}
+                                        onChange={() => toggleProject(project.id)}
+                                      />
+                                      <span>
+                                        {project.project_name}
+                                        {project.project_code ? ` (${project.project_code})` : ''}
+                                      </span>
+                                    </label>
+                                  ))}
+                                  {filteredProjectOptions.length === 0 && (
+                                    <div className="create-lead-project-dropdown__empty">No projects found</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Source & Sub-Source */}
                   <div className="create-lead-grid" style={{ marginTop: 16 }}>
@@ -2740,127 +2779,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </div>
                 </div>
 
-                {/* ══ Section: Budget ══ */}
-                <div className="create-lead-section">
-                  <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--budget">💰</div>
-                    <div>
-                      <div className="create-lead-section__title">Budget Range</div>
-                      <div className="create-lead-section__subtitle">Approximate budget of the buyer</div>
-                    </div>
-                  </div>
-
-                  <div className="create-lead-budget">
-                    <div className="create-lead-budget__label">
-                      Budget Range:
-                      <span className="create-lead-budget__value">
-                        {budgetLabel(newLeadForm.budgetMinIdx || 0)} — {budgetLabel(newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)}
-                      </span>
-                    </div>
-                    <div className="create-lead-budget__track"
-                      onPointerDown={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = (e.clientX - rect.left) / rect.width;
-                        const hoveredIdx = Math.round(x * BUDGET_MAX_VAL);
-                        const distMin = Math.abs(hoveredIdx - (newLeadForm.budgetMinIdx || 0));
-                        const distMax = Math.abs(hoveredIdx - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL));
-                        setLastActiveBudgetHandle(distMax < distMin ? 'max' : 'min');
-                      }}
-                      onMouseMove={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = (e.clientX - rect.left) / rect.width;
-                        const hoveredIdx = Math.round(x * BUDGET_MAX_VAL);
-                        const distMin = Math.abs(hoveredIdx - (newLeadForm.budgetMinIdx || 0));
-                        const distMax = Math.abs(hoveredIdx - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL));
-                        setLastActiveBudgetHandle(distMax < distMin ? 'max' : 'min');
-                      }}
-                      onTouchMove={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const touch = e.touches[0];
-                        const x = (touch.clientX - rect.left) / rect.width;
-                        const hoveredIdx = Math.round(x * BUDGET_MAX_VAL);
-                        const distMin = Math.abs(hoveredIdx - (newLeadForm.budgetMinIdx || 0));
-                        const distMax = Math.abs(hoveredIdx - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL));
-                        setLastActiveBudgetHandle(distMax < distMin ? 'max' : 'min');
-                      }}
-                    >
-                      <div className="create-lead-budget__rail" />
-                      <div
-                        className="create-lead-budget__fill"
-                        style={{
-                          left: `calc(8px + ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% - ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 16}px)`,
-                          width: `calc(${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) - (newLeadForm.budgetMinIdx || 0)) / BUDGET_MAX_VAL * 100}% + ${(((newLeadForm.budgetMinIdx || 0) - (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)) / BUDGET_MAX_VAL) * 16}px)`,
-                        }}
-                      />
-                      <input
-                        type="range"
-                        className="create-lead-budget__range-input"
-                        min={0}
-                        max={BUDGET_MAX_VAL}
-                        step={1}
-                        value={newLeadForm.budgetMinIdx || 0}
-                        onChange={(e) => {
-                          const v = Math.min(Number(e.target.value), (newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) - 1);
-                          setLastActiveBudgetHandle('min');
-                          setNewLeadForm((p) => ({
-                            ...p,
-                            budgetMinIdx: v,
-                            budgetMin: BUDGET_STEPS[v] * 100000,
-                            budgetRange: `${budgetLabel(v)} - ${budgetLabel(p.budgetMaxIdx ?? BUDGET_MAX_VAL)}`,
-                          }));
-                        }}
-                        onMouseDown={() => setLastActiveBudgetHandle('min')}
-                        onTouchStart={() => setLastActiveBudgetHandle('min')}
-                        style={{ zIndex: lastActiveBudgetHandle === 'min' ? 15 : 13 }}
-                      />
-                      <input
-                        type="range"
-                        className="create-lead-budget__range-input"
-                        min={0}
-                        max={BUDGET_MAX_VAL}
-                        step={1}
-                        value={newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL}
-                        onChange={(e) => {
-                          const v = Math.max(Number(e.target.value), (newLeadForm.budgetMinIdx || 0) + 1);
-                          setLastActiveBudgetHandle('max');
-                          setNewLeadForm((p) => ({
-                            ...p,
-                            budgetMaxIdx: v,
-                            budgetMax: BUDGET_STEPS[v] * 100000,
-                            budgetRange: `${budgetLabel(p.budgetMinIdx || 0)} - ${budgetLabel(v)}`,
-                          }));
-                        }}
-                        onMouseDown={() => setLastActiveBudgetHandle('max')}
-                        onTouchStart={() => setLastActiveBudgetHandle('max')}
-                        style={{ zIndex: lastActiveBudgetHandle === 'max' ? 15 : 14 }}
-                      />
-                      <div
-                        className="create-lead-budget__thumb"
-                        style={{ left: `calc(8px + ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 100}% - ${((newLeadForm.budgetMinIdx || 0) / BUDGET_MAX_VAL) * 16}px)` }}
-                      >
-                        <div className="create-lead-budget__thumb-label">
-                          {budgetLabel(newLeadForm.budgetMinIdx || 0)}
-                        </div>
-                      </div>
-                      <div
-                        className="create-lead-budget__thumb"
-                        style={{ left: `calc(8px + ${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 100}% - ${((newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL) / BUDGET_MAX_VAL) * 16}px)` }}
-                      >
-                        <div className="create-lead-budget__thumb-label">
-                          {budgetLabel(newLeadForm.budgetMaxIdx ?? BUDGET_MAX_VAL)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="create-lead-budget__ticks">
-                      {BUDGET_STEPS.filter((_, i) => i % 2 === 0).map((v) => <span key={v}>{budgetLabel(BUDGET_STEPS.indexOf(v))}</span>)}
-                    </div>
-                  </div>
-                </div>
-
                 {/* ══ Section: Follow-Up & Assignment ══ */}
                 <div className="create-lead-section">
                   <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--followup">📅</div>
+                    <div className="create-lead-section__icon create-lead-section__icon--followup"><CalendarDaysIcon style={{ width: 20, height: 20 }} /></div>
                     <div>
                       <div className="create-lead-section__title">Follow-Up &amp; Assignment</div>
                       <div className="create-lead-section__subtitle">Schedule next action and assign ownership</div>
@@ -2893,10 +2815,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </div>
                       )}
 
-                      {/* Call Status Selection for New Lead */}
-                      {shouldShowCallStatus(
-                        statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
-                      ) && (
+                    {/* Call Status Selection for New Lead */}
+                    {shouldShowCallStatus(
+                      statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
+                    ) && (
                         <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
                           <div className="call-result-label">Call Status</div>
                           <div className="call-result-toggle">
@@ -2929,7 +2851,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <option value="">— Unassigned (new lead pool) —</option>
                           <option value="self">Assign to Me</option>
                         </select>
-                        <span className="create-lead-assign-hint">ℹ️ Leave unassigned to add to pool</span>
+                        <span className="create-lead-assign-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><InformationCircleIcon style={{ width: 14, height: 14 }} /> Leave unassigned to add to pool</span>
                       </div>
                     )}
                   </div>
@@ -2938,9 +2860,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 {/* ══ Section: Notes & Remarks ══ */}
                 <div className="create-lead-section">
                   <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--notes">📝</div>
+                    <div className="create-lead-section__icon create-lead-section__icon--notes"><PencilSquareIcon style={{ width: 20, height: 20 }} /></div>
                     <div>
-                        <div className="create-lead-section__title">Notes &amp; Remarks{needsRemark ? ' *' : ''}</div>
+                      <div className="create-lead-section__title">Notes &amp; Remarks{needsRemark ? ' *' : ''}</div>
                       <div className="create-lead-section__subtitle">Add quick tags or custom notes</div>
                     </div>
                   </div>
@@ -2954,10 +2876,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </div>
                     ) : (
                       (() => {
-                        const chips = newLeadStatusRemarks.length > 0 
-                          ? newLeadStatusRemarks 
+                        const chips = newLeadStatusRemarks.length > 0
+                          ? newLeadStatusRemarks
                           : NEW_LEAD_REMARK_CHIPS.map(c => ({ remark_text: c }));
-                        
+
                         return chips.map((remark, idx) => (
                           <button
                             key={idx}
@@ -2966,10 +2888,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             onClick={() => {
                               const text = remark.remark_text;
                               setNewLeadForm((p) => ({ ...p, remark: p.remark.trim() === text ? '' : text }));
-                          }}
-                        >
-                          + {remark.remark_text}
-                        </button>
+                            }}
+                          >
+                            + {remark.remark_text}
+                          </button>
                         ))
                       })()
                     )}
@@ -3011,7 +2933,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       ].filter(Boolean).includes(reengageLeadId))
                   }
                 >
-                  {creating ? '⏳ Creating...' : '✓ Create Lead'}
+                  {creating ? 'Creating...' : <><CheckIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Create Lead</>}
                 </button>
               </div>
             </form>
@@ -3558,7 +3480,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       {quickActionLead && (
         <div className="lead-workspace__modal" role="dialog" aria-modal="true" onClick={() => {
           setQuickActionLead(null);
-              resetQuickWorkflowForm();
+          resetQuickWorkflowForm();
         }}>
           <div className="qa-modal-panel" onClick={(e) => e.stopPropagation()}>
             {/* Drawer Handle */}
@@ -3608,19 +3530,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div className="qa-header-comms">
-                  <button 
+                  <button
                     className="qa-header-icon-btn"
                     title="Call Now"
                     onClick={() => window.open(`tel:${quickActionLead.phone}`)}
                   >
-                    📞
+                    <PhoneIcon style={{ width: 18, height: 18 }} />
                   </button>
-                  <button 
+                  <button
                     className="qa-header-icon-btn"
                     title="WhatsApp"
                     onClick={() => window.open(`https://wa.me/${(quickActionLead.whatsappNumber || quickActionLead.phone || '').replace(/\D/g, '')}`, '_blank')}
                   >
-                    💬
+                    <ChatBubbleLeftIcon style={{ width: 18, height: 18 }} />
                   </button>
                 </div>
                 <button
@@ -3630,12 +3552,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     resetQuickWorkflowForm();
                   }}
                 >
-                  ✕
+                  <XMarkIcon style={{ width: 18, height: 18 }} />
                 </button>
               </div>
             </div>
-
-
 
             {/* ── Scrollable Drawer Body ── */}
             <div className="qa-drawer-body">
@@ -3653,16 +3573,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       const isHotNegotiation = a.code.includes('NEGOTIATION_HOT') || a.targetStatusCode === 'NEGOTIATION_HOT';
                       return a.tone !== 'danger' && !a.code.includes('REASSIGN') && (!isNegotiation || isHotNegotiation);
                     }).map((action) => {
-                      let icon = '📋';
+                      let icon = <ClipboardDocumentListIcon style={{ width: 18, height: 18 }} />;
                       let selClass = 'sel-default';
-                      if (action.code.includes('RNR')) { icon = '🔄'; selClass = 'sel-rnr'; }
-                      else if (action.code.includes('SV_DONE') || action.code.includes('SITE_VISIT')) { icon = '✅'; selClass = 'sel-sv-done'; }
-                      else if (action.code.includes('SCHEDULE') || action.code.includes('REVISIT')) { icon = '📅'; selClass = 'sel-sv-scheduled'; }
-                      else if (action.code.includes('FOLLOW_UP')) { icon = '📞'; selClass = 'sel-follow-up'; }
-                      else if (action.code.includes('NEGOTIATION')) { icon = '🤝'; selClass = 'sel-negotiation'; }
-                      else if (action.code.includes('BOOKING')) { icon = '🎉'; selClass = 'sel-booking'; }
-                      else if (action.code.includes('PAYMENT')) { icon = '💸'; selClass = 'sel-booking'; }
-                      else if (action.code.includes('REASSIGN')) { icon = '👤'; selClass = 'sel-follow-up'; }
+                      if (action.code.includes('RNR')) { icon = <ArrowPathIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-rnr'; }
+                      else if (action.code.includes('SV_DONE') || action.code.includes('SITE_VISIT')) { icon = <CheckCircleIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-sv-done'; }
+                      else if (action.code.includes('SCHEDULE') || action.code.includes('REVISIT')) { icon = <CalendarDaysIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-sv-scheduled'; }
+                      else if (action.code.includes('FOLLOW_UP')) { icon = <PhoneIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-follow-up'; }
+                      else if (action.code.includes('NEGOTIATION')) { icon = <HandRaisedIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-negotiation'; }
+                      else if (action.code.includes('BOOKING')) { icon = <SparklesIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-booking'; }
+                      else if (action.code.includes('PAYMENT')) { icon = <BanknotesIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-booking'; }
+                      else if (action.code.includes('REASSIGN')) { icon = <UserIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-follow-up'; }
 
                       return (
                         <button
@@ -3686,7 +3606,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         disabled={quickActionLoading || quickActionLeadReadOnly}
                         onClick={() => handleQuickWorkflowActionSelect(action)}
                       >
-                        <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? '🚫' : action.code.includes('SPAM') ? '🗑️' : '⚠️'}</div>
+                        <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? <NoSymbolIcon style={{ width: 18, height: 18 }} /> : action.code.includes('SPAM') ? <TrashIcon style={{ width: 18, height: 18 }} /> : <ExclamationTriangleIcon style={{ width: 18, height: 18 }} />}</div>
                         <div className="qa-drawer-st-label">{action.label}</div>
                       </button>
                     ))}
@@ -3753,7 +3673,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       >
                         <option value="">
                           {getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'SH' ? 'Select Sales Head...' :
-                           getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
+                            getAssigneeRoleForAction(quickWorkflowAction, workspaceRole) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
                         </option>
                         {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || [])
                           .filter((u) => {
@@ -3762,9 +3682,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             return !currentAssigneeId || u.id !== currentAssigneeId;
                           })
                           .map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
-                          </option>
+                            <option key={u.id} value={u.id}>
+                              {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
+                            </option>
                           ))}
                       </select>
                     </div>
@@ -3921,7 +3841,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                   }
                                 }}
                               >
-                                🎯 Get Position
+                                <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
                               </button>
                             </div>
                             <div className="qa-drawer-field-row">
@@ -3943,9 +3863,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {/* ── Contextual: Customer Profile ── */}
                   {(quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && (
                     <div className="qa-drawer-profile-block">
-                      <div className="qa-drawer-profile-section">🏆 Customer Profile Details</div>
+                      <div className="qa-drawer-profile-section"><TrophyIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Customer Profile Details</div>
 
-                      <div className="qa-drawer-profile-section">👤 Personal Details</div>
+                      <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Personal Details</div>
                       <div className="qa-drawer-profile-grid-3">
                         <div>
                           <label className="qa-drawer-field-label">Date of Birth *</label>
@@ -3983,7 +3903,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </div>
                       </div>
 
-                      <div className="qa-drawer-profile-section">🪪 Identity Documents</div>
+                      <div className="qa-drawer-profile-section"><IdentificationIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Identity Documents</div>
                       <div className="qa-drawer-profile-grid">
                         <div>
                           <label className="qa-drawer-field-label">PAN Number *</label>
@@ -3995,7 +3915,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </div>
                       </div>
 
-                      <div className="qa-drawer-profile-section">📍 Current Address *</div>
+                      <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Current Address *</div>
                       <div>
                         <label className="qa-drawer-field-label">Address</label>
                         <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
@@ -4016,7 +3936,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div className="qa-drawer-profile-section" style={{ flex: 1, marginBottom: 0 }}>🏠 Permanent Address</div>
+                        <div className="qa-drawer-profile-section" style={{ flex: 1, marginBottom: 0 }}><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
                         <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                           <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
                         </label>
@@ -4091,7 +4011,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               disabled={quickStatusRemarks.some(r => r.ans_non_ans_disabled)}
                               onClick={() => setQuickRemarkAnsNonAns('Answered')}
                             >
-                              ✓ Answered
+                              <CheckIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Answered
                             </button>
                             <button
                               type="button"
@@ -4109,7 +4029,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               disabled={quickStatusRemarks.some(r => r.ans_non_ans_disabled)}
                               onClick={() => setQuickRemarkAnsNonAns('Not-Answered')}
                             >
-                              ✗ Not Answered
+                              <XMarkIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Not Answered
                             </button>
                           </div>
                         </div>
@@ -4130,74 +4050,161 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               )}
 
 
-
               <div className="qa-drawer-divider" />
 
-              {/* ── Lead Activity Timeline ── */}
-              <div className="qa-drawer-section">Lead Activity</div>
-              <div className="qa-drawer-history">
-                {quickActionActivities.length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
-                ) : (
-                  quickActionActivities.slice(0, 5).map((act, i) => {
-                    const isStage = act.type === 'STAGE_CHANGE';
-                    const isNote = act.type === 'NOTE_ADDED';
-                    const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
-                    const dotBg = isStage ? '#EEE9FC' : isNote ? '#FEF3C7' : '#E3EEFB';
-                    return (
-                      <div key={act.id} className="qa-drawer-hist-item">
-                        <div className="qa-drawer-hist-col">
-                          <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
-                          {i < Math.min(quickActionActivities.length, 5) - 1 && <div className="qa-drawer-hist-line" />}
-                        </div>
-                        <div className="qa-drawer-hist-right">
-                          <div className="qa-drawer-hist-header">
-                            <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
-                            <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
-                          </div>
-                          {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
-                          {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
-                            <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                              Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
-                            </div>
-                          )}
-                          <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+              {/* ── Tabbed: Lead Activity / Remark History ── */}
+              <div className="qa-drawer-tabs">
+                <button
+                  type="button"
+                  className={`qa-drawer-tab ${qaActiveTab === 'activity' ? 'qa-drawer-tab--active' : ''}`}
+                  onClick={() => setQaActiveTab('activity')}
+                >
+                  <BoltIcon style={{ width: 15, height: 15 }} /> Lead Activity
+                </button>
+                <button
+                  type="button"
+                  className={`qa-drawer-tab ${qaActiveTab === 'history' ? 'qa-drawer-tab--active' : ''}`}
+                  onClick={() => setQaActiveTab('history')}
+                >
+                  <TableCellsIcon style={{ width: 15, height: 15 }} /> Remark History
+                </button>
               </div>
 
-              {/* ── Site Visit History ── */}
-              {quickActionSiteVisits.length > 0 && (
+              {/* ── Lead Activity Timeline (tab) ── */}
+              {qaActiveTab === 'activity' && (
                 <>
-                  <div className="qa-drawer-divider" />
-                  <div className="qa-drawer-section">🏠 Recent site visits</div>
-                  <div style={{ padding: '0 20px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {quickActionSiteVisits.slice(0, 4).map((sv) => (
-                      <div key={sv.id} style={{ padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <strong style={{ fontSize: 12 }}>{sv.project?.project_name || 'Unknown'}</strong>
-                          <span style={{ fontSize: 10, color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7' }}>{sv.status}</span>
-                        </div>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
-                          {sv.actual_visit_date ? `✓ ${formatDateTime(sv.actual_visit_date)}` : `📅 ${formatDateTime(sv.scheduled_date)}`}
-                        </div>
-                        {sv.attendedBy && (
-                          <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 3 }}>
-                            By {sv.attendedBy.first_name} {sv.attendedBy.last_name}
+                  <div className="qa-drawer-history">
+                    {quickActionActivities.length === 0 ? (
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
+                    ) : (
+                      quickActionActivities.slice(0, 5).map((act, i) => {
+                        const isStage = act.type === 'STAGE_CHANGE';
+                        const isNote = act.type === 'NOTE_ADDED';
+                        const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
+                        const dotBg = isStage ? '#EEE9FC' : isNote ? '#FEF3C7' : '#E3EEFB';
+                        return (
+                          <div key={act.id} className="qa-drawer-hist-item">
+                            <div className="qa-drawer-hist-col">
+                              <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
+                              {i < Math.min(quickActionActivities.length, 5) - 1 && <div className="qa-drawer-hist-line" />}
+                            </div>
+                            <div className="qa-drawer-hist-right">
+                              <div className="qa-drawer-hist-header">
+                                <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
+                                <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
+                              </div>
+                              {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
+                              {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
+                                <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                  Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
+                                </div>
+                              )}
+                              <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        );
+                      })
+                    )}
                   </div>
-                  {quickActionSiteVisits.length > 4 && (
-                    <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      +{quickActionSiteVisits.length - 4} more
-                    </div>
+
+                  {/* ── Site Visit History ── */}
+                  {quickActionSiteVisits.length > 0 && (
+                    <>
+                      <div className="qa-drawer-divider" />
+                      <div className="qa-drawer-section" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 16, height: 16 }} /> Recent site visits</div>
+                      <div style={{ padding: '0 20px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        {quickActionSiteVisits.slice(0, 4).map((sv) => (
+                          <div key={sv.id} style={{ padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                              <strong style={{ fontSize: 12 }}>{sv.project?.project_name || 'Unknown'}</strong>
+                              <span style={{ fontSize: 10, color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7' }}>{sv.status}</span>
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              {sv.actual_visit_date
+                                ? <><CheckCircleIcon style={{ width: 12, height: 12 }} /> {formatDateTime(sv.actual_visit_date)}</>
+                                : <><CalendarDaysIcon style={{ width: 12, height: 12 }} /> {formatDateTime(sv.scheduled_date)}</>}
+                            </div>
+                            {sv.attendedBy && (
+                              <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 3 }}>
+                                By {sv.attendedBy.first_name} {sv.attendedBy.last_name}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {quickActionSiteVisits.length > 4 && (
+                        <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          +{quickActionSiteVisits.length - 4} more
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
+              )}
+
+              {/* ══ Remark History Tab ══ */}
+              {qaActiveTab === 'history' && (
+                <div className="qa-remark-history">
+                  {(() => {
+                    const remarkActivities = quickActionActivities.filter(
+                      (act) => act.description || act.metadata?.statusRemarkText || act.metadata?.closureReasonName
+                    );
+                    if (remarkActivities.length === 0) {
+                      return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
+                    }
+                    return (
+                      <div className="qa-remark-table-wrap">
+                        <table className="qa-remark-table">
+                          <thead>
+                            <tr>
+                              <th>Status</th>
+                              <th>Remarks</th>
+                              <th>Call / Response</th>
+                              <th>By</th>
+                              <th>Date & Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {remarkActivities.map((act) => {
+                              const callStatus = act.metadata?.statusRemarkResponseType
+                                || act.metadata?.callResult
+                                || act.metadata?.last_call_result
+                                || '';
+                              const byName = act.by || 'System';
+                              const byRole = act.metadata?.performedByRole || act.metadata?.role || '';
+                              const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
+                              return (
+                                <tr key={act.id}>
+                                  <td>
+                                    <span className="qa-remark-status-badge">{act.title || '—'}</span>
+                                  </td>
+                                  <td>
+                                    <div>{act.description || act.metadata?.statusRemarkText || '—'}</div>
+                                    {closureReason && (
+                                      <div className="qa-remark-closure">Reason: {closureReason}</div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {callStatus ? (
+                                      <span className={`qa-remark-call-badge ${callStatus.toLowerCase().includes('not') ? 'qa-remark-call-badge--missed' : 'qa-remark-call-badge--answered'}`}>
+                                        {callStatus.replace('-', ' ')}
+                                      </span>
+                                    ) : '—'}
+                                  </td>
+                                  <td>
+                                    <div className="qa-remark-by-name">{byName}</div>
+                                    {byRole && <div className="qa-remark-by-role">{byRole}</div>}
+                                  </td>
+                                  <td className="qa-remark-date">{formatDateTime(act.at || act.created_at)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
             </div>
 
@@ -4207,10 +4214,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 className="qa-drawer-skip-btn"
                 onClick={() => {
                   setQuickActionLead(null);
-                              resetQuickWorkflowForm();
+                  resetQuickWorkflowForm();
                 }}
               >
-               Close
+                Close
               </button>
               <button
                 className="qa-drawer-save-btn"
@@ -4232,7 +4239,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             </div>
           </div>
         </div>
-        )}
+      )}
     </section>
   );
 };

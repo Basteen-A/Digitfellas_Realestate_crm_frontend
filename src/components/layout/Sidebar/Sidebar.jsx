@@ -1,20 +1,27 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { NavLink } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { getSidebarMenuForRole, ROLE_LABELS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
-import { logout } from '../../../redux/slices/authSlice';
-import toast from 'react-hot-toast';
+import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import './Sidebar.css';
+import logoS from '../../../assets/images/logo S.png';
 
 const MOBILE_BREAKPOINT = 768;
 
+/** Renders a menu icon — accepts a Heroicon component or falls back to a dot */
+const MenuIcon = ({ icon, className = 'sidebar-icon' }) => {
+  if (!icon) return <span className={className}>•</span>;
+  if (typeof icon === 'function' || typeof icon === 'object') {
+    const Icon = icon;
+    return <Icon className={className} />;
+  }
+  return <span className={className}>{icon}</span>;
+};
+
 const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const { sidebarCollapsed } = useSelector((state) => state.ui);
-  const { user } = useSelector((state) => state.auth);
   const roleCode = useSelector((state) => getRoleCode(state.auth.user));
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const [openGroups, setOpenGroups] = useState({});
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
@@ -31,15 +38,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const fullName = user?.fullName || user?.full_name || 'User';
-  const initials = (fullName.split(' ').map((w) => w[0]).join('').substring(0, 2) || 'U').toUpperCase();
   const roleLabel = ROLE_LABELS[roleCode] || roleCode || '';
-
-  const handleLogout = async () => {
-    await dispatch(logout());
-    toast.success('Logged out');
-    navigate('/login');
-  };
 
   const handleLinkClick = () => {
     if (isMobile && onMobileClose) {
@@ -63,12 +62,14 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 md:hidden"
             aria-label="Close sidebar"
           >
-            ✕
+            <XMarkIcon className="sidebar-icon" />
           </button>
         )}
       {/* Brand */}
       <div className="app-sidebar__brand">
-        <span className="app-sidebar__logo">RC</span>
+        <div className="app-sidebar__logo">
+          {sidebarCollapsed ? 'RC' : <img src={logoS} alt="Logo" />}
+        </div>
         {!sidebarCollapsed && <span className="app-sidebar__name">RealEstate CRM</span>}
       </div>
 
@@ -88,9 +89,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             return (
               <div key={item.label} className="app-sidebar__group">
                 <button type="button" className="app-sidebar__group-button" onClick={() => toggleGroup(item.label)}>
-                  <span>{item.icon || '▸'}</span>
+                  <MenuIcon icon={item.icon} />
                   {!sidebarCollapsed && <span>{item.label}</span>}
-                  {!sidebarCollapsed && <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}>›</span>}
+                  {!sidebarCollapsed && <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>}
                 </button>
                 {!sidebarCollapsed && isOpen && (
                   <div className="app-sidebar__subnav">
@@ -118,35 +119,14 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
               onClick={handleLinkClick}
               className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
             >
-              <span>{item.icon || '•'}</span>
+              <MenuIcon icon={item.icon} />
               {!sidebarCollapsed && <span>{item.label}</span>}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Profile Section at Bottom */}
-      <div className="app-sidebar__footer">
-        <div className="app-sidebar__profile">
-          <NavLink
-            to="/profile"
-            className={({ isActive }) => `app-sidebar__profile-link ${isActive ? 'is-active' : ''}`}
-          >
-            <span className="app-sidebar__profile-avatar">{initials}</span>
-            {!sidebarCollapsed && (
-              <div className="app-sidebar__profile-info">
-                <span className="app-sidebar__profile-name">{fullName}</span>
-                <span className="app-sidebar__profile-role">{roleLabel}</span>
-              </div>
-            )}
-          </NavLink>
-          {!sidebarCollapsed && (
-            <button type="button" className="app-sidebar__logout-btn" onClick={handleLogout} title="Logout">
-              🚪
-            </button>
-          )}
-        </div>
-      </div>
+
     </aside>
     </>
   );

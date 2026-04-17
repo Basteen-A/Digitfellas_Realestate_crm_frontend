@@ -37,6 +37,7 @@ import ClosedLostReasons from '../pages/superadmin/ClosedLostReasons';
 import BookingCancelReasons from '../pages/superadmin/BookingCancelReasons';
 import StatusRemarks from '../pages/superadmin/StatusRemarks';
 import WorkflowActions from '../pages/superadmin/WorkflowActions/WorkflowActionList';
+import Motivations from '../pages/superadmin/Motivations';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
@@ -142,6 +143,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />
             <Route path="/super-admin/status-remarks" element={<StatusRemarks />} />
             <Route path="/super-admin/workflow-actions" element={<WorkflowActions />} />
+            <Route path="/super-admin/motivations" element={<Motivations />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

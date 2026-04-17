@@ -4,6 +4,21 @@ import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import siteVisitApi from '../../../api/siteVisitApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import {
+  UsersIcon,
+  MapPinIcon,
+  HomeModernIcon,
+  ArrowPathIcon,
+  RocketLaunchIcon,
+  XCircleIcon,
+  InboxArrowDownIcon,
+  ChartBarIcon,
+  FireIcon,
+  TruckIcon,
+} from '@heroicons/react/24/outline';
+
+const ICON_SIZE = { width: 22, height: 22 };
+const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
 
 const SalesManagerDashboard = ({ onNavigate }) => {
   const [stats, setStats] = useState(null);
@@ -87,12 +102,12 @@ const SalesManagerDashboard = ({ onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'Active Leads', value: stats?.activeLeads ?? stats?.totalLeads ?? 0, icon: '👥', iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', change: `↑ ${incomingPendingCount} incoming`, changeType: 'up' },
-    { label: 'Due Today', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, icon: '📌', iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: `${stats?.overdueActions ?? stats?.missedActions ?? 0} overdue`, changeType: (stats?.overdueActions ?? stats?.missedActions ?? 0) > 0 ? 'down' : 'neutral' },
-    { label: 'Upcoming Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, icon: '🏠', iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, changeType: 'neutral' },
-    { label: 'Revisits', value: stats?.revisits ?? 0, icon: '🔄', iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In revisit stage', changeType: 'neutral' },
-    { label: 'Pushed to SH', value: stats?.pushedToSH ?? 0, icon: '🚀', iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', change: 'This month', changeType: 'up' },
-    { label: 'Dropped', value: stats?.dropped ?? 0, icon: '✗', iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'This month', changeType: 'neutral' },
+    { label: 'Active Leads', value: stats?.activeLeads ?? stats?.totalLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', change: `↑ ${incomingPendingCount} incoming`, changeType: 'up' },
+    { label: 'Due Today', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, icon: <MapPinIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: `${stats?.overdueActions ?? stats?.missedActions ?? 0} overdue`, changeType: (stats?.overdueActions ?? stats?.missedActions ?? 0) > 0 ? 'down' : 'neutral' },
+    { label: 'Upcoming Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, changeType: 'neutral' },
+    { label: 'Revisits', value: stats?.revisits ?? 0, icon: <ArrowPathIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In revisit stage', changeType: 'neutral' },
+    { label: 'Pushed to SH', value: stats?.pushedToSH ?? 0, icon: <RocketLaunchIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', change: 'This month', changeType: 'up' },
+    { label: 'Dropped', value: stats?.dropped ?? 0, icon: <XCircleIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'This month', changeType: 'neutral' },
   ];
 
   const pipelineData = (Array.isArray(stats?.stageBreakdown) ? stats.stageBreakdown : [])
@@ -122,7 +137,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       {/* Handoff Banner */}
       {incomingPendingCount > 0 && (
         <div className="handoff-banner" style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a' }}>
-          <div className="handoff-banner-icon" style={{ fontSize: 24 }}>📥</div>
+          <div className="handoff-banner-icon" style={{ fontSize: 24 }}><InboxArrowDownIcon style={{ width: 28, height: 28 }} /></div>
           <div className="handoff-banner-text">
             <div className="handoff-banner-title" style={{ color: '#92400e', fontWeight: 700 }}>{incomingPendingCount} incoming lead{incomingPendingCount > 1 ? 's' : ''} awaiting your review</div>
             <div className="handoff-banner-desc" style={{ color: '#b45309' }}>Leads handed off from telecallers are ready for your action.</div>
@@ -150,13 +165,13 @@ const SalesManagerDashboard = ({ onNavigate }) => {
         {/* Today's Meetings */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">🏠 Upcoming Site Visits ({svList.length})</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={ICON_SM} /> Upcoming Site Visits ({svList.length})</div>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate?.('visits')}>View All →</button>
           </div>
           <div className="crm-card-body-flush" style={{ minHeight: 180 }}>
             {svList.length === 0 && (
               <div className="empty-state" style={{ padding: '40px 20px' }}>
-                <div className="empty-icon">🏠</div>
+                <div className="empty-icon"><HomeModernIcon style={{ width: 40, height: 40, color: 'var(--text-muted)' }} /></div>
                 <div className="empty-title">No upcoming site visits</div>
                 <div className="empty-desc">Scheduled site visits will appear here automatically.</div>
               </div>
@@ -179,10 +194,10 @@ const SalesManagerDashboard = ({ onNavigate }) => {
                   <div className="followup-content">
                     <div className="followup-name" style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
                       {leadName} 
-                      {isHot && <span className="crm-badge badge-hot" style={{ fontSize: 9, padding: '1px 4px' }}>🔥 Hot</span>}
+                      {isHot && <span className="crm-badge badge-hot" style={{ fontSize: 9, padding: '1px 4px', display: 'inline-flex', alignItems: 'center', gap: 2 }}><FireIcon style={{ width: 10, height: 10 }} /> Hot</span>}
                     </div>
-                    <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                      📍 {sv.project?.project_name || 'N/A'} {sv.status === 'Revisit' ? '· 🔄 Revisit' : ''} {sv.pickup_required && '· 🚗 Pickup Needed'}
+                    <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <MapPinIcon style={{ width: 12, height: 12 }} /> {sv.project?.project_name || 'N/A'} {sv.status === 'Revisit' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>· <ArrowPathIcon style={{ width: 12, height: 12 }} /> Revisit</span> : ''} {sv.pickup_required && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>· <TruckIcon style={{ width: 12, height: 12 }} /> Pickup Needed</span>}
                     </div>
                   </div>
                   <button className="crm-btn crm-btn-ghost-primary crm-btn-sm" onClick={() => onNavigate?.('visits')}>Open</button>
@@ -195,7 +210,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
         {/* My Pipeline Summary */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title">📊 Activity Summary</div>
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ChartBarIcon style={ICON_SM} /> Activity Summary</div>
           </div>
           <div className="crm-card-body">
             <div className="mini-bars" style={{ height: 160 }}>

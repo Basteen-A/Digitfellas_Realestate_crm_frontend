@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import authApi from '../../api/authApi';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
 import './Profile.css';
 
 const Profile = () => {
@@ -86,7 +87,7 @@ const Profile = () => {
             className="crm-btn crm-btn-ghost"
             onClick={() => navigate(changePasswordPath)}
           >
-            🔒 Change Password
+            <LockClosedIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Change Password
           </button>
         </div>
       </div>

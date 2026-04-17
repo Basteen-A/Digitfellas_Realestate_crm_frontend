@@ -3,6 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { logout } from '../../../redux/slices/authSlice';
+import { UserIcon, LockClosedIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+
+const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 6 };
 
 const UserMenu = () => {
   const dispatch = useDispatch();
@@ -53,14 +56,14 @@ const UserMenu = () => {
           </div>
           <div className="user-menu__divider" />
           <Link to="/profile" className="user-menu__item" onClick={() => setOpen(false)}>
-            👤 Profile
+            <UserIcon style={ICON_STYLE} /> Profile
           </Link>
           <Link to="/profile/change-password" className="user-menu__item" onClick={() => setOpen(false)}>
-            🔒 Change Password
+            <LockClosedIcon style={ICON_STYLE} /> Change Password
           </Link>
           <div className="user-menu__divider" />
           <button type="button" className="user-menu__item user-menu__item--danger" onClick={handleLogout}>
-            🚪 Logout
+            <ArrowRightOnRectangleIcon style={ICON_STYLE} /> Logout
           </button>
         </div>
       )}

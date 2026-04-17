@@ -5,7 +5,20 @@ import toast from 'react-hot-toast';
 import { useThemeContext } from '../../../contexts/ThemeContext';
 import { logout } from '../../../redux/slices/authSlice';
 import PortalSidebar from './PortalSidebar';
+import {
+  Bars3Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  SunIcon,
+  MoonIcon,
+  BellIcon,
+  UserIcon,
+  LockClosedIcon,
+  ArrowRightOnRectangleIcon,
+} from '@heroicons/react/24/outline';
 import './PortalSidebar.css';
+
+const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 6 };
 
 const SCREEN_TITLES = {
   dashboard: 'Dashboard',
@@ -110,24 +123,23 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
             className="portal-topbar-btn lg:hidden mr-2"
             onClick={() => setMobileMenuOpen(true)}
           >
-            ☰
+            <Bars3Icon style={{ width: 20, height: 20 }} />
           </button>
           <button
             type="button"
             className="portal-topbar-btn hidden lg:inline-flex mr-2"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
-            {sidebarCollapsed ? '→' : '←'}
+            {sidebarCollapsed
+              ? <ChevronRightIcon style={{ width: 18, height: 18 }} />
+              : <ChevronLeftIcon style={{ width: 18, height: 18 }} />
+            }
           </button>
           <div className="portal-topbar__title">
             {SCREEN_TITLES[activeScreen] || activeScreen}
           </div>
           <div className="portal-topbar__center">
-            {/* <div className="portal-search">
-              <span className="portal-search__icon">🔍</span>
-              <input placeholder={searchPlaceholder || 'Search leads...'} />
-              <span className="portal-search__shortcut">⌘K</span>
-            </div> */}
+            {/* Search bar placeholder */}
           </div>
           <div className="portal-topbar__right">
             <button
@@ -136,10 +148,13 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
               onClick={toggleTheme}
               title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDark ? '☀️' : '🌙'}
+              {isDark
+                ? <SunIcon style={{ width: 20, height: 20 }} />
+                : <MoonIcon style={{ width: 20, height: 20 }} />
+              }
             </button>
             <button className="portal-topbar-btn" type="button">
-              🔔<span className="notif-dot"></span>
+              <BellIcon style={{ width: 20, height: 20 }} /><span className="notif-dot"></span>
             </button>
 
             {/* User Menu */}
@@ -161,14 +176,14 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                   </div>
                   <div className="portal-topbar__dropdown-divider" />
                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile'); }}>
-                    👤 My Profile
+                    <UserIcon style={ICON_STYLE} /> My Profile
                   </button>
                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
-                    🔒 Change Password
+                    <LockClosedIcon style={ICON_STYLE} /> Change Password
                   </button>
                   <div className="portal-topbar__dropdown-divider" />
                   <button type="button" className="portal-topbar__dropdown-item portal-topbar__dropdown-item--danger" onClick={handleLogout}>
-                    🚪 Logout
+                    <ArrowRightOnRectangleIcon style={ICON_STYLE} /> Logout
                   </button>
                 </div>
               )}

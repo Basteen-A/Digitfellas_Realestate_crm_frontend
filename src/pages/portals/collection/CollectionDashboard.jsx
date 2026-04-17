@@ -3,7 +3,20 @@ import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  UsersIcon,
+  ClipboardDocumentListIcon,
+  BanknotesIcon,
+  ClockIcon,
+  UserIcon,
+  ChartBarIcon,
+  CreditCardIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
+
+const ICON_SIZE = { width: 22, height: 22 };
+const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
 
 /* ═══════════════════════════════════════════
    COLLECTION DASHBOARD
@@ -23,15 +36,15 @@ const CollectionDashboard = ({ user, onNavigate }) => {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="col-empty"><div className="col-empty-icon">⏳</div><div className="col-empty-title">Loading dashboard...</div></div>;
+  if (loading) return <div className="col-empty"><div className="col-empty-icon"><ClockIcon style={{ width: 40, height: 40, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">Loading dashboard...</div></div>;
 
   const cards = [
-    { label: 'Assigned Leads', value: stats?.totalLeads ?? 0, icon: '👥', bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' },
-    { label: 'Active Bookings', value: stats?.activeBookings ?? 0, icon: '📋', bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
-    { label: 'Total Collected', value: formatCurrency(stats?.totalCollected ?? 0), icon: '💰', bg: 'var(--accent-cyan-bg)', color: 'var(--accent-cyan, #22d3ee)' },
-    { label: 'Pending Dues', value: formatCurrency(stats?.pendingDues ?? 0), icon: '⏰', bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },
-    { label: 'Customers', value: stats?.customersCount ?? 0, icon: '👤', bg: 'var(--accent-purple-bg, #ede9fe)', color: 'var(--accent-purple, #8b5cf6)' },
-    { label: 'This Month', value: formatCurrency(stats?.monthRevenue ?? 0), icon: '📈', bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+    { label: 'Assigned Leads', value: stats?.totalLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' },
+    { label: 'Active Bookings', value: stats?.activeBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+    { label: 'Total Collected', value: formatCurrency(stats?.totalCollected ?? 0), icon: <BanknotesIcon style={ICON_SIZE} />, bg: 'var(--accent-cyan-bg)', color: 'var(--accent-cyan, #22d3ee)' },
+    { label: 'Pending Dues', value: formatCurrency(stats?.pendingDues ?? 0), icon: <ClockIcon style={ICON_SIZE} />, bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },
+    { label: 'Customers', value: stats?.customersCount ?? 0, icon: <UserIcon style={ICON_SIZE} />, bg: 'var(--accent-purple-bg, #ede9fe)', color: 'var(--accent-purple, #8b5cf6)' },
+    { label: 'This Month', value: formatCurrency(stats?.monthRevenue ?? 0), icon: <ChartBarIcon style={ICON_SIZE} />, bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
   ];
 
   const statusData = stats?.statusBreakdown || [];
@@ -41,11 +54,11 @@ const CollectionDashboard = ({ user, onNavigate }) => {
     <div>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>Welcome, {user?.first_name || 'Collection Manager'} 💰</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Welcome, {user?.first_name || 'Collection Manager'} <BanknotesIcon style={{ width: 24, height: 24 }} /></h1>
           <p className="hidden sm:block">Manage bookings, payments, and customer profiles</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={load}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 
@@ -64,7 +77,7 @@ const CollectionDashboard = ({ user, onNavigate }) => {
       <div className="col-two-col">
         <div className="col-section">
           <div className="col-section-header">
-            <div className="col-section-title">📊 Booking Status Breakdown</div>
+            <div className="col-section-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ChartBarIcon style={ICON_SM} /> Booking Status Breakdown</div>
           </div>
           <div className="col-section-body">
             {statusData.length === 0 ? (
@@ -88,7 +101,7 @@ const CollectionDashboard = ({ user, onNavigate }) => {
 
         <div className="col-section">
           <div className="col-section-header">
-            <div className="col-section-title">💳 Recent Payments</div>
+            <div className="col-section-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CreditCardIcon style={ICON_SM} /> Recent Payments</div>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate('payments')}>View All →</button>
           </div>
           <div className="col-section-body-flush">
@@ -114,10 +127,10 @@ const CollectionDashboard = ({ user, onNavigate }) => {
       </div>
 
       <div className="col-actions-row" style={{ marginTop: 20 }}>
-        <button className="crm-btn crm-btn-primary" onClick={() => onNavigate('bookings')}>📋 Manage Bookings</button>
-        <button className="crm-btn crm-btn-success" onClick={() => onNavigate('payments')}>💳 Payment History</button>
-        <button className="crm-btn crm-btn-ghost" onClick={() => onNavigate('customers')}>👤 Customer Profiles</button>
-        <button className="crm-btn crm-btn-ghost" onClick={() => onNavigate('leads')}>👥 View Leads</button>
+        <button className="crm-btn crm-btn-primary" onClick={() => onNavigate('bookings')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ClipboardDocumentListIcon style={{ width: 16, height: 16 }} /> Manage Bookings</button>
+        <button className="crm-btn crm-btn-success" onClick={() => onNavigate('payments')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CreditCardIcon style={{ width: 16, height: 16 }} /> Payment History</button>
+        <button className="crm-btn crm-btn-ghost" onClick={() => onNavigate('customers')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><UserIcon style={{ width: 16, height: 16 }} /> Customer Profiles</button>
+        <button className="crm-btn crm-btn-ghost" onClick={() => onNavigate('leads')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><UsersIcon style={{ width: 16, height: 16 }} /> View Leads</button>
       </div>
     </div>
   );

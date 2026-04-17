@@ -1,12 +1,29 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import followUpApi from '../../../api/followUpApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
+import {
+  UsersIcon,
+  UserIcon,
+  PhoneIcon,
+  HomeModernIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  SparklesIcon,
+  ArrowPathIcon,
+  PlusIcon,
+  MapPinIcon,
+} from '@heroicons/react/24/outline';
 import './TelecallerDashboard.css';
 
+const ICON_SIZE = { width: 20, height: 20 };
+const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
+
 const TelecallerDashboard = ({ user, onNavigate }) => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [unassignedLeads, setUnassignedLeads] = useState([]);
   const [missedFollowUps, setMissedFollowUps] = useState([]);
@@ -65,17 +82,18 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const statCardsData = [
-    { label: 'New Leads', value: stats?.unassignedLeads ?? stats?.unassignedLeadCount ?? unassignedLeads.length, icon: '👥', color: 'var(--accent-purple)' },
-    { label: 'My Leads', value: stats?.myLeads ?? 0, icon: '👤', color: 'var(--accent-blue)' },
-    { label: "Today's FU", value: stats?.todaysFollowUps ?? 0, icon: '📞', color: 'var(--accent-green)' },
-    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: '🏠', color: 'var(--accent-cyan)' },
-    { label: 'SV Completed', value: stats?.svCompleted ?? 0, icon: '✅', color: '#10b981' },
-    { label: 'Missed FU', value: stats?.overdueFollowUps ?? 0, icon: '⚠️', color: 'var(--accent-red)' },
+    { label: 'New Leads', value: stats?.unassignedLeads ?? stats?.unassignedLeadCount ?? unassignedLeads.length, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
+    { label: 'My Leads', value: stats?.myLeads ?? 0, icon: <UserIcon style={ICON_SIZE} />, color: 'var(--accent-blue)' },
+    { label: "Today's FU", value: stats?.todaysFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: 'var(--accent-green)' },
+    { label: 'Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
+    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
+    { label: 'SV Completed', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
+    { label: 'Missed FU', value: stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
   ];
 
   const handleLeadClick = (leadId) => {
     if (!leadId) return;
-    onNavigate?.('leads', { leadId });
+    navigate(`/portal/lead/${leadId}`);
   };
 
   return (
@@ -87,8 +105,8 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
           <p style={{ color: 'var(--text-secondary)', marginTop: 4 }}>Let's close some deals today!</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button className="crm-btn crm-btn-ghost" onClick={loadDashboardData}>↻ Refresh</button>
-          <button className="crm-btn crm-btn-primary" onClick={() => onNavigate?.('leads-addnew')}>＋ Add Lead</button>
+          <button className="crm-btn crm-btn-ghost" onClick={loadDashboardData} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
+          <button className="crm-btn crm-btn-primary" onClick={() => onNavigate?.('leads-addnew')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PlusIcon style={{ width: 16, height: 16 }} /> Add Lead</button>
         </div>
       </div>
 
@@ -99,7 +117,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
             <div className="td-stat-label">{card.label}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span className="td-stat-value" style={{ color: card.color }}>{card.value}</span>
-              <span style={{ fontSize: 16 }}>{card.icon}</span>
+              <span style={{ color: card.color }}>{card.icon}</span>
             </div>
           </div>
         ))}
@@ -110,7 +128,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         {/* Unassigned Leads */}
         <div className="td-card">
           <div className="td-card-header">
-            <div className="td-card-title">🆕 New Leads (Unassigned)</div>
+            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SparklesIcon style={ICON_SM} /> New Leads (Unassigned)</div>
             <span className="view-all-link" onClick={() => onNavigate?.('leads')}>View All →</span>
           </div>
           <div className="td-card-body">
@@ -136,8 +154,8 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         {/* Missed Follow-ups */}
         <div className="td-card">
           <div className="td-card-header">
-            <div className="td-card-title">⚠️ Missed Follow-ups</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('followups')}>View All →</span>
+            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExclamationTriangleIcon style={ICON_SM} /> Missed Follow-ups</div>
+            <span className="view-all-link" onClick={() => onNavigate?.('leads')}>View My Leads →</span>
           </div>
           <div className="td-card-body">
             {missedFollowUps.length === 0 ? (
@@ -167,8 +185,8 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         {/* Today's Follow-ups */}
         <div className="td-card">
           <div className="td-card-header">
-            <div className="td-card-title">📞 Today's Follow-ups</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('followups')}>Schedule →</span>
+            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PhoneIcon style={ICON_SM} /> Today's Follow-ups</div>
+            <span className="view-all-link" onClick={() => onNavigate?.('leads')}>Open My Leads →</span>
           </div>
           <div className="td-card-body">
             {todayFollowUps.length === 0 ? (
@@ -195,7 +213,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         {/* Upcoming Site Visits */}
         <div className="td-card">
           <div className="td-card-header">
-            <div className="td-card-title">🏠 SV Scheduled</div>
+            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={ICON_SM} /> SV Scheduled</div>
             <span className="view-all-link" onClick={() => onNavigate?.('sitevisits')}>Track →</span>
           </div>
           <div className="td-card-body">
@@ -208,8 +226,8 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                     <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
                     <div className="td-item-meta">
                       <span className="td-item-date">{formatDateTime(lead.nextFollowUpAt || lead.updatedAt)}</span>
-                      <span>📍 {lead.project || 'Project'}</span>
-                      <span>📞 {lead.phone}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><MapPinIcon style={{ width: 12, height: 12 }} /> {lead.project || 'Project'}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><PhoneIcon style={{ width: 12, height: 12 }} /> {lead.phone}</span>
                     </div>
                   </div>
                   <span className={`td-badge td-badge-sitevisit`}>Scheduled</span>

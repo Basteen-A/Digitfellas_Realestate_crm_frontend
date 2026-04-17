@@ -12,6 +12,31 @@ import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getRoleCode } from '../../../utils/permissions';
 import { getActionsForRole } from './workflowConfig';
+import {
+  XMarkIcon,
+  UserIcon,
+  MapPinIcon,
+  CalendarDaysIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  PhoneIcon,
+  ClipboardDocumentListIcon,
+  NoSymbolIcon,
+  TrashIcon,
+  HandRaisedIcon,
+  SparklesIcon,
+  BanknotesIcon,
+  TrophyIcon,
+  IdentificationIcon,
+  HomeIcon,
+  BoltIcon,
+  TableCellsIcon,
+  HomeModernIcon,
+  ChatBubbleLeftIcon
+} from '@heroicons/react/24/outline';
+import CalendarPicker from '../../../components/common/CalendarPicker';
 import './LeadDetailsPage.css';
 
 const QUICK_REMARKS = [
@@ -19,25 +44,15 @@ const QUICK_REMARKS = [
   'Not Reachable', 'RNR', 'Wrong Number', 'Follow-up Scheduled'
 ];
 
-const STAGE_FLOW = ['LEAD', 'CONTACTED', 'QUALIFIED', 'SITE_VISIT', 'OPPORTUNITY', 'BOOKING', 'CLOSED_WON', 'CLOSED_LOST'];
-const STAGE_LABELS = {
-  LEAD: 'Lead',
-  CONTACTED: 'Contacted',
-  QUALIFIED: 'Qualified',
-  SITE_VISIT: 'Site Visit',
-  OPPORTUNITY: 'Opportunity',
-  BOOKING: 'Booking',
-  CLOSED_WON: 'Won',
-  CLOSED_LOST: 'Lost',
-};
+
 const iconForTimeline = (type) => {
-  if (type === 'NOTE_ADDED') return '📝';
-  if (type === 'STAGE_CHANGED' || type === 'STAGE_CHANGE') return '📍';
-  if (type === 'STATUS_CHANGED' || type === 'STATUS_CHANGE') return '🔁';
-  if (type === 'REASSIGNMENT' || type === 'ASSIGNMENT') return '👤';
-  if (type === 'FOLLOW_UP_SCHEDULED') return '📅';
-  if (type === 'CREATED') return '✨';
-  return '•';
+  if (type === 'NOTE_ADDED') return ClipboardDocumentListIcon;
+  if (type === 'STAGE_CHANGED' || type === 'STAGE_CHANGE') return MapPinIcon;
+  if (type === 'STATUS_CHANGED' || type === 'STATUS_CHANGE') return ArrowPathIcon;
+  if (type === 'REASSIGNMENT' || type === 'ASSIGNMENT') return UserIcon;
+  if (type === 'FOLLOW_UP_SCHEDULED') return CalendarDaysIcon;
+  if (type === 'CREATED') return SparklesIcon;
+  return null;
 };
 
 const getAssigneeRoleForAction = (action, roleCode) => {
@@ -60,7 +75,7 @@ const toDateTimeLocalValue = (value) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
+const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
   const date = new Date();
   date.setSeconds(0, 0);
   date.setDate(date.getDate() + dayOffset);
@@ -78,13 +93,7 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
-  const date = new Date();
-  date.setSeconds(0, 0);
-  date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return date;
-};
+
 
 const actionInitialState = {
   nextFollowUpAt: '',
@@ -117,12 +126,13 @@ const LeadDetailsPage = () => {
   const [projectOptions, setProjectOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
-  const [activeTab, setActiveTab] = useState('actions');
+  const [activeTab, setActiveTab] = useState('activity');
   const [siteVisits, setSiteVisits] = useState([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [assignedUser, setAssignedUser] = useState(null);
   const [userTotalScore, setUserTotalScore] = useState(0);
 
+  const [qaActiveTab, setQaActiveTab] = useState('activity');
   const [actionCode, setActionCode] = useState('');
   const [actionForm, setActionForm] = useState(actionInitialState);
   const [assignableUsers, setAssignableUsers] = useState([]);
@@ -130,13 +140,12 @@ const LeadDetailsPage = () => {
   const [actionSaving, setActionSaving] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState('contact');
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
-  const [quickBusy, setQuickBusy] = useState(false);
+  const [actionStatusRemarks, setActionStatusRemarks] = useState([]);
+  const [actionRemarkAnsNonAns, setActionRemarkAnsNonAns] = useState(null);
   const [quickActionCode, setQuickActionCode] = useState('');
   const [quickActionForm, setQuickActionForm] = useState(actionInitialState);
   const [quickAssignableUsers, setQuickAssignableUsers] = useState([]);
   const [quickClosureReasons, setQuickClosureReasons] = useState([]);
-  const [actionStatusRemarks, setActionStatusRemarks] = useState([]);
-  const [actionRemarkAnsNonAns, setActionRemarkAnsNonAns] = useState(null);
   const [quickStatusRemarks, setQuickStatusRemarks] = useState([]);
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null);
   const [quickActionSaving, setQuickActionSaving] = useState(false);
@@ -154,7 +163,6 @@ const LeadDetailsPage = () => {
   const roleActions = useMemo(() => getActionsForRole(workflowConfig?.actions || {}, roleCode), [workflowConfig, roleCode]);
   const selectedAction = useMemo(() => roleActions.find((a) => a.code === actionCode) || null, [roleActions, actionCode]);
   const quickSelectedAction = useMemo(() => roleActions.find((a) => a.code === quickActionCode) || null, [roleActions, quickActionCode]);
-  const timeline = useMemo(() => lead?.timeline || [], [lead?.timeline]);
   const isSmHandoffReadOnly = useMemo(() => {
     if (roleCode !== 'SM' || !lead || !authUser?.id) return false;
     const assignedToOtherUser = lead.assignedToUserId && String(lead.assignedToUserId) !== String(authUser.id);
@@ -164,37 +172,6 @@ const LeadDetailsPage = () => {
       && String(lead.previousAssignedTo) === String(authUser.id);
   }, [authUser?.id, lead, roleCode]);
 
-  const followUpEvents = useMemo(
-    () => timeline.filter((evt) => {
-      const type = String(evt.type || '').toUpperCase();
-      const title = String(evt.title || '').toUpperCase();
-      return type.includes('FOLLOW') || title.includes('FOLLOW-UP') || title.includes('FOLLOW UP');
-    }),
-    [timeline]
-  );
-
-  const statusStageRecords = useMemo(
-    () => timeline.filter((evt) => {
-      const type = String(evt.type || '').toUpperCase();
-      return type.includes('STATUS') || type.includes('STAGE');
-    }),
-    [timeline]
-  );
-
-  const { pastFollowUps, futureFollowUps } = useMemo(() => {
-    const now = Date.now();
-    const past = [];
-    const future = [];
-
-    followUpEvents.forEach((evt) => {
-      const time = new Date(evt.at).getTime();
-      if (Number.isNaN(time)) return;
-      if (time < now) past.push(evt);
-      else future.push(evt);
-    });
-
-    return { pastFollowUps: past, futureFollowUps: future };
-  }, [followUpEvents]);
 
   const getProjectNames = useMemo(() => {
     if (!lead) return [];
@@ -471,39 +448,7 @@ const LeadDetailsPage = () => {
     }
   };
 
-  const handleQuickFollowUp = async (dateValue, label) => {
-    if (!lead?.id) return;
-    if (isSmHandoffReadOnly) {
-      toast.error('This lead is view-only after handoff to Sales Head.');
-      return;
-    }
-    const targetDate = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-    if (!targetDate || Number.isNaN(targetDate.getTime())) {
-      toast.error('Please select a valid follow-up date & time');
-      return;
-    }
 
-    const followUpAction = roleActions.find((item) => item.needsFollowUp);
-    if (!followUpAction) {
-      toast.error('No follow-up action configured for your role.');
-      return;
-    }
-
-    setQuickBusy(true);
-    try {
-      await leadWorkflowApi.transitionLead(lead.id, followUpAction.code, {
-        nextFollowUpAt: targetDate.toISOString(),
-        note: `Quick follow-up scheduled: ${label}`,
-      });
-      toast.success(`Follow-up set for ${label}`);
-      closeQuickActionsModal();
-      await loadLeadData();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to schedule follow-up'));
-    } finally {
-      setQuickBusy(false);
-    }
-  };
 
   const handleQuickActionPick = async (code) => {
     const action = roleActions.find((item) => item.code === code);
@@ -756,9 +701,11 @@ const LeadDetailsPage = () => {
           >
             +
           </button>
-          <span className="lead-details-stage" style={{ backgroundColor: `${lead.stageColor}22`, color: lead.stageColor }}>
-            {lead.stageLabel}
-          </span>
+          {roleCode !== 'TC' && (
+            <span className="lead-details-stage" style={{ backgroundColor: `${lead.stageColor}22`, color: lead.stageColor }}>
+              {lead.stageLabel}
+            </span>
+          )}
           <span className="lead-details-status" style={{ backgroundColor: `${lead.statusColor}22`, color: lead.statusColor }}>
             {lead.statusIcon || ''} {lead.statusLabel}
           </span>
@@ -794,24 +741,7 @@ const LeadDetailsPage = () => {
         </article>
       </div>
 
-      <div className="lead-details-pipeline">
-        <div className="pipeline-stages">
-          {STAGE_FLOW.map((stageCode, idx) => {
-            const currentIndex = STAGE_FLOW.indexOf(lead.stageCode);
-            const isActive = currentIndex === idx;
-            const isPast = currentIndex > idx;
-            const isTerminal = ['CLOSED_WON', 'CLOSED_LOST'].includes(stageCode);
 
-            return (
-              <div key={stageCode} className={`pipeline-stage ${isActive ? 'active' : ''} ${isPast ? 'completed' : ''} ${isTerminal ? 'terminal' : ''}`}>
-                <div className="pipeline-dot" />
-                {idx < STAGE_FLOW.length - 1 && <div className="pipeline-line" />}
-                <div className="pipeline-label">{STAGE_LABELS[stageCode]}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       <div className="lead-details-content">
         <div className="lead-details-left">
@@ -898,14 +828,9 @@ const LeadDetailsPage = () => {
                   <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
                     <span className="lead-details-label">Creation Location</span>
                     <span className="lead-details-value">
-                      <a
-                        href={`https://www.google.com/maps?q=${lead.geoLat},${lead.geoLong}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-                      >
-                        📍 View Location on Map
-                      </a>
+                      <button className="crm-btn crm-btn-secondary" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.location?.location_name || '')}`, '_blank')} title="View Map">
+                        <MapPinIcon style={{ width: 14, height: 14, marginRight: 5 }} /> View Location
+                      </button>
                     </span>
                   </div>
                 )}
@@ -915,7 +840,7 @@ const LeadDetailsPage = () => {
 
           <section className="lead-details-card">
             <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'assignment' ? '' : 'assignment'))}>
-              <span className="lead-details-card-title">Assignment & Ownership</span>
+              <span className="lead-details-card-title">Assignment</span>
               <span className="lead-accordion-icon">{accordionOpen === 'assignment' ? '−' : '+'}</span>
             </button>
             {accordionOpen === 'assignment' && (
@@ -923,7 +848,7 @@ const LeadDetailsPage = () => {
                 <div className="lead-details-info-item"><span className="lead-details-label">Assigned To</span><span className="lead-details-value lead-details-value--primary">{lead.assignedToUserName || 'Unassigned'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Assigned By</span><span className="lead-details-value">{lead.assignedByUserName || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Assigned At</span><span className="lead-details-value">{lead.assignedAt ? formatDateTime(lead.assignedAt) : '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">Stage Owner</span><span className="lead-details-value">{lead.ownerRoleLabel || lead.ownerRole || '-'}</span></div>
+                <div className="lead-details-info-item"><span className="lead-details-label">Current Assigned User</span><span className="lead-details-value">{lead.ownerRoleLabel || lead.ownerRole || '-'}</span></div>
                 {lead.handoff?.fromUserName && (
                   <div className="lead-details-info-item">
                     <span className="lead-details-label">Last Handoff</span>
@@ -955,17 +880,17 @@ const LeadDetailsPage = () => {
 
         <div className="lead-details-right">
           <div className="lead-details-tabs">
-            <button className={`lead-details-tab ${activeTab === 'actions' ? 'active' : ''}`} onClick={() => setActiveTab('actions')}>Actions</button>
             <button className={`lead-details-tab ${activeTab === 'activity' ? 'active' : ''}`} onClick={() => setActiveTab('activity')}>Activity</button>
-            <button className={`lead-details-tab ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>Comments</button>
+            <button className={`lead-details-tab ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>Notes</button>
             <button className={`lead-details-tab ${activeTab === 'calls' ? 'active' : ''}`} onClick={() => setActiveTab('calls')}>Call Logs</button>
             <button className={`lead-details-tab ${activeTab === 'followups' ? 'active' : ''}`} onClick={() => setActiveTab('followups')}>Followups & Status</button>
-            <button className={`lead-details-tab ${activeTab === 'sitevisits' ? 'active' : ''}`} onClick={() => setActiveTab('sitevisits')}>Site Visits</button>
-            <button className={`lead-details-tab ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')}>Documents</button>
+            {roleCode !== 'TC' && (
+              <button className={`lead-details-tab ${activeTab === 'sitevisits' ? 'active' : ''}`} onClick={() => setActiveTab('sitevisits')}>Site Visits</button>
+            )}
           </div>
 
           <div className="lead-details-tab-content">
-            {activeTab === 'actions' && (
+            {false && activeTab === 'actions' && (
               <div className="lead-actions-panel">
                 {isSmHandoffReadOnly && (
                   <p className="lead-actions-hint" style={{ marginBottom: 12 }}>This lead is currently view-only for you after handoff to Sales Head.</p>
@@ -993,7 +918,7 @@ const LeadDetailsPage = () => {
 
                         {selectedAction.needsFollowUp && (
                           <label className="lead-actions-label">
-                            Follow-Up Date & Time *
+                            <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up Date & Time *
                             <input
                               type="datetime-local"
                               value={actionForm.nextFollowUpAt}
@@ -1001,8 +926,8 @@ const LeadDetailsPage = () => {
                               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                             />
                             <div className="qa-remarks-wrap" style={{ marginTop: 8 }}>
-                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6PM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11AM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today 6PM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tomorrow 11AM</button>
                               <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11AM</button>
                               <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11AM</button>
                             </div>
@@ -1244,7 +1169,12 @@ const LeadDetailsPage = () => {
                 ) : (
                   lead.timeline.map((evt) => (
                     <div key={evt.id} className="lead-details-timeline-item">
-                      <div className="lead-details-timeline-icon">{iconForTimeline(evt.type)}</div>
+                      <div className="lead-details-timeline-icon">
+                        {(() => {
+                          const Icon = iconForTimeline(evt.type);
+                          return Icon ? <Icon style={{ width: 14, height: 14 }} /> : <span style={{ fontSize: 10 }}>•</span>;
+                        })()}
+                      </div>
                       <div className="lead-details-timeline-content">
                         <div className="lead-details-timeline-header">
                           <span className="lead-details-timeline-title">{evt.title || evt.type.replace(/_/g, ' ')}</span>
@@ -1287,71 +1217,58 @@ const LeadDetailsPage = () => {
             )}
 
             {activeTab === 'followups' && (
-              <div className="lead-followups-tab">
-                <div className="lead-followups-grid">
-                  <div className="lead-followups-card">
-                    <h4>Next Follow-Up</h4>
-                    <p>{lead.nextFollowUpAt ? formatDateTime(lead.nextFollowUpAt) : 'Not scheduled'}</p>
-                  </div>
-                  <div className="lead-followups-card">
-                    <h4>Follow-Up Status</h4>
-                    <p>
-                      {!lead.nextFollowUpAt
-                        ? 'Not set'
-                        : new Date(lead.nextFollowUpAt).getTime() < Date.now()
-                          ? 'Overdue'
-                          : 'Upcoming'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="lead-followups-records">
-                  <div className="lead-followups-block">
-                    <h5>Future Follow-Ups</h5>
-                    {futureFollowUps.length === 0 ? (
-                      <p className="lead-details-empty">No future follow-up record yet.</p>
-                    ) : (
-                      futureFollowUps.map((evt) => (
-                        <div key={evt.id} className="lead-followups-item">
-                          <strong>{evt.title || 'Follow-Up Scheduled'}</strong>
-                          <span>{formatDateTime(evt.at)}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="lead-followups-block">
-                    <h5>Past Follow-Ups</h5>
-                    {pastFollowUps.length === 0 ? (
-                      <p className="lead-details-empty">No past follow-up record yet.</p>
-                    ) : (
-                      pastFollowUps.map((evt) => (
-                        <div key={evt.id} className="lead-followups-item">
-                          <strong>{evt.title || 'Follow-Up Completed'}</strong>
-                          <span>{formatDateTime(evt.at)}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="lead-followups-block">
-                    <h5>Status & Stage Records</h5>
-                    {statusStageRecords.length === 0 ? (
-                      <p className="lead-details-empty">No status/stage record yet.</p>
-                    ) : (
-                      statusStageRecords.map((evt) => (
-                        <div key={evt.id} className="lead-followups-item">
-                          <strong>{evt.title || evt.type.replace(/_/g, ' ')}</strong>
-                          <span>{formatDateTime(evt.at)}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
+              <div className="lead-details-followups-new">
+                <div className="history-table-container">
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                        <th>Action By</th>
+                        <th>Call Status</th>
+                        <th>Date & Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(lead.timeline || []).filter(evt => 
+                        ['STATUS_CHANGED', 'STATUS_CHANGE', 'STAGE_CHANGED', 'STAGE_CHANGE', 'FOLLOW_UP_SCHEDULED'].includes(evt.type)
+                      ).length === 0 ? (
+                        <tr><td colSpan={5} className="text-center py-4 text-muted">No status or followup history yet.</td></tr>
+                      ) : (
+                        lead.timeline
+                          .filter(evt => ['STATUS_CHANGED', 'STATUS_CHANGE', 'STAGE_CHANGED', 'STAGE_CHANGE', 'FOLLOW_UP_SCHEDULED'].includes(evt.type))
+                          .sort((a, b) => new Date(b.at) - new Date(a.at))
+                          .map((evt) => (
+                          <tr key={evt.id}>
+                            <td>
+                              <div className="status-cell">
+                                {(() => {
+                                  const Icon = iconForTimeline(evt.type);
+                                  return Icon ? <Icon style={{ width: 14, height: 14, marginRight: 6, color: 'var(--accent-blue)' }} /> : null;
+                                })()}
+                                <strong>{evt.title || evt.type.replace(/_/g, ' ')}</strong>
+                              </div>
+                            </td>
+                            <td>{evt.description || '-'}</td>
+                            <td>{evt.by || 'System'}</td>
+                            <td>
+                              {evt.metadata?.callResult ? (
+                                <span className={`call-status-badge ${evt.metadata.callResult.toLowerCase()}`}>
+                                  {evt.metadata.callResult}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="text-nowrap">{formatDateTime(evt.at)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
-            {activeTab === 'sitevisits' && (
+            {roleCode !== 'TC' && activeTab === 'sitevisits' && (
               <div className="lead-details-sitevisits">
                 <div className="lead-details-info-grid">
                   <div className="lead-details-info-item"><span className="lead-details-label">Total Site Visits</span><span className="lead-details-value">{lead.totalSiteVisits || 0}</span></div>
@@ -1382,7 +1299,7 @@ const LeadDetailsPage = () => {
               </div>
             )}
 
-            {activeTab === 'documents' && (
+            {false && activeTab === 'documents' && (
               <div className="lead-details-documents">
                 <p className="lead-details-empty">No documents uploaded yet.</p>
               </div>
@@ -1397,7 +1314,10 @@ const LeadDetailsPage = () => {
           <div className="qa-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="qa-header">
               <div>
-                <h2>⚡ Quick Actions</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <BoltIcon style={{ width: 22, height: 22, color: '#f59e0b' }} />
+                  <h2>Quick Actions</h2>
+                </div>
                 <small style={{ color: '#94a3b8', fontSize: '12px' }}>{lead?.fullName || lead?.full_name} · {lead?.phone}</small>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1407,415 +1327,699 @@ const LeadDetailsPage = () => {
                     title="Call Now"
                     onClick={() => window.open(`tel:${lead.phone || lead.phone_number}`)}
                   >
-                    📞
+                    <PhoneIcon style={{ width: 18, height: 18 }} />
                   </button>
                   <button 
                     className="qa-header-icon-btn"
                     title="WhatsApp"
                     onClick={() => window.open(`https://wa.me/${(lead.whatsappNumber || lead.phone || '').replace(/\D/g, '')}`, '_blank')}
                   >
-                    💬
+                    <ChatBubbleLeftIcon style={{ width: 18, height: 18 }} />
                   </button>
                 </div>
                 <button className="qa-header-close" onClick={closeQuickActionsModal}>×</button>
               </div>
             </div>
 
-            <div className="qa-body">
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 300px', gap: '24px' }}>
-                {/* Left Column: Actions and Forms */}
-                <div>
-                  {/* Workflow Transitions */}
-                  <div className="qa-section">
-                    <div className="qa-section-title">🚀 Workflow Transitions</div>
-                    {isSmHandoffReadOnly && (
-                      <p style={{ gridColumn: '1 / -1', margin: '0 0 10px', color: 'var(--text-muted)', fontSize: 12 }}>View-only: actions are disabled after handoff to Sales Head.</p>
-                    )}
-                    <div className="qa-action-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                      {roleActions.filter(a => a.tone !== 'danger').map((action) => {
-                        let icon = '📋';
-                        if (action.code.includes('RNR')) icon = '🔄';
-                        else if (action.code.includes('SV_DONE') || action.code.includes('SITE_VISIT')) icon = '✅';
-                        else if (action.code.includes('SCHEDULE') || action.code.includes('REVISIT')) icon = '📅';
-                        else if (action.code.includes('FOLLOW_UP')) icon = '📞';
-                        else if (action.code.includes('NEGOTIATION')) icon = '🤝';
-                        else if (action.code.includes('BOOKING')) icon = '🎉';
-                        else if (action.code.includes('PAYMENT')) icon = '💸';
-                        else if (action.code.includes('REASSIGN')) icon = '👤';
+            {/* ── Scrollable Drawer Body ── */}
+            <div className="qa-drawer-body">
 
-                        return (
-                          <button
-                            key={action.code}
-                            type="button"
-                            className={`qa-btn-card ${quickActionCode === action.code ? 'active' : ''}`}
-                            disabled={quickBusy || quickActionSaving || isSmHandoffReadOnly}
-                            onClick={() => handleQuickActionPick(action.code)}
-                          >
-                            <span className="icon">{icon}</span>
-                            <span className="label">{action.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+              {/* ── Update Status (Status Grid) ── */}
+              {!lead.isClosed && (
+                <>
+                  <div className="qa-drawer-section">Update status</div>
+                  {isSmHandoffReadOnly && (
+                    <p style={{ margin: '0 20px 8px', fontSize: 12, color: 'var(--text-muted)' }}>This lead is view-only for you after handoff to Sales Head.</p>
+                  )}
+                  <div className="qa-drawer-status-grid">
+                    {roleActions.filter((a) => {
+                      const isNegotiation = a.code.includes('NEGOTIATION');
+                      const isHotNegotiation = a.code.includes('NEGOTIATION_HOT') || a.targetStatusCode === 'NEGOTIATION_HOT';
+                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && (!isNegotiation || isHotNegotiation);
+                    }).map((action) => {
+                      let icon = <ClipboardDocumentListIcon style={{ width: 18, height: 18 }} />;
+                      let selClass = 'sel-default';
+                      if (action.code.includes('RNR')) { icon = <ArrowPathIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-rnr'; }
+                      else if (action.code.includes('SV_DONE') || action.code.includes('SITE_VISIT')) { icon = <CheckCircleIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-sv-done'; }
+                      else if (action.code.includes('SCHEDULE') || action.code.includes('REVISIT')) { icon = <CalendarDaysIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-sv-scheduled'; }
+                      else if (action.code.includes('FOLLOW_UP')) { icon = <ArrowPathIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-follow-up'; }
+                      else if (action.code.includes('NEGOTIATION')) { icon = <HandRaisedIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-negotiation'; }
+                      else if (action.code.includes('BOOKING')) { icon = <SparklesIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-booking'; }
+                      else if (action.code.includes('PAYMENT')) { icon = <BanknotesIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-booking'; }
+                      else if (action.code.includes('REASSIGN')) { icon = <UserIcon style={{ width: 18, height: 18 }} />; selClass = 'sel-follow-up'; }
 
-                  {/* Disqualification */}
-                  <div className="qa-section">
-                    <div className="qa-section-title" style={{ color: '#dc2626' }}>⚠️ Disqualification</div>
-                    <div className="qa-disqual-row">
-                      {roleActions.filter(a => a.tone === 'danger').map((action) => (
+                      return (
                         <button
                           key={action.code}
                           type="button"
-                          className={`qa-btn-disqual ${quickActionCode === action.code ? 'active' : ''}`}
-                          disabled={quickBusy || quickActionSaving || isSmHandoffReadOnly}
+                          className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? selClass : ''}`}
+                          disabled={quickActionSaving || isSmHandoffReadOnly}
                           onClick={() => handleQuickActionPick(action.code)}
                         >
-                          {action.code.includes('JUNK') ? '🗑️' : action.code.includes('SPAM') ? '🚫' : '💔'} {action.label}
+                          <div className="qa-drawer-st-icon">{icon}</div>
+                          <div className="qa-drawer-st-label">{action.label}</div>
                         </button>
-                      ))}
-                      {roleActions.filter(a => a.tone === 'danger').length === 0 && (
-                        <div style={{ padding: '8px', gridColumn: '1 / -1', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>No disqualification actions available for your role.</div>
-                      )}
-                    </div>
+                      );
+                    })}
+                    {/* Danger / Disqualification actions in the grid */}
+                    {roleActions.filter(a => a.tone === 'danger').map((action) => (
+                      <button
+                        key={action.code}
+                        type="button"
+                        className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? 'sel-junk' : ''}`}
+                        disabled={quickActionSaving || isSmHandoffReadOnly}
+                        onClick={() => handleQuickActionPick(action.code)}
+                      >
+                        <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? <NoSymbolIcon style={{ width: 18, height: 18 }} /> : action.code.includes('SPAM') ? <TrashIcon style={{ width: 18, height: 18 }} /> : <ExclamationTriangleIcon style={{ width: 18, height: 18 }} />}</div>
+                        <div className="qa-drawer-st-label">{action.label}</div>
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Dynamic Action Form */}
-                  {quickSelectedAction && (
-                    <div className="qa-section" style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-primary)', marginTop: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                        <div style={{ width: '4px', height: '16px', background: 'var(--accent-blue)', borderRadius: '2px' }} />
-                        <span style={{ fontSize: '13px', fontWeight: '800' }}>Configure: {quickSelectedAction.label}</span>
+                </>
+              )}
+
+              {/* ── Dynamic Form: Shows only after selecting a status ── */}
+              {quickSelectedAction && (
+                <div style={{ animation: 'qa-fade-in 0.3s ease' }}>
+                  {/* ── Contextual: Follow-up Date (when action needs follow-up) ── */}
+                  {quickSelectedAction?.needsFollowUp && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 14, 0) }))}>Today 2PM</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today 6PM</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tmrw 11AM</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2, 11, 0) }))}>In 2 days</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7, 11, 0) }))}>Next week</button>
                       </div>
+                      <CalendarPicker
+                        type="datetime"
+                        value={quickActionForm.nextFollowUpAt}
+                        onChange={(val) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: val }))}
+                        placeholder="Select follow-up date & time..."
+                        minDate={new Date().toISOString()}
+                      />
+                    </div>
+                  )}
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        {quickSelectedAction.needsFollowUp && (
-                          <div style={{ gridColumn: 'span 2' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Next Follow-up *</label>
-                            <input
-                              type="datetime-local"
-                              value={quickActionForm.nextFollowUpAt}
-                              onChange={(e) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
-                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                            />
-                            <div className="qa-remarks-wrap" style={{ marginTop: 8 }}>
-                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6PM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11AM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11AM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11AM</button>
-                            </div>
-                          </div>
-                        )}
+                  {/* ── Contextual: Closure Reason (when action needs reason) ── */}
+                  {quickSelectedAction?.needsReason && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Reason *</div>
+                      <select
+                        className="qa-drawer-field-select"
+                        value={quickActionForm.closureReasonId}
+                        onChange={(e) => setQuickActionForm((p) => ({ ...p, closureReasonId: e.target.value }))}
+                        style={{ width: '100%', marginBottom: 8 }}
+                      >
+                        <option value="">Select a reason...</option>
+                        {quickClosureReasons.map(r => (
+                          <option key={r.id} value={r.id}>{r.reason_name || r.reason_text || r.reason}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                        {(quickSelectedAction.needsAssignee || quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE' || quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') && (
-                          <div style={{ gridColumn: 'span 2' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
-                              {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Assign To Sales Head *' : 
-                               (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') ? 'Assign To Collection Manager *' : 'Assign To *'}
-                            </label>
-                            <select
-                              value={quickActionForm.assignToUserId}
-                              onChange={(e) => setQuickActionForm((p) => ({ ...p, assignToUserId: e.target.value }))}
-                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                            >
-                              <option value="">Select user...</option>
-                              {quickAssignableUsers.map((item) => (
-                                <option key={item.id} value={item.id}>{item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim()}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+                  {/* ── Contextual: Assignee (when action needs assignee or SV details) ── */}
+                  {(quickSelectedAction?.needsAssignee || quickSelectedAction?.needsSvDetails || quickSelectedAction?.code === 'TC_SV_DONE') && (
+                    <div className="qa-drawer-ctx-block">
+                      <label className="qa-drawer-field-label">
+                        {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
+                      </label>
+                      <select
+                        className="qa-drawer-field-select"
+                        value={quickActionForm.assignToUserId}
+                        onChange={(e) => setQuickActionForm((p) => ({ ...p, assignToUserId: e.target.value }))}
+                        style={{ width: '100%' }}
+                      >
+                        <option value="">
+                          {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Select Sales Head...' :
+                           getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
+                        </option>
+                        {(quickAssignableUsers[getAssigneeRoleForAction(quickSelectedAction, roleCode)] || [])
+                          .filter((u) => {
+                            if (quickSelectedAction?.code !== 'TC_REASSIGN') return true;
+                            const currentAssigneeId = lead?.assignedToUserId || null;
+                            return !currentAssigneeId || u.id !== currentAssigneeId;
+                          })
+                          .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
+                          </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
 
-                        {(quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') && (
-                          <>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Visit Date</label>
-                              <input
-                                type="date"
-                                value={quickActionForm.svDate}
-                                onChange={(e) => setQuickActionForm((p) => ({ ...p, svDate: e.target.value }))}
-                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Project *</label>
-                              <select
-                                value={quickActionForm.svProjectId}
-                                onChange={(e) => setQuickActionForm((p) => ({ ...p, svProjectId: e.target.value }))}
-                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                              >
-                                {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
-                              </select>
-                            </div>
-                          </>
-                        )}
-
-                        {(quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') && (
-                          <div style={{ gridColumn: 'span 2', backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-primary)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-                        {quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && (
-                          <>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Budget Min *</label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={quickActionForm.budgetMin}
-                                onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMin: e.target.value }))}
-                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Budget Max *</label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={quickActionForm.budgetMax}
-                                onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMax: e.target.value }))}
-                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                              />
-                            </div>
-                          </>
-                        )}
-                            <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏆 Customer Profile Details</div>
-                            
-                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>👤 Personal Details</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                Date of Birth *
-                                <input type="date" value={customerProfileForm.date_of_birth} onChange={(e) => setCustomerProfileForm(p => ({ ...p, date_of_birth: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                Marital Status
-                                <select value={customerProfileForm.marital_status} onChange={(e) => setCustomerProfileForm(p => ({ ...p, marital_status: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
-                                  <option value="">Select...</option>
-                                  <option value="Single">Single</option>
-                                  <option value="Married">Married</option>
-                                  <option value="Divorced">Divorced</option>
-                                  <option value="Widowed">Widowed</option>
-                                </select>
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                Purchase Type
-                                <select value={customerProfileForm.purchase_type} onChange={(e) => setCustomerProfileForm(p => ({ ...p, purchase_type: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
-                                  <option value="">Select...</option>
-                                  <option value="Investment">Investment</option>
-                                  <option value="Self Use">Self Use</option>
-                                  <option value="Rental">Rental</option>
-                                  <option value="Gift">Gift</option>
-                                </select>
-                              </label>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                Occupation *
-                                <input type="text" value={customerProfileForm.occupation} onChange={(e) => setCustomerProfileForm(p => ({ ...p, occupation: e.target.value }))} placeholder="e.g. Business, Salaried" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                Current Post
-                                <input type="text" value={customerProfileForm.current_post} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_post: e.target.value }))} placeholder="e.g. Manager" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                            </div>
-
-                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>🪪 Identity Documents</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                PAN Number *
-                                <input type="text" maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', textTransform: 'uppercase', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                Aadhar Number *
-                                <input type="text" maxLength={12} value={customerProfileForm.aadhar_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, aadhar_number: e.target.value.replace(/\D/g, '') }))} placeholder="1234 5678 9012" style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                            </div>
-
-                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>📍 Current Address *</div>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                              Address
-                              <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                            </label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>City
-                                <input type="text" value={customerProfileForm.current_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_city: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>State
-                                <input type="text" value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Pincode
-                                <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                              </label>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, flex: 1 }}>🏠 Permanent Address</div>
-                              <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 12 }}>
-                                <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
-                              </label>
-                            </div>
-                            
-                            {!customerProfileForm.sameAsCurrent && (
-                              <>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                  Address
-                                  <textarea rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                                </label>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>City
-                                    <input type="text" value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                                  </label>
-                                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>State
-                                    <input type="text" value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                                  </label>
-                                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Pincode
-                                    <input type="text" maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4, padding: '8px', border: '1px solid var(--border-primary)', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-primary)' }} />
-                                  </label>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {quickSelectedAction.needsReason && (
-                          <div style={{ gridColumn: 'span 2' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Closure Reason *</label>
-                            <select
-                              value={quickActionForm.closureReasonId}
-                              onChange={(e) => setQuickActionForm((p) => ({ ...p, closureReasonId: e.target.value }))}
-                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                            >
-                              <option value="">Select reason...</option>
-                              {quickClosureReasons.map(r => <option key={r.id} value={r.id}>{r.reason || r.reason_text}</option>)}
-                            </select>
-                          </div>
-                        )}
-
-                        <div style={{ gridColumn: 'span 2' }}>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Status Remarks</label>
-                          <div className="qa-remarks-wrap" style={{ margin: 0 }}>
-                            {(quickStatusRemarks.length > 0 ? quickStatusRemarks : QUICK_REMARKS.map((remarkText) => ({ remark_text: remarkText }))).map((remark) => {
-                              const remarkText = remark.remark_text || remark.text || remark.label || '';
-                              if (!remarkText) return null;
-                              return (
-                                <button
-                                  key={remark.id || remarkText}
-                                  type="button"
-                                  className={`qa-remark-chip ${quickActionForm.statusRemarkText === remarkText ? 'active' : ''}`}
-                                  onClick={() => {
-                                    setQuickActionForm((p) => ({
-                                      ...p,
-                                      statusRemarkText: remarkText,
-                                      note: remarkText,
-                                      callResult: remark.has_ans_non_ans ? (remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered') : p.callResult,
-                                    }));
-                                    if (remark.has_ans_non_ans) {
-                                      setQuickRemarkAnsNonAns(remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered');
-                                    }
-                                  }}
-                                >
-                                  + {remarkText}
-                                </button>
-                              );
-                            })}
-                          </div>
+                  {quickSelectedAction?.code === 'TC_SV_DONE' && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Project Visited *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.svProjectId}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {projectOptions.map((p) => (
+                              <option key={p.id} value={p.id}>{p.project_name}</option>
+                            ))}
+                          </select>
                         </div>
-                      </div>
-
-                      <div style={{ marginTop: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>Remarks</label>
-                        <textarea
-                          rows={2}
-                          value={quickActionForm.note}
-                          onChange={(e) => setQuickActionForm((p) => ({ ...p, note: e.target.value }))}
-                          style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                        />
-                      </div>
-
-                      {/* Call Result Toggle */}
-                      {quickSelectedAction.code !== 'TC_SV_DONE' && quickSelectedAction.code !== 'SM_SITE_VISIT' && (
-                        <div className="call-result-wrap" style={{ marginTop: '16px' }}>
-                          <div className="call-result-label">Call Result</div>
-                          <div className="call-result-toggle">
-                            <button
-                              type="button"
-                              className={`call-result-btn ${quickActionForm.callResult === 'Answered' ? 'active' : ''}`}
-                              onClick={() => setQuickActionForm(p => ({ ...p, callResult: 'Answered' }))}
-                              disabled={quickSelectedAction.code.includes('RNR') || isSmHandoffReadOnly}
-                            >
-                              Answered
-                            </button>
-                            <button
-                              type="button"
-                              className={`call-result-btn ${quickActionForm.callResult === 'Not Answered' ? 'active' : ''}`}
-                              onClick={() => setQuickActionForm(p => ({ ...p, callResult: 'Not Answered' }))}
-                              disabled={quickSelectedAction.code.includes('RNR') || isSmHandoffReadOnly}
-                            >
-                              Not Answered
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                        <button
-                          className="lead-details-action-btn lead-details-action-btn--primary"
-                          style={{ flex: 1, padding: '12px', borderRadius: '10px', fontWeight: '800' }}
-                          onClick={handleQuickActionSubmit}
-                          disabled={quickActionSaving || isSmHandoffReadOnly}
-                        >
-                          {quickActionSaving ? 'Saving...' : 'Submit Followup'}
-                        </button>
-                        <button
-                          className="lead-details-action-btn lead-details-action-btn--secondary"
-                          style={{ padding: '12px 20px', borderRadius: '10px' }}
-                          onClick={() => { setQuickActionCode(''); setQuickActionForm(actionInitialState); }}
-                        >
-                          Clear
-                        </button>
                       </div>
                     </div>
                   )}
-                </div>
 
-                {/* Right Column: Follow-ups & History */}
-                <div style={{ borderLeft: '1px solid var(--border-primary)', paddingLeft: '24px' }}>
-                  <div className="qa-section">
-                    <div className="qa-section-title">📅 Quick Follow-up</div>
-                    <div className="qa-remarks-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 14, 0), 'Today 2PM')}>Today 2PM</button>
-                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(0, 18, 0), 'Today 6PM')}>Today 6PM</button>
-                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpDate(1, 11, 0), 'Tomorrow 11AM')}>Tomorrow 11AM</button>
-                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(6, 11, 0), 'This Sat 11AM')}>This Sat 11AM</button>
-                      <button type="button" className="qa-remark-chip" disabled={isSmHandoffReadOnly} onClick={() => handleQuickFollowUp(getQuickFollowUpForWeekday(0, 11, 0), 'This Sun 11AM')}>This Sun 11AM</button>
-                    </div>
-                  </div>
+                  {/* ── Contextual: Site Visit Details ── */}
+                  {(quickSelectedAction?.needsSvDetails && quickSelectedAction?.code !== 'TC_SV_DONE') && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Visit Date *</label>
+                          <input
+                            type="date"
+                            className="qa-drawer-field-input"
+                            value={quickActionForm.svDate}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, svDate: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Project *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.svProjectId}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {projectOptions.map((p) => (
+                              <option key={p.id} value={p.id}>{p.project_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
 
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Budget Min *</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="qa-drawer-field-input"
+                            placeholder="Minimum budget"
+                            value={quickActionForm.budgetMin}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Budget Max *</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="qa-drawer-field-input"
+                            placeholder="Maximum budget"
+                            value={quickActionForm.budgetMax}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
 
-
-                  <div className="qa-section" style={{ marginTop: '24px' }}>
-                    <div className="qa-section-title">📝 Lead Activity</div>
-                    <div className="qa-timeline">
-                      {quickActionActivities.slice(0, 5).map((act) => (
-                        <div key={act.id} className="qa-timeline-item" style={{ gap: '12px' }}>
-                          <div className="qa-timeline-dot">
-                            {act.type === 'NOTE_ADDED' ? '📝' : '🔄'}
-                          </div>
-                          <div className="qa-timeline-content">
-                            <div className="qa-timeline-header">
-                              <span className="qa-timeline-title">{act.title}</span>
+                      {quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && (
+                        <>
+                          <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                            <div style={{ flex: 1 }}>
+                              <label className="qa-drawer-field-label">Motivation</label>
+                              <select
+                                className="qa-drawer-field-select"
+                                value={quickActionForm.motivationType}
+                                onChange={(e) => setQuickActionForm((p) => ({ ...p, motivationType: e.target.value }))}
+                                style={{ width: '100%' }}
+                              >
+                                <option value="">Select...</option>
+                                <option value="End Use">End Use</option>
+                                <option value="Investment">Investment</option>
+                                <option value="Rental">Rental</option>
+                                <option value="Expansion">Expansion</option>
+                                <option value="Gift">Gift</option>
+                              </select>
                             </div>
-                            <span className="qa-timeline-time">{formatDateTime(act.at || act.created_at)}</span>
+                            <div style={{ flex: 1 }}>
+                              <label className="qa-drawer-field-label">Time Spent (min)</label>
+                              <input
+                                type="number"
+                                className="qa-drawer-field-input"
+                                placeholder="e.g. 45"
+                                value={quickActionForm.timeSpent}
+                                onChange={(e) => setQuickActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
+                                style={{ width: '100%' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: 10 }}>
+                            <label className="qa-drawer-field-label">Requirement (Primary)</label>
+                            <input
+                              type="text"
+                              className="qa-drawer-field-input"
+                              placeholder="e.g. 3BHK, East facing"
+                              value={quickActionForm.primaryRequirement}
+                              onChange={(e) => setQuickActionForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+
+                          <div style={{ marginBottom: 10 }}>
+                            <label className="qa-drawer-field-label">Requirements / Remarks</label>
+                            <textarea
+                              className="qa-drawer-remark-ta"
+                              rows={2}
+                              placeholder="Specific preferences, configuration, budget notes..."
+                              value={quickActionForm.secondaryRequirement}
+                              onChange={(e) => setQuickActionForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
+                            />
+                          </div>
+
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                              <label className="qa-drawer-field-label" style={{ marginBottom: 0 }}>Geo-Location</label>
+                              <button
+                                type="button"
+                                className="qa-drawer-rchip"
+                                style={{ fontSize: '10px', padding: '4px 10px' }}
+                                onClick={() => {
+                                  if (navigator.geolocation) {
+                                    navigator.geolocation.getCurrentPosition((pos) => {
+                                      setQuickActionForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                                      toast.success('Location captured!');
+                                    }, () => toast.error('Check location permissions'));
+                                  }
+                                }}
+                              >
+                                <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
+                              </button>
+                            </div>
+                            <div className="qa-drawer-field-row">
+                              <input type="number" step="any" placeholder="Latitude" className="qa-drawer-field-input"
+                                value={quickActionForm.latitude || ''}
+                                onChange={(e) => setQuickActionForm(p => ({ ...p, latitude: e.target.value }))}
+                              />
+                              <input type="number" step="any" placeholder="Longitude" className="qa-drawer-field-input"
+                                value={quickActionForm.longitude || ''}
+                                onChange={(e) => setQuickActionForm(p => ({ ...p, longitude: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Contextual: Customer Profile ── */}
+                  {(quickSelectedAction?.needsCustomerProfile || quickSelectedAction?.code === 'SH_BOOKING') && (
+                    <div className="qa-drawer-profile-block">
+                      <div className="qa-drawer-profile-section"><TrophyIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Customer Profile Details</div>
+
+                      <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Personal Details</div>
+                      <div className="qa-drawer-profile-grid-3">
+                        <div>
+                          <label className="qa-drawer-field-label">Date of Birth *</label>
+                          <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.date_of_birth} onChange={(e) => setCustomerProfileForm(p => ({ ...p, date_of_birth: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Marital Status</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.marital_status} onChange={(e) => setCustomerProfileForm(p => ({ ...p, marital_status: e.target.value }))}>
+                            <option value="">Select...</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Divorced">Divorced</option>
+                            <option value="Widowed">Widowed</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Purchase Type</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.purchase_type} onChange={(e) => setCustomerProfileForm(p => ({ ...p, purchase_type: e.target.value }))}>
+                            <option value="">Select...</option>
+                            <option value="Investment">Investment</option>
+                            <option value="Self Use">Self Use</option>
+                            <option value="Rental">Rental</option>
+                            <option value="Gift">Gift</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="qa-drawer-profile-grid">
+                        <div>
+                          <label className="qa-drawer-field-label">Occupation *</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.occupation} onChange={(e) => setCustomerProfileForm(p => ({ ...p, occupation: e.target.value }))} placeholder="e.g. Business, Salaried" />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Current Post</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_post} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_post: e.target.value }))} placeholder="e.g. Manager" />
+                        </div>
+                      </div>
+
+                      <div className="qa-drawer-profile-section"><IdentificationIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Identity Documents</div>
+                      <div className="qa-drawer-profile-grid">
+                        <div>
+                          <label className="qa-drawer-field-label">PAN Number *</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%', textTransform: 'uppercase' }} maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Aadhar Number *</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={12} value={customerProfileForm.aadhar_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, aadhar_number: e.target.value.replace(/\D/g, '') }))} placeholder="1234 5678 9012" />
+                        </div>
+                      </div>
+
+                      <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Current Address *</div>
+                      <div>
+                        <label className="qa-drawer-field-label">Address</label>
+                        <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
+                      </div>
+                      <div className="qa-drawer-profile-grid-3">
+                        <div>
+                          <label className="qa-drawer-field-label">City</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_city: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">State</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="qa-drawer-profile-section" style={{ flex: 1, marginBottom: 0 }}><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
+                        <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
+                        </label>
+                      </div>
+                      {!customerProfileForm.sameAsCurrent && (
+                        <>
+                          <div>
+                            <label className="qa-drawer-field-label">Address</label>
+                            <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
+                          </div>
+                          <div className="qa-drawer-profile-grid-3">
+                            <div>
+                              <label className="qa-drawer-field-label">City</label>
+                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">State</label>
+                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Pincode</label>
+                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Quick Remarks (secondary fields shown after action-required fields) ── */}
+                  {quickStatusRemarks.length > 0 && (
+                    <>
+                      <div className="qa-drawer-section">Quick remarks — tap to fill</div>
+                      <div className="qa-drawer-rchip-row">
+                        {quickStatusRemarks.map(remark => (
+                          <button
+                            key={remark.id}
+                            type="button"
+                            className={`qa-drawer-rchip ${quickActionForm.statusRemarkText === remark.remark_text ? 'sel' : ''}`}
+                            onClick={() => {
+                              setQuickActionForm(p => ({ ...p, statusRemarkText: remark.remark_text, note: remark.remark_text }));
+                              if (remark.has_ans_non_ans) {
+                                setQuickRemarkAnsNonAns(remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered');
+                              } else {
+                                setQuickRemarkAnsNonAns(null);
+                              }
+                            }}
+                          >
+                            {remark.remark_text}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* ── Ans/Non-Ans Toggle (if needed) ── */}
+                      {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
+                        <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Response Type:</span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                border: quickRemarkAnsNonAns === 'Answered' ? '2px solid #0F7B5C' : '1px solid var(--border-primary)',
+                                background: quickRemarkAnsNonAns === 'Answered' ? '#E0F4EE' : 'transparent',
+                                color: quickRemarkAnsNonAns === 'Answered' ? '#0F7B5C' : 'var(--text-primary)',
+                                borderRadius: 4,
+                                cursor: quickStatusRemarks.some(r => r.ans_non_ans_disabled) ? 'not-allowed' : 'pointer',
+                                opacity: quickStatusRemarks.some(r => r.ans_non_ans_disabled) ? 0.5 : 1,
+                              }}
+                              disabled={quickStatusRemarks.some(r => r.ans_non_ans_disabled)}
+                              onClick={() => setQuickRemarkAnsNonAns('Answered')}
+                            >
+                              <CheckIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Answered
+                            </button>
+                            <button
+                              type="button"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                border: quickRemarkAnsNonAns === 'Not-Answered' ? '2px solid #B45309' : '1px solid var(--border-primary)',
+                                background: quickRemarkAnsNonAns === 'Not-Answered' ? '#FEF3C7' : 'transparent',
+                                color: quickRemarkAnsNonAns === 'Not-Answered' ? '#B45309' : 'var(--text-primary)',
+                                borderRadius: 4,
+                                cursor: quickStatusRemarks.some(r => r.ans_non_ans_disabled) ? 'not-allowed' : 'pointer',
+                                opacity: quickStatusRemarks.some(r => r.ans_non_ans_disabled) ? 0.5 : 1,
+                              }}
+                              disabled={quickStatusRemarks.some(r => r.ans_non_ans_disabled)}
+                              onClick={() => setQuickRemarkAnsNonAns('Not-Answered')}
+                            >
+                              <XMarkIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Not Answered
+                            </button>
                           </div>
                         </div>
-                      ))}
-                      {quickActionActivities.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No recent activity</span>}
-                    </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="qa-drawer-remark-wrap">
+                    <textarea
+                      className="qa-drawer-remark-ta"
+                      rows={2}
+                      value={quickActionForm.note}
+                      onChange={(e) => setQuickActionForm((p) => ({ ...p, note: e.target.value }))}
+                      placeholder="What was discussed? What's the next step?"
+                    />
                   </div>
                 </div>
+              )}
+
+
+              <div className="qa-drawer-divider" />
+
+              {/* ── Tabbed: Lead Activity / Remark History ── */}
+              <div className="qa-drawer-tabs">
+                <button
+                  type="button"
+                  className={`qa-drawer-tab ${qaActiveTab === 'activity' ? 'qa-drawer-tab--active' : ''}`}
+                  onClick={() => setQaActiveTab('activity')}
+                >
+                  <BoltIcon style={{ width: 15, height: 15 }} /> Lead Activity
+                </button>
+                <button
+                  type="button"
+                  className={`qa-drawer-tab ${qaActiveTab === 'history' ? 'qa-drawer-tab--active' : ''}`}
+                  onClick={() => setQaActiveTab('history')}
+                >
+                  <TableCellsIcon style={{ width: 15, height: 15 }} /> Remark History
+                </button>
+              </div>
+
+              {/* ── Lead Activity Timeline (tab) ── */}
+              {qaActiveTab === 'activity' && (
+                <>
+              <div className="qa-drawer-history">
+                {quickActionActivities.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
+                ) : (
+                  quickActionActivities.slice(0, 5).map((act, i) => {
+                    const isStage = act.type === 'STAGE_CHANGE';
+                    const isNote = act.type === 'NOTE_ADDED';
+                    const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
+                    const dotBg = isStage ? '#EEE9FC' : isNote ? '#FEF3C7' : '#E3EEFB';
+                    return (
+                      <div key={act.id} className="qa-drawer-hist-item">
+                        <div className="qa-drawer-hist-col">
+                          <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
+                          {i < Math.min(quickActionActivities.length, 5) - 1 && <div className="qa-drawer-hist-line" />}
+                        </div>
+                        <div className="qa-drawer-hist-right">
+                          <div className="qa-drawer-hist-header">
+                            <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
+                            <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
+                          </div>
+                          {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
+                          {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
+                            <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                              Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
+                            </div>
+                          )}
+                          <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* ── Site Visit History ── */}
+              {siteVisits.length > 0 && (
+                <>
+                  <div className="qa-drawer-divider" />
+                  <div className="qa-drawer-section" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 16, height: 16 }} /> Recent site visits</div>
+                  <div style={{ padding: '0 20px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {siteVisits.slice(0, 4).map((sv) => (
+                      <div key={sv.id} style={{ padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <strong style={{ fontSize: 12 }}>{sv.project?.project_name || 'Unknown'}</strong>
+                          <span style={{ fontSize: 10, color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7' }}>{sv.status}</span>
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {sv.actual_visit_date
+                            ? <><CheckCircleIcon style={{ width: 12, height: 12 }} /> {formatDateTime(sv.actual_visit_date)}</>
+                            : <><CalendarDaysIcon style={{ width: 12, height: 12 }} /> {formatDateTime(sv.scheduled_date)}</>}
+                        </div>
+                        {sv.attendedBy && (
+                          <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 3 }}>
+                            By {sv.attendedBy.first_name} {sv.attendedBy.last_name}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {siteVisits.length > 4 && (
+                    <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      +{siteVisits.length - 4} more
+                    </div>
+                  )}
+                  </>
+              )}
+              </>
+              )}
+
+             {/* ══ Remark History Tab ══ */}
+             {qaActiveTab === 'history' && (
+              <div className="qa-remark-history">
+                {(() => {
+                  const remarkActivities = quickActionActivities.filter(
+                    (act) => act.description || act.metadata?.statusRemarkText || act.metadata?.closureReasonName
+                  );
+                  if (remarkActivities.length === 0) {
+                    return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
+                  }
+                  return (
+                    <div className="qa-remark-table-wrap">
+                      <table className="qa-remark-table">
+                        <thead>
+                          <tr>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                            <th>Call / Response</th>
+                            <th>By</th>
+                            <th>Date & Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {remarkActivities.map((act) => {
+                            const callStatus = act.metadata?.statusRemarkResponseType
+                              || act.metadata?.callResult
+                              || act.metadata?.last_call_result
+                              || '';
+                            const byName = act.by || 'System';
+                            const byRole = act.metadata?.performedByRole || act.metadata?.role || '';
+                            const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
+                            return (
+                              <tr key={act.id}>
+                                <td>
+                                  <span className="qa-remark-status-badge">{act.title || '—'}</span>
+                                </td>
+                                <td>
+                                  <div>{act.description || act.metadata?.statusRemarkText || '—'}</div>
+                                  {closureReason && (
+                                    <div className="qa-remark-closure">Reason: {closureReason}</div>
+                                  )}
+                                </td>
+                                <td>
+                                  {callStatus ? (
+                                    <span className={`qa-remark-call-badge ${callStatus.toLowerCase().includes('not') ? 'qa-remark-call-badge--missed' : 'qa-remark-call-badge--answered'}`}>
+                                      {callStatus.replace('-', ' ')}
+                                    </span>
+                                  ) : '—'}
+                                </td>
+                                <td>
+                                  <div className="qa-remark-by-name">{byName}</div>
+                                  {byRole && <div className="qa-remark-by-role">{byRole}</div>}
+                                </td>
+                                <td className="qa-remark-date">{formatDateTime(act.at || act.created_at)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+              </div>
+             )}
+            </div>
+
+            {/* ── Save Row (sticky bottom) ── */}
+            <div className="qa-drawer-save-row">
+              <button
+                className="qa-drawer-skip-btn"
+                onClick={closeQuickActionsModal}
+              >
+               Close
+              </button>
+              <button
+                className="qa-drawer-save-btn"
+                disabled={
+                  quickActionSaving
+                  || isSmHandoffReadOnly
+                  || !quickSelectedAction
+                  || ((quickSelectedAction?.needsAssignee
+                    || quickSelectedAction?.code === 'TC_SV_DONE'
+                    || quickSelectedAction?.code === 'TC_REASSIGN')
+                    && !quickActionForm.assignToUserId)
+                  || (quickSelectedAction?.needsFollowUp && !quickActionForm.nextFollowUpAt)
+                  || (quickSelectedAction?.needsReason && !quickActionForm.closureReasonId)
+                }
+                onClick={handleQuickActionSubmit} style={{ backgroundColor: '#625afa' }}
+              >
+                {quickActionSaving ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );
