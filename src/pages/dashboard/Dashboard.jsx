@@ -20,7 +20,6 @@ import {
   Cog6ToothIcon,
   ArrowPathIcon,
   ArrowDownTrayIcon,
-  WrenchScrewdriverIcon,
   DocumentTextIcon,
   UserGroupIcon,
   BuildingStorefrontIcon,
