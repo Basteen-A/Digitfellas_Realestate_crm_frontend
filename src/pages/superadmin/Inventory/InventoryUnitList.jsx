@@ -483,7 +483,7 @@ const InventoryUnitList = () => {
                 </div>
 
                 <div className="inv-form__field">
-                  <label>Price per sqft (₹)</label>
+                  <label>Guided  value per sqft (₹)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -493,7 +493,7 @@ const InventoryUnitList = () => {
                   />
                 </div>
 
-                <div className="inv-form__field">
+                {/* <div className="inv-form__field">
                   <label>Total Price (₹)</label>
                   <input
                     type="number"
@@ -502,19 +502,7 @@ const InventoryUnitList = () => {
                     placeholder="Auto-calculated or enter manually"
                     onChange={(e) => handleFieldChange('total_price', e.target.value)}
                   />
-                </div>
-
-                <div className="inv-form__field">
-                  <label>Guided / Circle Value (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formValues.guided_value}
-                    placeholder="Government guided value"
-                    onChange={(e) => handleFieldChange('guided_value', e.target.value)}
-                  />
-                </div>
-
+                </div> */}
                 <div className="inv-form__field">
                   <label>Facing</label>
                   <select

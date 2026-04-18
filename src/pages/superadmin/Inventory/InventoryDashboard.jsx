@@ -1,16 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast';             
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import './InventoryDashboard.css';
-
-const formatCurrency = (val) => {
-  const num = parseFloat(val) || 0;
-  if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
-  if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
-  if (num >= 1000) return `₹${(num / 1000).toFixed(1)} K`;
-  return `₹${num.toLocaleString('en-IN')}`;
-};
 
 const InventoryDashboard = () => {
   const navigate = useNavigate();
@@ -79,24 +71,6 @@ const InventoryDashboard = () => {
           </div>
           <div className="inv-stat-card__label">Sold</div>
         </div>
-        <div className="inv-stat-card">
-          <div className="inv-stat-card__value inv-stat-card__value--revenue">
-            {formatCurrency(global.total_value)}
-          </div>
-          <div className="inv-stat-card__label">Total Value</div>
-        </div>
-        <div className="inv-stat-card">
-          <div className="inv-stat-card__value inv-stat-card__value--booked">
-            {formatCurrency(global.booked_value)}
-          </div>
-          <div className="inv-stat-card__label">Booked Revenue</div>
-        </div>
-        <div className="inv-stat-card">
-          <div className="inv-stat-card__value inv-stat-card__value--sold">
-            {formatCurrency(global.sold_value)}
-          </div>
-          <div className="inv-stat-card__label">Sold Revenue</div>
-        </div>
       </div>
 
       {/* ── Per-Project Cards ── */}
@@ -149,7 +123,7 @@ const InventoryDashboard = () => {
                     </div>
                     <div className="inv-project-card__stat-label">Available</div>
                   </div>
-                  <div className="inv-project-card__stat">
+                  {/* <div className="inv-project-card__stat">
                     <div className="inv-project-card__stat-value" style={{ color: '#f59e0b' }}>
                       {booked}
                     </div>
@@ -160,7 +134,7 @@ const InventoryDashboard = () => {
                       {sold}
                     </div>
                     <div className="inv-project-card__stat-label">Sold</div>
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="inv-project-card__progress">
@@ -174,10 +148,10 @@ const InventoryDashboard = () => {
                   />
                 </div>
 
-                <div className="inv-project-card__revenue">
+                {/* <div className="inv-project-card__revenue">
                   <span>Booked: <strong>{formatCurrency(proj.booked_value)}</strong></span>
                   <span>Sold: <strong>{formatCurrency(proj.sold_value)}</strong></span>
-                </div>
+                </div> */}
               </div>
             );
           })}

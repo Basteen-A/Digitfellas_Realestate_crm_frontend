@@ -55,18 +55,18 @@ export const getSidebarMenuForRole = (roleCode) => {
 // ── Admin / Super Admin ──
 const adminSidebar = [
   // Top-level Dashboard
-  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+  { label: 'DASHBOARD', path: '/dashboard', icon: Squares2X2Icon },
 
   // Inventory group
   {
-    label: 'Inventory',
+    label: 'PROPERTIES',
     icon: BuildingStorefrontIcon,
     children: [
-      { label: 'Inventory Dashboard', path: '/super-admin/inventory' },
-      { label: 'Manage Units', path: '/super-admin/units' },
+      { label: 'Inventory Overview', path: '/super-admin/inventory' },
       { label: 'Locations', path: '/super-admin/locations' },
       { label: 'Projects', path: '/super-admin/projects' },
       { label: 'Project Types', path: '/super-admin/project-types' },
+      { label: 'Manage Units', path: '/super-admin/units' }
     ],
   },
 

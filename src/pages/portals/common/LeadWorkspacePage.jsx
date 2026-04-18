@@ -31,7 +31,6 @@ import {
   PencilSquareIcon,
   ExclamationTriangleIcon,
   CheckIcon,
-  InformationCircleIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   PhoneIcon,
@@ -2883,20 +2882,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </div>
                       )}
 
-                    {workspaceRole === 'TC' && (
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">Assign To</label>
-                        <select
-                          className="create-lead-select"
-                          value={newLeadForm.assigned_to}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, assigned_to: e.target.value }))}
-                        >
-                          <option value="">— Unassigned (new lead pool) —</option>
-                          <option value="self">Assign to Me</option>
-                        </select>
-                        <span className="create-lead-assign-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><InformationCircleIcon style={{ width: 14, height: 14 }} /> Leave unassigned to add to pool</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -2953,6 +2938,27 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               {/* ── Footer ── */}
               <div className="create-lead-footer">
+                {workspaceRole === 'TC' && (
+                  <div className="create-lead-footer__assign">
+                    <div className="create-lead-footer__assign-label">Assign To</div>
+                    <div className="create-lead-footer__assign-toggle" role="group" aria-label="Assign lead to me or pool">
+                      <button
+                        type="button"
+                        className={`create-lead-footer__assign-btn ${newLeadForm.assigned_to === 'self' ? 'active' : ''}`}
+                        onClick={() => setNewLeadForm((p) => ({ ...p, assigned_to: 'self' }))}
+                      >
+                        Assign to Me
+                      </button>
+                      <button
+                        type="button"
+                        className={`create-lead-footer__assign-btn ${newLeadForm.assigned_to !== 'self' ? 'active' : ''}`}
+                        onClick={() => setNewLeadForm((p) => ({ ...p, assigned_to: '' }))}
+                      >
+                        Unassigned 
+                      </button>
+                    </div>
+                 </div>
+                )}
                 <button
                   type="button"
                   className="create-lead-footer__cancel"
