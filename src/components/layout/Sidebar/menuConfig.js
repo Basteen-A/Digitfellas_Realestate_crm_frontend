@@ -2,7 +2,6 @@
 // SIDEBAR MENU CONFIGURATION — Role-specific menus
 // ============================================================
 import {
-  WrenchScrewdriverIcon,
   ChartBarIcon,
   UsersIcon,
   ClipboardDocumentListIcon,
@@ -20,6 +19,11 @@ import {
   CheckBadgeIcon,
   RocketLaunchIcon,
   CurrencyRupeeIcon,
+  BuildingStorefrontIcon,
+  Cog6ToothIcon,
+  UserGroupIcon,
+  AdjustmentsHorizontalIcon,
+  Squares2X2Icon,
 } from '@heroicons/react/24/outline';
 
 /**
@@ -50,28 +54,58 @@ export const getSidebarMenuForRole = (roleCode) => {
 
 // ── Admin / Super Admin ──
 const adminSidebar = [
+  // Top-level Dashboard
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+
+  // Inventory group
   {
-    label: 'Masters',
-    icon: WrenchScrewdriverIcon,
+    label: 'Inventory',
+    icon: BuildingStorefrontIcon,
     children: [
-      { label: 'Users', path: '/super-admin/users' },
-      { label: 'User Types', path: '/super-admin/user-types' },
+      { label: 'Inventory Dashboard', path: '/super-admin/inventory' },
+      { label: 'Manage Units', path: '/super-admin/units' },
       { label: 'Locations', path: '/super-admin/locations' },
       { label: 'Projects', path: '/super-admin/projects' },
       { label: 'Project Types', path: '/super-admin/project-types' },
+    ],
+  },
+
+  // User Management group
+  {
+    label: 'User Management',
+    icon: UserGroupIcon,
+    children: [
+      { label: 'Users', path: '/super-admin/users' },
+      { label: 'User Types', path: '/super-admin/user-types' },
+    ],
+  },
+
+  // Lead Configuration group
+  {
+    label: 'Lead Configuration',
+    icon: AdjustmentsHorizontalIcon,
+    children: [
       { label: 'Lead Types', path: '/super-admin/lead-types' },
       { label: 'Lead Sources', path: '/super-admin/lead-sources' },
       { label: 'Lead Sub-Sources', path: '/super-admin/lead-sub-sources' },
-      { label: 'Customer Types', path: '/super-admin/customer-types' },
-      { label: 'Score Master', path: '/super-admin/score-master' },
       { label: 'Lead Stages', path: '/super-admin/lead-stages' },
       { label: 'Lead Statuses', path: '/super-admin/lead-statuses' },
       { label: 'Quick Remarks', path: '/super-admin/status-remarks' },
-      { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
-      { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
-      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
-      { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
       { label: 'Motivations', path: '/super-admin/motivations' },
+      { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
+    ],
+  },
+
+  // System & Workflow group
+  {
+    label: 'System & Workflow',
+    icon: Cog6ToothIcon,
+    children: [
+      { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
+      { label: 'Score Master', path: '/super-admin/score-master' },
+      { label: 'Customer Types', path: '/super-admin/customer-types' },
+      { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
+      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
     ],
   },
 ];

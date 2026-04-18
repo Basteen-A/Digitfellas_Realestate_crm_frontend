@@ -23,17 +23,27 @@ import {
   WrenchScrewdriverIcon,
   DocumentTextIcon,
   UserGroupIcon,
+  BuildingStorefrontIcon,
+  AdjustmentsHorizontalIcon,
 } from '@heroicons/react/24/outline';
 import './Dashboard.css';
 
 const ICON_SIZE = { width: 22, height: 22 };
 const ICON_SM = { width: 18, height: 18 };
 
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [adminStats, setAdminStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const roleCode = useSelector((state) => getRoleCode(state.auth.user));
+  const user = useSelector((state) => state.auth.user);
+  const roleCode = getRoleCode(user);
 
   useEffect(() => {
     const load = async () => {
@@ -98,11 +108,11 @@ const Dashboard = () => {
 
   const quickLinks = [
     { label: 'Users', path: '/super-admin/users', icon: <UsersIcon style={ICON_SM} /> },
-    { label: 'Projects', path: '/super-admin/projects', icon: <WrenchScrewdriverIcon style={ICON_SM} /> },
+    { label: 'Projects', path: '/super-admin/projects', icon: <BuildingStorefrontIcon style={ICON_SM} /> },
     { label: 'Locations', path: '/super-admin/locations', icon: <MapPinIcon style={ICON_SM} /> },
     { label: 'Lead Sources', path: '/super-admin/lead-sources', icon: <SignalIcon style={ICON_SM} /> },
-    { label: 'Lead Stages', path: '/super-admin/lead-stages', icon: <ClipboardDocumentListIcon style={ICON_SM} /> },
-    { label: 'Settings', path: '/super-admin/lead-statuses', icon: <Cog6ToothIcon style={ICON_SM} /> },
+    { label: 'Inventory', path: '/super-admin/inventory', icon: <BuildingOfficeIcon style={ICON_SM} /> },
+    { label: 'Workflow', path: '/super-admin/workflow-actions', icon: <AdjustmentsHorizontalIcon style={ICON_SM} /> },
   ];
 
   const sourceStats = adminStats?.sourceStats || [];
@@ -110,15 +120,25 @@ const Dashboard = () => {
 
   return (
     <section>
-      {/* Header */}
-      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="page-header-left">
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Organization Overview <Cog6ToothIcon style={{ width: 24, height: 24 }} /></h1>
-          <p className="hidden sm:block">Complete business metrics across all teams</p>
+      {/* Greeting Banner */}
+      <div className="dash-greeting">
+        <div className="dash-greeting__title">
+          {getGreeting()}, {user?.first_name || 'Admin'} 👋
         </div>
-        <div className="page-header-actions flex-wrap">
-          <button className="crm-btn crm-btn-ghost" onClick={refresh} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
-          <button className="crm-btn crm-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowDownTrayIcon style={{ width: 16, height: 16 }} /> Export</button>
+        <div className="dash-greeting__sub">
+          Here's your organization overview for today. Stay on top of your metrics.
+        </div>
+      </div>
+
+      {/* Header Actions */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1><Cog6ToothIcon style={{ width: 24, height: 24 }} /> Organization Overview</h1>
+          <p>Complete business metrics across all teams</p>
+        </div>
+        <div className="page-header-actions">
+          <button className="crm-btn crm-btn-ghost" onClick={refresh}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
+          <button className="crm-btn crm-btn-primary"><ArrowDownTrayIcon style={{ width: 16, height: 16 }} /> Export</button>
         </div>
       </div>
 
@@ -141,7 +161,7 @@ const Dashboard = () => {
         {/* Leads by Source */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SignalIcon style={ICON_SM} /> Leads by Source</div>
+            <div className="crm-card-title"><SignalIcon style={ICON_SM} /> Leads by Source</div>
           </div>
           <div className="crm-card-body">
             {sourceStats.length === 0 ? (
@@ -166,7 +186,7 @@ const Dashboard = () => {
         {/* Project Inventory */}
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BuildingOfficeIcon style={ICON_SM} /> Project Inventory</div>
+            <div className="crm-card-title"><BuildingOfficeIcon style={ICON_SM} /> Project Inventory</div>
           </div>
           <div className="crm-card-body">
             {(adminStats?.projectInventory || []).length === 0 ? (
@@ -218,7 +238,7 @@ const Dashboard = () => {
       {/* Quick Admin Links */}
       {['SA', 'ADM'].includes(roleCode) && (
         <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Cog6ToothIcon style={ICON_SM} /> Configuration</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Cog6ToothIcon style={ICON_SM} /> Quick Access</h2>
           <div className="crm-grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {quickLinks.map((link) => (
               <Link key={link.path} to={link.path} className="admin-config-card">
@@ -234,7 +254,7 @@ const Dashboard = () => {
       <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4 mt-4">
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><UserGroupIcon style={ICON_SM} /> User Distribution</div>
+            <div className="crm-card-title"><UserGroupIcon style={ICON_SM} /> User Distribution</div>
           </div>
           <div className="crm-card-body">
             {(stats?.userDistribution || []).map((item) => (
@@ -254,7 +274,7 @@ const Dashboard = () => {
 
         <div className="crm-card">
           <div className="crm-card-header">
-            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><DocumentTextIcon style={ICON_SM} /> Recent Activity</div>
+            <div className="crm-card-title"><DocumentTextIcon style={ICON_SM} /> Recent Activity</div>
           </div>
           <div className="crm-card-body-flush">
             {(stats?.recentActivity || []).length === 0 && (

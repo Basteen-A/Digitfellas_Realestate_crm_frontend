@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { getSidebarMenuForRole, ROLE_LABELS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
@@ -22,8 +22,23 @@ const MenuIcon = ({ icon, className = 'sidebar-icon' }) => {
 const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const { sidebarCollapsed } = useSelector((state) => state.ui);
   const roleCode = useSelector((state) => getRoleCode(state.auth.user));
+  const location = useLocation();
 
-  const [openGroups, setOpenGroups] = useState({});
+  // Determine which group contains the current path so it auto-opens
+  const menu = getSidebarMenuForRole(roleCode);
+
+  const getInitialOpenGroups = useCallback(() => {
+    const initial = {};
+    menu.forEach((item) => {
+      if (item.children?.length) {
+        const isActive = item.children.some((child) => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
+        initial[item.label] = isActive;
+      }
+    });
+    return initial;
+  }, [menu, location.pathname]);
+
+  const [openGroups, setOpenGroups] = useState(() => getInitialOpenGroups());
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
 
   React.useEffect(() => {
@@ -32,7 +47,17 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const menu = getSidebarMenuForRole(roleCode);
+  // Auto-expand group containing the active route when location changes
+  React.useEffect(() => {
+    menu.forEach((item) => {
+      if (item.children?.length) {
+        const isActive = item.children.some((child) => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
+        if (isActive) {
+          setOpenGroups((prev) => ({ ...prev, [item.label]: true }));
+        }
+      }
+    });
+  }, [location.pathname, menu]);
 
   const toggleGroup = (label) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -85,10 +110,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       <nav className="app-sidebar__nav">
         {menu.map((item) => {
           if (item.children?.length) {
-            const isOpen = openGroups[item.label] !== false; // default open
+            const isOpen = !!openGroups[item.label];
+            const hasActiveChild = item.children.some((child) => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
+
             return (
-              <div key={item.label} className="app-sidebar__group">
-                <button type="button" className="app-sidebar__group-button" onClick={() => toggleGroup(item.label)}>
+              <div key={item.label} className={`app-sidebar__group ${hasActiveChild ? 'has-active-child' : ''}`}>
+                <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)}>
                   <MenuIcon icon={item.icon} />
                   {!sidebarCollapsed && <span>{item.label}</span>}
                   {!sidebarCollapsed && <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>}
@@ -99,6 +126,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                       <NavLink
                         key={child.path}
                         to={child.path}
+                        onClick={handleLinkClick}
                         className={({ isActive }) =>
                           `app-sidebar__link app-sidebar__link--child ${isActive ? 'is-active' : ''}`
                         }

@@ -1,0 +1,244 @@
+/* ============================================================ */
+/* INVENTORY DASHBOARD — Premium Design with Theme Support      */
+/* ============================================================ */
+
+.inventory-dashboard {
+  padding: 0;
+}
+
+.inventory-dashboard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.inventory-dashboard__header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.inventory-dashboard__header p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+}
+
+/* ── Global Summary Cards ── */
+.inv-global-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.inv-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-lg, 12px);
+  padding: 20px;
+  text-align: center;
+  transition: box-shadow 0.25s, transform 0.25s, border-color 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.inv-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.inv-stat-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+  border-color: var(--border-primary);
+}
+
+.inv-stat-card:hover::before {
+  opacity: 1;
+}
+
+.inv-stat-card__value {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+}
+
+.inv-stat-card__value--total { color: var(--accent-blue); }
+.inv-stat-card__value--available { color: var(--accent-green); }
+.inv-stat-card__value--booked { color: var(--accent-yellow); }
+.inv-stat-card__value--sold { color: var(--accent-red); }
+.inv-stat-card__value--revenue { color: var(--accent-purple); }
+
+.inv-stat-card__label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+/* ── Project Cards Grid ── */
+.inv-projects-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.inv-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.inv-project-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-xl, 16px);
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.inv-project-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+  opacity: 0.7;
+}
+
+.inv-project-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+  border-color: var(--border-primary);
+}
+
+.inv-project-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.inv-project-card__location {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.inv-project-card__type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent-blue-bg);
+  color: var(--accent-blue);
+  padding: 2px 8px;
+  border-radius: var(--border-radius-sm, 6px);
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.inv-project-card__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.inv-project-card__stat {
+  text-align: center;
+}
+
+.inv-project-card__stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.inv-project-card__stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+/* ── Progress bar ── */
+.inv-project-card__progress {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+  display: flex;
+}
+
+.inv-project-card__progress-sold {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inv-project-card__progress-booked {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inv-project-card__revenue {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.inv-project-card__revenue strong {
+  color: var(--text-primary);
+}
+
+/* ── Empty state ── */
+.inv-empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-muted);
+}
+
+.inv-empty__icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.inv-empty__text {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.inv-empty__sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Loading ── */
+.inv-loading {
+  text-align: center;
+  padding: 60px;
+  color: var(--text-muted);
+  font-size: 14px;
+}

@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* SIDEBAR — Role-specific with profile footer                   */
+/* SIDEBAR — Premium Clean Design with Dark/Light Theme         */
 /* ============================================================ */
 
 .app-sidebar {
@@ -7,15 +7,16 @@
   height: 100vh;
   max-height: 100vh;
   min-height: 100vh;
-  background: var(--bg-sidebar, var(--bg-card));
-  border-right: 1px solid var(--border-primary);
+  background: var(--sidebar-bg, var(--bg-sidebar));
+  border-right: 1px solid var(--sidebar-border, var(--border-primary));
   display: flex;
   flex-direction: column;
-  transition: width var(--transition-normal, 0.25s);
+  transition: width var(--transition-sidebar);
   position: sticky;
   top: 0;
   z-index: 100;
   overflow: hidden;
+  box-shadow: var(--shadow-sidebar);
 }
 
 .app-sidebar--collapsed {
@@ -27,14 +28,26 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-primary);
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--sidebar-separator, var(--border-primary));
+  background: var(--sidebar-brand-bg, transparent);
+  position: relative;
+}
+
+.app-sidebar__brand::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-blue-bg), transparent);
 }
 
 .app-sidebar__logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,6 +57,7 @@
   color: #fff;
   font-weight: 800;
   font-size: 12px;
+  box-shadow: 0 2px 8px rgba(98, 90, 250, 0.3);
 }
 
 .app-sidebar__logo img {
@@ -54,9 +68,10 @@
 
 .app-sidebar__name {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-primary);
   white-space: nowrap;
+  letter-spacing: -0.3px;
 }
 
 /* ── Role Badge ── */
@@ -64,15 +79,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 7px 16px;
   margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent-blue);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sidebar-active-text, var(--accent-blue));
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border-primary);
-  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.08));
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--sidebar-separator, var(--border-primary));
+  background: var(--sidebar-active-bg, var(--accent-blue-bg));
 }
 
 .app-sidebar__role-dot {
@@ -81,22 +96,41 @@
   border-radius: 50%;
   background: var(--accent-green, #22c55e);
   flex-shrink: 0;
+  animation: sidebar-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sidebar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* ── Navigation ── */
 .app-sidebar__nav {
   flex: 1;
   min-height: 0;
-  padding: 8px;
+  padding: 8px 8px 16px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
+/* Slim scrollbar */
+.app-sidebar__nav::-webkit-scrollbar {
+  width: 3px;
+}
+.app-sidebar__nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-sidebar__nav::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 4px;
+}
+
+/* ── Top-level links (Dashboard) ── */
 .app-sidebar__link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: var(--border-radius-md, 8px);
   font-size: 13px;
   font-weight: 500;
@@ -104,22 +138,55 @@
   text-decoration: none;
   transition: all var(--transition-fast, 0.15s);
   margin-bottom: 2px;
+  position: relative;
+  border: 1px solid transparent;
 }
 
 .app-sidebar__link:hover {
-  background: var(--bg-card-hover);
+  background: var(--sidebar-hover-bg, var(--bg-card-hover));
   color: var(--text-primary);
 }
 
 .app-sidebar__link.is-active {
-  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.12));
-  color: var(--accent-blue);
+  background: var(--sidebar-active-bg, rgba(98, 90, 250, 0.12));
+  color: var(--sidebar-active-text, var(--accent-blue));
+  font-weight: 600;
+  border-color: var(--sidebar-active-bg);
+}
+
+.app-sidebar__link.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sidebar-active-border, var(--accent-blue));
+}
+
+/* ── Child links (submenu items) ── */
+.app-sidebar__link--child {
+  padding: 7px 12px 7px 38px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.app-sidebar__link--child:hover {
+  color: var(--text-primary);
+  background: var(--sidebar-hover-bg, var(--bg-card-hover));
+}
+
+.app-sidebar__link--child.is-active {
+  color: var(--sidebar-active-text, var(--accent-blue));
+  background: var(--sidebar-active-bg, rgba(98, 90, 250, 0.08));
   font-weight: 600;
 }
 
-.app-sidebar__link--child {
-  padding: 8px 12px 8px 38px;
-  font-size: 12.5px;
+.app-sidebar__link--child.is-active::before {
+  top: 8px;
+  bottom: 8px;
 }
 
 /* ── Groups ── */
@@ -127,33 +194,49 @@
   margin-bottom: 2px;
 }
 
+.app-sidebar__group + .app-sidebar__group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--sidebar-separator, var(--border-secondary));
+}
+
 .app-sidebar__group-button {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: none;
   background: none;
   border-radius: var(--border-radius-md, 8px);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sidebar-group-label, var(--text-muted));
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s);
   font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .app-sidebar__group-button:hover {
-  background: var(--bg-card-hover);
+  background: var(--sidebar-hover-bg, var(--bg-card-hover));
   color: var(--text-primary);
+}
+
+.app-sidebar__group-button.is-open {
+  color: var(--text-primary);
+}
+
+.has-active-child > .app-sidebar__group-button {
+  color: var(--sidebar-active-text, var(--accent-blue));
 }
 
 .app-sidebar__chevron {
   margin-left: auto;
-  font-size: 14px;
-  transition: transform 0.2s;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .app-sidebar__chevron.open {
@@ -161,12 +244,24 @@
 }
 
 .app-sidebar__subnav {
-  padding: 2px 0;
+  padding: 2px 0 2px 0;
+  animation: sidebar-subnav-in 0.2s ease-out;
+}
+
+@keyframes sidebar-subnav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Footer / Profile ── */
 .app-sidebar__footer {
-  border-top: 1px solid var(--border-primary);
+  border-top: 1px solid var(--sidebar-separator, var(--border-primary));
   padding: 10px 8px;
   margin-top: auto;
 }
@@ -189,11 +284,11 @@
 }
 
 .app-sidebar__profile-link:hover {
-  background: var(--bg-card-hover);
+  background: var(--sidebar-hover-bg, var(--bg-card-hover));
 }
 
 .app-sidebar__profile-link.is-active {
-  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.12));
+  background: var(--sidebar-active-bg, rgba(98, 90, 250, 0.12));
 }
 
 .app-sidebar__profile-avatar {
@@ -242,7 +337,7 @@
 }
 
 .app-sidebar__logout-btn:hover {
-  background: var(--bg-card-hover);
+  background: var(--sidebar-hover-bg, var(--bg-card-hover));
 }
 
 /* ── Heroicon SVG sizing ── */

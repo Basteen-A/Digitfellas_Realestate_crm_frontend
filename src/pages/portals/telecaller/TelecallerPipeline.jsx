@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -59,7 +58,6 @@ const extractLeadRows = (response) => {
 };
 
 const TelecallerPipeline = ({ onNavigate }) => {
-  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [statusMetaByCode, setStatusMetaByCode] = useState({});
   const [loading, setLoading] = useState(true);
@@ -185,24 +183,11 @@ const TelecallerPipeline = ({ onNavigate }) => {
     return statusMetaByCode[column.statusCode]?.color_code || '#94a3b8';
   }, [statusMetaByCode]);
 
-  const getLeadFooterText = (lead) => {
-    const followUpDate = toValidDate(lead.nextFollowUpAt);
-    if (followUpDate) {
-      return `Follow-up: ${followUpDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
-    }
-    const updatedDate = toValidDate(lead.updatedAt || lead.createdAt);
-    if (!updatedDate) return 'No date available';
-    return `Updated: ${updatedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
-  };
-
-  const activeFilterLabel = DATE_FILTER_OPTIONS.find((item) => item.value === dateFilter)?.label || 'All Dates';
-
   return (
     <div className="telecaller-pipeline">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Pipeline Board</h1>
-          <p className="hidden sm:block">Showing {filteredLeads.length} of {leads.length} leads ({activeFilterLabel})</p>
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select
@@ -243,12 +228,12 @@ const TelecallerPipeline = ({ onNavigate }) => {
           <p>Loading your pipeline...</p>
         </div>
       ) : (
-        <div className="kanban" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12, minHeight: 'calc(100vh - 220px)' }}>
+        <div className="kanban" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
           {PIPELINE_COLUMNS.map((column) => {
             const stageLeads = getLeadsByColumn(column);
             const columnColor = getColumnColor(column);
             return (
-              <div className="kanban-col" key={column.key} style={{ minWidth: 280, maxWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary, #f8fafc)', borderRadius: 12, border: '1px solid var(--border-primary, #e2e8f0)' }}>
+              <div className="kanban-col" key={column.key} style={{ minWidth: 210, maxWidth: 210, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary, #f8fafc)', borderRadius: 12, border: '1px solid var(--border-primary, #e2e8f0)' }}>
                 <div className="kanban-col-header" style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card, #fff)', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
                   <div className="kanban-col-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
                     <span className="col-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: columnColor }}></span>
@@ -259,43 +244,21 @@ const TelecallerPipeline = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                <div className="kanban-col-body" style={{ flex: 1, padding: 12, overflowY: 'auto' }}>
-                  {stageLeads.map((lead) => (
-                    <div key={lead.id} className="kanban-card" style={{ background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 10, padding: 12, marginBottom: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderLeft: `3px solid ${columnColor}` }}>
-                      <div className="kanban-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="kanban-card-name" style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.fullName}</div>
-                        </div>
-                        <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: (lead.statusColor || '#64748b') + '15', color: lead.statusColor || '#64748b', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          {lead.statusLabel}
-                        </span>
-                      </div>
-
-                      <div className="kanban-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>
-                        <span className="kanban-card-project" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>📍 {lead.project || 'No Project'}</span>
-                        <span className="kanban-card-time" style={{ fontWeight: 600, color: lead.nextFollowUpAt && new Date(lead.nextFollowUpAt) < new Date() ? 'var(--accent-red)' : 'inherit' }}>
-                          {getLeadFooterText(lead)}
-                        </span>
-                      </div>
-
-                      {column.key !== 'SV_DONE' && (
-                        <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-                          <button
-                            className="crm-btn crm-btn-primary crm-btn-sm"
-                            style={{ flex: 1, fontSize: 11, padding: '4px 0' }}
-                            onClick={() => navigate(`/portal/lead/${lead.id}`)}
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {stageLeads.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic' }}>
-                      No leads in this column
-                    </div>
-                  )}
+                <div className="kanban-col-body" style={{ padding: 12 }}>
+                  <div style={{
+                    minHeight: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    background: 'var(--bg-card, #fff)',
+                    border: '1px solid var(--border-primary, #e2e8f0)',
+                    color: 'var(--text-primary)',
+                    fontWeight: 800,
+                    fontSize: 24,
+                  }}>
+                    {stageLeads.length}
+                  </div>
                 </div>
               </div>
             );

@@ -7,6 +7,7 @@ import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
+import inventoryUnitApi from '../../../api/inventoryUnitApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
@@ -93,6 +94,26 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
+const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:'];
+
+const getUserRemarkText = (activity) => {
+  const statusRemark = typeof activity?.metadata?.statusRemarkText === 'string'
+    ? activity.metadata.statusRemarkText.trim()
+    : '';
+  if (statusRemark) return statusRemark;
+
+  const description = typeof activity?.description === 'string' ? activity.description.trim() : '';
+  if (description) {
+    if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
+    return description;
+  }
+
+  const title = typeof activity?.title === 'string' ? activity.title.trim() : '';
+  if (!title) return '';
+  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) return title;
+  return '';
+};
+
 
 
 const actionInitialState = {
@@ -132,7 +153,7 @@ const LeadDetailsPage = () => {
   const [assignedUser, setAssignedUser] = useState(null);
   const [userTotalScore, setUserTotalScore] = useState(0);
 
-  const [qaActiveTab, setQaActiveTab] = useState('activity');
+  const [qaActiveTab, setQaActiveTab] = useState('history');
   const [actionCode, setActionCode] = useState('');
   const [actionForm, setActionForm] = useState(actionInitialState);
   const [assignableUsers, setAssignableUsers] = useState([]);
@@ -156,8 +177,10 @@ const LeadDetailsPage = () => {
     pan_number: '', aadhar_number: '',
     current_address: '', current_city: '', current_state: '', current_pincode: '',
     sameAsCurrent: true,
-    permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: ''
+    permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+    inventoryUnitId: '',
   });
+  const [availableUnits, setAvailableUnits] = useState([]);
 
 
   const roleActions = useMemo(() => getActionsForRole(workflowConfig?.actions || {}, roleCode), [workflowConfig, roleCode]);
@@ -264,6 +287,14 @@ const LeadDetailsPage = () => {
       } catch {
         setUsers([]);
       }
+      // Load inventory units for SH_BOOKING
+      if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
+        if (lead?.projectId) {
+          inventoryUnitApi.getDropdown({ project_id: lead.projectId }).then(resp => {
+            setAvailableUnits(resp.data || []);
+          }).catch(() => setAvailableUnits([]));
+        }
+      }
     } else {
       setUsers([]);
     }
@@ -278,7 +309,7 @@ const LeadDetailsPage = () => {
     } else {
       setReasons([]);
     }
-  }, [roleCode]);
+  }, [roleCode, lead?.projectId]);
 
   const closeQuickActionsModal = useCallback(() => {
     setQuickActionsOpen(false);
@@ -313,14 +344,6 @@ const LeadDetailsPage = () => {
   const handleActionPick = async (code) => {
     setActionCode(code);
     const action = roleActions.find((item) => item.code === code);
-    const needsInput = Boolean(
-      action?.needsFollowUp
-      || action?.needsAssignee
-      || action?.needsReason
-      || action?.needsSvDetails
-      || action?.needsCustomerProfile
-      || action?.code === 'TC_SV_DONE'
-    );
     setActionForm((p) => ({
       ...actionInitialState,
       budgetMin: lead?.budgetMin ?? '',
@@ -338,10 +361,6 @@ const LeadDetailsPage = () => {
 
     await loadActionDependencies(action, setAssignableUsers, setClosureReasons);
     await loadStatusRemarks(action, setActionStatusRemarks, setActionRemarkAnsNonAns);
-
-    if (!needsInput) {
-      setActionForm((p) => ({ ...p, note: `Quick action: ${action.label}` }));
-    }
   };
 
   const handleRunAction = async () => {
@@ -358,9 +377,9 @@ const LeadDetailsPage = () => {
 
     const payload = {
       note: actionForm.note.trim() || undefined,
-      callResult: actionForm.callResult,
+      callResult: undefined,
       statusRemarkText: actionForm.statusRemarkText.trim() || undefined,
-      statusRemarkResponseType: actionRemarkAnsNonAns || undefined,
+      statusRemarkResponseType: actionRemarkAnsNonAns || actionForm.callResult || undefined,
     };
 
     if (selectedAction.needsFollowUp) {
@@ -386,7 +405,6 @@ const LeadDetailsPage = () => {
       }
       payload.closureReasonId = actionForm.closureReasonId || undefined;
       payload.reason = actionForm.reason.trim() || undefined;
-      if (!payload.note) payload.note = payload.reason;
     }
 
     if (selectedAction.needsSvDetails || selectedAction.code === 'TC_SV_DONE') {
@@ -485,19 +503,11 @@ const LeadDetailsPage = () => {
       }
     }
 
-    const needsInput = Boolean(
-      quickSelectedAction.needsFollowUp
-      || quickSelectedAction.needsAssignee
-      || quickSelectedAction.needsReason
-      || quickSelectedAction.needsSvDetails
-      || quickSelectedAction.code === 'TC_SV_DONE'
-    );
-
     const payload = {
       note: quickActionForm.note.trim() || undefined,
-      callResult: quickActionForm.callResult,
+      callResult: undefined,
       statusRemarkText: quickActionForm.statusRemarkText.trim() || undefined,
-      statusRemarkResponseType: quickRemarkAnsNonAns || undefined,
+      statusRemarkResponseType: quickRemarkAnsNonAns || quickActionForm.callResult || undefined,
     };
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -527,6 +537,7 @@ const LeadDetailsPage = () => {
         current_pincode: pF.current_pincode,
         ...permAddr,
       };
+      payload.inventoryUnitId = pF.inventoryUnitId || undefined;
     }
 
     if (quickSelectedAction.needsFollowUp) {
@@ -557,7 +568,6 @@ const LeadDetailsPage = () => {
       }
       payload.closureReasonId = quickActionForm.closureReasonId || undefined;
       payload.reason = quickActionForm.reason.trim() || undefined;
-      if (!payload.note) payload.note = payload.reason;
     }
 
     if (quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') {
@@ -605,10 +615,6 @@ const LeadDetailsPage = () => {
     if (['TC_SPAM', 'TC_JUNK'].includes(quickSelectedAction.code) && !quickActionForm.reason.trim() && !quickActionForm.note.trim()) {
       toast.error('Please enter a reason for ' + quickSelectedAction.label);
       return;
-    }
-
-    if (!needsInput && !payload.note) {
-      payload.note = `Quick action: ${quickSelectedAction.label}`;
     }
 
     setQuickActionSaving(true);
@@ -688,6 +694,17 @@ const LeadDetailsPage = () => {
             disabled={isSmHandoffReadOnly}
             onClick={async () => {
               setQuickActionsOpen(true);
+              setQaActiveTab('history');
+              
+              // Pre-select the action based on lead's current status (last activity)
+              const currentAction = roleActions.find(a => a.targetStatusCode === lead.statusCode);
+              if (currentAction) {
+                await handleQuickActionPick(currentAction.code);
+              } else {
+                setQuickActionCode('');
+                setQuickActionForm(actionInitialState);
+              }
+
               try {
                 const [actResp] = await Promise.all([
                   leadWorkflowApi.getLeadActivities(lead.id)
@@ -1315,10 +1332,10 @@ const LeadDetailsPage = () => {
             <div className="qa-header">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <BoltIcon style={{ width: 22, height: 22, color: '#f59e0b' }} />
+                  <BoltIcon style={{ width: 22, height: 22, color: 'var(--text-secondary)' }} />
                   <h2>Quick Actions</h2>
                 </div>
-                <small style={{ color: '#94a3b8', fontSize: '12px' }}>{lead?.fullName || lead?.full_name} · {lead?.phone}</small>
+                <small style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{lead?.fullName || lead?.full_name} · {lead?.phone}</small>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div className="qa-header-comms" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1649,6 +1666,40 @@ const LeadDetailsPage = () => {
                     <div className="qa-drawer-profile-block">
                       <div className="qa-drawer-profile-section"><TrophyIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Customer Profile Details</div>
 
+                      {/* ── Inventory Unit Selection ── */}
+                      {availableUnits.length > 0 && (
+                        <>
+                          <div className="qa-drawer-profile-section"><HomeModernIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Unit / Plot</div>
+                          <div>
+                            <label className="qa-drawer-field-label">Available Unit</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))}>
+                              <option value="">— Select Unit (Optional) —</option>
+                              {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
+                                <option key={unit.id} value={unit.id}>
+                                  {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {customerProfileForm.inventoryUnitId && (() => {
+                            const su = availableUnits.find(u => u.id === customerProfileForm.inventoryUnitId);
+                            if (!su) return null;
+                            return (
+                              <div style={{ margin: '8px 0', padding: '10px 12px', background: 'var(--bg-tertiary, #f0fdf4)', border: '1px solid #86efac', borderRadius: 8, fontSize: 12, color: 'var(--text-primary)' }}>
+                                <div style={{ fontWeight: 700, marginBottom: 4 }}>{su.unit_number}</div>
+                                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                  {su.configuration && <span>Config: {su.configuration}</span>}
+                                  {su.unit_area && <span>Area: {su.unit_area} {su.area_unit || 'sq.ft.'}</span>}
+                                  {su.total_price && <span>Price: ₹{Number(su.total_price).toLocaleString('en-IN')}</span>}
+                                  {su.facing && <span>Facing: {su.facing}</span>}
+                                  {su.tower_block && <span>Block: {su.tower_block}</span>}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </>
+                      )}
+
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Personal Details</div>
                       <div className="qa-drawer-profile-grid-3">
                         <div>
@@ -1930,9 +1981,10 @@ const LeadDetailsPage = () => {
              {qaActiveTab === 'history' && (
               <div className="qa-remark-history">
                 {(() => {
-                  const remarkActivities = quickActionActivities.filter(
-                    (act) => act.description || act.metadata?.statusRemarkText || act.metadata?.closureReasonName
-                  );
+                  const remarkActivities = quickActionActivities.filter((act) => {
+                    const remarkText = getUserRemarkText(act);
+                    return Boolean(remarkText || act.metadata?.closureReasonName || act.metadata?.closure_reason);
+                  });
                   if (remarkActivities.length === 0) {
                     return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
                   }
@@ -1950,6 +2002,7 @@ const LeadDetailsPage = () => {
                         </thead>
                         <tbody>
                           {remarkActivities.map((act) => {
+                            const remarkText = getUserRemarkText(act);
                             const callStatus = act.metadata?.statusRemarkResponseType
                               || act.metadata?.callResult
                               || act.metadata?.last_call_result
@@ -1963,7 +2016,7 @@ const LeadDetailsPage = () => {
                                   <span className="qa-remark-status-badge">{act.title || '—'}</span>
                                 </td>
                                 <td>
-                                  <div>{act.description || act.metadata?.statusRemarkText || '—'}</div>
+                                  <div>{remarkText || '—'}</div>
                                   {closureReason && (
                                     <div className="qa-remark-closure">Reason: {closureReason}</div>
                                   )}

@@ -8,6 +8,7 @@ import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
+import inventoryUnitApi from '../../../api/inventoryUnitApi';
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -112,6 +113,26 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   date.setDate(date.getDate() + dayOffset);
   date.setHours(hour, minute, 0, 0);
   return toDateTimeLocalValue(date.toISOString());
+};
+
+const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:'];
+
+const getUserRemarkText = (activity) => {
+  const statusRemark = typeof activity?.metadata?.statusRemarkText === 'string'
+    ? activity.metadata.statusRemarkText.trim()
+    : '';
+  if (statusRemark) return statusRemark;
+
+  const description = typeof activity?.description === 'string' ? activity.description.trim() : '';
+  if (description) {
+    if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
+    return description;
+  }
+
+  const title = typeof activity?.title === 'string' ? activity.title.trim() : '';
+  if (!title) return '';
+  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) return title;
+  return '';
 };
 
 const getAssigneeRoleForAction = (action, workspaceRole) => {
@@ -230,7 +251,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null); // 'Answered' | 'Not-Answered' | null
   const [closureReasons, setClosureReasons] = useState([]);
   const [activeTab, setActiveTab] = useState('today'); // 'all' | 'new' | 'today' | 'missed'
-  const [qaActiveTab, setQaActiveTab] = useState('activity'); // 'activity' | 'history'
+  const [qaActiveTab, setQaActiveTab] = useState('history'); // 'activity' | 'history'
 
   // ── Create lead ──
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -296,8 +317,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
     current_address: '', current_city: '', current_state: '', current_pincode: '',
     permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-    sameAsCurrent: false, assignToUserId: '', note: '',
+    sameAsCurrent: false, assignToUserId: '', note: '', inventoryUnitId: '',
   });
+  const [availableUnits, setAvailableUnits] = useState([]);
 
   // ── Assignment ──
   const [assignableUsers, setAssignableUsers] = useState({});
@@ -935,6 +957,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         motivationType: newLeadForm.motivationType,
         assigned_to: assignedToValue,
         closure_reason_id: newLeadForm.closure_reason_id || undefined,
+        note: newLeadForm.remark || undefined,
         remark: newLeadForm.remark || undefined,
         reengage: Boolean(reengageLeadId),
         reengageLeadId: reengageLeadId || undefined,
@@ -1030,10 +1053,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
         current_address: '', current_city: '', current_state: '', current_pincode: '',
         permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-        sameAsCurrent: false, assignToUserId: '', note: actionState.note || '',
+        sameAsCurrent: false, assignToUserId: '', note: actionState.note || '', inventoryUnitId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
+      // Load available inventory units for the lead's project
+      if (selectedLead?.projectId) {
+        inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(resp => {
+          setAvailableUnits(resp.data || []);
+        }).catch(() => setAvailableUnits([]));
+      }
       return;
     }
 
@@ -1191,6 +1220,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING', {
         assignToUserId: f.assignToUserId,
         note: f.note?.trim() || 'Booking approved by Sales Head',
+        inventoryUnitId: f.inventoryUnitId || undefined,
         customerProfile: {
           date_of_birth: f.date_of_birth ? new Date(f.date_of_birth).toISOString() : undefined,
           pan_number: f.pan_number,
@@ -1250,10 +1280,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
         current_address: '', current_city: '', current_state: '', current_pincode: '',
         permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-        sameAsCurrent: false, assignToUserId: '', note: stagePopupData.reason || actionState.note || '',
+        sameAsCurrent: false, assignToUserId: '', note: stagePopupData.reason || actionState.note || '', inventoryUnitId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
+      // Load inventory units
+      if (selectedLead?.projectId) {
+        inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(resp => {
+          setAvailableUnits(resp.data || []);
+        }).catch(() => setAvailableUnits([]));
+      }
       return;
     }
 
@@ -1433,6 +1469,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
       loadAssignableUsers('COL');
+      // Load available inventory units for the lead's project
+      if (quickActionLead?.projectId) {
+        inventoryUnitApi.getDropdown({ project_id: quickActionLead.projectId }).then(resp => {
+          setAvailableUnits(resp.data || []);
+        }).catch(() => setAvailableUnits([]));
+      }
     }
 
     if (action.needsSvDetails && action.code !== 'TC_SV_DONE') {
@@ -1558,7 +1600,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         const payload = {
           note: f.note.trim() || undefined,
           statusRemarkText: f.statusRemarkText?.trim() || undefined,
-          statusRemarkResponseType: quickRemarkAnsNonAns || undefined,
+          statusRemarkResponseType: quickRemarkAnsNonAns || f.callResult || undefined,
           nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : undefined,
           assignToUserId: f.assignToUserId || undefined,
           closureReasonId: f.closureReasonId || undefined,
@@ -1606,6 +1648,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             assignToUserId: pF.assignToUserId,
             note: pF.note,
           };
+          payload.inventoryUnitId = pF.inventoryUnitId || undefined;
         }
 
         if (quickWorkflowAction.code === 'TC_REASSIGN') {
@@ -1917,7 +1960,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             e.stopPropagation();
                             resetQuickWorkflowForm();
                             setQuickActionLead(lead);
-                            setQaActiveTab('activity');
+                            setQaActiveTab('history');
                             // Load site visits and activities for this lead
                             let activities = [];
                             try {
@@ -3491,10 +3534,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <div className="qa-drawer-header-left">
                 <div
                   className="qa-drawer-avatar"
-                  style={{
-                    background: '#E3EEFB',
-                    color: '#1A5FA8',
-                  }}
                 >
                   {(quickActionLead.fullName || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
@@ -3865,6 +3904,40 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <div className="qa-drawer-profile-block">
                       <div className="qa-drawer-profile-section"><TrophyIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Customer Profile Details</div>
 
+                      {/* ── Inventory Unit Selection ── */}
+                      {availableUnits.length > 0 && (
+                        <>
+                          <div className="qa-drawer-profile-section"><HomeModernIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Unit / Plot</div>
+                          <div>
+                            <label className="qa-drawer-field-label">Available Unit</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))}>
+                              <option value="">— Select Unit (Optional) —</option>
+                              {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
+                                <option key={unit.id} value={unit.id}>
+                                  {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {customerProfileForm.inventoryUnitId && (() => {
+                            const su = availableUnits.find(u => u.id === customerProfileForm.inventoryUnitId);
+                            if (!su) return null;
+                            return (
+                              <div style={{ margin: '8px 0', padding: '10px 12px', background: 'var(--bg-tertiary, #f0fdf4)', border: '1px solid #86efac', borderRadius: 8, fontSize: 12, color: 'var(--text-primary)' }}>
+                                <div style={{ fontWeight: 700, marginBottom: 4 }}>{su.unit_number}</div>
+                                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                  {su.configuration && <span>Config: {su.configuration}</span>}
+                                  {su.unit_area && <span>Area: {su.unit_area} {su.area_unit || 'sq.ft.'}</span>}
+                                  {su.total_price && <span>Price: ₹{Number(su.total_price).toLocaleString('en-IN')}</span>}
+                                  {su.facing && <span>Facing: {su.facing}</span>}
+                                  {su.tower_block && <span>Block: {su.tower_block}</span>}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </>
+                      )}
+
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Personal Details</div>
                       <div className="qa-drawer-profile-grid-3">
                         <div>
@@ -4146,9 +4219,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               {qaActiveTab === 'history' && (
                 <div className="qa-remark-history">
                   {(() => {
-                    const remarkActivities = quickActionActivities.filter(
-                      (act) => act.description || act.metadata?.statusRemarkText || act.metadata?.closureReasonName
-                    );
+                    const remarkActivities = quickActionActivities.filter((act) => {
+                      const remarkText = getUserRemarkText(act);
+                      return Boolean(remarkText || act.metadata?.closureReasonName || act.metadata?.closure_reason);
+                    });
                     if (remarkActivities.length === 0) {
                       return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
                     }
@@ -4166,6 +4240,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           </thead>
                           <tbody>
                             {remarkActivities.map((act) => {
+                              const remarkText = getUserRemarkText(act);
                               const callStatus = act.metadata?.statusRemarkResponseType
                                 || act.metadata?.callResult
                                 || act.metadata?.last_call_result
@@ -4179,7 +4254,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                     <span className="qa-remark-status-badge">{act.title || '—'}</span>
                                   </td>
                                   <td>
-                                    <div>{act.description || act.metadata?.statusRemarkText || '—'}</div>
+                                    <div>{remarkText || '—'}</div>
                                     {closureReason && (
                                       <div className="qa-remark-closure">Reason: {closureReason}</div>
                                     )}
