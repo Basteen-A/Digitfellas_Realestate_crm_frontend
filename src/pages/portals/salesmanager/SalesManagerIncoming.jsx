@@ -86,6 +86,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
   const [expandedId, setExpandedId] = useState(null);
   const [dateFilter, setDateFilter] = useState('today');
   const [customDate, setCustomDate] = useState('');
+  const [searchText, setSearchText] = useState('');
 
   // Dropdown options
   const [projectOptions, setProjectOptions] = useState([]);
@@ -139,6 +140,8 @@ const SalesManagerIncoming = ({ onNavigate }) => {
       const resp = await leadWorkflowApi.getHandoffs({
         type: 'incoming', stageCode: 'SITE_VISIT', statusCode: 'SV_DONE',
         currentOnly: true, pendingAcceptance: true, limit: 200,
+        search: searchText,
+        crossSmIncoming: Boolean(searchText && searchText.trim()),
       });
       setHandoffs(Array.isArray(resp?.data) ? resp.data : []);
       setError(null);
@@ -147,7 +150,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchText]);
 
   useEffect(() => { fetchHandoffs(); }, [fetchHandoffs]);
   useEffect(() => { loadOptions(); }, [loadOptions]);
@@ -207,7 +210,12 @@ const SalesManagerIncoming = ({ onNavigate }) => {
     if (action.targetStatusCode) {
       try {
         const resp = await statusRemarkApi.getByStatusCode(action.targetStatusCode);
-        setQuickStatusRemarks(resp.data || []);
+        const remarks = resp?.data?.remarks || resp?.data || [];
+        const normalizedRemarks = Array.isArray(remarks) ? remarks : [];
+        setQuickStatusRemarks(normalizedRemarks);
+
+        const firstRemarkWithResponse = normalizedRemarks.find((item) => item?.has_ans_non_ans);
+        setQuickRemarkAnsNonAns(firstRemarkWithResponse ? (firstRemarkWithResponse.ans_non_ans_default || 'Answered') : null);
       } catch { setQuickStatusRemarks([]); }
     } else { setQuickStatusRemarks([]); }
   };
@@ -249,7 +257,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
       // Step 2: Transition with selected action
       try {
         const transPayload = {
-          note: quickWorkflowForm.note || `Status set to ${quickWorkflowAction.label} on acceptance`,
+          note: quickWorkflowForm.note || quickWorkflowForm.statusRemarkText || `Status set to ${quickWorkflowAction.label} on acceptance`,
           callResult: quickWorkflowForm.callResult || 'Answered',
           statusRemarkText: quickWorkflowForm.statusRemarkText || undefined,
         };
@@ -319,6 +327,13 @@ const SalesManagerIncoming = ({ onNavigate }) => {
       <div className="page-header" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div><h1 style={{ margin: 0 }}>Incoming Leads</h1></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            className="crm-form-input"
+            style={{ height: 32, fontSize: 12, minWidth: 240 }}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Search lead/phone/number (includes other SM incoming)"
+          />
           {DATE_FILTERS.map((f) => (
             <button key={f.value} className={`crm-btn crm-btn-sm ${dateFilter === f.value ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setDateFilter(f.value)}>{f.label}</button>
           ))}
@@ -355,7 +370,9 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                   </div>
                   <span style={{ color: 'var(--text-secondary)' }}>{handoff.leadNumber || '—'}</span>
                   <span style={{ color: 'var(--text-secondary)' }}>{handoff.leadProjectName || '—'}</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>{handoff.fromUserName || '—'}</span>
+                  <span style={{ color: 'var(--text-secondary)' }} title={handoff.toUserName ? `Incoming to: ${handoff.toUserName}` : undefined}>
+                    {handoff.fromUserName || '—'}
+                  </span>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDateTime(handoff.handedOffAt)}</span>
                   <span className="crm-badge badge-interested" style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12 }}>{handoff.stageName || 'SV Done'}</span>
                   <span style={{ color: 'var(--text-muted)' }}>{isExpanded ? <ChevronUpIcon style={{ width: 16 }} /> : <ChevronDownIcon style={{ width: 16 }} />}</span>

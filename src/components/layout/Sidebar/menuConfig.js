@@ -16,8 +16,6 @@ import {
   HomeModernIcon,
   MagnifyingGlassIcon,
   ArrowsRightLeftIcon,
-  CheckBadgeIcon,
-  RocketLaunchIcon,
   CurrencyRupeeIcon,
   BuildingStorefrontIcon,
   Cog6ToothIcon,
@@ -31,7 +29,7 @@ import {
  * SA/ADM → Admin sidebar with masters + all workspaces
  * TC     → Telecaller sidebar (leads, follow-ups, pipeline)
  * SM     → Sales Manager sidebar (leads, site visits, incoming)
- * SH     → Sales Head sidebar (negotiations, bookings, approvals)
+ * SH     → Sales Head sidebar (negotiations, bookings)
  * COL    → Collection sidebar
  */
 export const getSidebarMenuForRole = (roleCode) => {
@@ -149,6 +147,7 @@ export const telecallerMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
+  { label: 'Handoff Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Pipeline Board', key: 'pipeline', icon: ClipboardDocumentListIcon, badge: null },
   { group: 'Quick Actions' },
   { label: 'Call Log', key: 'calllog', icon: DevicePhoneMobileIcon, badge: null },
@@ -164,7 +163,6 @@ export const salesManagerMenu = [
   { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
   { label: 'Pull Lead', key: 'pull', icon: MagnifyingGlassIcon, badge: null },
-  { label: 'Push to Sales Head', key: 'push', icon: RocketLaunchIcon, badge: null },
 ];
 
 export const salesHeadMenu = [
@@ -173,7 +171,6 @@ export const salesHeadMenu = [
   { label: 'Negotiations', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Handoff Leads', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
   { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
-  { label: 'Approvals', key: 'approvals', icon: CheckBadgeIcon, badgeColor: 'red' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },

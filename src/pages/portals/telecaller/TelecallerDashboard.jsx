@@ -31,6 +31,21 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const isLeadAssignedToCurrentUser = useCallback((item) => {
+    const currentUserId = String(user?.id || user?.user_id || '');
+    if (!currentUserId) return false;
+
+    const assignedToId = item?.assignedToUserId
+      || item?.assigned_to
+      || item?.lead?.assignedToUserId
+      || item?.lead?.assigned_to
+      || item?.lead?.assignedTo?.id
+      || item?.assignedTo?.id
+      || null;
+
+    return String(assignedToId || '') === currentUserId;
+  }, [user?.id, user?.user_id]);
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
@@ -51,7 +66,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
 
       setStats(dashboardData.stats || null);
       setUnassignedLeads(ensureArray(dashboardData.unassignedLeads));
-      setMissedFollowUps(ensureArray(overdueData));
+      setMissedFollowUps(ensureArray(overdueData).filter(isLeadAssignedToCurrentUser));
       setTodayFollowUps(ensureArray(dashboardData.todaysFollowUps));
       setUpcomingVisits(ensureArray(dashboardData.upcomingVisits));
     } catch (err) {
@@ -64,7 +79,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isLeadAssignedToCurrentUser]);
 
   useEffect(() => {
     loadDashboardData();
@@ -88,7 +103,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
     { label: 'Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
     { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
     { label: 'SV Completed', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
-    { label: 'Missed FU', value: stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
+    { label: 'Missed FU', value: missedFollowUps.length ?? stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
   ];
 
   const handleLeadClick = (leadId) => {

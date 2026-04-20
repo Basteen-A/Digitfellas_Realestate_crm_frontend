@@ -94,24 +94,88 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:'];
+const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for'];
+
+const normalizeStatusCode = (value) => String(value || '').trim().toUpperCase();
+
+const statusCodeToLabel = (statusCode, workflowConfig) => {
+  const normalized = normalizeStatusCode(statusCode);
+  if (!normalized) return '';
+
+  const statuses = Array.isArray(workflowConfig?.statuses) ? workflowConfig.statuses : [];
+  const match = statuses.find((status) => normalizeStatusCode(status?.status_code) === normalized);
+  if (match?.status_name) return match.status_name;
+
+  return normalized.replace(/_/g, ' ');
+};
+
+const getActionByCode = (workflowConfig, actionCode) => {
+  if (!actionCode || !workflowConfig?.actions) return null;
+  const actionGroups = Object.values(workflowConfig.actions);
+  for (const group of actionGroups) {
+    if (!Array.isArray(group)) continue;
+    const found = group.find((action) => action?.code === actionCode);
+    if (found) return found;
+  }
+  return null;
+};
+
+const getRemarkHistoryStatusLabel = (activity, workflowConfig) => {
+  const explicitStatusName = [
+    activity?.metadata?.statusName,
+    activity?.metadata?.createdStatus,
+    activity?.metadata?.targetStatusName,
+    activity?.metadata?.newStatusName,
+  ].find((value) => typeof value === 'string' && value.trim());
+  if (explicitStatusName) return explicitStatusName.trim();
+
+  const fromStatusCode = [
+    activity?.metadata?.statusCode,
+    activity?.metadata?.targetStatusCode,
+    activity?.metadata?.newStatusCode,
+  ].find((value) => typeof value === 'string' && value.trim());
+  if (fromStatusCode) return statusCodeToLabel(fromStatusCode, workflowConfig);
+
+  if (typeof activity?.title === 'string' && activity.title.startsWith('Status updated to ')) {
+    return activity.title.replace('Status updated to ', '').trim();
+  }
+
+  const actionCode = activity?.metadata?.actionCode;
+  if (actionCode) {
+    const action = getActionByCode(workflowConfig, actionCode);
+    if (action?.targetStatusCode) {
+      return statusCodeToLabel(action.targetStatusCode, workflowConfig);
+    }
+  }
+
+  return '';
+};
 
 const getUserRemarkText = (activity) => {
+  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) {
+    return '';
+  }
+
   const statusRemark = typeof activity?.metadata?.statusRemarkText === 'string'
     ? activity.metadata.statusRemarkText.trim()
     : '';
   if (statusRemark) return statusRemark;
 
   const description = typeof activity?.description === 'string' ? activity.description.trim() : '';
-  if (description) {
-    if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
-    return description;
-  }
+  if (!description) return '';
 
-  const title = typeof activity?.title === 'string' ? activity.title.trim() : '';
-  if (!title) return '';
-  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) return title;
-  return '';
+  if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
+
+  const parts = description.split('|').map((part) => part.trim()).filter(Boolean);
+  const remarkPart = parts.find((part) => /^remark\s*:/i.test(part));
+  if (remarkPart) return remarkPart.replace(/^remark\s*:/i, '').trim();
+
+  const notePart = parts.find((part) => /^note\s*:/i.test(part));
+  if (notePart) return notePart.replace(/^note\s*:/i, '').trim();
+
+  if (parts.length === 1 && /^response\s*:/i.test(parts[0])) return '';
+
+  return description;
 };
 
 
@@ -147,7 +211,7 @@ const LeadDetailsPage = () => {
   const [projectOptions, setProjectOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
-  const [activeTab, setActiveTab] = useState('activity');
+  const [activeTab, setActiveTab] = useState('followups');
   const [siteVisits, setSiteVisits] = useState([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [assignedUser, setAssignedUser] = useState(null);
@@ -159,7 +223,7 @@ const LeadDetailsPage = () => {
   const [assignableUsers, setAssignableUsers] = useState([]);
   const [closureReasons, setClosureReasons] = useState([]);
   const [actionSaving, setActionSaving] = useState(false);
-  const [accordionOpen, setAccordionOpen] = useState('contact');
+  const [accordionOpen, setAccordionOpen] = useState('');
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [actionStatusRemarks, setActionStatusRemarks] = useState([]);
   const [actionRemarkAnsNonAns, setActionRemarkAnsNonAns] = useState(null);
@@ -171,6 +235,7 @@ const LeadDetailsPage = () => {
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null);
   const [quickActionSaving, setQuickActionSaving] = useState(false);
   const [quickActionActivities, setQuickActionActivities] = useState([]);
+  const [hasPendingMissedFollowupsForMe, setHasPendingMissedFollowupsForMe] = useState(false);
   const [customerProfileForm, setCustomerProfileForm] = useState({
     date_of_birth: '', marital_status: '', purchase_type: '',
     occupation: '', current_post: '',
@@ -217,17 +282,84 @@ const LeadDetailsPage = () => {
     return lead.location ? [lead.location] : [];
   }, [lead, locationOptions]);
 
+  const getSourceMediumLabel = useMemo(() => {
+    const source = typeof lead?.source === 'string' ? lead.source.trim() : '';
+    const subSource = typeof lead?.subSource === 'string' ? lead.subSource.trim() : '';
+    if (!source && !subSource) return '-';
+    if (source && subSource) return `${source} / ${subSource}`;
+    return source || subSource || '-';
+  }, [lead?.source, lead?.subSource]);
+
+  const getTcLocationNames = useMemo(() => {
+    if (!lead) return [];
+    if (lead.interestedLocations?.length > 0) {
+      return lead.interestedLocations
+        .map((lid) => {
+          const loc = locationOptions.find((item) => item.id === lid);
+          return loc?.location_name || null;
+        })
+        .filter(Boolean);
+    }
+
+    if (typeof lead.location === 'string' && lead.location.trim()) {
+      const onlyLocation = lead.location.split(',')[0].trim();
+      return onlyLocation ? [onlyLocation] : [];
+    }
+
+    if (lead.location?.location_name) {
+      return [lead.location.location_name];
+    }
+
+    return [];
+  }, [lead, locationOptions]);
+
+  const followupRemarkActivities = useMemo(() => {
+    const timeline = Array.isArray(lead?.timeline) ? lead.timeline : [];
+
+    return [...timeline]
+      .filter((evt) => {
+        const remarkText = getUserRemarkText(evt);
+        const statusLabel = getRemarkHistoryStatusLabel(evt, workflowConfig);
+        const callStatus = evt.metadata?.statusRemarkResponseType
+          || evt.metadata?.callResult
+          || evt.metadata?.last_call_result
+          || '';
+        const closureReason = evt.metadata?.closureReasonName || evt.metadata?.closure_reason || '';
+        const hasMeaningfulRemark = Boolean(remarkText || closureReason);
+        const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
+
+        return hasMeaningfulRemark && hasWorkflowContext;
+      })
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }, [lead?.timeline, workflowConfig]);
+
+  const isCurrentLeadMissedFollowup = useMemo(() => {
+    if (!lead?.nextFollowUpAt || lead?.isClosed) return false;
+    const followUpAt = new Date(lead.nextFollowUpAt);
+    if (Number.isNaN(followUpAt.getTime())) return false;
+    return followUpAt < new Date();
+  }, [lead?.nextFollowUpAt, lead?.isClosed]);
+
+  const isTcMissedFirstBlocked = useMemo(() => {
+    if (roleCode !== 'TC') return false;
+    if (!hasPendingMissedFollowupsForMe) return false;
+    return !isCurrentLeadMissedFollowup;
+  }, [roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
+
   const loadLeadData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
 
     try {
-      const [leadResp, projResp, locResp, wfResp, svResp] = await Promise.all([
+      const [leadResp, projResp, locResp, wfResp, svResp, tcAssignedResp] = await Promise.all([
         leadWorkflowApi.getLeadById(id),
         projectApi.getDropdown(),
         locationApi.getDropdown(),
         leadWorkflowApi.getWorkflowConfig().catch(() => ({ data: null })),
         siteVisitApi.getAll({ lead_id: id }).catch(() => ({ data: { rows: [] } })),
+        roleCode === 'TC'
+          ? leadWorkflowApi.getLeads({ roleCode: 'TC', assignedToMe: true, page: 1, limit: 200 }).catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] }),
       ]);
 
       const leadData = leadResp.data;
@@ -236,6 +368,20 @@ const LeadDetailsPage = () => {
       setLocationOptions(locResp.data || []);
       setWorkflowConfig(wfResp.data || null);
       setSiteVisits(Array.isArray(svResp.data?.rows) ? svResp.data.rows : Array.isArray(svResp.data) ? svResp.data : []);
+
+      if (roleCode === 'TC') {
+        const assignedLeads = Array.isArray(tcAssignedResp?.data) ? tcAssignedResp.data : [];
+        const now = new Date();
+        const hasMissed = assignedLeads.some((item) => {
+          if (!item?.nextFollowUpAt || item?.isClosed) return false;
+          const followUpAt = new Date(item.nextFollowUpAt);
+          if (Number.isNaN(followUpAt.getTime())) return false;
+          return followUpAt < now;
+        });
+        setHasPendingMissedFollowupsForMe(hasMissed);
+      } else {
+        setHasPendingMissedFollowupsForMe(false);
+      }
 
       if (leadData?.assignedToUserId) {
         try {
@@ -256,7 +402,7 @@ const LeadDetailsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, roleCode]);
 
   useEffect(() => {
     loadLeadData();
@@ -458,7 +604,7 @@ const LeadDetailsPage = () => {
       setAssignableUsers([]);
       setClosureReasons([]);
       await loadLeadData();
-      setActiveTab('activity');
+      setActiveTab('followups');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to update lead'));
     } finally {
@@ -490,6 +636,10 @@ const LeadDetailsPage = () => {
 
   const handleQuickActionSubmit = async () => {
     if (!lead?.id || !quickSelectedAction) return;
+    if (isTcMissedFirstBlocked) {
+      toast.error('Complete missed follow-ups first to enable this action.');
+      return;
+    }
     if (isSmHandoffReadOnly) {
       toast.error('This lead is view-only after handoff to Sales Head.');
       return;
@@ -691,7 +841,7 @@ const LeadDetailsPage = () => {
           <button
             type="button"
             className="lead-details-quick-btn"
-            disabled={isSmHandoffReadOnly}
+            disabled={isSmHandoffReadOnly || isTcMissedFirstBlocked}
             onClick={async () => {
               setQuickActionsOpen(true);
               setQaActiveTab('history');
@@ -714,7 +864,7 @@ const LeadDetailsPage = () => {
                 setQuickActionActivities([]);
               }
             }}
-            title="Quick actions"
+            title={isTcMissedFirstBlocked ? 'Complete missed follow-ups first to enable today actions' : 'Quick actions'}
           >
             +
           </button>
@@ -775,10 +925,33 @@ const LeadDetailsPage = () => {
                 <div className="lead-details-info-item"><span className="lead-details-label">Alternate Phone</span><span className="lead-details-value">{lead.alternatePhone || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Email</span><span className="lead-details-value">{lead.email || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Lead Number</span><span className="lead-details-value">{lead.leadNumber}</span></div>
+                <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}><span className="lead-details-label">Source / Medium</span><span className="lead-details-value">{getSourceMediumLabel}</span></div>
+                {roleCode === 'TC' && (
+                  <>
+                    <div className="lead-details-info-item">
+                      <span className="lead-details-label">Project(s)</span>
+                      <div className="lead-details-tags">
+                        {getProjectNames.length > 0
+                          ? getProjectNames.map((name, index) => <span key={index} className="lead-details-tag lead-details-tag--project">{name}</span>)
+                          : <span className="lead-details-value">-</span>}
+                      </div>
+                    </div>
+                    <div className="lead-details-info-item">
+                      <span className="lead-details-label">Location(s)</span>
+                      <div className="lead-details-tags">
+                        {getTcLocationNames.length > 0
+                          ? getTcLocationNames.map((name, index) => <span key={index} className="lead-details-tag lead-details-tag--location">{name}</span>)
+                          : <span className="lead-details-value">-</span>}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </section>
 
+          {roleCode !== 'TC' && (
+          <>
           <section className="lead-details-card">
             <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'interest' ? '' : 'interest'))}>
               <span className="lead-details-card-title">Requirements & Interest</span>
@@ -812,7 +985,6 @@ const LeadDetailsPage = () => {
                 </div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Configuration</span><span className="lead-details-value">{lead.configuration || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Purpose</span><span className="lead-details-value">{lead.purpose || '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">Source / Medium</span><span className="lead-details-value">{lead.source || '-'} / {lead.subSource || '-'}</span></div>
                 {lead.motivationType && (
                   <div className="lead-details-info-item">
                     <span className="lead-details-label">Buying Motivation</span>
@@ -841,19 +1013,11 @@ const LeadDetailsPage = () => {
                     <span className="lead-details-value">{lead.timeSpent}</span>
                   </div>
                 )}
-                {lead.geoLat && (
-                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
-                    <span className="lead-details-label">Creation Location</span>
-                    <span className="lead-details-value">
-                      <button className="crm-btn crm-btn-secondary" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.location?.location_name || '')}`, '_blank')} title="View Map">
-                        <MapPinIcon style={{ width: 14, height: 14, marginRight: 5 }} /> View Location
-                      </button>
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </section>
+          </>
+          )}
 
           <section className="lead-details-card">
             <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'assignment' ? '' : 'assignment'))}>
@@ -877,6 +1041,7 @@ const LeadDetailsPage = () => {
             )}
           </section>
 
+          {roleCode !== 'TC' && (
           <section className="lead-details-card">
             <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'campaign' ? '' : 'campaign'))}>
               <span className="lead-details-card-title">Campaign & Audit</span>
@@ -893,14 +1058,15 @@ const LeadDetailsPage = () => {
               </div>
             )}
           </section>
+          )}
         </div>
 
         <div className="lead-details-right">
           <div className="lead-details-tabs">
+            <button className={`lead-details-tab ${activeTab === 'followups' ? 'active' : ''}`} onClick={() => setActiveTab('followups')}>Follow Up</button>
             <button className={`lead-details-tab ${activeTab === 'activity' ? 'active' : ''}`} onClick={() => setActiveTab('activity')}>Activity</button>
             <button className={`lead-details-tab ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>Notes</button>
             <button className={`lead-details-tab ${activeTab === 'calls' ? 'active' : ''}`} onClick={() => setActiveTab('calls')}>Call Logs</button>
-            <button className={`lead-details-tab ${activeTab === 'followups' ? 'active' : ''}`} onClick={() => setActiveTab('followups')}>Followups & Status</button>
             {roleCode !== 'TC' && (
               <button className={`lead-details-tab ${activeTab === 'sitevisits' ? 'active' : ''}`} onClick={() => setActiveTab('sitevisits')}>Site Visits</button>
             )}
@@ -1247,15 +1413,18 @@ const LeadDetailsPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(lead.timeline || []).filter(evt => 
-                        ['STATUS_CHANGED', 'STATUS_CHANGE', 'STAGE_CHANGED', 'STAGE_CHANGE', 'FOLLOW_UP_SCHEDULED'].includes(evt.type)
-                      ).length === 0 ? (
+                      {followupRemarkActivities.length === 0 ? (
                         <tr><td colSpan={5} className="text-center py-4 text-muted">No status or followup history yet.</td></tr>
                       ) : (
-                        lead.timeline
-                          .filter(evt => ['STATUS_CHANGED', 'STATUS_CHANGE', 'STAGE_CHANGED', 'STAGE_CHANGE', 'FOLLOW_UP_SCHEDULED'].includes(evt.type))
-                          .sort((a, b) => new Date(b.at) - new Date(a.at))
-                          .map((evt) => (
+                        followupRemarkActivities.map((evt) => {
+                          const statusLabel = getRemarkHistoryStatusLabel(evt, workflowConfig);
+                          const remarkText = getUserRemarkText(evt);
+                          const callStatus = evt.metadata?.statusRemarkResponseType
+                            || evt.metadata?.callResult
+                            || evt.metadata?.last_call_result
+                            || '';
+                          const closureReason = evt.metadata?.closureReasonName || evt.metadata?.closure_reason || '';
+                          return (
                           <tr key={evt.id}>
                             <td>
                               <div className="status-cell">
@@ -1263,21 +1432,25 @@ const LeadDetailsPage = () => {
                                   const Icon = iconForTimeline(evt.type);
                                   return Icon ? <Icon style={{ width: 14, height: 14, marginRight: 6, color: 'var(--accent-blue)' }} /> : null;
                                 })()}
-                                <strong>{evt.title || evt.type.replace(/_/g, ' ')}</strong>
+                                <strong>{statusLabel || '—'}</strong>
                               </div>
                             </td>
-                            <td>{evt.description || '-'}</td>
+                            <td>
+                              <div>{remarkText || '—'}</div>
+                              {closureReason && <div className="qa-remark-closure">Reason: {closureReason}</div>}
+                            </td>
                             <td>{evt.by || 'System'}</td>
                             <td>
-                              {evt.metadata?.callResult ? (
-                                <span className={`call-status-badge ${evt.metadata.callResult.toLowerCase()}`}>
-                                  {evt.metadata.callResult}
+                              {callStatus ? (
+                                <span className={`call-status-badge ${callStatus.toLowerCase().replace(/\s+/g, '-')}`}>
+                                  {callStatus}
                                 </span>
                               ) : '-'}
                             </td>
                             <td className="text-nowrap">{formatDateTime(evt.at)}</td>
                           </tr>
-                        ))
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1390,7 +1563,7 @@ const LeadDetailsPage = () => {
                           key={action.code}
                           type="button"
                           className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? selClass : ''}`}
-                          disabled={quickActionSaving || isSmHandoffReadOnly}
+                          disabled={quickActionSaving || isSmHandoffReadOnly || isTcMissedFirstBlocked}
                           onClick={() => handleQuickActionPick(action.code)}
                         >
                           <div className="qa-drawer-st-icon">{icon}</div>
@@ -1404,7 +1577,7 @@ const LeadDetailsPage = () => {
                         key={action.code}
                         type="button"
                         className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? 'sel-junk' : ''}`}
-                        disabled={quickActionSaving || isSmHandoffReadOnly}
+                        disabled={quickActionSaving || isSmHandoffReadOnly || isTcMissedFirstBlocked}
                         onClick={() => handleQuickActionPick(action.code)}
                       >
                         <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? <NoSymbolIcon style={{ width: 18, height: 18 }} /> : action.code.includes('SPAM') ? <TrashIcon style={{ width: 18, height: 18 }} /> : <ExclamationTriangleIcon style={{ width: 18, height: 18 }} />}</div>
@@ -1828,7 +2001,7 @@ const LeadDetailsPage = () => {
                       {/* ── Ans/Non-Ans Toggle (if needed) ── */}
                       {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
                         <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Response Type:</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>call status</span>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button
                               type="button"
@@ -1891,17 +2064,17 @@ const LeadDetailsPage = () => {
               <div className="qa-drawer-tabs">
                 <button
                   type="button"
-                  className={`qa-drawer-tab ${qaActiveTab === 'activity' ? 'qa-drawer-tab--active' : ''}`}
-                  onClick={() => setQaActiveTab('activity')}
-                >
-                  <BoltIcon style={{ width: 15, height: 15 }} /> Lead Activity
-                </button>
-                <button
-                  type="button"
                   className={`qa-drawer-tab ${qaActiveTab === 'history' ? 'qa-drawer-tab--active' : ''}`}
                   onClick={() => setQaActiveTab('history')}
                 >
                   <TableCellsIcon style={{ width: 15, height: 15 }} /> Remark History
+                </button>
+                <button
+                  type="button"
+                  className={`qa-drawer-tab ${qaActiveTab === 'activity' ? 'qa-drawer-tab--active' : ''}`}
+                  onClick={() => setQaActiveTab('activity')}
+                >
+                  <BoltIcon style={{ width: 15, height: 15 }} /> Lead Activity
                 </button>
               </div>
 
@@ -1983,7 +2156,15 @@ const LeadDetailsPage = () => {
                 {(() => {
                   const remarkActivities = quickActionActivities.filter((act) => {
                     const remarkText = getUserRemarkText(act);
-                    return Boolean(remarkText || act.metadata?.closureReasonName || act.metadata?.closure_reason);
+                    const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
+                    const callStatus = act.metadata?.statusRemarkResponseType
+                      || act.metadata?.callResult
+                      || act.metadata?.last_call_result
+                      || '';
+                    const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
+                    const hasMeaningfulRemark = Boolean(remarkText || closureReason);
+                    const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
+                    return hasMeaningfulRemark && hasWorkflowContext;
                   });
                   if (remarkActivities.length === 0) {
                     return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
@@ -2003,6 +2184,7 @@ const LeadDetailsPage = () => {
                         <tbody>
                           {remarkActivities.map((act) => {
                             const remarkText = getUserRemarkText(act);
+                              const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
                             const callStatus = act.metadata?.statusRemarkResponseType
                               || act.metadata?.callResult
                               || act.metadata?.last_call_result
@@ -2013,7 +2195,7 @@ const LeadDetailsPage = () => {
                             return (
                               <tr key={act.id}>
                                 <td>
-                                  <span className="qa-remark-status-badge">{act.title || '—'}</span>
+                                  <span className="qa-remark-status-badge">{statusLabel || '—'}</span>
                                 </td>
                                 <td>
                                   <div>{remarkText || '—'}</div>
@@ -2058,6 +2240,7 @@ const LeadDetailsPage = () => {
                 disabled={
                   quickActionSaving
                   || isSmHandoffReadOnly
+                  || isTcMissedFirstBlocked
                   || !quickSelectedAction
                   || ((quickSelectedAction?.needsAssignee
                     || quickSelectedAction?.code === 'TC_SV_DONE'

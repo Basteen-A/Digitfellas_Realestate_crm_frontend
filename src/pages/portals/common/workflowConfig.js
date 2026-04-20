@@ -115,12 +115,18 @@ export const getActionsForRole = (actions = {}, roleCode) => {
   const fallbacks = FALLBACK_ACTIONS[roleCode] || [];
 
   if (fromConfig.length) {
-    // Merge mandatory actions from fallback if they are missing from config
-    const mandatoryCodes = ['TC_REASSIGN'];
-    const existingCodes = new Set(fromConfig.map(a => a.code));
-    const missingMandatory = fallbacks.filter(a => mandatoryCodes.includes(a.code) && !existingCodes.has(a.code));
-    
-    return [...fromConfig, ...missingMandatory];
+    // Merge required fallback actions if they are missing from config
+    const requiredCodesByRole = {
+      TC: ['TC_REASSIGN'],
+      SM: ['SM_FOLLOW_UP', 'SM_LOST'],
+      SH: ['SH_FOLLOW_UP', 'SH_LOST'],
+      COL: ['COL_LOST'],
+    };
+    const existingCodes = new Set(fromConfig.map((a) => a.code));
+    const requiredCodes = requiredCodesByRole[roleCode] || [];
+    const missingRequired = fallbacks.filter((a) => requiredCodes.includes(a.code) && !existingCodes.has(a.code));
+
+    return [...fromConfig, ...missingRequired];
   }
 
   return fallbacks;

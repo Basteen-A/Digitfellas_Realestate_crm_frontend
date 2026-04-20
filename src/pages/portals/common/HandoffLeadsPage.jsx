@@ -102,6 +102,7 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
               <th>To</th>
               <th>Stage</th>
               <th>Status</th>
+              <th>Latest Remark</th>
               <th>Reason / Remarks</th>
               <th>Direction</th>
               <th>Current Owner</th>
@@ -110,12 +111,12 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={9} className="handoff-leads__empty">Loading handoff leads...</td>
+                <td colSpan={10} className="handoff-leads__empty">Loading handoff leads...</td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="handoff-leads__empty">No handoff leads found</td>
+                <td colSpan={10} className="handoff-leads__empty">No handoff leads found</td>
               </tr>
             )}
             {!loading && rows.map((row) => (
@@ -134,14 +135,17 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
                   <small>{ROLE_LABELS[row.toUserRole] || row.toUserRoleName || '-'}</small>
                 </td>
                 <td>
-                  <span className="handoff-chip" style={{ backgroundColor: `${row.stageColor}22`, color: row.stageColor, borderColor: `${row.stageColor}66` }}>
-                    {row.stageName || '-'}
+                  <span className="handoff-chip" style={{ backgroundColor: `${row.stageColor || '#6B7280'}22`, color: 'var(--text-primary)', borderColor: `${row.stageColor || '#6B7280'}66` }}>
+                    {row.stageName || row.stageLabel || row.stageCode || row.stage_code || '-'}
                   </span>
                 </td>
                 <td>
                   <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
                     {row.statusName || '-'}
                   </span>
+                </td>
+                <td>
+                  <div>{row.latestRemark || '-'}</div>
                 </td>
                 <td>
                   <div>{row.assignmentReason || '-'}</div>

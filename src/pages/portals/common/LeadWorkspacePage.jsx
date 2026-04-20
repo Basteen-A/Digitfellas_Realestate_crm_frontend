@@ -9,6 +9,7 @@ import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
+import userApi from '../../../api/userApi';
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -60,6 +61,14 @@ const hasValidPhoneLength = (value) => {
   return len >= 10 && len <= 12;
 };
 
+const FOLLOW_UP_WORKSPACE_ROLES = ['TC', 'SM', 'SH'];
+
+const getProjectDisplayName = (project) => {
+  const raw = String(project?.project_name || '').trim();
+  if (!raw) return '';
+  return raw.replace(/\s*\(\d+\)\s*$/, '').trim();
+};
+
 const initialNewLead = {
   full_name: '',
   phone: '',
@@ -79,9 +88,12 @@ const initialNewLead = {
   motivationNote: '',
   primaryRequirement: '',
   secondaryRequirement: '',
+  svDate: new Date().toISOString().split('T')[0],
+  timeSpent: '',
   latitude: null,
   longitude: null,
-  assigned_to: 'self', // default to current user; '' = unassigned, user.id = assigned to that user
+  assignment_mode: 'ME',
+  assigned_to: '',
   closure_reason_id: '',
   remark: '',
   callResult: 'Answered',
@@ -114,24 +126,118 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:'];
+const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for'];
+
+const normalizeStatusCode = (value) => String(value || '').trim().toUpperCase();
+
+const normalizeStatusKey = (value) => normalizeStatusCode(value).replace(/[\s-]+/g, '_');
+
+const TC_NEW_LEAD_STATUS_ALIASES = {
+  NEW: ['NEW', 'FRESH', 'NEW_LEAD'],
+  RNR: ['RNR', 'NO_RESPONSE', 'NOT_RESPONDED'],
+  FOLLOW_UP: ['FOLLOW_UP', 'FOLLOWUP', 'CALL_BACK', 'CALLBACK'],
+  SV_SCHEDULED: ['SV_SCHEDULED', 'SITE_VISIT_SCHEDULED', 'VISIT_SCHEDULED'],
+  LOST: ['LOST', 'CLOSED_LOST', 'COLD_LOST'],
+  JUNK: ['JUNK'],
+  SPAM: ['SPAM'],
+};
+
+const TC_STATUS_ALIAS_TO_CANONICAL = Object.entries(TC_NEW_LEAD_STATUS_ALIASES)
+  .reduce((acc, [canonical, aliases]) => {
+    aliases.forEach((alias) => {
+      acc[normalizeStatusKey(alias)] = canonical;
+    });
+    return acc;
+  }, {});
+
+const toCanonicalStatusCode = (statusCode) => {
+  const key = normalizeStatusKey(statusCode);
+  return TC_STATUS_ALIAS_TO_CANONICAL[key] || key;
+};
+
+const isTcAllowedCreateStatus = (statusCode) => {
+  const canonical = toCanonicalStatusCode(statusCode);
+  return Object.prototype.hasOwnProperty.call(TC_NEW_LEAD_STATUS_ALIASES, canonical);
+};
+
+const statusCodeToLabel = (statusCode, workflowConfig) => {
+  const normalized = normalizeStatusCode(statusCode);
+  if (!normalized) return '';
+
+  const statuses = Array.isArray(workflowConfig?.statuses) ? workflowConfig.statuses : [];
+  const match = statuses.find((status) => normalizeStatusCode(status?.status_code) === normalized);
+  if (match?.status_name) return match.status_name;
+
+  return normalized.replace(/_/g, ' ');
+};
+
+const getActionByCode = (workflowConfig, actionCode) => {
+  if (!actionCode || !workflowConfig?.actions) return null;
+  const actionGroups = Object.values(workflowConfig.actions);
+  for (const group of actionGroups) {
+    if (!Array.isArray(group)) continue;
+    const found = group.find((action) => action?.code === actionCode);
+    if (found) return found;
+  }
+  return null;
+};
+
+const getRemarkHistoryStatusLabel = (activity, workflowConfig) => {
+  const explicitStatusName = [
+    activity?.metadata?.statusName,
+    activity?.metadata?.createdStatus,
+    activity?.metadata?.targetStatusName,
+    activity?.metadata?.newStatusName,
+  ].find((value) => typeof value === 'string' && value.trim());
+  if (explicitStatusName) return explicitStatusName.trim();
+
+  const fromStatusCode = [
+    activity?.metadata?.statusCode,
+    activity?.metadata?.targetStatusCode,
+    activity?.metadata?.newStatusCode,
+  ].find((value) => typeof value === 'string' && value.trim());
+  if (fromStatusCode) return statusCodeToLabel(fromStatusCode, workflowConfig);
+
+  if (typeof activity?.title === 'string' && activity.title.startsWith('Status updated to ')) {
+    return activity.title.replace('Status updated to ', '').trim();
+  }
+
+  const actionCode = activity?.metadata?.actionCode;
+  if (actionCode) {
+    const action = getActionByCode(workflowConfig, actionCode);
+    if (action?.targetStatusCode) {
+      return statusCodeToLabel(action.targetStatusCode, workflowConfig);
+    }
+  }
+
+  return '';
+};
 
 const getUserRemarkText = (activity) => {
+  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) {
+    return '';
+  }
+
   const statusRemark = typeof activity?.metadata?.statusRemarkText === 'string'
     ? activity.metadata.statusRemarkText.trim()
     : '';
   if (statusRemark) return statusRemark;
 
   const description = typeof activity?.description === 'string' ? activity.description.trim() : '';
-  if (description) {
-    if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
-    return description;
-  }
+  if (!description) return '';
 
-  const title = typeof activity?.title === 'string' ? activity.title.trim() : '';
-  if (!title) return '';
-  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) return title;
-  return '';
+  if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
+
+  const parts = description.split('|').map((part) => part.trim()).filter(Boolean);
+  const remarkPart = parts.find((part) => /^remark\s*:/i.test(part));
+  if (remarkPart) return remarkPart.replace(/^remark\s*:/i, '').trim();
+
+  const notePart = parts.find((part) => /^note\s*:/i.test(part));
+  if (notePart) return notePart.replace(/^note\s*:/i, '').trim();
+
+  if (parts.length === 1 && /^response\s*:/i.test(parts[0])) return '';
+
+  return description;
 };
 
 const getAssigneeRoleForAction = (action, workspaceRole) => {
@@ -201,7 +307,7 @@ const FilterDropdown = ({ label, options, selectedValues, onToggle, onClear }) =
 const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const CALL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
 
-  const shouldShowCallStatus = (statusCode) => CALL_STATUS_CODES.includes(statusCode);
+  const shouldShowCallStatus = (statusCode) => CALL_STATUS_CODES.includes(toCanonicalStatusCode(statusCode));
 
   const navigate = useNavigate();
   const wsTitle = getWorkspaceTitle(workspaceRole);
@@ -308,6 +414,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [reengageLeadId, setReengageLeadId] = useState(null);
   const [newLeadStatusRemarks, setNewLeadStatusRemarks] = useState([]);
   const [remarksLoading, setRemarksLoading] = useState(false);
+  const [tcMappedLocationIds, setTcMappedLocationIds] = useState([]);
 
   // ── Customer Profile Modal (SH Close Won) ──
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
@@ -383,14 +490,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       && String(lead.previousAssignedTo) === String(user.id);
   }, [workspaceRole, user?.id]);
 
+  const isShTaggedReadOnlyLead = useCallback((lead) => {
+    if (workspaceRole !== 'SH' || !lead || !user?.id) return false;
+
+    const taggedSalesHeadId = lead?.customFields?.assigned_sales_head;
+    if (!taggedSalesHeadId || String(taggedSalesHeadId) !== String(user.id)) return false;
+
+    const assignedToMe = lead.assignedToUserId && String(lead.assignedToUserId) === String(user.id);
+    return !assignedToMe;
+  }, [workspaceRole, user?.id]);
+
+  const isLeadReadOnly = useCallback(
+    (lead) => isSmHandoffReadOnlyLead(lead) || isShTaggedReadOnlyLead(lead),
+    [isSmHandoffReadOnlyLead, isShTaggedReadOnlyLead]
+  );
+
   const selectedLeadReadOnly = useMemo(
-    () => isSmHandoffReadOnlyLead(selectedLead),
-    [isSmHandoffReadOnlyLead, selectedLead]
+    () => isLeadReadOnly(selectedLead),
+    [isLeadReadOnly, selectedLead]
   );
 
   const quickActionLeadReadOnly = useMemo(
-    () => isSmHandoffReadOnlyLead(quickActionLead),
-    [isSmHandoffReadOnlyLead, quickActionLead]
+    () => isLeadReadOnly(quickActionLead),
+    [isLeadReadOnly, quickActionLead]
   );
 
   const toolbarStageOptions = useMemo(() => {
@@ -426,9 +548,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrowStart = new Date(todayStart.getTime() + 86400000);
+    const useFollowUpTabs = FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole);
 
     return leads.filter((lead) => {
-      if (workspaceRole === 'TC' && !searchText) {
+      if (useFollowUpTabs && !searchText) {
         if (lead.isClosed) return false;
 
         const followUpAt = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null;
@@ -477,14 +600,71 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     [subSourceMap, newLeadForm.lead_source_id]
   );
 
+  const newLeadStatusChipOptions = useMemo(() => {
+    if (!Array.isArray(statusOptions) || statusOptions.length === 0) return [];
+
+    if (workspaceRole === 'TC') {
+      const filtered = statusOptions.filter((st) => isTcAllowedCreateStatus(st.value));
+      return filtered.length >= 3 ? filtered : statusOptions;
+    }
+
+    if (workspaceRole === 'SM') {
+      const allowedSmCreateStatuses = new Set(['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST']);
+      const filtered = statusOptions.filter((st) => allowedSmCreateStatuses.has(toCanonicalStatusCode(st.value)));
+      return filtered.length > 0 ? filtered : statusOptions;
+    }
+
+    const actionStatusCodes = new Set(
+      roleActions
+        .map((action) => action?.targetStatusCode)
+        .filter(Boolean)
+        .map((code) => String(code).toUpperCase())
+    );
+
+    if (!actionStatusCodes.size) return statusOptions;
+
+    actionStatusCodes.add('NEW');
+
+    const filtered = statusOptions.filter((st) => actionStatusCodes.has(String(st.value || '').toUpperCase()));
+    return filtered.length > 0 ? filtered : statusOptions;
+  }, [workspaceRole, roleActions, statusOptions]);
+
   const selectedNewLeadStatusCode = useMemo(() => {
     const selected = statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id);
-    return selected?.value || '';
+    return toCanonicalStatusCode(selected?.value || newLeadForm.lead_status_id || '');
   }, [statusOptions, newLeadForm.lead_status_id]);
+
+  const selectedCreateLocationIds = useMemo(() => {
+    const ids = [
+      ...(Array.isArray(newLeadForm.location_ids) ? newLeadForm.location_ids : []),
+      newLeadForm.location_id,
+    ]
+      .filter(Boolean)
+      .map((id) => String(id));
+    return [...new Set(ids)];
+  }, [newLeadForm.location_ids, newLeadForm.location_id]);
+
+  const tcCanSelfAssignSelectedLocation = useMemo(() => {
+    if (workspaceRole !== 'TC') return true;
+    if (!selectedCreateLocationIds.length) return false;
+    if (!tcMappedLocationIds.length) return false;
+
+    const mapped = new Set(tcMappedLocationIds.map((id) => String(id)));
+    return selectedCreateLocationIds.every((id) => mapped.has(String(id)));
+  }, [workspaceRole, selectedCreateLocationIds, tcMappedLocationIds]);
 
   const tcStatusNeedsFullDetails = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
   const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
+  const smStatusNeedsFollowUp = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'FOLLOW_UP';
+  const smStatusNeedsReason = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'LOST';
+  const smStatusNeedsAssignee = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'NEGOTIATION_HOT';
+  const smStatusNeedsCallStatus = workspaceRole === 'SM' && ['FOLLOW_UP', 'LOST'].includes(selectedNewLeadStatusCode);
+  const smStatusNeedsRemark = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST'].includes(selectedNewLeadStatusCode);
+  const createLeadNeedsRemark = workspaceRole === 'SM' ? smStatusNeedsRemark : needsRemark;
+  const shouldShowCreateCallStatus = workspaceRole === 'SM'
+    ? smStatusNeedsCallStatus
+    : shouldShowCallStatus(selectedNewLeadStatusCode);
 
   const newLeadValidation = useMemo(() => {
     const errors = [];
@@ -529,6 +709,32 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       }
     }
 
+    if (workspaceRole === 'SM') {
+      if (!newLeadForm.lead_status_id) errors.push('Lead status is required');
+      if (!newLeadForm.location_id) errors.push('Location is required');
+      if (!newLeadForm.project_ids?.length) errors.push('At least one project is required');
+
+      if (smStatusNeedsFollowUp && !newLeadForm.nextFollowUpAt) {
+        errors.push('Next follow up date is required');
+      }
+
+      if (smStatusNeedsReason && !newLeadForm.closure_reason_id) {
+        errors.push('Closure reason is required');
+      }
+
+      if (smStatusNeedsAssignee && !newLeadForm.assigned_to) {
+        errors.push('Sales Head is required for Negotiation (Hot)');
+      }
+
+      if (smStatusNeedsCallStatus && !newLeadForm.callResult) {
+        errors.push('Call status is required');
+      }
+
+      if (smStatusNeedsRemark && !newLeadForm.remark?.trim()) {
+        errors.push('Notes & Remarks are required');
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -538,7 +744,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         whatsappPhone,
       },
     };
-  }, [newLeadForm, workspaceRole, tcStatusNeedsFullDetails, isTerminalCreateStatus, needsRemark]);
+  }, [
+    newLeadForm,
+    workspaceRole,
+    tcStatusNeedsFullDetails,
+    isTerminalCreateStatus,
+    needsRemark,
+    smStatusNeedsFollowUp,
+    smStatusNeedsReason,
+    smStatusNeedsAssignee,
+    smStatusNeedsCallStatus,
+    smStatusNeedsRemark,
+  ]);
 
   // ── Stats (Telecaller KPI cards) ──
   const computedStats = useMemo(() => {
@@ -554,6 +771,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const missedFollowups = overdueFollowUps;
     return { totalLeads, newToday, todayFollowUps, overdueFollowUps, svScheduled, svCompleted, missedFollowups };
   }, [leads]);
+
+  const hasPendingMissedFollowupsForMe = useMemo(() => {
+    if (!FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) return false;
+
+    const now = new Date();
+    return leads.some((lead) => {
+      if (lead.isClosed) return false;
+      if (!lead.nextFollowUpAt) return false;
+
+      const assignedToMe = lead.assignedToUserId && String(lead.assignedToUserId) === String(user?.id);
+      if (!assignedToMe) return false;
+
+      const followUpAt = new Date(lead.nextFollowUpAt);
+      if (Number.isNaN(followUpAt.getTime())) return false;
+
+      return followUpAt < now;
+    });
+  }, [leads, workspaceRole, user?.id]);
 
   // ── Load workflow config on mount ──
   const loadWorkflowConfig = useCallback(async () => {
@@ -571,6 +806,48 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   useEffect(() => {
     loadWorkflowConfig();
   }, [loadWorkflowConfig]);
+
+  useEffect(() => {
+    const loadTcMappedLocations = async () => {
+      if (workspaceRole !== 'TC' || !user?.id) {
+        setTcMappedLocationIds([]);
+        return;
+      }
+
+      try {
+        const response = await userApi.getById(user.id);
+        const raw = response?.data || response || {};
+
+        const directIds = Array.isArray(raw.location_ids)
+          ? raw.location_ids
+          : Array.isArray(raw.locationIds)
+            ? raw.locationIds
+            : [];
+
+        const mappedIds = directIds.length > 0
+          ? directIds
+          : (Array.isArray(raw.locationMappings)
+            ? raw.locationMappings.map((m) => m?.location_id || m?.location?.id)
+            : []);
+
+        setTcMappedLocationIds([...new Set(mappedIds.filter(Boolean).map((id) => String(id)))]);
+      } catch {
+        setTcMappedLocationIds([]);
+      }
+    };
+
+    loadTcMappedLocations();
+  }, [workspaceRole, user?.id]);
+
+  useEffect(() => {
+    if (workspaceRole !== 'TC') return;
+    if (tcCanSelfAssignSelectedLocation) return;
+
+    setNewLeadForm((prev) => {
+      if (prev.assignment_mode === 'POOL' && !prev.assigned_to) return prev;
+      return { ...prev, assignment_mode: 'POOL', assigned_to: '' };
+    });
+  }, [workspaceRole, tcCanSelfAssignSelectedLocation]);
 
   // ── Load assignable users for roles that need them ──
   const loadAssignableUsers = useCallback(async (roleCode) => {
@@ -604,8 +881,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         ...filters,
       };
 
-      // Add tab-specific filters for TC
-      if (workspaceRole === 'TC') {
+      // Add tab-specific filters for follow-up roles
+      if (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) {
         if (activeTab === 'new') {
           queryParams.unassigned = true;
         } else {
@@ -695,7 +972,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Duplicate Phone Check ──
   const checkDuplicatePhone = async (phone, type) => {
-    if (!phone || phone.length < 10) {
+    const normalizedPhone = sanitizePhoneNumberInput(phone);
+
+    if (!normalizedPhone || normalizedPhone.length < 10) {
       if (type === 'primary') setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
       else setAltPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
       return;
@@ -705,19 +984,32 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     else setAltPhoneCheck({ status: 'checking', leadInfo: null, duplicateLead: null });
 
     try {
-      const resp = await leadWorkflowApi.searchLeadByPhone(phone);
+      const resp = await leadWorkflowApi.searchLeadByPhone(normalizedPhone);
       const results = resp.data || [];
-      const exactMatch = results.find(l =>
-        l.phone === phone ||
-        l.alternate_phone === phone ||
-        l.whatsapp_number === phone
-      );
+      const exactMatch = results.find((l) => {
+        const candidatePhones = [
+          l.phone,
+          l.alternate_phone,
+          l.alternatePhone,
+          l.whatsapp_number,
+          l.whatsappNumber,
+          l.secondary_phone_1,
+          l.secondaryPhone1,
+          l.secondary_phone_2,
+          l.secondaryPhone2,
+          l.secondary_phone_3,
+          l.secondaryPhone3,
+        ];
+        return candidatePhones.some((num) => sanitizePhoneNumberInput(num) === normalizedPhone);
+      });
 
-      if (exactMatch) {
+      const matchedLead = exactMatch || results[0] || null;
+
+      if (matchedLead) {
         // Fetch complete lead details
         try {
-          const detailResp = await leadWorkflowApi.getLeadById(exactMatch.id);
-          const fullLead = detailResp?.data || exactMatch;
+          const detailResp = await leadWorkflowApi.getLeadById(matchedLead.id);
+          const fullLead = detailResp?.data || matchedLead;
           const duplicateLeadName = (
             fullLead.fullName
             || fullLead.full_name
@@ -728,9 +1020,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
         } catch {
           // Fallback: use search result only
-          const info = `${exactMatch.leadNumber || 'Lead'} - ${exactMatch.fullName || ''} (${exactMatch.stageLabel || 'No Stage'})`;
-          if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: exactMatch });
-          else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: exactMatch });
+          const info = `${matchedLead.leadNumber || 'Lead'} - ${matchedLead.fullName || ''} (${matchedLead.stageLabel || 'No Stage'})`;
+          if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
+          else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
         }
       } else {
         if (type === 'primary') setPhoneCheck({ status: 'valid', leadInfo: null, duplicateLead: null });
@@ -892,7 +1184,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   };
 
   const selectedProjectNames = useMemo(
-    () => (newLeadForm.project_ids || []).map((id) => projectOptions.find((p) => p.id === id)?.project_name).filter(Boolean),
+    () => (newLeadForm.project_ids || [])
+      .map((id) => getProjectDisplayName(projectOptions.find((p) => p.id === id)))
+      .filter(Boolean),
     [newLeadForm.project_ids, projectOptions]
   );
 
@@ -909,6 +1203,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
 
   // ── Handlers ──
+  const resetNewLeadModal = useCallback(() => {
+    setNewLeadForm({ ...initialNewLead, latitude: null, longitude: null });
+    setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
+    setAltPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
+    setReengageLeadId(null);
+    setProjectDropdownOpen(false);
+    setProjectSearch('');
+    setNewLeadOpen(false);
+  }, []);
+
   const handleCreateLead = async (e) => {
     e.preventDefault();
     if (!newLeadValidation.isValid) {
@@ -919,24 +1223,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const { primaryPhone, alternatePhone, whatsappPhone } = newLeadValidation.sanitized;
 
     // For TC: use first selected project from multi-select
-    const primaryProjectId = workspaceRole === 'TC'
-      ? (newLeadForm.project_ids?.[0] || null)
-      : (newLeadForm.project_id || null);
+    const primaryProjectId = newLeadForm.project_ids?.[0] || newLeadForm.project_id || null;
     const selectedProject = primaryProjectId ? projectOptions.find((p) => p.id === primaryProjectId) : null;
     const selectedSource = sourceOptions.find((s) => s.id === newLeadForm.lead_source_id) || null;
     const selectedLocation = locationOptions.find((l) => l.id === newLeadForm.location_id) || null;
 
     try {
-      if (workspaceRole === 'SM' && (!newLeadForm.latitude || !newLeadForm.longitude)) {
-        toast.error('Location is mandatory for SM lead creation');
-        return;
-      }
-
       setCreating(true);
-      // Handle assigned_to - convert "self" to actual user ID
-      const assignedToValue = newLeadForm.assigned_to === 'self' ? user?.id : (newLeadForm.assigned_to || null);
-
-      await leadWorkflowApi.createLead({
+      const createResponse = await leadWorkflowApi.createLead({
         ...newLeadForm,
         phone: primaryPhone,
         alternate_phone: alternatePhone || undefined,
@@ -954,7 +1248,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         lead_status_id: newLeadForm.lead_status_id || undefined,
         callResult: newLeadForm.callResult,
         motivationType: newLeadForm.motivationType,
-        assigned_to: assignedToValue,
+        primaryRequirement: newLeadForm.primaryRequirement || undefined,
+        secondaryRequirement: newLeadForm.secondaryRequirement || undefined,
+        svDate: newLeadForm.svDate ? new Date(newLeadForm.svDate).toISOString() : undefined,
+        timeSpent: newLeadForm.timeSpent ? Number(newLeadForm.timeSpent) : undefined,
+        assignment_mode: workspaceRole === 'TC' ? (newLeadForm.assignment_mode || 'ME') : undefined,
+        assigned_to: workspaceRole === 'TC'
+          ? (newLeadForm.assignment_mode === 'POOL' ? null : (user?.id || null))
+          : (newLeadForm.assigned_to || null),
         closure_reason_id: newLeadForm.closure_reason_id || undefined,
         note: newLeadForm.remark || undefined,
         remark: newLeadForm.remark || undefined,
@@ -962,12 +1263,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         reengageLeadId: reengageLeadId || undefined,
       });
       toast.success('Lead created successfully');
-      setNewLeadForm({ ...initialNewLead, latitude: null, longitude: null });
-      setReengageLeadId(null);
-      setNewLeadOpen(false);
-      setProjectDropdownOpen(false);
+      resetNewLeadModal();
       if (workspaceRole === 'TC') {
-        const targetTab = assignedToValue ? 'today' : 'new';
+        const createdLead = createResponse?.data || null;
+        const targetTab = createdLead?.assignedToUserId ? 'today' : 'new';
         if (activeTab !== targetTab) {
           setActiveTab(targetTab);
         } else {
@@ -1396,7 +1695,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const runQuickWorkflowAction = useCallback(async (action, payload = {}) => {
     if (!quickActionLead || !action) return;
-    if (isSmHandoffReadOnlyLead(quickActionLead)) {
+    if (isLeadReadOnly(quickActionLead)) {
       toast.error('This lead is view-only after handoff to Sales Head.');
       return;
     }
@@ -1414,11 +1713,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     } finally {
       setQuickActionLoading(false);
     }
-  }, [quickActionLead, loadLeads, resetQuickWorkflowForm, isSmHandoffReadOnlyLead]);
+  }, [quickActionLead, loadLeads, resetQuickWorkflowForm, isLeadReadOnly]);
 
   const handleQuickWorkflowActionSelect = async (action) => {
     if (!action) return;
-    if (isSmHandoffReadOnlyLead(quickActionLead)) {
+    if (isLeadReadOnly(quickActionLead)) {
       toast.error('This lead is view-only after handoff to Sales Head.');
       return;
     }
@@ -1526,7 +1825,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const handleQuickWorkflowSubmit = async () => {
     if (!quickActionLead) return;
-    if (isSmHandoffReadOnlyLead(quickActionLead)) {
+    if (isLeadReadOnly(quickActionLead)) {
       toast.error('This lead is view-only after handoff to Sales Head.');
       return;
     }
@@ -1802,8 +2101,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             </small>
           </div>
 
-          {/* Tabs for TC */}
-          {workspaceRole === 'TC' && (
+          {/* Tabs for follow-up roles */}
+          {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
             <div style={{ display: 'flex', gap: 4, padding: '10px 16px 12px', borderBottom: '1px solid var(--border-secondary)' }}>
               <button
                 onClick={() => setActiveTab('today')}
@@ -1820,6 +2119,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               >
                 Today&apos;s Follow Ups
               </button>
+              {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
               <button
                 onClick={() => setActiveTab('missed')}
                 style={{
@@ -1835,6 +2135,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               >
                 Missed Follow Ups
               </button>
+              )}
+              {workspaceRole === 'TC' && (
               <button
                 onClick={() => setActiveTab('new')}
                 style={{
@@ -1850,6 +2152,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               >
                 New (Unassigned)
               </button>
+              )}
             </div>
           )}
 
@@ -1863,6 +2166,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <th>Source</th>
                   <th>Medium</th>
                   <th>Project/Location</th>
+                  <th>Assignment / Ownership</th>
                   <th style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
               </thead>
@@ -1924,6 +2228,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         ) : null;
                       })()}
                     </td>
+                    <td>
+                      <p className="assigned-name">{lead.assignedToUserName || 'Unassigned'}</p>
+                      <small className="assigned-role">
+                        {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
+                      </small>
+                    </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
                         className="crm-btn crm-btn-sm"
@@ -1954,7 +2264,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       {(lead.assignedToUserId || activeTab !== 'new') && (
                         <button
                           className="crm-btn crm-btn-primary crm-btn-sm"
-                          disabled={isSmHandoffReadOnlyLead(lead)}
+                          disabled={
+                            isLeadReadOnly(lead)
+                            || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe)
+                          }
+                          title={
+                            FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe
+                              ? 'Complete missed follow-ups first to enable today actions'
+                              : undefined
+                          }
                           onClick={async (e) => {
                             e.stopPropagation();
                             resetQuickWorkflowForm();
@@ -2476,10 +2794,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <button
                 type="button"
                 className="create-lead-header__close"
-                onClick={() => {
-                  setReengageLeadId(null);
-                  setNewLeadOpen(false);
-                }}
+                onClick={resetNewLeadModal}
               >
                 <XMarkIcon style={{ width: 20, height: 20 }} />
               </button>
@@ -2638,12 +2953,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         Lead Status <span className="create-lead-field__required">*</span>
                       </label>
                       <div className="create-lead-status-chips">
-                        {(workspaceRole === 'TC'
-                          ? statusOptions.filter((st) => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'].includes(st.value))
-                          : statusOptions
-                        ).map((st) => {
+                        {newLeadStatusChipOptions.map((st) => {
                           const isSelected = newLeadForm.lead_status_id === st.value || newLeadForm.lead_status_id === st.id;
-                          const isTerminal = ['LOST', 'JUNK', 'SPAM'].includes(st.value);
+                          const isTerminal = ['LOST', 'JUNK', 'SPAM'].includes(toCanonicalStatusCode(st.value));
                           return (
                             <button
                               key={st.value}
@@ -2654,7 +2966,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                 setNewLeadForm((p) => ({
                                   ...p,
                                   lead_status_id: p.lead_status_id === val ? '' : val,
-                                  callResult: val.includes('RNR') ? 'Not Answered' : p.callResult,
+                                  callResult: toCanonicalStatusCode(val) === 'RNR' ? 'Not Answered' : p.callResult,
                                 }));
                               }}
                             >
@@ -2668,7 +2980,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </div>
 
                   {/* Closure Details for terminal statuses */}
-                  {['LOST', 'JUNK', 'SPAM'].includes(statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value) && (
+                  {['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode) && (
                     <div className="create-lead-closure">
                       <div className="create-lead-closure__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExclamationTriangleIcon style={{ width: 18, height: 18 }} /> Closure Details</div>
                       <div className="create-lead-grid">
@@ -2702,9 +3014,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     </div>
                   </div>
 
-                  {['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(
-                    statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
-                  ) && (
+                    {(workspaceRole === 'SM' || ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode)) && (
                       <div className="create-lead-grid">
                         {/* Location */}
                         <div className="create-lead-field">
@@ -2719,7 +3029,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           >
                             <option value="">Select location</option>
                             {locationOptions.map((loc) => (
-                              <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                              <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                             ))}
                           </select>
                         </div>
@@ -2766,8 +3076,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                         onChange={() => toggleProject(project.id)}
                                       />
                                       <span>
-                                        {project.project_name}
-                                        {project.project_code ? ` (${project.project_code})` : ''}
+                                        {getProjectDisplayName(project)}
                                       </span>
                                     </label>
                                   ))}
@@ -2823,19 +3132,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
                 {/* ══ Section: Follow-Up & Assignment ══ */}
                 <div className="create-lead-section">
-                  <div className="create-lead-section__header">
-                    <div className="create-lead-section__icon create-lead-section__icon--followup"><CalendarDaysIcon style={{ width: 20, height: 20 }} /></div>
-                    <div>
-                      <div className="create-lead-section__title">Follow-Up &amp; Assignment</div>
-                      <div className="create-lead-section__subtitle">Schedule next action and assign ownership</div>
-                    </div>
-                  </div>
-
                   <div className="create-lead-grid">
-                    {workspaceRole === 'TC' &&
-                      ['NEW', 'RNR', 'SV_SCHEDULED', 'FOLLOW_UP'].includes(
-                        statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
-                      ) && (
+                    {workspaceRole === 'SM' && smStatusNeedsAssignee && (
+                      <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
+                        <label className="create-lead-field__label">
+                          Sales Head <span className="create-lead-field__required">*</span>
+                        </label>
+                        <select
+                          className="create-lead-select"
+                          value={newLeadForm.assigned_to}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, assigned_to: e.target.value }))}
+                          required
+                        >
+                          <option value="">Select Sales Head</option>
+                          {(assignableUsers.SH || []).map((u) => (
+                            <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {((workspaceRole === 'TC' && ['NEW', 'RNR', 'SV_SCHEDULED', 'FOLLOW_UP'].includes(selectedNewLeadStatusCode))
+                      || (workspaceRole === 'SM' && smStatusNeedsFollowUp)) && (
                         <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
                           <label className="create-lead-field__label">
                             Next Follow-Up Date <span className="create-lead-field__required">*</span>
@@ -2857,12 +3175,41 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </div>
                       )}
 
+                    {workspaceRole === 'TC' && tcCanSelfAssignSelectedLocation && (
+                      <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
+                        <div className="call-result-label">Lead Assignment</div>
+                        <div className="call-result-toggle">
+                          <button
+                            type="button"
+                            className={`call-result-btn ${newLeadForm.assignment_mode !== 'POOL' ? 'active' : ''}`}
+                            onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'ME', assigned_to: user?.id || '' }))}
+                          >
+                            Assign to me
+                          </button>
+                          <button
+                            type="button"
+                            className={`call-result-btn ${newLeadForm.assignment_mode === 'POOL' ? 'active' : ''}`}
+                            onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'POOL', assigned_to: '' }))}
+                          >
+                            Assign to pool
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {workspaceRole === 'TC' && !tcCanSelfAssignSelectedLocation && selectedCreateLocationIds.length > 0 && (
+                      <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
+                        <div className="call-result-label">Lead Assignment</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          Selected location is outside your mapped locations. This lead will be sent to the unassigned pool.
+                        </div>
+                      </div>
+                    )}
+
                     {/* Call Status Selection for New Lead */}
-                    {shouldShowCallStatus(
-                      statusOptions.find((s) => s.id === newLeadForm.lead_status_id || s.value === newLeadForm.lead_status_id)?.value
-                    ) && (
+                    {shouldShowCreateCallStatus && (
                         <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
-                          <div className="call-result-label">Call Status</div>
+                          <div className="call-result-label">Call Status <span className="create-lead-field__required">*</span></div>
                           <div className="call-result-toggle">
                             <button
                               type="button"
@@ -2885,12 +3232,114 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </div>
                 </div>
 
+                  {workspaceRole === 'SM' && (
+                    <div className="create-lead-section">
+                      <div className="create-lead-section__header">
+                        <div className="create-lead-section__icon create-lead-section__icon--location"><HomeModernIcon style={{ width: 20, height: 20 }} /></div>
+                        <div>
+                          <div className="create-lead-section__title">Site Visit Details</div>
+                          <div className="create-lead-section__subtitle">Capture visit details while creating lead</div>
+                        </div>
+                      </div>
+
+                      <div className="create-lead-grid">
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Visit Date</label>
+                          <input
+                            type="date"
+                            className="create-lead-input"
+                            value={newLeadForm.svDate}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, svDate: e.target.value }))}
+                          />
+                        </div>
+
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Motivation Type</label>
+                          <input
+                            className="create-lead-input"
+                            value={newLeadForm.motivationType}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}
+                            placeholder="e.g. Investment / End Use"
+                          />
+                        </div>
+
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Primary Requirement</label>
+                          <input
+                            className="create-lead-input"
+                            value={newLeadForm.primaryRequirement}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
+                            placeholder="e.g. 2BHK near metro"
+                          />
+                        </div>
+
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Secondary Requirement</label>
+                          <input
+                            className="create-lead-input"
+                            value={newLeadForm.secondaryRequirement}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
+                            placeholder="Any additional preferences"
+                          />
+                        </div>
+
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Time Spent (mins)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="create-lead-input"
+                            value={newLeadForm.timeSpent}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, timeSpent: e.target.value }))}
+                            placeholder="e.g. 30"
+                          />
+                        </div>
+
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Geo Location</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                            <button
+                              type="button"
+                              className="calendar-shortcut-btn"
+                              onClick={() => {
+                                if (!navigator.geolocation) {
+                                  toast.error('Geolocation is not supported by this browser');
+                                  return;
+                                }
+                                navigator.geolocation.getCurrentPosition(
+                                  (pos) => {
+                                    setNewLeadForm((p) => ({
+                                      ...p,
+                                      latitude: pos.coords.latitude,
+                                      longitude: pos.coords.longitude,
+                                    }));
+                                    toast.success('Location captured');
+                                  },
+                                  () => toast.error('Unable to capture location')
+                                );
+                              }}
+                            >
+                              Capture
+                            </button>
+                            <input
+                              className="create-lead-input"
+                              value={newLeadForm.latitude && newLeadForm.longitude ? `${newLeadForm.latitude}, ${newLeadForm.longitude}` : ''}
+                              onChange={() => {}}
+                              placeholder="Latitude, Longitude"
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 {/* ══ Section: Notes & Remarks ══ */}
                 <div className="create-lead-section">
                   <div className="create-lead-section__header">
                     <div className="create-lead-section__icon create-lead-section__icon--notes"><PencilSquareIcon style={{ width: 20, height: 20 }} /></div>
                     <div>
-                      <div className="create-lead-section__title">Notes &amp; Remarks{needsRemark ? ' *' : ''}</div>
+                      <div className="create-lead-section__title">Notes &amp; Remarks{createLeadNeedsRemark ? ' *' : ''}</div>
                       <div className="create-lead-section__subtitle">Add quick tags or custom notes</div>
                     </div>
                   </div>
@@ -2930,6 +3379,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     rows={2}
                     value={newLeadForm.remark}
                     onChange={(e) => setNewLeadForm((p) => ({ ...p, remark: e.target.value }))}
+                    required={createLeadNeedsRemark}
                     placeholder="Add notes or remarks about the lead..."
                   />
                 </div>
@@ -2938,34 +3388,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               {/* ── Footer ── */}
               <div className="create-lead-footer">
-                {workspaceRole === 'TC' && (
-                  <div className="create-lead-footer__assign">
-                    <div className="create-lead-footer__assign-label">Assign To</div>
-                    <div className="create-lead-footer__assign-toggle" role="group" aria-label="Assign lead to me or pool">
-                      <button
-                        type="button"
-                        className={`create-lead-footer__assign-btn ${newLeadForm.assigned_to === 'self' ? 'active' : ''}`}
-                        onClick={() => setNewLeadForm((p) => ({ ...p, assigned_to: 'self' }))}
-                      >
-                        Assign to Me
-                      </button>
-                      <button
-                        type="button"
-                        className={`create-lead-footer__assign-btn ${newLeadForm.assigned_to !== 'self' ? 'active' : ''}`}
-                        onClick={() => setNewLeadForm((p) => ({ ...p, assigned_to: '' }))}
-                      >
-                        Unassigned 
-                      </button>
-                    </div>
-                 </div>
-                )}
                 <button
                   type="button"
                   className="create-lead-footer__cancel"
-                  onClick={() => {
-                    setReengageLeadId(null);
-                    setNewLeadOpen(false);
-                  }}
+                  onClick={resetNewLeadModal}
                 >
                   Cancel
                 </button>
@@ -4072,7 +4498,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       {/* ── Ans/Non-Ans Toggle (if needed) ── */}
                       {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
                         <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Response Type:</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Call Status</span>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button
                               type="button"
@@ -4135,17 +4561,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <div className="qa-drawer-tabs">
                 <button
                   type="button"
-                  className={`qa-drawer-tab ${qaActiveTab === 'activity' ? 'qa-drawer-tab--active' : ''}`}
-                  onClick={() => setQaActiveTab('activity')}
-                >
-                  <BoltIcon style={{ width: 15, height: 15 }} /> Lead Activity
-                </button>
-                <button
-                  type="button"
                   className={`qa-drawer-tab ${qaActiveTab === 'history' ? 'qa-drawer-tab--active' : ''}`}
                   onClick={() => setQaActiveTab('history')}
                 >
                   <TableCellsIcon style={{ width: 15, height: 15 }} /> Remark History
+                </button>
+                <button
+                  type="button"
+                  className={`qa-drawer-tab ${qaActiveTab === 'activity' ? 'qa-drawer-tab--active' : ''}`}
+                  onClick={() => setQaActiveTab('activity')}
+                >
+                  <BoltIcon style={{ width: 15, height: 15 }} /> Lead Activity
                 </button>
               </div>
 
@@ -4227,7 +4653,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {(() => {
                     const remarkActivities = quickActionActivities.filter((act) => {
                       const remarkText = getUserRemarkText(act);
-                      return Boolean(remarkText || act.metadata?.closureReasonName || act.metadata?.closure_reason);
+                      const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
+                      const callStatus = act.metadata?.statusRemarkResponseType
+                        || act.metadata?.callResult
+                        || act.metadata?.last_call_result
+                        || '';
+                      const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
+                      const hasMeaningfulRemark = Boolean(remarkText || closureReason);
+                      const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
+                      return hasMeaningfulRemark && hasWorkflowContext;
                     });
                     if (remarkActivities.length === 0) {
                       return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
@@ -4247,6 +4681,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <tbody>
                             {remarkActivities.map((act) => {
                               const remarkText = getUserRemarkText(act);
+                              const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
                               const callStatus = act.metadata?.statusRemarkResponseType
                                 || act.metadata?.callResult
                                 || act.metadata?.last_call_result
@@ -4257,7 +4692,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               return (
                                 <tr key={act.id}>
                                   <td>
-                                    <span className="qa-remark-status-badge">{act.title || '—'}</span>
+                                    <span className="qa-remark-status-badge">{statusLabel || '—'}</span>
                                   </td>
                                   <td>
                                     <div>{remarkText || '—'}</div>

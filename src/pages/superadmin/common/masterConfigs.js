@@ -21,6 +21,7 @@ const asOptions = (items, labelBuilder, valueKey = 'id') =>
   (items || []).map((item) => ({
     value: item[valueKey],
     label: labelBuilder(item),
+    raw: item,
   }));
 
 const loadLocationOptions = async () => {
@@ -41,11 +42,6 @@ const loadLeadSourceOptions = async () => {
 const loadUserTypeOptions = async () => {
   const response = await userTypeApi.getDropdown();
   return asOptions(response.data, (item) => `${item.type_name}${item.short_code ? ` (${item.short_code})` : ''}`);
-};
-
-const loadUserOptions = async () => {
-  const response = await userApi.getDropdown();
-  return asOptions(response.data, (item) => `${item.first_name} ${item.last_name} - ${item.email}`);
 };
 
 const loadLeadStageOptions = async () => {
@@ -218,7 +214,6 @@ export const masterConfigs = {
       { header: 'Email', path: 'email' },
       { header: 'Phone', path: 'phone' },
       { header: 'User Type', path: 'userType.type_name' },
-      { header: 'Manager', path: 'manager.first_name' },
       { header: 'Active', path: 'is_active', type: 'boolean' },
     ],
     fields: [
@@ -237,6 +232,43 @@ export const masterConfigs = {
       { name: 'password', label: 'Password', type: 'password', required: true, hideOnEdit: true },
       { name: 'alternate_phone', label: 'Alternate Phone' },
       {
+        name: 'location_ids',
+        label: 'Project Locations',
+        type: 'multiselect',
+        loadOptions: loadLocationOptions,
+        showWhen: (formValues, optionsMap) => {
+          const selectedTypeId = formValues?.user_type_id;
+          if (!selectedTypeId) return false;
+          const selectedType = (optionsMap?.user_type_id || []).find((opt) => String(opt.value) === String(selectedTypeId));
+          const shortCode = String(selectedType?.raw?.short_code || '').toUpperCase();
+          return ['TC', 'TELECALLER', 'TELE_CALLER'].includes(shortCode);
+        },
+        getInitialValue: (row) => {
+          const directIds = Array.isArray(row?.location_ids)
+            ? row.location_ids
+            : Array.isArray(row?.locationIds)
+              ? row.locationIds
+              : [];
+
+          if (directIds.length > 0) {
+            return [...new Set(directIds.filter(Boolean).map((id) => String(id)))];
+          }
+
+          const mappings = Array.isArray(row?.locationMappings)
+            ? row.locationMappings
+            : Array.isArray(row?.location_mappings)
+              ? row.location_mappings
+              : [];
+
+          return [...new Set(
+            mappings
+              .map((mapping) => mapping?.location_id || mapping?.location?.id)
+              .filter(Boolean)
+              .map((id) => String(id))
+          )];
+        },
+      },
+      {
         name: 'gender',
         label: 'Gender',
         type: 'select',
@@ -245,12 +277,6 @@ export const masterConfigs = {
           { value: 'Female', label: 'Female' },
           { value: 'Other', label: 'Other' },
         ],
-      },
-      {
-        name: 'reports_to',
-        label: 'Reports To',
-        type: 'select',
-        loadOptions: loadUserOptions,
       },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],

@@ -23,14 +23,16 @@ const MasterCrudPage = ({ config }) => {
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [formValues, setFormValues] = useState({});
   const [fieldOptions, setFieldOptions] = useState({});
+  const [multiSelectSearch, setMultiSelectSearch] = useState({});
 
   const visibleFields = useMemo(
     () =>
       (config.fields || []).filter((field) => {
         if (modal.mode === 'edit' && field.hideOnEdit) return false;
+        if (typeof field.showWhen === 'function' && !field.showWhen(formValues, fieldOptions, modal)) return false;
         return true;
       }),
-    [config.fields, modal.mode]
+    [config.fields, modal, formValues, fieldOptions]
   );
 
   const toInputValue = (field, value) => {
@@ -41,6 +43,9 @@ const MasterCrudPage = ({ config }) => {
     if (field.type === 'multitag' && Array.isArray(value)) {
       return value.join(', ');
     }
+    if (field.type === 'multiselect' && Array.isArray(value)) {
+      return value.map((item) => String(item));
+    }
     if (field.type === 'checkbox') return Boolean(value);
     return value;
   };
@@ -50,9 +55,14 @@ const MasterCrudPage = ({ config }) => {
 
     (config.fields || []).forEach((field) => {
       if (row) {
-        initial[field.name] = toInputValue(field, row[field.name]);
+        const sourceValue = typeof field.getInitialValue === 'function'
+          ? field.getInitialValue(row)
+          : row[field.name];
+        initial[field.name] = toInputValue(field, sourceValue);
       } else if (field.defaultValue !== undefined) {
         initial[field.name] = field.defaultValue;
+      } else if (field.type === 'multiselect') {
+        initial[field.name] = [];
       } else if (field.type === 'checkbox') {
         initial[field.name] = false;
       } else {
@@ -66,7 +76,7 @@ const MasterCrudPage = ({ config }) => {
   const loadFieldOptions = async () => {
     const optionsResult = {};
     for (const field of config.fields || []) {
-      if (field.type !== 'select') continue;
+      if (field.type !== 'select' && field.type !== 'multiselect') continue;
       if (field.options) {
         optionsResult[field.name] = field.options;
         continue;
@@ -113,14 +123,25 @@ const MasterCrudPage = ({ config }) => {
     setModal({ open: true, mode: 'create', row: null });
   };
 
-  const openEdit = (row) => {
-    initializeForm(row);
+  const openEdit = async (row) => {
+    let detailedRow = row;
+    if (typeof config.api.getById === 'function' && row?.id) {
+      try {
+        const response = await config.api.getById(row.id);
+        detailedRow = response?.data || row;
+      } catch {
+        detailedRow = row;
+      }
+    }
+
+    initializeForm(detailedRow);
     loadFieldOptions();
-    setModal({ open: true, mode: 'edit', row });
+    setModal({ open: true, mode: 'edit', row: detailedRow });
   };
 
   const closeModal = () => {
     setModal({ open: false, mode: 'create', row: null });
+    setMultiSelectSearch({});
   };
 
   const buildPayload = () => {
@@ -134,6 +155,8 @@ const MasterCrudPage = ({ config }) => {
         value = value === '' ? null : Number(value);
       } else if (field.type === 'multitag') {
         value = normalizeArray(value);
+      } else if (field.type === 'multiselect') {
+        value = Array.isArray(value) ? value : [];
       } else if (value === '') {
         value = field.required ? '' : null;
       }
@@ -239,6 +262,82 @@ const MasterCrudPage = ({ config }) => {
               </option>
             ))}
           </select>
+        </label>
+      );
+    }
+
+    if (field.type === 'multiselect') {
+      const selectedValues = Array.isArray(value) ? value.map((item) => String(item)) : [];
+      const selectedValueSet = new Set(selectedValues);
+      const availableOptions = fieldOptions[field.name] || [];
+      const searchText = (multiSelectSearch[field.name] || '').trim().toLowerCase();
+      const filteredOptions = availableOptions
+        .filter((option) => !selectedValueSet.has(String(option.value)))
+        .filter((option) => !searchText || String(option.label || '').toLowerCase().includes(searchText));
+
+      return (
+        <label className="master-form__field" key={field.name}>
+          <span>{field.label}</span>
+
+          <input
+            type="text"
+            value={multiSelectSearch[field.name] || ''}
+            placeholder={`Search ${field.label}`}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              setMultiSelectSearch((prev) => ({ ...prev, [field.name]: nextValue }));
+            }}
+            style={{ marginBottom: 8 }}
+          />
+
+          <select
+            value=""
+            required={field.required}
+            onChange={(e) => {
+              const selectedValue = String(e.target.value || '');
+              if (!selectedValue) return;
+
+              setFormValues((prev) => {
+                const existing = Array.isArray(prev[field.name]) ? prev[field.name].map((item) => String(item)) : [];
+                if (existing.includes(selectedValue)) return prev;
+                return { ...prev, [field.name]: [...existing, selectedValue] };
+              });
+
+              setMultiSelectSearch((prev) => ({ ...prev, [field.name]: '' }));
+            }}
+          >
+            <option value="">Select {field.label}</option>
+            {filteredOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          {selectedValues.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+              {selectedValues.map((selectedId) => {
+                const option = availableOptions.find((opt) => String(opt.value) === String(selectedId));
+                return (
+                  <span key={selectedId} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 12, background: '#eef2ff', color: '#3730a3', fontSize: 12, fontWeight: 600 }}>
+                    {option?.label || selectedId}
+                    <button
+                      type="button"
+                      style={{ border: 'none', background: 'transparent', color: '#3730a3', cursor: 'pointer', fontWeight: 700, padding: 0, lineHeight: 1 }}
+                      onClick={() => {
+                        setFormValues((prev) => {
+                          const existing = Array.isArray(prev[field.name]) ? prev[field.name].map((item) => String(item)) : [];
+                          return { ...prev, [field.name]: existing.filter((id) => String(id) !== String(selectedId)) };
+                        });
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </label>
       );
     }

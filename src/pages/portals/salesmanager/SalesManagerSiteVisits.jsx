@@ -5,6 +5,7 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
+import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 
@@ -34,12 +35,19 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     sales_head_id: '',
     geo_lat: '',
     geo_long: '',
+    action_code: '',
+    next_follow_up_at: '',
+    closure_reason_id: '',
+    reason_note: '',
+    call_status: '',
   });
   const [projects, setProjects] = useState([]);
   const [leads, setLeads] = useState([]);
   const [customerTypes, setCustomerTypes] = useState([]);
   const [motivations, setMotivations] = useState([]);
   const [salesHeads, setSalesHeads] = useState([]);
+  const [workflowConfig, setWorkflowConfig] = useState(null);
+  const [closureReasons, setClosureReasons] = useState([]);
   const [creating, setCreating] = useState(false);
 
   // Phone search state
@@ -50,6 +58,33 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [selectedLeadInfo, setSelectedLeadInfo] = useState(null);
   const phoneDropdownRef = useRef(null);
   const phoneSearchTimer = useRef(null);
+
+  const siteVisitActionOptions = getActionsForRole(workflowConfig?.actions || {}, 'SM').filter((action) => (
+    ['SM_SCHEDULE_REVISIT', 'SM_FOLLOW_UP', 'SM_NEGOTIATION_HOT', 'SM_LOST', 'SM_SITE_VISIT'].includes(action.code)
+  ));
+  const selectedAction = siteVisitActionOptions.find((action) => action.code === createForm.action_code) || null;
+  const isSiteVisitAction = selectedAction?.code === 'SM_SITE_VISIT';
+  // Site visit fields shown always, but required only for SM_SITE_VISIT
+  const svFieldsRequired = isSiteVisitAction;
+
+  useEffect(() => {
+    const loadActionReasons = async () => {
+      if (!selectedAction?.needsReason) {
+        setClosureReasons([]);
+        return;
+      }
+
+      try {
+        const category = selectedAction.reasonCategory === 'LOST' ? '' : (selectedAction.reasonCategory || '');
+        const resp = await leadWorkflowApi.getClosureReasons(category);
+        setClosureReasons(resp?.data?.rows || resp?.data || []);
+      } catch {
+        setClosureReasons([]);
+      }
+    };
+
+    loadActionReasons();
+  }, [selectedAction]);
 
   const loadVisits = useCallback(async () => {
     setLoading(true);
@@ -117,19 +152,45 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   const loadCreateOptions = async () => {
     try {
-      const [projResp, leadsResp, ctResp, motResp, shResp] = await Promise.all([
+      const [projResp, leadsResp, incomingResp, ctResp, motResp, shResp, wfResp] = await Promise.all([
         projectApi.getDropdown(),
         leadWorkflowApi.getLeads({ roleCode: 'SM', limit: 200 }),
+        leadWorkflowApi.getHandoffs({
+          type: 'incoming',
+          stageCode: 'SITE_VISIT',
+          statusCode: 'SV_DONE',
+          currentOnly: true,
+          pendingAcceptance: true,
+          crossSmIncoming: true,
+          limit: 200,
+        }),
         customerTypeApi.getDropdown(),
         motivationApi.getDropdown(),
         leadWorkflowApi.getAssignableUsers('SH'),
+        leadWorkflowApi.getWorkflowConfig(),
       ]);
       setProjects(projResp.data || []);
-      const leadsData = leadsResp.data?.rows || leadsResp.data || [];
-      setLeads(Array.isArray(leadsData) ? leadsData : []);
+      const ownLeads = leadsResp.data?.rows || leadsResp.data || [];
+      const incomingRows = incomingResp.data || [];
+      const incomingLeads = incomingRows.map((row) => ({
+        id: row.leadId,
+        fullName: row.leadName,
+        phone: row.leadPhone,
+        leadNumber: row.leadNumber,
+        projectId: row.leadProjectId,
+        projectName: row.leadProjectName,
+      }));
+      const mergedLeads = [...(Array.isArray(ownLeads) ? ownLeads : []), ...incomingLeads]
+        .filter((lead) => lead?.id)
+        .reduce((acc, lead) => {
+          if (!acc.some((item) => item.id === lead.id)) acc.push(lead);
+          return acc;
+        }, []);
+      setLeads(mergedLeads);
       setCustomerTypes(ctResp.data || []);
       setMotivations(motResp.data || []);
       setSalesHeads(shResp.data || []);
+      setWorkflowConfig(wfResp?.data || null);
     } catch (err) {
       console.error('Failed to load options:', err);
     }
@@ -172,9 +233,36 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         } else {
           // Fallback: search via API (all SM leads)
           try {
-            const resp = await leadWorkflowApi.getLeads({ roleCode: 'SM', search: value, limit: 10 });
-            const apiLeads = resp.data?.rows || resp.data || [];
-            setPhoneResults(Array.isArray(apiLeads) ? apiLeads : []);
+            const [ownResp, incomingResp] = await Promise.all([
+              leadWorkflowApi.getLeads({ roleCode: 'SM', search: value, limit: 10 }),
+              leadWorkflowApi.getHandoffs({
+                type: 'incoming',
+                stageCode: 'SITE_VISIT',
+                statusCode: 'SV_DONE',
+                currentOnly: true,
+                pendingAcceptance: true,
+                crossSmIncoming: true,
+                search: value,
+                limit: 10,
+              }),
+            ]);
+            const ownLeads = ownResp.data?.rows || ownResp.data || [];
+            const incomingLeads = (incomingResp.data || []).map((row) => ({
+              id: row.leadId,
+              fullName: row.leadName,
+              phone: row.leadPhone,
+              leadNumber: row.leadNumber,
+              projectId: row.leadProjectId,
+              projectName: row.leadProjectName,
+            }));
+            const merged = [...(Array.isArray(ownLeads) ? ownLeads : []), ...incomingLeads]
+              .filter((lead) => lead?.id)
+              .reduce((acc, lead) => {
+                if (!acc.some((item) => item.id === lead.id)) acc.push(lead);
+                return acc;
+              }, [])
+              .slice(0, 10);
+            setPhoneResults(merged);
           } catch {
             setPhoneResults([]);
           }
@@ -200,37 +288,67 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.lead_id) { toast.error('Please search and select a lead by phone number'); return; }
-    if (!createForm.project_id) { toast.error('Project is required'); return; }
-    if (!createForm.scheduled_date) { toast.error('Visit date is required'); return; }
-    if (!createForm.customer_type_id) { toast.error('Customer Type is required'); return; }
-    if (!createForm.motivation_type) { toast.error('Motivation is required'); return; }
-    if (!createForm.primary_requirement?.trim()) { toast.error('Primary Requirement is required'); return; }
-    if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
-    if (!createForm.sales_head_id) { toast.error('Sales Head is required'); return; }
-    if (!createForm.geo_lat || !createForm.geo_long) { toast.error('Please capture geo-location'); return; }
+    if (!createForm.action_code) { toast.error('Please select an action'); return; }
+
+    const selectedAction = siteVisitActionOptions.find((action) => action.code === createForm.action_code);
+    if (!selectedAction) { toast.error('Selected action is invalid'); return; }
+
+    const isSiteVisitAction = selectedAction.code === 'SM_SITE_VISIT';
+    const svFieldsRequired = isSiteVisitAction;
+
+    // Validate only site-visit fields when SM_SITE_VISIT is selected
+    if (svFieldsRequired) {
+      if (!createForm.project_id) { toast.error('Project is required'); return; }
+      if (!createForm.scheduled_date) { toast.error('Visit date is required'); return; }
+      if (!createForm.customer_type_id) { toast.error('Customer Type is required'); return; }
+      if (!createForm.motivation_type) { toast.error('Motivation is required'); return; }
+      if (!createForm.primary_requirement?.trim()) { toast.error('Primary Requirement is required'); return; }
+      if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
+      if (!createForm.geo_lat || !createForm.geo_long) { toast.error('Please capture geo-location'); return; }
+    }
+
+    if (selectedAction.needsAssignee && !createForm.sales_head_id) {
+      toast.error('Assignee is required for selected action');
+      return;
+    }
+    if (selectedAction.needsFollowUp && !createForm.next_follow_up_at) {
+      toast.error('Next follow up date & time is required for selected action');
+      return;
+    }
+    if (selectedAction.needsReason && !createForm.closure_reason_id) {
+      toast.error('Closure reason is required for selected action');
+      return;
+    }
+    if (selectedAction.needsRemark && !createForm.remarks?.trim()) {
+      toast.error('Remarks are required for selected action');
+      return;
+    }
+    if (selectedAction.needsCallStatus && !createForm.call_status) {
+      toast.error('Call status is required for selected action');
+      return;
+    }
 
     setCreating(true);
     try {
-      await siteVisitApi.create({
-        lead_id: createForm.lead_id,
-        project_id: createForm.project_id,
-        scheduled_date: createForm.scheduled_date,
-        scheduled_time_slot: createForm.scheduled_time_slot || undefined,
-        attended_by: createForm.attended_by || undefined,
+      await leadWorkflowApi.transitionLead(createForm.lead_id, createForm.action_code, {
+        note: createForm.remarks || createForm.feedback || `Action updated via ${selectedAction.label}`,
+        assignToUserId: selectedAction.needsAssignee ? (createForm.sales_head_id || undefined) : undefined,
+        // Always send site-visit data if filled, regardless of action
+        svDate: createForm.scheduled_date ? new Date(createForm.scheduled_date).toISOString() : undefined,
+        svProjectId: createForm.project_id || undefined,
+        nextFollowUpAt: createForm.next_follow_up_at ? new Date(createForm.next_follow_up_at).toISOString() : undefined,
+        closureReasonId: createForm.closure_reason_id || undefined,
+        reason: createForm.reason_note || undefined,
+        motivationType: createForm.motivation_type || undefined,
+        primaryRequirement: createForm.primary_requirement || undefined,
+        secondaryRequirement: createForm.secondary_requirement || undefined,
+        latitude: createForm.geo_lat ? Number(createForm.geo_lat) : undefined,
+        longitude: createForm.geo_long ? Number(createForm.geo_long) : undefined,
+        time_spent: createForm.time_spent ? Number(createForm.time_spent) : undefined,
         remarks: createForm.remarks || undefined,
-        feedback: createForm.feedback || undefined,
-        rating: createForm.rating ? Number(createForm.rating) : null,
-        interested_after_visit: createForm.interested_after_visit,
-        customer_type_id: createForm.customer_type_id,
-        motivation_type: createForm.motivation_type,
-        primary_requirement: createForm.primary_requirement,
-        secondary_requirement: createForm.secondary_requirement || undefined,
-        time_spent: Number(createForm.time_spent),
-        sales_head_id: createForm.sales_head_id,
-        geo_lat: Number(createForm.geo_lat),
-        geo_long: Number(createForm.geo_long),
+        callStatus: createForm.call_status || undefined,
       });
-      toast.success('Site visit created successfully');
+      toast.success('Site visit recorded and lead updated successfully');
       setShowCreateModal(false);
       setCreateForm({
         lead_id: '', project_id: '',
@@ -240,6 +358,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         customer_type_id: '', motivation_type: '', primary_requirement: '',
         secondary_requirement: '', time_spent: '', sales_head_id: '',
         geo_lat: '', geo_long: '',
+        action_code: '',
+        next_follow_up_at: '', closure_reason_id: '', reason_note: '', call_status: '',
       });
       setSelectedLeadInfo(null);
       setPhoneSearch('');
@@ -494,111 +614,193 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   </div>
                 )}
 
-                {/* ── Visit Details Grid (matching incoming leads) ── */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                {/* ── Action Selection ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 16 }}>
                   <div>
-                    <label style={fieldLabelStyle}>Visit Date *</label>
-                    <input type="date" value={createForm.scheduled_date} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_date: e.target.value }))} style={fieldInputStyle} required />
-                  </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Project *</label>
-                    <select value={createForm.project_id} onChange={(e) => setCreateForm(p => ({ ...p, project_id: e.target.value }))} style={fieldInputStyle} required>
-                      <option value="">Select project...</option>
-                      {projects.map(p => <option key={p.id} value={p.id}>{p.project_name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Time Slot</label>
-                    <input type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10AM-12PM" style={fieldInputStyle} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={fieldLabelStyle}>Customer Type *</label>
-                    <select value={createForm.customer_type_id} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required>
-                      <option value="">Select...</option>
-                      {customerTypes.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Motivation *</label>
-                    <select value={createForm.motivation_type} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required>
-                      <option value="">Select...</option>
-                      {motivations.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Time Spent (mins) *</label>
-                    <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={fieldLabelStyle}>Primary Requirement *</label>
-                    <input value={createForm.primary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, primary_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required />
-                  </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Sales Head *</label>
-                    <select value={createForm.sales_head_id} onChange={(e) => setCreateForm(p => ({ ...p, sales_head_id: e.target.value }))} style={fieldInputStyle} required>
-                      <option value="">Select Sales Head...</option>
-                      {salesHeads.map(sh => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
+                    <label style={fieldLabelStyle}>Action *</label>
+                    <select value={createForm.action_code} onChange={(e) => setCreateForm(p => ({ ...p, action_code: e.target.value, next_follow_up_at: '', closure_reason_id: '', reason_note: '' }))} style={fieldInputStyle} required>
+                      <option value="">Select action...</option>
+                      {siteVisitActionOptions.map((action) => (
+                        <option key={action.code} value={action.code}>{action.label}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <label style={{ ...fieldLabelStyle, marginBottom: 0 }}>Geo-Location *</label>
-                    <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 10, padding: '4px 10px' }} onClick={() => {
-                      if (!navigator.geolocation) { toast.error('Geolocation not supported.'); return; }
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => { setCreateForm(p => ({ ...p, geo_lat: pos.coords.latitude, geo_long: pos.coords.longitude })); toast.success('Location captured!'); },
-                        () => toast.error('Unable to capture location.')
-                      );
-                    }}>
-                      <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
-                    </button>
+                {/* ── Site Visit Details Section ── */}
+                <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Site Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <label style={fieldLabelStyle}>Visit Date {svFieldsRequired ? '*' : ''}</label>
+                      <input type="date" value={createForm.scheduled_date} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_date: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Project {svFieldsRequired ? '*' : ''}</label>
+                      <select value={createForm.project_id} onChange={(e) => setCreateForm(p => ({ ...p, project_id: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                        <option value="">Select project...</option>
+                        {projects.map(p => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Time Slot</label>
+                      <input type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10AM-12PM" style={fieldInputStyle} />
+                    </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <input type="number" step="any" placeholder="Latitude" value={createForm.geo_lat} onChange={(e) => setCreateForm(p => ({ ...p, geo_lat: e.target.value }))} style={fieldInputStyle} />
-                    <input type="number" step="any" placeholder="Longitude" value={createForm.geo_long} onChange={(e) => setCreateForm(p => ({ ...p, geo_long: e.target.value }))} style={fieldInputStyle} />
-                  </div>
-                </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={fieldLabelStyle}>Secondary Requirement / Notes</label>
-                  <textarea value={createForm.secondary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, secondary_requirement: e.target.value }))} rows={2} placeholder="Additional details..." style={fieldInputStyle} />
-                </div>
+                {selectedAction?.needsFollowUp && (
+                  <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Action Details (Required)</div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={fieldLabelStyle}>Next Follow Up Date & Time *</label>
+                      <input
+                        type="datetime-local"
+                        value={createForm.next_follow_up_at}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, next_follow_up_at: e.target.value }))}
+                        style={fieldInputStyle}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={fieldLabelStyle}>Rating (1-5)</label>
-                    <select value={createForm.rating} onChange={(e) => setCreateForm(p => ({ ...p, rating: e.target.value }))} style={fieldInputStyle}>
-                      <option value="">Select rating...</option>
-                      {[1,2,3,4,5].map(r => <option key={r} value={r}>{'★'.repeat(r)}{'☆'.repeat(5-r)}</option>)}
-                    </select>
+                {selectedAction?.needsReason && (
+                  <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Action Details (Required)</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                      <div>
+                        <label style={fieldLabelStyle}>Closure Reason *</label>
+                        <select
+                          value={createForm.closure_reason_id}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, closure_reason_id: e.target.value }))}
+                          style={fieldInputStyle}
+                          required
+                        >
+                          <option value="">Select reason...</option>
+                          {closureReasons.map((r) => (
+                            <option key={r.id} value={r.id}>{r.reason_name || r.reason_text || r.reason}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={fieldLabelStyle}>Reason Notes</label>
+                        <textarea
+                          value={createForm.reason_note}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, reason_note: e.target.value }))}
+                          rows={2}
+                          placeholder="Optional details..."
+                          style={fieldInputStyle}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Interested After Visit</label>
-                    <select value={createForm.interested_after_visit === null ? '' : createForm.interested_after_visit} onChange={(e) => setCreateForm(p => ({ ...p, interested_after_visit: e.target.value === '' ? null : e.target.value === 'true' }))} style={fieldInputStyle}>
-                      <option value="">Select...</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={fieldLabelStyle}>Feedback</label>
-                    <textarea value={createForm.feedback} onChange={(e) => setCreateForm(p => ({ ...p, feedback: e.target.value }))} rows={2} placeholder="Enter feedback..." style={fieldInputStyle} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <label style={fieldLabelStyle}>Customer Type {svFieldsRequired ? '*' : ''}</label>
+                      <select value={createForm.customer_type_id} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                        <option value="">Select...</option>
+                        {customerTypes.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Motivation {svFieldsRequired ? '*' : ''}</label>
+                      <select value={createForm.motivation_type} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                        <option value="">Select...</option>
+                        {motivations.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Time Spent (mins) {svFieldsRequired ? '*' : ''}</label>
+                      <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required={svFieldsRequired} />
+                    </div>
                   </div>
-                  <div>
-                    <label style={fieldLabelStyle}>Remarks</label>
-                    <textarea value={createForm.remarks} onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))} rows={2} placeholder="Additional remarks..." style={fieldInputStyle} />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <label style={fieldLabelStyle}>Primary Requirement {svFieldsRequired ? '*' : ''}</label>
+                      <input value={createForm.primary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, primary_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required={svFieldsRequired} />
+                    </div>
+                    {selectedAction?.needsAssignee && (
+                      <div>
+                        <label style={fieldLabelStyle}>Sales Head (Assignee) *</label>
+                        <select value={createForm.sales_head_id} onChange={(e) => setCreateForm(p => ({ ...p, sales_head_id: e.target.value }))} style={fieldInputStyle} required>
+                          <option value="">Select Sales Head...</option>
+                          {salesHeads.map(sh => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label style={{ ...fieldLabelStyle, marginBottom: 0 }}>Geo-Location {svFieldsRequired ? '*' : ''}</label>
+                      <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 10, padding: '4px 10px' }} onClick={() => {
+                        if (!navigator.geolocation) { toast.error('Geolocation not supported.'); return; }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => { setCreateForm(p => ({ ...p, geo_lat: pos.coords.latitude, geo_long: pos.coords.longitude })); toast.success('Location captured!'); },
+                          () => toast.error('Unable to capture location.')
+                        );
+                      }}>
+                        <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
+                      </button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <input type="number" step="any" placeholder="Latitude" value={createForm.geo_lat} onChange={(e) => setCreateForm(p => ({ ...p, geo_lat: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired} />
+                      <input type="number" step="any" placeholder="Longitude" value={createForm.geo_long} onChange={(e) => setCreateForm(p => ({ ...p, geo_long: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={fieldLabelStyle}>Secondary Requirement / Notes</label>
+                    <textarea value={createForm.secondary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, secondary_requirement: e.target.value }))} rows={2} placeholder="Additional details..." style={fieldInputStyle} />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <label style={fieldLabelStyle}>Rating (1-5)</label>
+                      <select value={createForm.rating} onChange={(e) => setCreateForm(p => ({ ...p, rating: e.target.value }))} style={fieldInputStyle}>
+                        <option value="">Select rating...</option>
+                        {[1,2,3,4,5].map(r => <option key={r} value={r}>{'★'.repeat(r)}{'☆'.repeat(5-r)}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Interested After Visit</label>
+                      <select value={createForm.interested_after_visit === null ? '' : createForm.interested_after_visit} onChange={(e) => setCreateForm(p => ({ ...p, interested_after_visit: e.target.value === '' ? null : e.target.value === 'true' }))} style={fieldInputStyle}>
+                        <option value="">Select...</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <label style={fieldLabelStyle}>Feedback</label>
+                      <textarea value={createForm.feedback} onChange={(e) => setCreateForm(p => ({ ...p, feedback: e.target.value }))} rows={2} placeholder="Enter feedback..." style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Remarks {selectedAction?.needsRemark ? '*' : ''}</label>
+                      <textarea value={createForm.remarks} onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))} rows={2} placeholder="Additional remarks..." style={fieldInputStyle} required={selectedAction?.needsRemark} />
+                    </div>
+                  </div>
+
+                  {selectedAction?.needsCallStatus && (
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={fieldLabelStyle}>Call Status *</label>
+                      <select value={createForm.call_status} onChange={(e) => setCreateForm(p => ({ ...p, call_status: e.target.value }))} style={fieldInputStyle} required>
+                        <option value="">Select call status...</option>
+                        <option value="answered">Answered</option>
+                        <option value="no_answer">No Answer</option>
+                        <option value="switched_off">Switched Off</option>
+                        <option value="busy">Busy</option>
+                        <option value="not_reachable">Not Reachable</option>
+                        <option value="invalid_number">Invalid Number</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
               </div>
