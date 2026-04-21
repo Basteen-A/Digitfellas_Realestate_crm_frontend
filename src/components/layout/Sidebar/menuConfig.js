@@ -16,7 +16,6 @@ import {
   HomeModernIcon,
   MagnifyingGlassIcon,
   ArrowsRightLeftIcon,
-  CurrencyRupeeIcon,
   BuildingStorefrontIcon,
   Cog6ToothIcon,
   UserGroupIcon,

@@ -6,9 +6,7 @@ import { getErrorMessage } from '../../../utils/helpers';
 import {
   HandRaisedIcon,
   ClipboardDocumentListIcon,
-  BanknotesIcon,
   UsersIcon,
-  ClockIcon,
   ArrowPathIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
