@@ -174,9 +174,7 @@ export const salesHeadMenu = [
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
-  { label: 'All Leads', key: 'allleads', icon: UsersIcon, badge: null },
   { label: 'Team Metrics', key: 'team', icon: BriefcaseIcon, badge: null },
-  { label: 'Revenue', key: 'revenue', icon: CurrencyRupeeIcon, badge: null },
 ];
 
 export const ROLE_LABELS = {

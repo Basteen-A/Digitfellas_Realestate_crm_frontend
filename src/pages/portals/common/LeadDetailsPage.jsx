@@ -67,6 +67,24 @@ const getAssigneeRoleForAction = (action, roleCode) => {
   return 'SM';
 };
 
+const MANDATORY_REMARK_STATUS_CODES = new Set([
+  'NEW',
+  'RNR',
+  'FOLLOW_UP',
+  'SV_SCHEDULED',
+  'SV_DONE',
+  'REVISIT',
+  'NEGOTIATION_HOT',
+  'NEGOTIATION_WARM',
+  'NEGOTIATION_COLD',
+]);
+
+const isRemarkMandatoryForAction = (action) => {
+  if (!action) return false;
+  const statusCode = String(action.targetStatusCode || '').trim().toUpperCase();
+  return MANDATORY_REMARK_STATUS_CODES.has(statusCode);
+};
+
 const toDateTimeLocalValue = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -94,13 +112,15 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for'];
+const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
 
 const normalizeStatusCode = (value) => String(value || '').trim().toUpperCase();
 
 const statusCodeToLabel = (statusCode, workflowConfig) => {
   const normalized = normalizeStatusCode(statusCode);
   if (!normalized) return '';
+
+  if (normalized === 'BOOKED') return 'Booked';
 
   const statuses = Array.isArray(workflowConfig?.statuses) ? workflowConfig.statuses : [];
   const match = statuses.find((status) => normalizeStatusCode(status?.status_code) === normalized);
@@ -173,9 +193,15 @@ const getUserRemarkText = (activity) => {
   const notePart = parts.find((part) => /^note\s*:/i.test(part));
   if (notePart) return notePart.replace(/^note\s*:/i, '').trim();
 
-  if (parts.length === 1 && /^response\s*:/i.test(parts[0])) return '';
+  const nonSystemParts = parts.filter((part) => (
+    !/^action\s*:/i.test(part)
+    && !/^response\s*:/i.test(part)
+    && !/^call\s*status\s*:/i.test(part)
+    && !/^status\s*:/i.test(part)
+  ));
 
-  return description;
+  if (!nonSystemParts.length) return '';
+  return nonSystemParts.join(' | ');
 };
 
 
@@ -253,12 +279,21 @@ const LeadDetailsPage = () => {
   const quickSelectedAction = useMemo(() => roleActions.find((a) => a.code === quickActionCode) || null, [roleActions, quickActionCode]);
   const isSmHandoffReadOnly = useMemo(() => {
     if (roleCode !== 'SM' || !lead || !authUser?.id) return false;
-    const assignedToOtherUser = lead.assignedToUserId && String(lead.assignedToUserId) !== String(authUser.id);
-    return assignedToOtherUser
-      && lead.assignedRole === 'SH'
-      && lead.previousAssignedTo
-      && String(lead.previousAssignedTo) === String(authUser.id);
+
+    const assignedRoleCode = String(lead.assignedRole || '').toUpperCase();
+    const ownerRoleCode = String(lead.ownerRole || '').toUpperCase();
+    const stageOrder = Number(lead.stageOrder || 0);
+    const nowWithSalesHead = assignedRoleCode === 'SH' || ownerRoleCode === 'SH' || stageOrder >= 6;
+
+    // SM should have read-only access once lead moves to SH-owned stages/workspace.
+    return nowWithSalesHead;
   }, [authUser?.id, lead, roleCode]);
+
+  const isSmShUnassignedReadOnly = useMemo(() => {
+    if (!lead) return false;
+    if (!['SM', 'SH'].includes(roleCode)) return false;
+    return !lead.assignedToUserId;
+  }, [lead, roleCode]);
 
 
   const getProjectNames = useMemo(() => {
@@ -615,6 +650,11 @@ const LeadDetailsPage = () => {
 
 
   const handleQuickActionPick = async (code) => {
+    if (isSmShUnassignedReadOnly) {
+      toast.error('Actions are disabled for unassigned leads. Assign the lead first.');
+      return;
+    }
+
     const action = roleActions.find((item) => item.code === code);
     if (!action) return;
 
@@ -636,6 +676,10 @@ const LeadDetailsPage = () => {
 
   const handleQuickActionSubmit = async () => {
     if (!lead?.id || !quickSelectedAction) return;
+    if (isSmShUnassignedReadOnly) {
+      toast.error('Actions are disabled for unassigned leads. Assign the lead first.');
+      return;
+    }
     if (isTcMissedFirstBlocked) {
       toast.error('Complete missed follow-ups first to enable this action.');
       return;
@@ -643,6 +687,14 @@ const LeadDetailsPage = () => {
     if (isSmHandoffReadOnly) {
       toast.error('This lead is view-only after handoff to Sales Head.');
       return;
+    }
+
+    if (isRemarkMandatoryForAction(quickSelectedAction)) {
+      const hasRemark = Boolean((quickActionForm.statusRemarkText || '').trim() || (quickActionForm.note || '').trim());
+      if (!hasRemark) {
+        toast.error('Remark is mandatory for this status/action.');
+        return;
+      }
     }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -838,11 +890,29 @@ const LeadDetailsPage = () => {
               Read-Only
             </span>
           )}
+          {isSmShUnassignedReadOnly && (
+            <span
+              className="lead-details-status"
+              style={{
+                backgroundColor: '#FEE2E2',
+                color: '#B91C1C',
+                border: '1px solid #FCA5A5',
+                fontWeight: 700,
+              }}
+              title="Unassigned lead: actions are disabled for Sales Manager and Sales Head"
+            >
+              Unassigned - Action Disabled
+            </span>
+          )}
           <button
             type="button"
             className="lead-details-quick-btn"
-            disabled={isSmHandoffReadOnly || isTcMissedFirstBlocked}
+            disabled={isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked}
             onClick={async () => {
+              if (isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked) {
+                return;
+              }
+
               setQuickActionsOpen(true);
               setQaActiveTab('history');
               
@@ -864,7 +934,9 @@ const LeadDetailsPage = () => {
                 setQuickActionActivities([]);
               }
             }}
-            title={isTcMissedFirstBlocked ? 'Complete missed follow-ups first to enable today actions' : 'Quick actions'}
+            title={isSmShUnassignedReadOnly
+              ? 'Unassigned lead: assign first to enable actions'
+              : (isTcMissedFirstBlocked ? 'Complete missed follow-ups first to enable today actions' : 'Quick actions')}
           >
             +
           </button>
@@ -1541,11 +1613,15 @@ const LeadDetailsPage = () => {
                   {isSmHandoffReadOnly && (
                     <p style={{ margin: '0 20px 8px', fontSize: 12, color: 'var(--text-muted)' }}>This lead is view-only for you after handoff to Sales Head.</p>
                   )}
+                  {isSmShUnassignedReadOnly && (
+                    <p style={{ margin: '0 20px 8px', fontSize: 12, color: 'var(--text-muted)' }}>This lead is unassigned. Actions are disabled for Sales Manager and Sales Head until assignment.</p>
+                  )}
                   <div className="qa-drawer-status-grid">
                     {roleActions.filter((a) => {
                       const isNegotiation = a.code.includes('NEGOTIATION');
                       const isHotNegotiation = a.code.includes('NEGOTIATION_HOT') || a.targetStatusCode === 'NEGOTIATION_HOT';
-                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && (!isNegotiation || isHotNegotiation);
+                      const allowNegotiationAction = roleCode === 'SH' ? true : (!isNegotiation || isHotNegotiation);
+                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && allowNegotiationAction;
                     }).map((action) => {
                       let icon = <ClipboardDocumentListIcon style={{ width: 18, height: 18 }} />;
                       let selClass = 'sel-default';
@@ -1563,7 +1639,7 @@ const LeadDetailsPage = () => {
                           key={action.code}
                           type="button"
                           className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? selClass : ''}`}
-                          disabled={quickActionSaving || isSmHandoffReadOnly || isTcMissedFirstBlocked}
+                          disabled={quickActionSaving || isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked}
                           onClick={() => handleQuickActionPick(action.code)}
                         >
                           <div className="qa-drawer-st-icon">{icon}</div>
@@ -1577,7 +1653,7 @@ const LeadDetailsPage = () => {
                         key={action.code}
                         type="button"
                         className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? 'sel-junk' : ''}`}
-                        disabled={quickActionSaving || isSmHandoffReadOnly || isTcMissedFirstBlocked}
+                        disabled={quickActionSaving || isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked}
                         onClick={() => handleQuickActionPick(action.code)}
                       >
                         <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? <NoSymbolIcon style={{ width: 18, height: 18 }} /> : action.code.includes('SPAM') ? <TrashIcon style={{ width: 18, height: 18 }} /> : <ExclamationTriangleIcon style={{ width: 18, height: 18 }} />}</div>
@@ -1649,7 +1725,7 @@ const LeadDetailsPage = () => {
                           {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Select Sales Head...' :
                            getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
                         </option>
-                        {(quickAssignableUsers[getAssigneeRoleForAction(quickSelectedAction, roleCode)] || [])
+                        {(Array.isArray(quickAssignableUsers) ? quickAssignableUsers : [])
                           .filter((u) => {
                             if (quickSelectedAction?.code !== 'TC_REASSIGN') return true;
                             const currentAssigneeId = lead?.assignedToUserId || null;
@@ -2240,8 +2316,12 @@ const LeadDetailsPage = () => {
                 disabled={
                   quickActionSaving
                   || isSmHandoffReadOnly
+                  || isSmShUnassignedReadOnly
                   || isTcMissedFirstBlocked
                   || !quickSelectedAction
+                  || (isRemarkMandatoryForAction(quickSelectedAction)
+                    && !(quickActionForm.statusRemarkText || '').trim()
+                    && !(quickActionForm.note || '').trim())
                   || ((quickSelectedAction?.needsAssignee
                     || quickSelectedAction?.code === 'TC_SV_DONE'
                     || quickSelectedAction?.code === 'TC_REASSIGN')

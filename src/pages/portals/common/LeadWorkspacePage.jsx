@@ -61,6 +61,19 @@ const hasValidPhoneLength = (value) => {
   return len >= 10 && len <= 12;
 };
 
+const isClosedLostLead = (lead) => {
+  const stageCode = String(lead?.stageCode || lead?.stage?.stage_code || '').trim().toUpperCase();
+  return stageCode === 'CLOSED_LOST';
+};
+
+const getLeadOwnerName = (lead) => {
+  const ownerFromFlat = String(lead?.assignedToName || '').trim();
+  if (ownerFromFlat) return ownerFromFlat;
+
+  const ownerFromNested = `${lead?.assignedTo?.first_name || ''} ${lead?.assignedTo?.last_name || ''}`.trim();
+  return ownerFromNested || 'Unassigned';
+};
+
 const FOLLOW_UP_WORKSPACE_ROLES = ['TC', 'SM', 'SH'];
 
 const getProjectDisplayName = (project) => {
@@ -126,7 +139,25 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for'];
+const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
+
+const MANDATORY_REMARK_STATUS_CODES = new Set([
+  'NEW',
+  'RNR',
+  'FOLLOW_UP',
+  'SV_SCHEDULED',
+  'SV_DONE',
+  'REVISIT',
+  'NEGOTIATION_HOT',
+  'NEGOTIATION_WARM',
+  'NEGOTIATION_COLD',
+]);
+
+const isRemarkMandatoryForAction = (action) => {
+  if (!action) return false;
+  const statusCode = String(action.targetStatusCode || '').trim().toUpperCase();
+  return MANDATORY_REMARK_STATUS_CODES.has(statusCode);
+};
 
 const normalizeStatusCode = (value) => String(value || '').trim().toUpperCase();
 
@@ -163,6 +194,8 @@ const isTcAllowedCreateStatus = (statusCode) => {
 const statusCodeToLabel = (statusCode, workflowConfig) => {
   const normalized = normalizeStatusCode(statusCode);
   if (!normalized) return '';
+
+  if (normalized === 'BOOKED') return 'Booked';
 
   const statuses = Array.isArray(workflowConfig?.statuses) ? workflowConfig.statuses : [];
   const match = statuses.find((status) => normalizeStatusCode(status?.status_code) === normalized);
@@ -235,9 +268,15 @@ const getUserRemarkText = (activity) => {
   const notePart = parts.find((part) => /^note\s*:/i.test(part));
   if (notePart) return notePart.replace(/^note\s*:/i, '').trim();
 
-  if (parts.length === 1 && /^response\s*:/i.test(parts[0])) return '';
+  const nonSystemParts = parts.filter((part) => (
+    !/^action\s*:/i.test(part)
+    && !/^response\s*:/i.test(part)
+    && !/^call\s*status\s*:/i.test(part)
+    && !/^status\s*:/i.test(part)
+  ));
 
-  return description;
+  if (!nonSystemParts.length) return '';
+  return nonSystemParts.join(' | ');
 };
 
 const getAssigneeRoleForAction = (action, workspaceRole) => {
@@ -1015,12 +1054,21 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             || fullLead.full_name
             || `${fullLead.firstName || fullLead.first_name || ''} ${fullLead.lastName || fullLead.last_name || ''}`.trim()
           ).trim();
-          const info = `${fullLead.leadNumber || fullLead.lead_number || 'Lead'} - ${duplicateLeadName || 'Unnamed'} (${fullLead.stage?.stage_name || fullLead.stageLabel || 'No Stage'})`;
+          const stageName = fullLead.stage?.stage_name || fullLead.stageLabel || 'No Stage';
+          const statusName = fullLead.status?.status_name || fullLead.statusLabel || 'No Status';
+          const ownerName = getLeadOwnerName(fullLead);
+          const blockedNote = isClosedLostLead(fullLead)
+            ? 'Use this lead to re-engage.'
+            : 'New lead cannot be created for this contact.';
+          const info = `${fullLead.leadNumber || fullLead.lead_number || 'Lead'} - ${duplicateLeadName || 'Unnamed'} | Stage: ${stageName} | Status: ${statusName} | Owner: ${ownerName} | ${blockedNote}`;
           if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
         } catch {
           // Fallback: use search result only
-          const info = `${matchedLead.leadNumber || 'Lead'} - ${matchedLead.fullName || ''} (${matchedLead.stageLabel || 'No Stage'})`;
+          const blockedNote = isClosedLostLead(matchedLead)
+            ? 'Use this lead to re-engage.'
+            : 'New lead cannot be created for this contact.';
+          const info = `${matchedLead.leadNumber || 'Lead'} - ${matchedLead.fullName || ''} | Stage: ${matchedLead.stageLabel || 'No Stage'} | Status: ${matchedLead.statusLabel || 'No Status'} | Owner: ${getLeadOwnerName(matchedLead)} | ${blockedNote}`;
           if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
         }
@@ -1037,6 +1085,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // Populate form with duplicate lead details
   const prefillFormFromDuplicateLead = useCallback((lead) => {
     if (!lead) return;
+    if (!isClosedLostLead(lead)) {
+      toast.error(`New lead cannot be created. Existing lead is active with owner ${getLeadOwnerName(lead)}.`);
+      return;
+    }
 
     const fullName = (
       lead.fullName
@@ -1846,6 +1898,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           toast.error('Please select a follow-up date');
           setQuickActionLoading(false);
           return;
+        }
+
+        if (isRemarkMandatoryForAction(quickWorkflowAction)) {
+          const hasRemark = Boolean((f.statusRemarkText || '').trim() || (f.note || '').trim());
+          if (!hasRemark) {
+            toast.error('Remark is mandatory for this status/action');
+            setQuickActionLoading(false);
+            return;
+          }
         }
 
         if (quickWorkflowAction.needsAssignee && !f.assignToUserId) {
@@ -2846,7 +2907,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Exists: {phoneCheck.leadInfo}</span>}
                           {phoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid</span>}
                         </div>
-                        {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && (
+                        {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && isClosedLostLead(phoneCheck.duplicateLead) && (
                           <button
                             type="button"
                             className={`create-lead-phone-status__btn ${reengageLeadId === phoneCheck.duplicateLead.id ? 'create-lead-phone-status__btn--active' : ''}`}
@@ -2910,7 +2971,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Already exists: {altPhoneCheck.leadInfo}</span>}
                           {altPhoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid Number</span>}
                         </div>
-                        {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && (
+                        {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && isClosedLostLead(altPhoneCheck.duplicateLead) && (
                           <button
                             type="button"
                             className={`create-lead-phone-status__btn ${reengageLeadId === altPhoneCheck.duplicateLead.id ? 'create-lead-phone-status__btn--active' : ''}`}
@@ -4042,7 +4103,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     {roleActions.filter((a) => {
                       const isNegotiation = a.code.includes('NEGOTIATION');
                       const isHotNegotiation = a.code.includes('NEGOTIATION_HOT') || a.targetStatusCode === 'NEGOTIATION_HOT';
-                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && (!isNegotiation || isHotNegotiation);
+                      const allowNegotiationAction = workspaceRole === 'SH' ? true : (!isNegotiation || isHotNegotiation);
+                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && allowNegotiationAction;
                     }).map((action) => {
                       let icon = <ClipboardDocumentListIcon style={{ width: 18, height: 18 }} />;
                       let selClass = 'sel-default';
@@ -4741,6 +4803,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   quickActionLoading
                   || quickActionLeadReadOnly
                   || !quickWorkflowAction
+                  || (isRemarkMandatoryForAction(quickWorkflowAction)
+                    && !(quickWorkflowForm.statusRemarkText || '').trim()
+                    && !(quickWorkflowForm.note || '').trim())
                   || ((quickWorkflowAction?.needsAssignee
                     || quickWorkflowAction?.code === 'TC_SV_DONE'
                     || quickWorkflowAction?.code === 'TC_REASSIGN')

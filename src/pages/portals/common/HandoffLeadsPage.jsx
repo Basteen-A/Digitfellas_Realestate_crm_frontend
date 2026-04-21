@@ -102,7 +102,6 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
               <th>To</th>
               <th>Stage</th>
               <th>Status</th>
-              <th>Latest Remark</th>
               <th>Reason / Remarks</th>
               <th>Direction</th>
               <th>Current Owner</th>
@@ -111,12 +110,12 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={10} className="handoff-leads__empty">Loading handoff leads...</td>
+                <td colSpan={9} className="handoff-leads__empty">Loading handoff leads...</td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={10} className="handoff-leads__empty">No handoff leads found</td>
+                <td colSpan={9} className="handoff-leads__empty">No handoff leads found</td>
               </tr>
             )}
             {!loading && rows.map((row) => (
@@ -143,9 +142,6 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
                   <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
                     {row.statusName || '-'}
                   </span>
-                </td>
-                <td>
-                  <div>{row.latestRemark || '-'}</div>
                 </td>
                 <td>
                   <div>{row.assignmentReason || '-'}</div>

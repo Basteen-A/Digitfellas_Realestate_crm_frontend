@@ -151,6 +151,11 @@ const SalesHeadTeamLeads = () => {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                      {sm.relationshipType === 'shared' && (
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: '#fef3c7', color: '#d97706', fontWeight: 600 }}>
+                          Shared
+                        </span>
+                      )}
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontWeight: 600 }}>
                         {sm.activeLeads} active
                       </span>
@@ -178,7 +183,14 @@ const SalesHeadTeamLeads = () => {
                   {(selectedSM.firstName?.[0] || '').toUpperCase()}{(selectedSM.lastName?.[0] || '').toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedSM.fullName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedSM.fullName}</div>
+                    {selectedSM.relationshipType === 'shared' && (
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, background: '#fef3c7', color: '#d97706', fontWeight: 600 }}>
+                        SHARED
+                      </span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{selectedSM.email} · {selectedSM.phone}</div>
                 </div>
               </div>

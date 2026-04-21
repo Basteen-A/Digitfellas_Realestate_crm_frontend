@@ -69,6 +69,9 @@ const FALLBACK_ACTIONS = {
     { code: 'SM_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'COLD', needsFollowUp: false },
   ],
   SH: [
+    { code: 'SH_NEGOTIATION_HOT', label: 'Negotiation Hot', tone: 'primary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_HOT', needsFollowUp: true },
+    { code: 'SH_NEGOTIATION_WARM', label: 'Negotiation Warm', tone: 'success', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_WARM', needsFollowUp: true },
+    { code: 'SH_NEGOTIATION_COLD', label: 'Negotiation Cold', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_COLD', needsFollowUp: true },
     { code: 'SH_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
     { code: 'SH_BOOKING', label: 'Booking (Token Received)', tone: 'success', targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' },
     { code: 'SH_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'COLD', needsFollowUp: false },
@@ -89,6 +92,19 @@ export const getActionsForRole = (actions = {}, roleCode) => {
       return { ...a, needsFollowUp: true };
     }
 
+    if (['SH_NEGOTIATION_HOT', 'SH_NEGOTIATION_WARM', 'SH_NEGOTIATION_COLD'].includes(a.code)) {
+      return {
+        ...a,
+        needsFollowUp: true,
+        needsAssignee: false,
+        targetStageCode: 'OPPORTUNITY',
+      };
+    }
+
+    if (a.code === 'SH_BOOKING') {
+      return { ...a, targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' };
+    }
+
     if (a.code === 'TC_SV_DONE') {
       return { ...a, needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true };
     }
@@ -105,10 +121,6 @@ export const getActionsForRole = (actions = {}, roleCode) => {
       return { ...a, needsReason: true, reasonCategory: 'COLD', needsFollowUp: false };
     }
 
-    if (a.code === 'SH_BOOKING') {
-      return { ...a, needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' };
-    }
-
     return a;
   });
   
@@ -119,7 +131,7 @@ export const getActionsForRole = (actions = {}, roleCode) => {
     const requiredCodesByRole = {
       TC: ['TC_REASSIGN'],
       SM: ['SM_FOLLOW_UP', 'SM_LOST'],
-      SH: ['SH_FOLLOW_UP', 'SH_LOST'],
+      SH: ['SH_FOLLOW_UP', 'SH_NEGOTIATION_HOT', 'SH_NEGOTIATION_WARM', 'SH_NEGOTIATION_COLD', 'SH_LOST'],
       COL: ['COL_LOST'],
     };
     const existingCodes = new Set(fromConfig.map((a) => a.code));
