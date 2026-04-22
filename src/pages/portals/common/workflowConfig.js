@@ -61,7 +61,7 @@ const FALLBACK_ACTIONS = {
   ],
   SM: [
     { code: 'SM_SITE_VISIT', label: 'Record Site Visit', tone: 'primary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'SV_DONE', needsSvDetails: true },
-    { code: 'SM_SCHEDULE_REVISIT', label: 'Schedule a Revisit', tone: 'secondary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'REVISIT', needsFollowUp: true },
+    { code: 'SM_SCHEDULE_REVISIT', label: 'Revisit', tone: 'secondary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'REVISIT', needsFollowUp: true },
     { code: 'SM_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'SITE_VISIT', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
     { code: 'SM_NEGOTIATION_HOT', label: 'Move to Negotiation (Hot)', tone: 'primary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_HOT', needsAssignee: true, assigneeRole: 'SH' },
     { code: 'SM_NEGOTIATION_WARM', label: 'Move to Negotiation (Warm)', tone: 'success', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_WARM', needsAssignee: true, assigneeRole: 'SH' },

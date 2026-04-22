@@ -692,9 +692,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     return selectedCreateLocationIds.every((id) => mapped.has(String(id)));
   }, [workspaceRole, selectedCreateLocationIds, tcMappedLocationIds]);
 
-  const tcStatusNeedsFullDetails = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
+  const tcStatusNeedsFullDetails = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
-  const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
+    const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
   const smStatusNeedsFollowUp = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'FOLLOW_UP';
   const smStatusNeedsReason = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'LOST';
   const smStatusNeedsAssignee = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'NEGOTIATION_HOT';

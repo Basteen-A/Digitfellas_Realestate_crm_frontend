@@ -10,18 +10,22 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, incomingOnPage: 0, outgoingOnPage: 0 });
+  const [meta, setMeta] = useState({ total: 0, incomingOnPage: 0, outgoingOnPage: 0, pendingOnPage: 0 });
   const [filters, setFilters] = useState({ type: defaultType, search: '' });
 
   const stats = useMemo(() => {
     const current = rows.filter((row) => row.isCurrent).length;
+    const outgoing = meta.outgoingOnPage || 0;
+    const pending = meta.pendingOnPage || 0;
+    const svDone = workspaceRole === 'TC' ? outgoing - pending : outgoing;
     return {
       total: meta.total || 0,
       incoming: meta.incomingOnPage || 0,
-      outgoing: meta.outgoingOnPage || 0,
+      outgoing: svDone,
+      pending: pending,
       current,
     };
-  }, [meta, rows]);
+  }, [meta, rows, workspaceRole]);
 
   const loadHandoffs = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
@@ -37,7 +41,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
       });
 
       setRows(response.data || []);
-      setMeta(response.meta || { total: 0, incomingOnPage: 0, outgoingOnPage: 0 });
+      setMeta(response.meta || { total: 0, incomingOnPage: 0, outgoingOnPage: 0, pendingOnPage: 0 });
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load handoff leads'));
     } finally {
@@ -71,9 +75,10 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
 
       <div className="handoff-leads__stats">
         <article className="crm-card handoff-stat-card"><p>Total</p><strong>{stats.total}</strong></article>
-        <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>
-        <article className="crm-card handoff-stat-card"><p>Outgoing (page)</p><strong>{stats.outgoing}</strong></article>
-        <article className="crm-card handoff-stat-card"><p>Current Ownership</p><strong>{stats.current}</strong></article>
+        {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>}
+        {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card"><p>Pending</p><strong>{stats.pending}</strong></article>}
+        <article className="crm-card handoff-stat-card"><p>{workspaceRole === 'TC' ? 'SV Done (Accepted)' : 'Outgoing (page)'}</p><strong>{stats.outgoing}</strong></article>
+        {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Current Ownership</p><strong>{stats.current}</strong></article>}
       </div>
 
       <div className="crm-card handoff-leads__filters">
@@ -125,7 +130,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
                 <td>{formatDateTime(row.handedOffAt)}</td>
                 <td>
                   <div className="handoff-lead-name">{row.leadName || '-'}</div>
-                  <small>{row.leadNumber || '-'} • {row.leadPhone || '-'}</small>
+                  <small>{row.leadNumber || '-'}</small>
                 </td>
                 <td>
                   <div>{row.fromUserName || '-'}</div>
