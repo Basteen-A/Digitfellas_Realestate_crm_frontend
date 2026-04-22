@@ -45,7 +45,7 @@ const TelecallerWorkspace = () => {
             <TelecallerPullRequests user={user} />
           )}
           {activeScreen === 'handoffs' && (
-            <HandoffLeadsPage workspaceRole="TC" />
+            <HandoffLeadsPage workspaceRole="TC" defaultType="outgoing" showStage={false} />
           )}
         </>
       )}

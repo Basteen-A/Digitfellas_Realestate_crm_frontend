@@ -6,12 +6,12 @@ import { formatDateTime } from '../../../utils/formatters';
 import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
 import './HandoffLeadsPage.css';
 
-const HandoffLeadsPage = ({ workspaceRole }) => {
+const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState({ total: 0, incomingOnPage: 0, outgoingOnPage: 0 });
-  const [filters, setFilters] = useState({ type: 'all', search: '' });
+  const [filters, setFilters] = useState({ type: defaultType, search: '' });
 
   const stats = useMemo(() => {
     const current = rows.filter((row) => row.isCurrent).length;
@@ -54,8 +54,8 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
     <div className="handoff-leads">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Handoff Leads</h1>
-          <p>Track who handed off leads, to whom, and current stage/status.</p>
+          <h1>{workspaceRole === 'TC' ? 'SV Leads' : 'Handoff Leads'}</h1>
+          <p>{workspaceRole === 'TC' ? 'Leads you have handed off to Sales Managers.' : 'Track who handed off leads, to whom, and current stage/status.'}</p>
         </div>
         <div className="page-header-right">
           <button
@@ -82,14 +82,16 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
           onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
           placeholder="Search by lead number, name, phone, email"
         />
-        <select
-          value={filters.type}
-          onChange={(event) => setFilters((prev) => ({ ...prev, type: event.target.value }))}
-        >
-          <option value="all">All Handoffs</option>
-          <option value="incoming">Incoming to Me</option>
-          <option value="outgoing">Outgoing from Me</option>
-        </select>
+        {defaultType === 'all' && (
+          <select
+            value={filters.type}
+            onChange={(event) => setFilters((prev) => ({ ...prev, type: event.target.value }))}
+          >
+            <option value="all">All Handoffs</option>
+            <option value="incoming">Incoming to Me</option>
+            <option value="outgoing">Outgoing from Me</option>
+          </select>
+        )}
       </div>
 
       <div className="crm-card handoff-leads__table-wrap">
@@ -100,7 +102,7 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
               <th>Lead</th>
               <th>From</th>
               <th>To</th>
-              <th>Stage</th>
+              {showStage && <th>Stage</th>}
               <th>Status</th>
               <th>Reason / Remarks</th>
               <th>Direction</th>
@@ -110,12 +112,12 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={9} className="handoff-leads__empty">Loading handoff leads...</td>
+                <td colSpan={showStage ? 9 : 8} className="handoff-leads__empty">Loading handoff leads...</td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="handoff-leads__empty">No handoff leads found</td>
+                <td colSpan={showStage ? 9 : 8} className="handoff-leads__empty">No handoff leads found</td>
               </tr>
             )}
             {!loading && rows.map((row) => (
@@ -133,18 +135,19 @@ const HandoffLeadsPage = ({ workspaceRole }) => {
                   <div>{row.toUserName || '-'}</div>
                   <small>{ROLE_LABELS[row.toUserRole] || row.toUserRoleName || '-'}</small>
                 </td>
-                <td>
-                  <span className="handoff-chip" style={{ backgroundColor: `${row.stageColor || '#6B7280'}22`, color: 'var(--text-primary)', borderColor: `${row.stageColor || '#6B7280'}66` }}>
-                    {row.stageName || row.stageLabel || row.stageCode || row.stage_code || '-'}
-                  </span>
-                </td>
+                {showStage && (
+                  <td>
+                    <span className="handoff-chip" style={{ backgroundColor: `${row.stageColor || '#6B7280'}22`, color: 'var(--text-primary)', borderColor: `${row.stageColor || '#6B7280'}66` }}>
+                      {row.stageName || row.stageLabel || row.stageCode || row.stage_code || '-'}
+                    </span>
+                  </td>
+                )}
                 <td>
                   <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
                     {row.statusName || '-'}
                   </span>
                 </td>
                 <td>
-                  <div>{row.assignmentReason || '-'}</div>
                   <small>{row.remarks || '-'}</small>
                 </td>
                 <td>

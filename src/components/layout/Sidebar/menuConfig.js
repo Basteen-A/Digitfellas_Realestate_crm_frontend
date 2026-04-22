@@ -90,6 +90,7 @@ const adminSidebar = [
       { label: 'Quick Remarks', path: '/super-admin/status-remarks' },
       { label: 'Motivations', path: '/super-admin/motivations' },
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
+      { label: 'Customer Types', path: '/super-admin/customer-types' },
     ],
   },
 
@@ -100,7 +101,6 @@ const adminSidebar = [
     children: [
       { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
       { label: 'Score Master', path: '/super-admin/score-master' },
-      { label: 'Customer Types', path: '/super-admin/customer-types' },
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
     ],
@@ -111,7 +111,8 @@ const adminSidebar = [
 const telecallerSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
   { label: 'Leads', path: '/telecaller/leads', icon: UsersIcon },
-  { label: 'Pipeline Board', path: '/telecaller/pipeline', icon: ClipboardDocumentListIcon },
+  { label: 'SV Leads', path: '/telecaller/handoffs', icon: HandRaisedIcon },
+  { label: 'Performance Tracker', path: '/telecaller/pipeline', icon: ClipboardDocumentListIcon },
 ];
 
 // ── Sales Manager ──
@@ -146,8 +147,8 @@ export const telecallerMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
-  { label: 'Handoff Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
-  { label: 'Pipeline Board', key: 'pipeline', icon: ClipboardDocumentListIcon, badge: null },
+  { label: 'SV Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
+  { label: 'Performance Tracker', key: 'pipeline', icon: ClipboardDocumentListIcon, badge: null },
   { group: 'Quick Actions' },
   { label: 'Call Log', key: 'calllog', icon: DevicePhoneMobileIcon, badge: null },
   { label: 'Pull Requests', key: 'pullrequests', icon: InboxArrowDownIcon, badgeColor: 'red' },
@@ -157,7 +158,7 @@ export const salesManagerMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'green' },
-  { label: 'Handoff Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
+  { label: 'SV Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
@@ -168,7 +169,7 @@ export const salesHeadMenu = [
   { group: 'Sales' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'Negotiations', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
-  { label: 'Handoff Leads', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
+  { label: 'SV Leads', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
   { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },

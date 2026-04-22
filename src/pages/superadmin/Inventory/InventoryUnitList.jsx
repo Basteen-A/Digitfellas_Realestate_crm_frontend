@@ -447,7 +447,7 @@ const InventoryUnitList = () => {
                   />
                 </div>
 
-                <div className="inv-form__field">
+                {/* <div className="inv-form__field">
                   <label>Configuration</label>
                   <input
                     type="text"
@@ -455,7 +455,7 @@ const InventoryUnitList = () => {
                     placeholder="e.g. 2BHK, Villa, Plot"
                     onChange={(e) => handleFieldChange('configuration', e.target.value)}
                   />
-                </div>
+                </div> */}
 
                 <div className="inv-form__field">
                   <label>Unit Area</label>
@@ -521,7 +521,7 @@ const InventoryUnitList = () => {
                   </select>
                 </div>
 
-                <div className="inv-form__field">
+                {/* <div className="inv-form__field">
                   <label>Block / Tower</label>
                   <input
                     type="text"
@@ -539,7 +539,7 @@ const InventoryUnitList = () => {
                     placeholder="e.g. Ground, 1st, 2nd"
                     onChange={(e) => handleFieldChange('floor_number', e.target.value)}
                   />
-                </div>
+                </div> */}
 
                 <div className="inv-form__field">
                   <label>Sort Order</label>

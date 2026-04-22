@@ -71,6 +71,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     }
   };
 
+  const isCollapsed = !isMobile && sidebarCollapsed;
+
   return (
     <>
       {isMobile && isMobileOpen && (
@@ -79,7 +81,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
           onClick={onMobileClose}
         />
       )}
-      <aside className={`app-sidebar ${sidebarCollapsed ? 'app-sidebar--collapsed' : ''} ${isMobile ? 'fixed left-0 top-0 z-50 w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
+      <aside className={`app-sidebar ${isCollapsed ? 'app-sidebar--collapsed' : ''} ${isMobile ? 'fixed left-0 top-0 z-50 w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
         {isMobile && (
           <button
             type="button"
@@ -93,13 +95,13 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       {/* Brand */}
       <div className="app-sidebar__brand">
         <div className="app-sidebar__logo">
-          {sidebarCollapsed ? 'RC' : <img src={logoS} alt="Logo" />}
+          {isCollapsed ? 'RC' : <img src={logoS} alt="Logo" />}
         </div>
-        {!sidebarCollapsed && <span className="app-sidebar__name">RealEstate CRM</span>}
+        {!isCollapsed && <span className="app-sidebar__name">RealEstate CRM</span>}
       </div>
 
       {/* Role Badge */}
-      {!sidebarCollapsed && (
+      {!isCollapsed && (
         <div className="app-sidebar__role-badge">
           <span className="app-sidebar__role-dot" />
           <span>{roleLabel}</span>
@@ -117,10 +119,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
               <div key={item.label} className={`app-sidebar__group ${hasActiveChild ? 'has-active-child' : ''}`}>
                 <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)}>
                   <MenuIcon icon={item.icon} />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
-                  {!sidebarCollapsed && <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>}
+                  {!isCollapsed && <span>{item.label}</span>}
+                  {!isCollapsed && <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>}
                 </button>
-                {!sidebarCollapsed && isOpen && (
+                {!isCollapsed && isOpen && (
                   <div className="app-sidebar__subnav">
                     {item.children.map((child) => (
                       <NavLink
@@ -148,7 +150,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
               className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
             >
               <MenuIcon icon={item.icon} />
-              {!sidebarCollapsed && <span>{item.label}</span>}
+              {!isCollapsed && <span>{item.label}</span>}
             </NavLink>
           );
         })}
