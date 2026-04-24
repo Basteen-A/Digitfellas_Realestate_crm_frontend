@@ -1281,12 +1281,24 @@ textarea.crm-form-input {
 /* ── Modal Panel Override ── */
 .create-lead-panel {
   max-width: 820px;
+  width: min(820px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
   border-radius: 16px;
   overflow: hidden;
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(0, 0, 0, 0.04);
   border: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.create-lead-panel > form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* ── Header ── */
@@ -1367,8 +1379,11 @@ textarea.crm-form-input {
 /* ── Body (Scrollable) ── */
 .create-lead-body {
   padding: 24px 28px 20px;
-  max-height: calc(100vh - 220px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--bg-card, #fff);
 }
 
@@ -2032,6 +2047,7 @@ textarea.crm-form-input {
   padding: 16px 28px 20px;
   border-top: 1px solid var(--border-primary, #e2e8f0);
   background: var(--bg-secondary, #f8fafc);
+  flex-shrink: 0;
 }
 
 .create-lead-footer__assign {

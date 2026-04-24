@@ -151,6 +151,11 @@ const leadWorkflowApi = {
     const { data } = await api.get(`/leads/${leadId}/activities`);
     return data;
   },
+
+  getMyMappedLocations: async () => {
+    const { data } = await api.get('/leads/my-locations');
+    return data;
+  },
 };
 
 export default leadWorkflowApi;

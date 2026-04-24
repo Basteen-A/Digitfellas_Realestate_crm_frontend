@@ -9,7 +9,7 @@ import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
-import userApi from '../../../api/userApi';
+// userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -107,6 +107,7 @@ const initialNewLead = {
   longitude: null,
   assignment_mode: 'ME',
   assigned_to: '',
+  assignment_mode_manual: false,
   closure_reason_id: '',
   remark: '',
   callResult: 'Answered',
@@ -454,6 +455,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [newLeadStatusRemarks, setNewLeadStatusRemarks] = useState([]);
   const [remarksLoading, setRemarksLoading] = useState(false);
   const [tcMappedLocationIds, setTcMappedLocationIds] = useState([]);
+  const [isMappingsLoading, setIsMappingsLoading] = useState(false);
 
   // ── Customer Profile Modal (SH Close Won) ──
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
@@ -685,12 +687,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const tcCanSelfAssignSelectedLocation = useMemo(() => {
     if (workspaceRole !== 'TC') return true;
-    if (!selectedCreateLocationIds.length) return false;
+    if (isMappingsLoading) return true; // Default to true while loading to avoid premature pool-flip
+    if (!selectedCreateLocationIds.length) return true;
     if (!tcMappedLocationIds.length) return false;
 
     const mapped = new Set(tcMappedLocationIds.map((id) => String(id)));
-    return selectedCreateLocationIds.every((id) => mapped.has(String(id)));
-  }, [workspaceRole, selectedCreateLocationIds, tcMappedLocationIds]);
+    return selectedCreateLocationIds.some((id) => mapped.has(String(id)));
+  }, [workspaceRole, selectedCreateLocationIds, tcMappedLocationIds, isMappingsLoading]);
 
   const tcStatusNeedsFullDetails = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
@@ -853,25 +856,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         return;
       }
 
+      setIsMappingsLoading(true);
       try {
-        const response = await userApi.getById(user.id);
-        const raw = response?.data || response || {};
-
-        const directIds = Array.isArray(raw.location_ids)
-          ? raw.location_ids
-          : Array.isArray(raw.locationIds)
-            ? raw.locationIds
-            : [];
-
-        const mappedIds = directIds.length > 0
-          ? directIds
-          : (Array.isArray(raw.locationMappings)
-            ? raw.locationMappings.map((m) => m?.location_id || m?.location?.id)
-            : []);
-
-        setTcMappedLocationIds([...new Set(mappedIds.filter(Boolean).map((id) => String(id)))]);
-      } catch {
+        const response = await leadWorkflowApi.getMyMappedLocations();
+        const locationIds = response?.data?.location_ids || [];
+        const normalized = [...new Set(locationIds.filter(Boolean).map((id) => String(id)))];
+        setTcMappedLocationIds(normalized);
+      } catch (err) {
+        console.error('Failed to load TC mapped locations:', err);
         setTcMappedLocationIds([]);
+      } finally {
+        setIsMappingsLoading(false);
       }
     };
 
@@ -884,9 +879,26 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
     setNewLeadForm((prev) => {
       if (prev.assignment_mode === 'POOL' && !prev.assigned_to) return prev;
-      return { ...prev, assignment_mode: 'POOL', assigned_to: '' };
+      return { ...prev, assignment_mode: 'POOL', assigned_to: '', assignment_mode_manual: false };
     });
   }, [workspaceRole, tcCanSelfAssignSelectedLocation]);
+
+  useEffect(() => {
+    if (workspaceRole !== 'TC' || isMappingsLoading) return;
+    if (selectedNewLeadStatusCode === 'RNR') return;
+    if (!selectedCreateLocationIds.length) return;
+    if (newLeadForm.assignment_mode_manual) return;
+
+    setNewLeadForm((prev) => {
+      if (!tcCanSelfAssignSelectedLocation) {
+        if (prev.assignment_mode === 'POOL' && !prev.assigned_to) return prev;
+        return { ...prev, assignment_mode: 'POOL', assigned_to: '', assignment_mode_manual: false };
+      }
+
+      if (prev.assignment_mode === 'ME' && String(prev.assigned_to || '') === String(user?.id || '')) return prev;
+      return { ...prev, assignment_mode: 'ME', assigned_to: user?.id || '', assignment_mode_manual: false };
+    });
+  }, [workspaceRole, selectedNewLeadStatusCode, selectedCreateLocationIds, tcCanSelfAssignSelectedLocation, user?.id, isMappingsLoading, newLeadForm.assignment_mode_manual]);
 
   // ── Load assignable users for roles that need them ──
   const loadAssignableUsers = useCallback(async (roleCode) => {
@@ -1306,7 +1318,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         timeSpent: newLeadForm.timeSpent ? Number(newLeadForm.timeSpent) : undefined,
         assignment_mode: workspaceRole === 'TC' ? (newLeadForm.assignment_mode || 'ME') : undefined,
         assigned_to: workspaceRole === 'TC'
-          ? (newLeadForm.assignment_mode === 'POOL' ? null : (user?.id || null))
+          ? (selectedNewLeadStatusCode === 'RNR'
+            ? (user?.id || null)
+            : (newLeadForm.assignment_mode === 'POOL' ? null : (user?.id || null)))
           : (newLeadForm.assigned_to || null),
         closure_reason_id: newLeadForm.closure_reason_id || undefined,
         note: newLeadForm.remark || undefined,
@@ -2296,13 +2310,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </small>
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button
-                        className="crm-btn crm-btn-sm"
-                        style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                        onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
-                      >
-                        <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> View
-                      </button>
+                      {activeTab !== 'new' && activeTab !== 'unassigned' && (
+                        <button
+                          className="crm-btn crm-btn-sm"
+                          style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
+                        >
+                          <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> View
+                        </button>
+                      )}
                       {!lead.assignedToUserId && activeTab === 'new' && (
                         <button
                           className="crm-btn crm-btn-sm"
@@ -3028,6 +3044,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                   ...p,
                                   lead_status_id: p.lead_status_id === val ? '' : val,
                                   callResult: toCanonicalStatusCode(val) === 'RNR' ? 'Not Answered' : p.callResult,
+                                  assignment_mode: toCanonicalStatusCode(val) === 'RNR' ? 'ME' : p.assignment_mode,
+                                  assigned_to: toCanonicalStatusCode(val) === 'RNR' ? (user?.id || '') : p.assigned_to,
+                                  assignment_mode_manual: toCanonicalStatusCode(val) === 'RNR' ? false : p.assignment_mode_manual,
                                 }));
                               }}
                             >
@@ -3085,7 +3104,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <select
                             className="create-lead-select"
                             value={newLeadForm.location_id}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, location_id: e.target.value, project_ids: [] }))}
+                            onChange={(e) => setNewLeadForm((p) => ({
+                              ...p,
+                              location_id: e.target.value,
+                              location_ids: e.target.value ? [e.target.value] : [],
+                              project_ids: [],
+                            }))}
                             required
                           >
                             <option value="">Select location</option>
@@ -3235,37 +3259,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           />
                         </div>
                       )}
-
-                    {workspaceRole === 'TC' && tcCanSelfAssignSelectedLocation && (
-                      <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
-                        <div className="call-result-label">Lead Assignment</div>
-                        <div className="call-result-toggle">
-                          <button
-                            type="button"
-                            className={`call-result-btn ${newLeadForm.assignment_mode !== 'POOL' ? 'active' : ''}`}
-                            onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'ME', assigned_to: user?.id || '' }))}
-                          >
-                            Assign to me
-                          </button>
-                          <button
-                            type="button"
-                            className={`call-result-btn ${newLeadForm.assignment_mode === 'POOL' ? 'active' : ''}`}
-                            onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'POOL', assigned_to: '' }))}
-                          >
-                            Assign to pool
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {workspaceRole === 'TC' && !tcCanSelfAssignSelectedLocation && selectedCreateLocationIds.length > 0 && (
-                      <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
-                        <div className="call-result-label">Lead Assignment</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          Selected location is outside your mapped locations. This lead will be sent to the unassigned pool.
-                        </div>
-                      </div>
-                    )}
 
                     {/* Call Status Selection for New Lead */}
                     {shouldShowCreateCallStatus && (
@@ -3449,6 +3442,41 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               {/* ── Footer ── */}
               <div className="create-lead-footer">
+                {workspaceRole === 'TC' && selectedNewLeadStatusCode !== 'RNR' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginRight: 'auto' }}>
+                    <div className="call-result-label" style={{ marginBottom: 0 }}>Lead Assignment</div>
+                    <div className="call-result-toggle" style={{ marginBottom: 0 }}>
+                      <button
+                        type="button"
+                        className={`call-result-btn ${newLeadForm.assignment_mode !== 'POOL' ? 'active' : ''}`}
+                        onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'ME', assigned_to: user?.id || '', assignment_mode_manual: true }))}
+                        disabled={!tcCanSelfAssignSelectedLocation && selectedCreateLocationIds.length > 0}
+                        title={!tcCanSelfAssignSelectedLocation && selectedCreateLocationIds.length > 0 ? 'Selected location is not mapped to you' : undefined}
+                      >
+                        Assign to me
+                      </button>
+                      <button
+                        type="button"
+                        className={`call-result-btn ${newLeadForm.assignment_mode === 'POOL' ? 'active' : ''}`}
+                        onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'POOL', assigned_to: '', assignment_mode_manual: true }))}
+                      >
+                        Unassigned pool
+                      </button>
+                    </div>
+                    {!tcCanSelfAssignSelectedLocation && selectedCreateLocationIds.length > 0 && (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        Selected location is outside your mapped locations. Lead will go to unassigned pool.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {workspaceRole === 'TC' && selectedNewLeadStatusCode === 'RNR' && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 'auto' }}>
+                    RNR leads are auto-assigned to you.
+                  </div>
+                )}
+
                 <button
                   type="button"
                   className="create-lead-footer__cancel"
