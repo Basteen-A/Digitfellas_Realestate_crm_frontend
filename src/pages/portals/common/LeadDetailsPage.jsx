@@ -262,6 +262,8 @@ const LeadDetailsPage = () => {
   const [quickActionSaving, setQuickActionSaving] = useState(false);
   const [quickActionActivities, setQuickActionActivities] = useState([]);
   const [hasPendingMissedFollowupsForMe, setHasPendingMissedFollowupsForMe] = useState(false);
+  const [quickMissingLocationId, setQuickMissingLocationId] = useState('');
+  const [quickMissingProjectIds, setQuickMissingProjectIds] = useState([]);
   const [customerProfileForm, setCustomerProfileForm] = useState({
     date_of_birth: '', marital_status: '', purchase_type: '',
     occupation: '', current_post: '',
@@ -500,6 +502,8 @@ const LeadDetailsPage = () => {
     setQuickClosureReasons([]);
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
+    setQuickMissingLocationId('');
+    setQuickMissingProjectIds([]);
   }, []);
 
   const loadStatusRemarks = useCallback(async (action, setRemarks, setAnsNonAns) => {
@@ -670,6 +674,21 @@ const LeadDetailsPage = () => {
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
 
+    // Pre-fill missing location/project selectors from current lead data
+    setQuickMissingLocationId(lead?.interestedLocations?.[0] || '');
+    setQuickMissingProjectIds(lead?.interestedProjects?.length ? lead.interestedProjects : (lead?.projectId ? [lead.projectId] : []));
+
+    // For TC_REASSIGN, load TCs as assignable users
+    if (code === 'TC_REASSIGN') {
+      try {
+        const resp = await leadWorkflowApi.getAssignableUsers('TC');
+        setQuickAssignableUsers(resp.data || []);
+      } catch {
+        setQuickAssignableUsers([]);
+      }
+      return;
+    }
+
     await loadActionDependencies(action, setQuickAssignableUsers, setQuickClosureReasons);
     await loadStatusRemarks(action, setQuickStatusRemarks, setQuickRemarkAnsNonAns);
   };
@@ -697,6 +716,26 @@ const LeadDetailsPage = () => {
       }
     }
 
+    // Check: lead missing project/location — require user to fill them
+    const leadHasLocation = Boolean(
+      lead?.interestedLocations?.length || lead?.location || quickMissingLocationId
+    );
+    const leadHasProject = Boolean(
+      lead?.interestedProjects?.length || lead?.projectId || lead?.project || quickMissingProjectIds.length
+    );
+    // For non-terminal actions, require location and project
+    const isTerminalAction = ['TC_JUNK', 'TC_SPAM', 'TC_LOST', 'SM_LOST', 'COL_CANCELLED'].includes(quickSelectedAction.code);
+    if (!isTerminalAction && roleCode === 'TC') {
+      if (!leadHasLocation) {
+        toast.error('Please select a location for this lead before performing this action.');
+        return;
+      }
+      if (!leadHasProject) {
+        toast.error('Please select a project for this lead before performing this action.');
+        return;
+      }
+    }
+
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
       const pF = customerProfileForm;
       if (!pF.date_of_birth || !pF.pan_number || !pF.aadhar_number || !pF.current_address || !pF.occupation) {
@@ -711,6 +750,16 @@ const LeadDetailsPage = () => {
       statusRemarkText: quickActionForm.statusRemarkText.trim() || undefined,
       statusRemarkResponseType: quickRemarkAnsNonAns || quickActionForm.callResult || undefined,
     };
+
+    // Attach missing location/project if user filled them in the quick action modal
+    if (quickMissingLocationId && !lead?.interestedLocations?.length) {
+      payload.locationId = quickMissingLocationId;
+      payload.interestedLocations = [quickMissingLocationId];
+    }
+    if (quickMissingProjectIds.length && !lead?.interestedProjects?.length && !lead?.projectId) {
+      payload.projectId = quickMissingProjectIds[0];
+      payload.projectIds = quickMissingProjectIds;
+    }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
       const pF = customerProfileForm;

@@ -156,6 +156,15 @@ const leadWorkflowApi = {
     const { data } = await api.get('/leads/my-locations');
     return data;
   },
+
+  /**
+   * GET /leads (admin mode with date/user filters)
+   * Used by the Super Admin Lead Management page
+   */
+  getAdminLeads: async (params = {}) => {
+    const { data } = await api.get('/leads', { params: { includeClosed: 'true', includeUnassigned: 'true', ...params } });
+    return data;
+  },
 };
 
 export default leadWorkflowApi;

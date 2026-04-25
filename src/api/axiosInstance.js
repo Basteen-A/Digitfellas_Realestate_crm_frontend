@@ -5,7 +5,12 @@
 
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+// Build API URL dynamically so mobile devices (accessing via network IP) reach
+// the backend on port 5000 of the same host, instead of failing on "localhost".
+const API_URL =
+  process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL !== 'http://localhost:5000/api/v1'
+    ? process.env.REACT_APP_API_URL
+    : `http://${window.location.hostname}:5000/api/v1`;
 const TOKEN_KEY = process.env.REACT_APP_TOKEN_KEY || 'recrm_access_token';
 const REFRESH_KEY = process.env.REACT_APP_REFRESH_KEY || 'recrm_refresh_token';
 

@@ -39,6 +39,7 @@ import StatusRemarks from '../pages/superadmin/StatusRemarks';
 import WorkflowActions from '../pages/superadmin/WorkflowActions/WorkflowActionList';
 import Motivations from '../pages/superadmin/Motivations';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
+import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
@@ -148,6 +149,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/inventory" element={<InventoryDashboard />} />
             <Route path="/super-admin/units" element={<InventoryUnitList />} />
             <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
+            <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

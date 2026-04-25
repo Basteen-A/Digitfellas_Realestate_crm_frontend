@@ -54,6 +54,9 @@ const adminSidebar = [
   // Top-level Dashboard
   { label: 'DASHBOARD', path: '/dashboard', icon: Squares2X2Icon },
 
+  // Lead Management – full CRM lead overview for admin
+  { label: 'Lead Management', path: '/super-admin/lead-management', icon: ClipboardDocumentListIcon },
+
   // Inventory group
   {
     label: 'PROPERTIES',
