@@ -10,7 +10,7 @@ import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatCurrency, formatDateTime } from '../../../utils/formatters';
+import { formatCurrency, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
 import { getRoleCode } from '../../../utils/permissions';
 import { getActionsForRole } from './workflowConfig';
 import {
@@ -113,6 +113,7 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
 };
 
 const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
+const FOLLOW_UP_SCHEDULED_PREFIX = 'Follow-up call scheduled for';
 
 const normalizeStatusCode = (value) => String(value || '').trim().toUpperCase();
 
@@ -202,6 +203,57 @@ const getUserRemarkText = (activity) => {
 
   if (!nonSystemParts.length) return '';
   return nonSystemParts.join(' | ');
+};
+
+const getScheduledFollowUpIso = (activity) => {
+  const metadata = activity?.metadata || {};
+  const candidates = [
+    metadata.nextFollowUpAt,
+    metadata.next_follow_up_at,
+    metadata.followUpAt,
+    metadata.follow_up_at,
+    metadata.scheduledFor,
+    metadata.scheduled_for,
+  ];
+
+  const firstValid = candidates.find((value) => {
+    if (!value) return false;
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.getTime());
+  });
+
+  return firstValid ? new Date(firstValid).toISOString() : null;
+};
+
+const parseAsUtcIfNeeded = (rawDateText) => {
+  const direct = new Date(rawDateText);
+  if (!Number.isNaN(direct.getTime())) {
+    const hasExplicitTimeZone = /\b(UTC|GMT|IST)\b|Z$|[+-]\d{2}:?\d{2}$/i.test(rawDateText);
+    if (hasExplicitTimeZone) return direct;
+  }
+
+  const utcFallback = new Date(`${rawDateText} UTC`);
+  if (!Number.isNaN(utcFallback.getTime())) return utcFallback;
+  return direct;
+};
+
+const formatActivityDescription = (description, activity) => {
+  if (typeof description !== 'string') return '';
+  const text = description.trim();
+  if (!text.startsWith(FOLLOW_UP_SCHEDULED_PREFIX)) return text;
+
+  const metadataIso = getScheduledFollowUpIso(activity);
+  if (metadataIso) {
+    return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(metadataIso)} IST`;
+  }
+
+  const rawDateText = text.slice(FOLLOW_UP_SCHEDULED_PREFIX.length).trim();
+  if (!rawDateText) return text;
+
+  const parsed = parseAsUtcIfNeeded(rawDateText);
+  if (Number.isNaN(parsed.getTime())) return text;
+
+  return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(parsed.toISOString())} IST`;
 };
 
 
@@ -1428,7 +1480,11 @@ const LeadDetailsPage = () => {
                             type="button"
                             className="lead-details-action-btn lead-details-action-btn--primary"
                             onClick={handleRunAction}
-                            disabled={actionSaving || isSmHandoffReadOnly}
+                            disabled={
+                              actionSaving 
+                              || isSmHandoffReadOnly 
+                              || (selectedAction?.needsFollowUp && !actionForm.nextFollowUpAt)
+                            }
                           >
                             {actionSaving ? 'Processing...' : 'Run Action'}
                           </button>
@@ -1484,7 +1540,7 @@ const LeadDetailsPage = () => {
                           <span className="lead-details-timeline-title">{evt.title || evt.type.replace(/_/g, ' ')}</span>
                           <span className="lead-details-timeline-date">{formatDateTime(evt.at)}</span>
                         </div>
-                        {evt.description && <p className="lead-details-timeline-desc">{evt.description}</p>}
+                        {evt.description && <p className="lead-details-timeline-desc">{formatActivityDescription(evt.description, evt)}</p>}
                         <span className="lead-details-timeline-by">By {evt.by || 'System'}</span>
                       </div>
                     </div>
@@ -2226,7 +2282,7 @@ const LeadDetailsPage = () => {
                             <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
                             <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
                           </div>
-                          {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
+                          {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
                           {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
                             <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                               Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}

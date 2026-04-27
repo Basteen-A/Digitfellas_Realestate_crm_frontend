@@ -15,6 +15,15 @@ const CalendarPicker = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null);
   const wrapperRef = useRef(null);
+  const minD = minDate ? new Date(minDate) : null;
+  const maxD = maxDate ? new Date(maxDate) : null;
+
+  const clampToBounds = (date) => {
+    const nextDate = new Date(date);
+    if (minD && nextDate.getTime() < minD.getTime()) return new Date(minD);
+    if (maxD && nextDate.getTime() > maxD.getTime()) return new Date(maxD);
+    return nextDate;
+  };
 
   // Sync prop value
   useEffect(() => {
@@ -56,8 +65,10 @@ const CalendarPicker = ({
       newDate.setMinutes(0);
     }
 
-    setSelectedDate(newDate);
-    onChange(newDate.toISOString());
+    const nextDate = clampToBounds(newDate);
+
+    setSelectedDate(nextDate);
+    onChange(nextDate.toISOString());
     if (type === 'date') setIsOpen(false);
   };
 
@@ -70,9 +81,6 @@ const CalendarPicker = ({
     const firstDay = firstDayOfMonth(year, month);
     
     const days = [];
-    const minD = minDate ? new Date(minDate) : null;
-    const maxD = maxDate ? new Date(maxDate) : null;
-
     // Empty cells
     for (let i = 0; i < firstDay; i++) {
         days.push(<div key={`empty-${i}`} className="cp-day empty"></div>);
@@ -116,9 +124,10 @@ const CalendarPicker = ({
     if (type === 'datetime') {
       today.setMinutes(Math.ceil(today.getMinutes() / 15) * 15); // round to next 15m
     }
-    setSelectedDate(today);
-    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    onChange(today.toISOString());
+    const nextDate = clampToBounds(today);
+    setSelectedDate(nextDate);
+    setCurrentMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+    onChange(nextDate.toISOString());
     if (type === 'date') setIsOpen(false);
   };
 
@@ -176,8 +185,9 @@ const CalendarPicker = ({
                     if (isPm) newH += 12;
                     const newD = new Date(selectedDate);
                     newD.setHours(newH);
-                    setSelectedDate(newD);
-                    onChange(newD.toISOString());
+                    const nextDate = clampToBounds(newD);
+                    setSelectedDate(nextDate);
+                    onChange(nextDate.toISOString());
                   }}
                   disabled={!selectedDate}
                 />
@@ -195,8 +205,9 @@ const CalendarPicker = ({
                     if (val < 0) val = 0;
                     const newD = new Date(selectedDate);
                     newD.setMinutes(val);
-                    setSelectedDate(newD);
-                    onChange(newD.toISOString());
+                    const nextDate = clampToBounds(newD);
+                    setSelectedDate(nextDate);
+                    onChange(nextDate.toISOString());
                   }}
                   disabled={!selectedDate}
                 />
@@ -208,8 +219,9 @@ const CalendarPicker = ({
                     const newD = new Date(selectedDate);
                     const h = newD.getHours();
                     newD.setHours(h >= 12 ? h - 12 : h + 12);
-                    setSelectedDate(newD);
-                    onChange(newD.toISOString());
+                    const nextDate = clampToBounds(newD);
+                    setSelectedDate(nextDate);
+                    onChange(nextDate.toISOString());
                   }}
                   disabled={!selectedDate}
                 >

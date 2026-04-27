@@ -88,7 +88,7 @@ const FALLBACK_ACTIONS = {
  */
 export const getActionsForRole = (actions = {}, roleCode) => {
   const fromConfig = (actions[roleCode] || []).map((a) => {
-    if (['TC_LEAD_QUALIFIED', 'TC_SV_SCHEDULED', 'TC_RNR', 'SM_FOLLOW_UP', 'SM_SCHEDULE_REVISIT', 'SH_FOLLOW_UP'].includes(a.code)) {
+    if (['TC_LEAD_QUALIFIED', 'TC_SV_SCHEDULED', 'TC_RNR', 'SM_FOLLOW_UP', 'SM_SCHEDULE_REVISIT', 'SH_FOLLOW_UP'].includes(a.code) || a.targetStatusCode === 'NEW') {
       return { ...a, needsFollowUp: true };
     }
 

@@ -11,7 +11,7 @@ import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 // userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
 // customerTypeApi removed — Customer Type field removed from TC lead creation
-import { formatCurrency, formatDateTime } from '../../../utils/formatters';
+import { formatCurrency, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 
 import {
@@ -53,6 +53,15 @@ import {
 import './LeadWorkspacePage.css';
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FOLLOW_UP_MINUTES_AHEAD = 5;
+
+const NEW_LEAD_FOLLOW_UP_SHORTCUTS = [
+  { label: 'Today 2 PM', kind: 'dayOffset', dayOffset: 0, hour: 14, minute: 0 },
+  { label: 'Today 6 PM', kind: 'dayOffset', dayOffset: 0, hour: 18, minute: 0 },
+  { label: 'Tomorrow 11 AM', kind: 'dayOffset', dayOffset: 1, hour: 11, minute: 0 },
+  { label: 'This Sat 11 AM', kind: 'weekday', weekday: 6, hour: 11, minute: 0 },
+  { label: 'This Sun 11 AM', kind: 'weekday', weekday: 0, hour: 11, minute: 0 },
+];
 
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
 
@@ -140,7 +149,25 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   return toDateTimeLocalValue(date.toISOString());
 };
 
+const getFollowUpMinimumTime = (minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => new Date(Date.now() + (minutesAhead * 60 * 1000));
+
+const isFollowUpAtLeastMinutesAhead = (value, minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getTime() > getFollowUpMinimumTime(minutesAhead).getTime();
+};
+
+const buildNewLeadFollowUpShortcut = (shortcut) => {
+  if (shortcut.kind === 'weekday') {
+    return getQuickFollowUpForWeekday(shortcut.weekday, shortcut.hour, shortcut.minute);
+  }
+
+  return getQuickFollowUpValue(shortcut.dayOffset, shortcut.hour, shortcut.minute);
+};
+
 const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
+const FOLLOW_UP_SCHEDULED_PREFIX = 'Follow-up call scheduled for';
 
 const MANDATORY_REMARK_STATUS_CODES = new Set([
   'NEW',
@@ -280,6 +307,58 @@ const getUserRemarkText = (activity) => {
   return nonSystemParts.join(' | ');
 };
 
+const getScheduledFollowUpIso = (activity) => {
+  const metadata = activity?.metadata || {};
+  const candidates = [
+    metadata.nextFollowUpAt,
+    metadata.next_follow_up_at,
+    metadata.followUpAt,
+    metadata.follow_up_at,
+    metadata.scheduledFor,
+    metadata.scheduled_for,
+  ];
+
+  const firstValid = candidates.find((value) => {
+    if (!value) return false;
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.getTime());
+  });
+
+  return firstValid ? new Date(firstValid).toISOString() : null;
+};
+
+const parseAsUtcIfNeeded = (rawDateText) => {
+  const direct = new Date(rawDateText);
+  if (!Number.isNaN(direct.getTime())) {
+    // If timezone is absent, backend activity text generally carries UTC clock time.
+    const hasExplicitTimeZone = /\b(UTC|GMT|IST)\b|Z$|[+-]\d{2}:?\d{2}$/i.test(rawDateText);
+    if (hasExplicitTimeZone) return direct;
+  }
+
+  const utcFallback = new Date(`${rawDateText} UTC`);
+  if (!Number.isNaN(utcFallback.getTime())) return utcFallback;
+  return direct;
+};
+
+const formatActivityDescription = (description, activity) => {
+  if (typeof description !== 'string') return '';
+  const text = description.trim();
+  if (!text.startsWith(FOLLOW_UP_SCHEDULED_PREFIX)) return text;
+
+  const metadataIso = getScheduledFollowUpIso(activity);
+  if (metadataIso) {
+    return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(metadataIso)} IST`;
+  }
+
+  const rawDateText = text.slice(FOLLOW_UP_SCHEDULED_PREFIX.length).trim();
+  if (!rawDateText) return text;
+
+  const parsed = parseAsUtcIfNeeded(rawDateText);
+  if (Number.isNaN(parsed.getTime())) return text;
+
+  return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(parsed.toISOString())} IST`;
+};
+
 const getAssigneeRoleForAction = (action, workspaceRole) => {
   if (!action) return 'SM';
   if (action.code === 'TC_SV_DONE') return 'SM';
@@ -390,10 +469,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     timeSpent: '',
     callResult: 'Answered',
   });
+  const [timeTick, setTimeTick] = useState(() => Date.now());
 
   // ── Dynamic Status Remarks ──
   const [quickStatusRemarks, setQuickStatusRemarks] = useState([]);
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null); // 'Answered' | 'Not-Answered' | null
+  const [quickMissingLocationId, setQuickMissingLocationId] = useState('');
+  const [quickMissingProjectIds, setQuickMissingProjectIds] = useState([]);
   const [closureReasons, setClosureReasons] = useState([]);
   const [activeTab, setActiveTab] = useState('today'); // 'all' | 'new' | 'today' | 'missed'
   const [qaActiveTab, setQaActiveTab] = useState('history'); // 'activity' | 'history'
@@ -428,6 +510,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Record Site Visit Modal (SM Analysis) ──
   const [recordSvModalOpen, setRecordSvModalOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeTick(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
   const [recordSvForm, setRecordSvForm] = useState({
     svDate: new Date().toISOString().split('T')[0],
     svProjectId: '',
@@ -554,6 +641,50 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const quickActionLeadReadOnly = useMemo(
     () => isLeadReadOnly(quickActionLead),
     [isLeadReadOnly, quickActionLead]
+  );
+
+  const quickWorkflowIsTerminalAction = useMemo(
+    () => ['TC_JUNK', 'TC_SPAM', 'TC_LOST', 'SM_LOST', 'COL_CANCELLED'].includes(quickWorkflowAction?.code),
+    [quickWorkflowAction]
+  );
+
+  const quickWorkflowIsRnrAction = useMemo(
+    () => quickWorkflowAction?.targetStatusCode === 'RNR' || quickWorkflowAction?.code?.includes('RNR'),
+    [quickWorkflowAction]
+  );
+
+  const quickWorkflowNeedsMissingLocationProject = useMemo(
+    () => workspaceRole === 'TC' && Boolean(quickWorkflowAction) && !quickWorkflowIsTerminalAction && !quickWorkflowIsRnrAction,
+    [workspaceRole, quickWorkflowAction, quickWorkflowIsTerminalAction, quickWorkflowIsRnrAction]
+  );
+
+  const quickLeadHasLocation = useMemo(
+    () => Boolean(
+      quickActionLead?.interestedLocations?.length
+      || quickActionLead?.locationId
+      || quickActionLead?.location
+    ),
+    [quickActionLead]
+  );
+
+  const quickLeadHasProject = useMemo(
+    () => Boolean(
+      quickActionLead?.interestedProjects?.length
+      || quickActionLead?.projectId
+      || quickActionLead?.project
+    ),
+    [quickActionLead]
+  );
+
+  const quickMissingProjectOptions = useMemo(
+    () => {
+      if (!quickMissingLocationId) return projectOptions;
+      return projectOptions.filter((project) => {
+        const projectLocationId = project.location_id || project.locationId || '';
+        return String(projectLocationId) === String(quickMissingLocationId);
+      });
+    },
+    [projectOptions, quickMissingLocationId]
   );
 
   const toolbarStageOptions = useMemo(() => {
@@ -696,9 +827,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   }, [workspaceRole, selectedCreateLocationIds, tcMappedLocationIds, isMappingsLoading]);
 
   const tcStatusNeedsFullDetails = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
+  const tcStatusNeedsFollowUp = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED', 'RNR'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
     const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
-  const smStatusNeedsFollowUp = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'FOLLOW_UP';
+  const smStatusNeedsFollowUp = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEW'].includes(selectedNewLeadStatusCode);
   const smStatusNeedsReason = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'LOST';
   const smStatusNeedsAssignee = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'NEGOTIATION_HOT';
   const smStatusNeedsCallStatus = workspaceRole === 'SM' && ['FOLLOW_UP', 'LOST'].includes(selectedNewLeadStatusCode);
@@ -707,6 +839,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const shouldShowCreateCallStatus = workspaceRole === 'SM'
     ? smStatusNeedsCallStatus
     : shouldShowCallStatus(selectedNewLeadStatusCode);
+
+  const newLeadFollowUpShortcutOptions = useMemo(() => {
+    const thresholdTime = timeTick + (FOLLOW_UP_MINUTES_AHEAD * 60 * 1000);
+    return NEW_LEAD_FOLLOW_UP_SHORTCUTS
+      .map((shortcut) => ({
+        ...shortcut,
+        value: buildNewLeadFollowUpShortcut(shortcut),
+      }))
+      .filter((shortcut) => {
+        const shortcutTime = new Date(shortcut.value).getTime();
+        return Number.isFinite(shortcutTime) && shortcutTime > thresholdTime;
+      });
+  }, [timeTick]);
 
   const newLeadValidation = useMemo(() => {
     const errors = [];
@@ -738,12 +883,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (tcStatusNeedsFullDetails) {
         if (!newLeadForm.location_id) errors.push('Location is required');
         if (!newLeadForm.project_ids?.length) errors.push('At least one project is required');
-        if (!newLeadForm.nextFollowUpAt) errors.push('Next follow up date is required');
         if (!newLeadForm.callResult) errors.push('Call status is required');
+      }
+
+      if (tcStatusNeedsFollowUp && !newLeadForm.nextFollowUpAt) {
+        errors.push('Next follow up date is required');
       }
 
       if (needsRemark && !newLeadForm.remark?.trim()) {
         errors.push('Notes & Remarks are required');
+      }
+
+      if (newLeadForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(newLeadForm.nextFollowUpAt)) {
+        errors.push('Next follow up must be at least 5 minutes from now');
       }
 
       if (isTerminalCreateStatus) {
@@ -775,6 +927,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (smStatusNeedsRemark && !newLeadForm.remark?.trim()) {
         errors.push('Notes & Remarks are required');
       }
+
+      if (newLeadForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(newLeadForm.nextFollowUpAt)) {
+        errors.push('Next follow up must be at least 5 minutes from now');
+      }
     }
 
     return {
@@ -790,6 +946,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     newLeadForm,
     workspaceRole,
     tcStatusNeedsFullDetails,
+    tcStatusNeedsFollowUp,
     isTerminalCreateStatus,
     needsRemark,
     smStatusNeedsFollowUp,
@@ -1452,6 +1609,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     };
 
     if (action.needsFollowUp && !payload.nextFollowUpAt) { toast.error('Follow-up date is required'); return; }
+    if (action.needsFollowUp && actionState.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(actionState.nextFollowUpAt)) {
+      toast.error('Follow-up time must be greater than current time');
+      return;
+    }
     if (action.needsAssignee && !payload.assignToUserId) { toast.error('Please select user to assign'); return; }
 
     try {
@@ -1662,6 +1823,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       return;
     }
 
+    if (stagePopupData.followUpAt && !isFollowUpAtLeastMinutesAhead(stagePopupData.followUpAt)) {
+      toast.error('Follow-up time must be greater than current time');
+      return;
+    }
+
     setManualUpdateSaving(true);
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, stagePopupData.actionCode, {
@@ -1702,6 +1868,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       nextFollowUpAt: manualNextFollowUpAt ? new Date(manualNextFollowUpAt).toISOString() : undefined,
     };
 
+    if (manualNextFollowUpAt && !isFollowUpAtLeastMinutesAhead(manualNextFollowUpAt)) {
+      toast.error('Follow-up time must be greater than current time');
+      return;
+    }
+
     setManualUpdateSaving(true);
     try {
       if (statusChanged || followUpChanged) {
@@ -1739,6 +1910,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     setQuickWorkflowAction(null);
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
+    setQuickMissingLocationId('');
+    setQuickMissingProjectIds([]);
     setQuickWorkflowForm({
       note: '',
       statusRemarkText: '',
@@ -1808,6 +1981,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     setQuickWorkflowAction(action);
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
+    setQuickMissingLocationId(quickActionLead?.interestedLocations?.[0] || quickActionLead?.locationId || '');
+    setQuickMissingProjectIds(
+      quickActionLead?.interestedProjects?.length
+        ? quickActionLead.interestedProjects
+        : (quickActionLead?.projectId ? [quickActionLead.projectId] : [])
+    );
     setQuickWorkflowForm({
       note: '',
       statusRemarkText: '',
@@ -1914,10 +2093,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           return;
         }
 
+        if (f.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(f.nextFollowUpAt)) {
+          toast.error('Follow-up time must be greater than current time');
+          setQuickActionLoading(false);
+          return;
+        }
+
         if (isRemarkMandatoryForAction(quickWorkflowAction)) {
           const hasRemark = Boolean((f.statusRemarkText || '').trim() || (f.note || '').trim());
           if (!hasRemark) {
             toast.error('Remark is mandatory for this status/action');
+            setQuickActionLoading(false);
+            return;
+          }
+        }
+
+        if (quickWorkflowNeedsMissingLocationProject) {
+          const hasLocationForSubmit = quickLeadHasLocation || Boolean(quickMissingLocationId);
+          const hasProjectForSubmit = quickLeadHasProject || quickMissingProjectIds.length > 0;
+
+          if (!hasLocationForSubmit) {
+            toast.error('Please select a location for this lead before performing this action.');
+            setQuickActionLoading(false);
+            return;
+          }
+
+          if (!hasProjectForSubmit) {
+            toast.error('Please select a project for this lead before performing this action.');
             setQuickActionLoading(false);
             return;
           }
@@ -1990,6 +2192,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           longitude: f.longitude || undefined,
           timeSpent: f.timeSpent || undefined,
         };
+
+        if (quickMissingLocationId && !quickLeadHasLocation) {
+          payload.location_id = quickMissingLocationId;
+          payload.location_ids = [quickMissingLocationId];
+        }
+
+        if (quickMissingProjectIds.length > 0 && !quickLeadHasProject) {
+          payload.project_id = quickMissingProjectIds[0];
+          payload.project_ids = quickMissingProjectIds;
+        }
 
         // Enrich payload with customer profile if needed
         if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
@@ -2672,10 +2884,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <div className="crm-form-label">Next Follow Up</div>
                       <CalendarPicker
                         type="datetime"
-                        value={manualNextFollowUpAt ? manualNextFollowUpAt + ':00Z' : ''}
+                        value={manualNextFollowUpAt || ''}
                         onChange={(val) => setManualNextFollowUpAt(val ? val.slice(0, 16) : '')}
                         placeholder="Select Date & Time..."
                         className="lead-detail__calendar-input"
+                        minDate={getFollowUpMinimumTime().toISOString()}
                         disabled={selectedLeadReadOnly}
                       />
                       <div className="lead-detail__calendar-shortcuts">
@@ -2695,7 +2908,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       {noteDraft.trim() && (
                         <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote} disabled={selectedLeadReadOnly}>📝 Save Note</button>
                       )}
-                      <button type="button" className="workspace-btn workspace-btn--primary" onClick={handleManualStatusUpdate} disabled={manualUpdateSaving || selectedLeadReadOnly}>
+                      <button
+                        type="button"
+                        className="workspace-btn workspace-btn--primary"
+                        onClick={handleManualStatusUpdate}
+                        disabled={
+                          manualUpdateSaving
+                          || selectedLeadReadOnly
+                          || (['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(toCanonicalStatusCode(manualStatus)) && !manualNextFollowUpAt)
+                          || (Boolean(manualNextFollowUpAt) && !isFollowUpAtLeastMinutesAhead(manualNextFollowUpAt))
+                        }
+                      >
                         {manualUpdateSaving ? 'Saving...' : '💾 Save Changes'}
                       </button>
                     </div>
@@ -2737,7 +2960,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               <span className="tl-type">{typeIcon} {evt.title || typeLabel}</span>
                               <span className="tl-date">{formatDateTime(evt.at)}</span>
                             </div>
-                            {evt.description && <div className="tl-text">{evt.description}</div>}
+                            {evt.description && <div className="tl-text">{formatActivityDescription(evt.description, evt)}</div>}
                             {(evt.metadata?.statusRemarkResponseType || evt.metadata?.callResult || evt.metadata?.last_call_result) && (
                               <div className="tl-text" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                                 Call Status: {(evt.metadata?.statusRemarkResponseType || evt.metadata?.callResult || evt.metadata?.last_call_result || '').replace('-', ' ')}
@@ -2776,10 +2999,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </div>
                 <CalendarPicker
                   type="datetime"
-                  value={stagePopupData.followUpAt ? stagePopupData.followUpAt + ':00Z' /* approximate valid ISO string if it is just a local format */ : ''}
+                  value={stagePopupData.followUpAt || ''}
                   onChange={(val) => setStagePopupData((p) => ({ ...p, followUpAt: val ? val.slice(0, 16) : '' }))}
                   placeholder="Select Date & Time..."
                   className="lead-detail__calendar-input"
+                  minDate={getFollowUpMinimumTime().toISOString()}
                 />
                 <div className="lead-detail__calendar-shortcuts">
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
@@ -2844,7 +3068,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <button
                   type="button"
                   className="workspace-btn workspace-btn--primary"
-                  disabled={manualUpdateSaving || (stagePopupData.needsFollowUp && !stagePopupData.followUpAt)}
+                  disabled={
+                    manualUpdateSaving
+                    || (stagePopupData.needsFollowUp && !stagePopupData.followUpAt)
+                    || (Boolean(stagePopupData.followUpAt) && !isFollowUpAtLeastMinutesAhead(stagePopupData.followUpAt))
+                  }
                   onClick={handleStagePopupConfirm}
                 >
                   {manualUpdateSaving ? 'Saving...' : '✅ Confirm Stage Change'}
@@ -3244,18 +3472,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             Next Follow-Up Date <span className="create-lead-field__required">*</span>
                           </label>
                           <div className="create-lead-followup-chips" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
-                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
-                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
-                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
-                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11 AM</button>
-                            <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11 AM</button>
+                            {newLeadFollowUpShortcutOptions.map((shortcut) => (
+                              <button
+                                key={shortcut.label}
+                                type="button"
+                                className="calendar-shortcut-btn"
+                                style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }}
+                                onClick={() => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: shortcut.value }))}
+                              >
+                                {shortcut.label}
+                              </button>
+                            ))}
                           </div>
                           <CalendarPicker
                             type="datetime"
                             value={newLeadForm.nextFollowUpAt}
                             onChange={(val) => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: val }))}
                             placeholder="Select follow-up date & time..."
-                            minDate={new Date().toISOString()}
+                            minDate={getFollowUpMinimumTime().toISOString()}
                           />
                         </div>
                       )}
@@ -4197,7 +4431,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         value={quickWorkflowForm.nextFollowUpAt}
                         onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
                         placeholder="Select follow-up date & time..."
-                        minDate={new Date().toISOString()}
+                        minDate={getFollowUpMinimumTime().toISOString()}
                       />
                     </div>
                   )}
@@ -4248,6 +4482,66 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             </option>
                           ))}
                       </select>
+                    </div>
+                  )}
+
+                  {quickWorkflowNeedsMissingLocationProject && (!quickLeadHasLocation || !quickLeadHasProject) && (
+                    <div className="qa-drawer-ctx-block">
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Lead details required</div>
+
+                      {!quickLeadHasLocation && (
+                        <div style={{ marginBottom: 10 }}>
+                          <label className="qa-drawer-field-label">Location *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickMissingLocationId}
+                            onChange={(e) => {
+                              const selectedLocationId = e.target.value;
+                              setQuickMissingLocationId(selectedLocationId);
+                              setQuickMissingProjectIds((prev) => prev.filter((projectId) => {
+                                const project = projectOptions.find((item) => String(item.id) === String(projectId));
+                                const projectLocationId = project?.location_id || project?.locationId || '';
+                                return selectedLocationId ? String(projectLocationId) === String(selectedLocationId) : true;
+                              }));
+                            }}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select location...</option>
+                            {locationOptions.map((location) => (
+                              <option key={location.id} value={location.id}>
+                                {location.location_name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {!quickLeadHasProject && (
+                        <div>
+                          <label className="qa-drawer-field-label">Project *</label>
+                          <div className="qa-drawer-rchip-row">
+                            {quickMissingProjectOptions.map((project) => {
+                              const selected = quickMissingProjectIds.includes(project.id);
+                              return (
+                                <button
+                                  key={project.id}
+                                  type="button"
+                                  className={`qa-drawer-rchip ${selected ? 'sel' : ''}`}
+                                  onClick={() => {
+                                    setQuickMissingProjectIds((prev) => (
+                                      prev.includes(project.id)
+                                        ? prev.filter((id) => id !== project.id)
+                                        : [...prev, project.id]
+                                    ));
+                                  }}
+                                >
+                                  {project.project_name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -4686,9 +4980,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             <div className="qa-drawer-hist-right">
                               <div className="qa-drawer-hist-header">
                                 <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
-                                <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
+                                <span className="qa-drawer-hist-date">{formatDateTimeInTimeZone(act.at || act.created_at)}</span>
                               </div>
-                              {act.description && <div className="qa-drawer-hist-remark">{act.description}</div>}
+                              {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
                               {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
                                 <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                                   Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
@@ -4839,6 +5133,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     || quickWorkflowAction?.code === 'TC_REASSIGN')
                     && !quickWorkflowForm.assignToUserId)
                   || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)
+                  || (Boolean(quickWorkflowForm.nextFollowUpAt) && !isFollowUpAtLeastMinutesAhead(quickWorkflowForm.nextFollowUpAt))
                   || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
                 }
                 onClick={handleQuickWorkflowSubmit} style={{ backgroundColor: '#625afa' }}

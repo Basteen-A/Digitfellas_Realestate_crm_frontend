@@ -27,6 +27,19 @@ export const formatDateTime = (value, locale = 'en-IN') => {
   }).format(date);
 };
 
+export const formatDateTimeInTimeZone = (value, locale = 'en-IN', timeZone = 'Asia/Kolkata') => {
+  const date = toDate(value);
+  if (!date) return '-';
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone,
+  }).format(date);
+};
+
 export const formatCurrency = (value, currency = 'INR', locale = 'en-IN') => {
   const num = Number(value);
   if (!Number.isFinite(num)) return '-';
