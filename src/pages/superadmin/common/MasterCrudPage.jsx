@@ -218,6 +218,9 @@ const MasterCrudPage = ({ config }) => {
 
   const renderField = (field) => {
     const value = formValues[field.name];
+    const isRequired = typeof field.required === 'function' 
+      ? field.required(formValues, fieldOptions, modal)
+      : field.required;
 
     if (field.type === 'checkbox') {
       return (
@@ -238,7 +241,7 @@ const MasterCrudPage = ({ config }) => {
           <span>{field.label}</span>
           <textarea
             value={value || ''}
-            required={field.required}
+            required={isRequired}
             placeholder={field.placeholder}
             onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
           />
@@ -252,7 +255,7 @@ const MasterCrudPage = ({ config }) => {
           <span>{field.label}</span>
           <select
             value={value || ''}
-            required={field.required}
+            required={isRequired}
             onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
           >
             <option value="">Select</option>
@@ -272,8 +275,8 @@ const MasterCrudPage = ({ config }) => {
       const availableOptions = fieldOptions[field.name] || [];
       const searchText = (multiSelectSearch[field.name] || '').trim().toLowerCase();
       const filteredOptions = availableOptions
-        .filter((option) => !selectedValueSet.has(String(option.value)))
-        .filter((option) => !searchText || String(option.label || '').toLowerCase().includes(searchText));
+          .filter((option) => !selectedValueSet.has(String(option.value)))
+          .filter((option) => !searchText || String(option.label || '').toLowerCase().includes(searchText));
 
       return (
         <label className="master-form__field" key={field.name}>
@@ -292,7 +295,7 @@ const MasterCrudPage = ({ config }) => {
 
           <select
             value=""
-            required={field.required}
+            required={isRequired && selectedValues.length === 0}
             onChange={(e) => {
               const selectedValue = String(e.target.value || '');
               if (!selectedValue) return;
@@ -344,11 +347,32 @@ const MasterCrudPage = ({ config }) => {
 
     return (
       <label className="master-form__field" key={field.name}>
-        <span>{field.label}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{field.label}</span>
+          {field.name === 'password' && modal.mode === 'edit' && (
+            <div 
+              className="password-badge" 
+              title={modal.row?.password_plain ? "Click to use this password" : "Password was set before this feature was enabled"}
+              style={{ 
+                backgroundColor: modal.row?.password_plain ? '#dcfce7' : '#f3f4f6', 
+                color: modal.row?.password_plain ? '#166534' : '#6b7280', 
+                padding: '2px 8px', 
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: '600',
+                border: `1px solid ${modal.row?.password_plain ? '#bbf7d0' : '#e5e7eb'}`,
+                cursor: modal.row?.password_plain ? 'pointer' : 'default'
+              }}
+              onClick={() => modal.row?.password_plain && setFormValues(prev => ({ ...prev, [field.name]: modal.row.password_plain }))}
+            >
+              {modal.row?.password_plain ? `Current: ${modal.row.password_plain} (Click to Use)` : 'Password Not Recorded (Reset to See)'}
+            </div>
+          )}
+        </div>
         <input
           type={field.type || 'text'}
           value={value || ''}
-          required={field.required}
+          required={isRequired}
           placeholder={field.placeholder}
           onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
         />

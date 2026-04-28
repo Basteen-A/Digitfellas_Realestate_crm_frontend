@@ -112,6 +112,18 @@ const Profile = () => {
               <span className="profile-field__label">Employee Code</span>
               <span className="profile-field__value">{user?.employee_code || '-'}</span>
             </div>
+            {roleCode === 'SA' && (
+              <div className="profile-field">
+                <span className="profile-field__label">My Password</span>
+                <span className="profile-field__value" style={{ 
+                  color: user?.password_plain ? '#166534' : '#6b7280', 
+                  fontWeight: user?.password_plain ? '700' : '400',
+                  fontSize: user?.password_plain ? 'inherit' : '12px'
+                }}>
+                  {user?.password_plain || 'Log out & log back in to see your password'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
