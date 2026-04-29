@@ -14,7 +14,6 @@ import {
   DevicePhoneMobileIcon,
   InboxArrowDownIcon,
   HomeModernIcon,
-  MagnifyingGlassIcon,
   ArrowsRightLeftIcon,
   BuildingStorefrontIcon,
   Cog6ToothIcon,
