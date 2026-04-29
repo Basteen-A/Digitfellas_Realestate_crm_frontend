@@ -28,7 +28,7 @@ const SalesManagerWorkspace = () => {
           {activeScreen === 'leads' && <LeadWorkspacePage user={user} workspaceRole="SM" />}
           {activeScreen === 'visits' && <SalesManagerVisits onNavigate={setActiveScreen} />}
           {activeScreen === 'incoming' && <SalesManagerIncoming onNavigate={setActiveScreen} />}
-          {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SM" />}
+          {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SM" defaultType="outgoing" />}
           {activeScreen === 'pull' && <SalesManagerPullLead user={user} onNavigate={setActiveScreen} />}
           {activeScreen === 'push' && <SalesManagerPushLeads onNavigate={setActiveScreen} />}
           {activeScreen === 'sitevisits' && <SalesManagerSiteVisits onNavigate={setActiveScreen} />}

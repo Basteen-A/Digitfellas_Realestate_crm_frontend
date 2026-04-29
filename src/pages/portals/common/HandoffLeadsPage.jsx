@@ -75,7 +75,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
 
       <div className="handoff-leads__stats">
         <article className="crm-card handoff-stat-card"><p>Total</p><strong>{stats.total}</strong></article>
-        {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>}
+        {workspaceRole !== 'TC' && defaultType !== 'outgoing' && <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>}
         {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card"><p>Pending</p><strong>{stats.pending}</strong></article>}
         <article className="crm-card handoff-stat-card"><p>{workspaceRole === 'TC' ? 'SV Done (Accepted)' : 'Outgoing (page)'}</p><strong>{stats.outgoing}</strong></article>
         {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Current Ownership</p><strong>{stats.current}</strong></article>}
