@@ -167,18 +167,18 @@ export const salesManagerMenu = [
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
-  { label: 'Pull Lead', key: 'pull', icon: MagnifyingGlassIcon, badge: null },
+  // { label: 'Pull Lead', key: 'pull', icon: MagnifyingGlassIcon, badge: null },
 ];
 
 export const salesHeadMenu = [
   { group: 'Sales' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
-  { label: 'Negotiations', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
-  { label: 'SV Leads', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
+  { label: 'My Leads', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
+  { label: 'Bookings Handoffs', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
   { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
-  { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
+  // { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { label: 'Team Metrics', key: 'team', icon: BriefcaseIcon, badge: null },
 ];
 

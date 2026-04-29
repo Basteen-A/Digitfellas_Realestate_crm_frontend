@@ -2701,9 +2701,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <th>Lead</th>
                   <th>Contact</th>
                   <th>Status</th>
-                  <th>Source</th>
-                  <th>Medium</th>
-                  <th>Project/Location</th>
+                  <th className="hide-mobile">Source</th>
+                  <th className="hide-mobile">Medium</th>
+                  <th className="hide-mobile">Project/Location</th>
                   <th>Assignment / Ownership</th>
                   <th style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
@@ -2744,13 +2744,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         {lead.statusLabel}
                       </span>
                     </td>
-                    <td>
+                    <td className="hide-mobile">
                       <p>{lead.source || '-'}</p>
                     </td>
-                    <td>
+                    <td className="hide-mobile">
                       <p>{lead.subSource || '-'}</p>
                     </td>
-                    <td>
+                    <td className="hide-mobile">
                       <small>{(() => {
                         const projText = lead.interestedProjects?.length > 0
                           ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
@@ -3552,7 +3552,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </div>
                     </div>
 
-                    <div className="create-lead-field">
+                    {/* <div className="create-lead-field">
                       <label className="create-lead-field__label">
                         Email <span className="create-lead-field__optional">(Optional)</span>
                       </label>
@@ -3563,7 +3563,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         onChange={(e) => setNewLeadForm((p) => ({ ...p, email: e.target.value }))}
                         placeholder="email@example.com"
                       />
-                    </div>
+                    </div> */}
                   </div>
                 </div>
 

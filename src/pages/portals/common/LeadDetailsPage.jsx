@@ -356,7 +356,27 @@ const LeadDetailsPage = () => {
     inventoryUnitId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [editingName, setEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
+  const handleSaveName = async () => {
+    if (!editNameValue.trim() || !lead?.id) return;
+    setSavingName(true);
+    try {
+      const parts = editNameValue.trim().split(' ');
+      const first_name = parts[0];
+      const last_name = parts.slice(1).join(' ') || undefined;
+      await leadWorkflowApi.updateLeadDetails(lead.id, { first_name, last_name });
+      toast.success('Lead name updated successfully');
+      setEditingName(false);
+      await loadLeadData();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update lead name'));
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const roleActions = useMemo(() => getActionsForRole(workflowConfig?.actions || {}, roleCode), [workflowConfig, roleCode]);
   const selectedAction = useMemo(() => roleActions.find((a) => a.code === actionCode) || null, [roleActions, actionCode]);
@@ -1125,7 +1145,53 @@ const LeadDetailsPage = () => {
             </button>
             {accordionOpen === 'contact' && (
               <div className="lead-details-info-grid">
-                <div className="lead-details-info-item"><span className="lead-details-label">Full Name</span><span className="lead-details-value">{lead.fullName}</span></div>
+                <div className="lead-details-info-item">
+                  <span className="lead-details-label">Full Name</span>
+                  <span className="lead-details-value">
+                    {editingName ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={editNameValue}
+                          onChange={(e) => setEditNameValue(e.target.value)}
+                          className="crm-form-input"
+                          style={{ padding: '4px 8px', fontSize: '13px', width: '200px' }}
+                          disabled={savingName}
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                        />
+                        <button 
+                          className="crm-btn crm-btn-sm crm-btn-success" 
+                          onClick={handleSaveName}
+                          disabled={savingName}
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                        >
+                          Save
+                        </button>
+                        <button 
+                          className="crm-btn crm-btn-sm crm-btn-secondary" 
+                          onClick={() => setEditingName(false)}
+                          disabled={savingName}
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span>{lead.fullName}</span>
+                        {!isSmHandoffReadOnly && (
+                          <button 
+                            onClick={() => { setEditNameValue(lead.fullName); setEditingName(true); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '11px', padding: 0 }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </span>
+                </div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Phone</span><span className="lead-details-value">{lead.phone || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">WhatsApp</span><span className="lead-details-value">{lead.whatsappNumber || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Alternate Phone</span><span className="lead-details-value">{lead.alternatePhone || '-'}</span></div>

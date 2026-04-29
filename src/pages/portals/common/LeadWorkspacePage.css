@@ -3661,6 +3661,8 @@ textarea.crm-form-input {
   /* Table: make it scrollable & compact */
   .lead-workspace__table-wrap {
     max-height: 60vh;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .lead-workspace__table th {
@@ -3686,8 +3688,9 @@ textarea.crm-form-input {
     gap: 16px;
   }
 
-  .lead-detail__update-grid {
-    grid-template-columns: 1fr;
+  .lead-detail__update-grid,
+  .lead-detail__info-grid {
+    grid-template-columns: 1fr !important;
   }
 
   .lead-detail__header {

@@ -89,6 +89,14 @@ const leadWorkflowApi = {
   },
 
   /**
+   * PATCH /leads/:id/details
+   */
+  updateLeadDetails: async (leadId, payload) => {
+    const { data } = await api.patch(`/leads/${leadId}/details`, payload);
+    return data;
+  },
+
+  /**
    * POST /leads/:id/notes
    */
   addNote: async (leadId, note) => {
