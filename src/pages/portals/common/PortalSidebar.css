@@ -554,3 +554,79 @@
   height: 18px;
   flex-shrink: 0;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE — Portal Layout Shell
+   ============================================================ */
+@media (max-width: 768px) {
+  .portal-layout {
+    --portal-header-height: 56px;
+    --portal-header-x-padding: 12px;
+  }
+
+  .portal-topbar {
+    height: var(--portal-header-height, 56px);
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .portal-topbar__title {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+
+  .portal-topbar__center {
+    display: none;
+  }
+
+  .portal-topbar__user-name {
+    display: none;
+  }
+
+  .portal-topbar__user-trigger {
+    padding: 4px;
+  }
+
+  .portal-topbar-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .portal-content {
+    padding: 12px;
+  }
+
+  .portal-sidebar__brand {
+    height: var(--portal-header-height, 56px);
+    padding: 0 12px;
+  }
+
+  .portal-sidebar__brand-icon {
+    width: 100px;
+    height: 40px;
+  }
+
+  .portal-topbar__user-dropdown {
+    right: -8px;
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .portal-content {
+    padding: 8px;
+  }
+
+  .portal-topbar__title {
+    max-width: 100px;
+    font-size: 13px;
+  }
+
+  .portal-topbar__right {
+    gap: 2px;
+  }
+}

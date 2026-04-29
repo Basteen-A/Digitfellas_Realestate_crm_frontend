@@ -619,3 +619,150 @@
   color: var(--accent-green);
   font-weight: 600;
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .tc-workspace__tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    padding: 3px;
+    margin-bottom: 14px;
+  }
+
+  .tc-workspace__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tc-workspace__tab {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .tc-workspace__tab-icon {
+    font-size: 0.95rem;
+  }
+
+  .tc-dashboard__header {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .tc-dashboard__header h1 {
+    font-size: 1.2rem;
+  }
+
+  .tc-dashboard__stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tc-stat-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .tc-stat-card__icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+
+  .tc-stat-card__value {
+    font-size: 1.2rem;
+  }
+
+  .tc-dashboard__grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .tc-dashboard__panel {
+    padding: 14px;
+  }
+
+  .tc-followups-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .tc-followup-card {
+    padding: 12px;
+  }
+
+  .tc-followups-page__header {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .tc-followups-page__header h1 {
+    font-size: 1.2rem;
+  }
+
+  .tc-followups-page__actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .tc-pipeline__label {
+    min-width: 90px;
+    font-size: 0.75rem;
+  }
+
+  .sh-team-table {
+    font-size: 0.75rem;
+  }
+
+  .sh-team-table th,
+  .sh-team-table td {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tc-dashboard__stats {
+    gap: 6px;
+  }
+
+  .tc-stat-card {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .tc-stat-card__icon {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+
+  .tc-stat-card__value {
+    font-size: 1rem;
+  }
+
+  .tc-stat-card__label {
+    font-size: 0.7rem;
+  }
+
+  .tc-followup-card__meta {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .tc-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .tc-select, .tc-input {
+    font-size: 16px;
+    padding: 8px 10px;
+    min-height: 40px;
+  }
+}

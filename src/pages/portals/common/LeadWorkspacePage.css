@@ -3557,3 +3557,421 @@ textarea.crm-form-input {
 [data-theme="dark"] .qa-remark-date {
   color: #94a3b8;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE — Lead Workspace Page
+   Comprehensive mobile-first responsive overrides
+   ============================================================ */
+
+/* ── 768px: Tablet & small laptops ── */
+@media (max-width: 768px) {
+  .lead-workspace {
+    padding: 12px;
+  }
+
+  .lead-workspace__header {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .lead-workspace__header h1 {
+    font-size: 18px;
+  }
+
+  .lead-workspace__header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .lead-workspace__header-actions .workspace-btn {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .lead-workspace__stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .workspace-stat-card {
+    padding: 14px;
+  }
+
+  .stat-card__value {
+    font-size: 20px;
+  }
+
+  .stat-card__icon {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  /* Toolbar stacks vertically */
+  .lead-workspace__toolbar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .lead-workspace__toolbar-search {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .lead-filter-dropdown,
+  .lead-workspace__clear-filters {
+    width: 100%;
+  }
+
+  .lead-filter-dropdown__summary {
+    width: 100%;
+  }
+
+  .lead-filter-dropdown__menu {
+    width: 100%;
+    left: 0;
+    right: auto;
+  }
+
+  /* Filter tabs scroll horizontally */
+  .filter-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-tab {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  /* Table: make it scrollable & compact */
+  .lead-workspace__table-wrap {
+    max-height: 60vh;
+  }
+
+  .lead-workspace__table th {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .lead-workspace__table td {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .lead-workspace__list-header {
+    padding: 12px 14px;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  /* Detail Panel */
+  .lead-detail__two-col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .lead-detail__update-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lead-detail__header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .lead-detail__badges {
+    flex-wrap: wrap;
+  }
+
+  /* Modals go full-width */
+  .lead-workspace__modal {
+    padding: 16px 10px;
+  }
+
+  .lead-workspace__modal-panel {
+    max-width: 100%;
+    max-height: calc(100vh - 32px);
+    margin: 0;
+    border-radius: 12px;
+  }
+
+  .lead-workspace__modal-panel--sm {
+    max-width: 100%;
+  }
+
+  .lead-workspace__modal-panel--lg {
+    max-width: 100%;
+  }
+
+  .lead-workspace__modal-header {
+    padding: 14px 16px;
+  }
+
+  .lead-workspace__modal-header h2 {
+    font-size: 15px;
+  }
+
+  .lead-workspace__modal-body {
+    padding: 16px;
+    max-height: calc(100vh - 120px);
+  }
+
+  /* New lead form */
+  .lead-workspace__new-form {
+    grid-template-columns: 1fr;
+  }
+
+  /* QA Drawer: full-width on mobile */
+  .qa-drawer-header {
+    padding: 12px 14px 8px;
+  }
+
+  .qa-drawer-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 12px;
+  }
+
+  .qa-drawer-name {
+    font-size: 14px;
+  }
+
+  .qa-drawer-meta {
+    font-size: 11px;
+  }
+
+  /* QA action grid: 2 cols */
+  .qa-action-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .qa-disqual-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Calendar shortcuts wrap */
+  .lead-detail__calendar-shortcuts {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .calendar-shortcut-btn {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  /* Create Lead Panel */
+  .create-lead-panel {
+    max-width: calc(100vw - 16px);
+  }
+
+  .create-lead-header {
+    padding: 14px 16px;
+  }
+
+  .create-lead-body {
+    padding: 16px;
+  }
+
+  .create-lead-status-chips {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── 640px: Large phones ── */
+@media (max-width: 640px) {
+  .lead-workspace__stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .workspace-stat-card {
+    padding: 12px;
+  }
+
+  .stat-card__value {
+    font-size: 18px;
+  }
+
+  .stat-card__label {
+    font-size: 10px;
+  }
+
+  /* Table cells: hide less-important columns via utility */
+  .lead-workspace__table .hide-mobile {
+    display: none;
+  }
+
+  .cell-lead {
+    gap: 8px;
+  }
+
+  .cell-lead-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 9px;
+  }
+
+  .lead-title {
+    font-size: 12px;
+  }
+
+  /* QA Drawer Status Grid */
+  .qa-drawer-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Checkbox grid single col */
+  .checkbox-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Follow-up warning */
+  .followup-warning {
+    font-size: 11px;
+  }
+
+  /* Buttons smaller */
+  .workspace-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .crm-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Form inputs touch-friendly */
+  .crm-form-input,
+  .crm-form-select,
+  .qa-drawer-field-select {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+}
+
+/* ── 480px: Small phones ── */
+@media (max-width: 480px) {
+  .lead-workspace {
+    padding: 8px;
+  }
+
+  .lead-workspace__header h1 {
+    font-size: 16px;
+  }
+
+  .lead-workspace__header p {
+    font-size: 11px;
+  }
+
+  .lead-workspace__stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .workspace-stat-card {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .stat-card__value {
+    font-size: 16px;
+  }
+
+  .stat-card__change {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  /* Modal: nearly full screen */
+  .lead-workspace__modal {
+    padding: 8px;
+  }
+
+  .lead-workspace__modal-panel {
+    border-radius: 10px;
+    max-height: calc(100vh - 16px);
+  }
+
+  .lead-workspace__modal-body {
+    padding: 12px;
+  }
+
+  /* QA Drawer bottom sheet style */
+  .qa-drawer-header-left {
+    gap: 8px;
+  }
+
+  .qa-drawer-close {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* Action grid: 2 col tight */
+  .qa-action-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .qa-action-btn {
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  /* Lead list compact */
+  .lead-workspace__table td {
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .lead-workspace__table th {
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .lead-workspace__list-header h2 {
+    font-size: 13px;
+  }
+
+  .lead-workspace__empty {
+    padding: 30px 12px;
+  }
+
+  /* Calendar shortcuts: smaller */
+  .calendar-shortcut-btn {
+    font-size: 9px;
+    padding: 3px 6px;
+    border-radius: 4px;
+  }
+
+  .create-lead-status-chips {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  /* Remark table compact */
+  .qa-remark-table th,
+  .qa-remark-table td {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}

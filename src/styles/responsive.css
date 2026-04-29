@@ -128,3 +128,87 @@
     padding: 0 !important;
   }
 }
+
+/* ============================================================
+   PORTAL-SPECIFIC MOBILE OVERRIDES
+   Forces inline-style grids in portal JSX to stack on mobile
+   ============================================================ */
+
+@media (max-width: 640px) {
+  /* Force all portal content grids with inline styles to stack */
+  .portal-content [style*="grid-template-columns"],
+  .portal-content [style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Keep 2-col grids that intentionally use 1fr 1fr */
+  .portal-content .col-booking-amounts,
+  .portal-content .col-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Page headers: stack vertically */
+  .portal-content .page-header {
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: flex-start !important;
+  }
+
+  /* All portal tables: horizontal scroll */
+  .portal-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .portal-content thead,
+  .portal-content tbody,
+  .portal-content tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  /* Ensure form inputs don't trigger iOS zoom */
+  .portal-content input[type="text"],
+  .portal-content input[type="email"],
+  .portal-content input[type="tel"],
+  .portal-content input[type="number"],
+  .portal-content input[type="password"],
+  .portal-content input[type="date"],
+  .portal-content input[type="datetime-local"],
+  .portal-content select,
+  .portal-content textarea {
+    font-size: 16px !important;
+  }
+
+  /* CRM cards: reduce padding */
+  .portal-content .crm-card {
+    border-radius: 10px;
+  }
+
+  .portal-content .crm-card-body {
+    padding: 12px;
+  }
+
+  /* Flex row actions: wrap and fill */
+  .portal-content [style*="display: flex"][style*="gap"] {
+    flex-wrap: wrap !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra-small phones: tighter spacing */
+  .portal-content .crm-card-body {
+    padding: 10px;
+  }
+
+  .portal-content .page-header h1 {
+    font-size: 16px !important;
+  }
+
+  .portal-content .page-header p {
+    font-size: 11px !important;
+  }
+}
