@@ -13,6 +13,12 @@ import {
 
 const ICON_SIZE = { width: 22, height: 22 };
 
+const formatSqft = (value) => {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num)) return '0 sq.ft';
+  return `${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} sq.ft`;
+};
+
 const SalesHeadDashboard = ({ user, onNavigate }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +47,8 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'In Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: `₹${((stats?.pipelineValue || 0) / 10000000).toFixed(1)} Cr pipeline`, changeType: 'neutral' },
-    { label: 'Bookings', value: stats?.totalBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: `₹${((stats?.bookedValue || 0) / 10000000).toFixed(1)} Cr booked`, changeType: 'up' },
+    { label: 'In Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'Active negotiation leads', changeType: 'neutral' },
+    { label: 'Bookings', value: stats?.totalBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: `${formatSqft(stats?.bookedAreaSqft)} booked`, changeType: 'up' },
     { label: 'All Leads', value: stats?.allLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: 'Across pipeline', changeType: 'neutral' },
   ];
 

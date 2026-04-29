@@ -12,7 +12,6 @@ import CalendarPicker from '../../../components/common/CalendarPicker';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'];
 const FULL_DETAIL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
-const LOCATION_REQUIRED_STATUS_CODES = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'];
 
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
 
@@ -101,9 +100,8 @@ const TelecallerAddLead = ({ onNavigate }) => {
   );
   const selectedStatusCode = getStatusCode(selectedStatus) || form.lead_status_id;
   const tcStatusNeedsFullDetails = FULL_DETAIL_STATUS_CODES.includes(selectedStatusCode);
-  const needsLocation = LOCATION_REQUIRED_STATUS_CODES.includes(selectedStatusCode);
   const isTerminalStatus = ['LOST', 'JUNK', 'SPAM'].includes(selectedStatusCode);
-  const needsRemark = selectedStatusCode && !['NEW', 'RNR'].includes(selectedStatusCode);
+  const needsRemark = selectedStatusCode && selectedStatusCode !== 'NEW';
   const visibleStatusOptions = useMemo(
     () => statusOptions.filter((item) => ALLOWED_STATUS_CODES.includes(getStatusCode(item))),
     [statusOptions]
@@ -135,13 +133,10 @@ const TelecallerAddLead = ({ onNavigate }) => {
     if (!form.lead_status_id) errors.push('Lead status is required');
 
     if (tcStatusNeedsFullDetails) {
+      if (!form.location_ids?.length) errors.push('At least one location is required');
       if (!form.project_ids?.length) errors.push('At least one project is required');
       if (!form.nextFollowUpAt) errors.push('Next follow up date is required');
       if (!form.callResult) errors.push('Call status is required');
-    }
-
-    if (needsLocation) {
-      if (!form.location_ids?.length) errors.push('At least one location is required');
     }
 
     if (needsRemark && !form.remark?.trim()) {
@@ -161,7 +156,7 @@ const TelecallerAddLead = ({ onNavigate }) => {
         whatsappPhone,
       },
     };
-  }, [form, tcStatusNeedsFullDetails, needsLocation, isTerminalStatus, needsRemark]);
+  }, [form, tcStatusNeedsFullDetails, isTerminalStatus, needsRemark]);
 
   // Close dropdowns on outside click
   useEffect(() => {

@@ -3,6 +3,10 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  CreditCardIcon, ChartBarIcon, CheckCircleIcon, ClockIcon,
+  XCircleIcon, ArrowPathIcon,
+} from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
 const CollectionPayments = ({ user }) => {
@@ -42,7 +46,7 @@ const CollectionPayments = ({ user }) => {
     <div>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>💳 Payment History</h1>
+          <h1><CreditCardIcon style={{ width: 22, height: 22, display: 'inline', verticalAlign: 'text-bottom', marginRight: 8 }} />Payment History</h1>
           <p className="hidden sm:block">Track all payment transactions across your bookings</p>
         </div>
         <div className="page-header-actions">
@@ -53,19 +57,19 @@ const CollectionPayments = ({ user }) => {
       {/* Summary */}
       <div className="col-stats-grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'all' ? '2px solid var(--accent-blue)' : undefined }} onClick={() => setFilter('all')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>📊</div>
+          <div className="col-stat-icon" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}><ChartBarIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.length}</div><div className="col-stat-label">Total Payments</div></div>
         </div>
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'verified' ? '2px solid var(--accent-green)' : undefined }} onClick={() => setFilter('verified')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>✅</div>
+          <div className="col-stat-icon" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}><CheckCircleIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => p.is_verified).length}</div><div className="col-stat-label">Verified</div></div>
         </div>
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'pending' ? '2px solid var(--accent-yellow)' : undefined }} onClick={() => setFilter('pending')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>⏳</div>
+          <div className="col-stat-icon" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}><ClockIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => !p.is_verified && !p.is_bounced).length}</div><div className="col-stat-label">Pending</div></div>
         </div>
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'bounced' ? '2px solid var(--accent-red)' : undefined }} onClick={() => setFilter('bounced')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>❌</div>
+          <div className="col-stat-icon" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}><XCircleIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => p.is_bounced).length}</div><div className="col-stat-label">Bounced</div></div>
         </div>
       </div>
@@ -83,9 +87,9 @@ const CollectionPayments = ({ user }) => {
       </div>
 
       {loading ? (
-        <div className="col-empty"><div className="col-empty-icon">⏳</div><div className="col-empty-title">Loading payments...</div></div>
+        <div className="col-empty"><div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">Loading payments...</div></div>
       ) : filtered.length === 0 ? (
-        <div className="col-section"><div className="col-empty"><div className="col-empty-icon">💳</div><div className="col-empty-title">No payments found</div><div className="col-empty-desc">Payments will appear here when recorded against bookings</div></div></div>
+        <div className="col-section"><div className="col-empty"><div className="col-empty-icon"><CreditCardIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">No payments found</div><div className="col-empty-desc">Payments will appear here when recorded against bookings</div></div></div>
       ) : (
         <div className="col-section">
           <div className="col-section-body-flush" style={{ overflowX: 'auto' }}>
@@ -107,9 +111,9 @@ const CollectionPayments = ({ user }) => {
                     <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(p.payment_date)}</td>
                     <td>
-                      {p.is_verified ? <span className="col-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>✅ Verified</span>
-                        : p.is_bounced ? <span className="col-badge" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>❌ Bounced</span>
-                        : <span className="col-badge" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>⏳ Pending</span>}
+                      {p.is_verified ? <span className="col-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>Verified</span>
+                        : p.is_bounced ? <span className="col-badge" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>Bounced</span>
+                        : <span className="col-badge" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>Pending</span>}
                     </td>
                   </tr>
                 ))}

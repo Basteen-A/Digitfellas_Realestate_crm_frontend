@@ -106,6 +106,8 @@ const adminSidebar = [
       { label: 'Score Master', path: '/super-admin/score-master' },
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
+      { label: 'Payment Types', path: '/super-admin/payment-types' },
+      { label: 'Payment Plans', path: '/super-admin/payment-plans' },
     ],
   },
 ];
@@ -161,7 +163,7 @@ export const salesManagerMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'green' },
-  { label: 'SV Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
+  { label: 'Negotiations', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
@@ -178,6 +180,16 @@ export const salesHeadMenu = [
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { label: 'Team Metrics', key: 'team', icon: BriefcaseIcon, badge: null },
+];
+
+export const collectionMenu = [
+  { group: 'Menu' },
+  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
+  { group: 'Bookings & Payments' },
+  { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'Payments', key: 'payments', icon: CreditCardIcon, badge: null },
+  { label: 'Customer Profiles', key: 'customers', icon: UserGroupIcon, badge: null },
 ];
 
 export const ROLE_LABELS = {

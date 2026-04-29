@@ -38,6 +38,8 @@ import BookingCancelReasons from '../pages/superadmin/BookingCancelReasons';
 import StatusRemarks from '../pages/superadmin/StatusRemarks';
 import WorkflowActions from '../pages/superadmin/WorkflowActions/WorkflowActionList';
 import Motivations from '../pages/superadmin/Motivations';
+import PaymentTypes from '../pages/superadmin/PaymentTypes';
+import PaymentPlans from '../pages/superadmin/PaymentPlans';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import TelecallerWorkspace from '../pages/portals/telecaller';
@@ -150,6 +152,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/units" element={<InventoryUnitList />} />
             <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
             <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
+            <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
+            <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

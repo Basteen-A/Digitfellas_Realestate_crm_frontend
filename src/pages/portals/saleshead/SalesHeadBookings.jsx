@@ -2,9 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
+import paymentPlanApi from '../../../api/paymentPlanApi';
+import paymentTypeApi from '../../../api/paymentTypeApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import '../collection/CollectionWorkspace.css'; // Reuse existing styles
+import { ClipboardDocumentListIcon, PencilSquareIcon, LinkIcon, CreditCardIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import '../collection/CollectionWorkspace.css';
 
 const SalesHeadBookings = ({ user }) => {
   const [bookings, setBookings] = useState([]);
@@ -15,6 +18,8 @@ const SalesHeadBookings = ({ user }) => {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [statusOptions, setStatusOptions] = useState([]);
+  const [planOptions, setPlanOptions] = useState([]);
+  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -40,10 +45,26 @@ const SalesHeadBookings = ({ user }) => {
     } catch { /* silent */ }
   }, []);
 
+  const loadPlans = useCallback(async () => {
+    try {
+      const resp = await paymentPlanApi.getDropdown();
+      setPlanOptions(resp.data || []);
+    } catch { /* silent */ }
+  }, []);
+
+  const loadPaymentTypes = useCallback(async () => {
+    try {
+      const resp = await paymentTypeApi.getDropdown();
+      setPaymentTypeOptions(resp.data || []);
+    } catch { /* silent */ }
+  }, []);
+
   useEffect(() => {
     loadBookings();
     loadStatuses();
-  }, [loadBookings, loadStatuses]);
+    loadPlans();
+    loadPaymentTypes();
+  }, [loadBookings, loadStatuses, loadPlans, loadPaymentTypes]);
 
   const openDetail = async (bookingId) => {
     setDetailLoading(true);
@@ -86,10 +107,13 @@ const SalesHeadBookings = ({ user }) => {
       stamp_duty: selectedBooking.stamp_duty || '',
       registration_charges: selectedBooking.registration_charges || '',
       booking_status_id: selectedBooking.booking_status_id || '',
+      payment_plan_id: selectedBooking.payment_plan_id || '',
+      payment_type_id: selectedBooking.payment_type_id || '',
       remarks: selectedBooking.remarks || '',
     });
     setEditMode(true);
   };
+
 
   return (
     <div>
@@ -120,7 +144,7 @@ const SalesHeadBookings = ({ user }) => {
         <div className="crm-card-body-flush">
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center' }}>
-              <div className="col-empty-icon">⏳</div>
+              <div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div>
               <p>Loading bookings...</p>
             </div>
           ) : bookings.length === 0 ? (
@@ -175,9 +199,7 @@ const SalesHeadBookings = ({ user }) => {
                         </span>
                       </td>
                       <td>
-                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>
-                          View
-                        </button>
+                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>View</button>
                       </td>
                     </tr>
                   ))}
@@ -193,12 +215,12 @@ const SalesHeadBookings = ({ user }) => {
         <div className="col-modal-overlay" onClick={() => setSelectedBooking(null)}>
           <div className="col-modal col-modal-lg" onClick={e => e.stopPropagation()}>
             <div className="col-modal-header">
-              <h2>📋 Booking Details: {selectedBooking.booking_number}</h2>
+              <h2><ClipboardDocumentListIcon style={{ width: 20, height: 20, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Booking Details: {selectedBooking.booking_number}</h2>
               <button className="col-modal-close" onClick={() => setSelectedBooking(null)}>×</button>
             </div>
             {detailLoading ? (
               <div className="col-modal-body" style={{ padding: 40, textAlign: 'center' }}>
-                <div className="col-empty-icon">⏳</div>
+                <div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div>
               </div>
             ) : (
               <div className="col-modal-body">
@@ -238,6 +260,22 @@ const SalesHeadBookings = ({ user }) => {
                         </select>
                       </div>
                     </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 15 }}>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Payment Plan</label>
+                        <select className="col-form-select" value={editForm.payment_plan_id || ''} onChange={e => setEditForm(p => ({ ...p, payment_plan_id: e.target.value || null }))}>
+                          <option value="">Select plan...</option>
+                          {planOptions.map(pl => <option key={pl.id} value={pl.id}>{pl.plan_name} ({pl.plan_type}{pl.plan_type === 'EMI' ? ` - ${pl.emi_months}m` : ''})</option>)}
+                        </select>
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Payment Type</label>
+                        <select className="col-form-select" value={editForm.payment_type_id || ''} onChange={e => setEditForm(p => ({ ...p, payment_type_id: e.target.value || null }))}>
+                          <option value="">Select type...</option>
+                          {paymentTypeOptions.map(pt => <option key={pt.id} value={pt.id}>{pt.type_name}</option>)}
+                        </select>
+                      </div>
+                    </div>
                     <div className="col-form-group" style={{ marginTop: 15 }}>
                       <label className="col-form-label">Internal Remarks</label>
                       <textarea className="col-form-textarea" rows={2} value={editForm.remarks || ''} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} />
@@ -255,17 +293,17 @@ const SalesHeadBookings = ({ user }) => {
                         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Project: <strong>{selectedBooking.project?.project_name || '-'}</strong> | Unit: <strong>{selectedBooking.unit_number || 'TBD'}</strong></div>
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}>✏️ Edit Details</button>
+                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Details</button>
                         {selectedBooking.lead_id && (
                           <a href={`/leads/${selectedBooking.lead_id}`} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ textDecoration: 'none' }}>
-                            🔗 View Lead
+                            <LinkIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />View Lead
                           </a>
                         )}
                       </div>
                     </div>
 
                     <div style={{ marginTop: 25 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>💳 Payment History</h3>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}><CreditCardIcon style={{ width: 18, height: 18, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Payment History</h3>
                       {(!selectedBooking.payments || selectedBooking.payments.length === 0) ? (
                         <div style={{ padding: 20, textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: 8, color: 'var(--text-muted)' }}>
                           No payments recorded for this booking yet.
@@ -313,6 +351,7 @@ const SalesHeadBookings = ({ user }) => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

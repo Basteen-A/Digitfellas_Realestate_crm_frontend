@@ -15,6 +15,8 @@ import closedLostReasonApi from '../../../api/closedLostReasonApi';
 import bookingCancelReasonApi from '../../../api/bookingCancelReasonApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import motivationApi from '../../../api/motivationApi';
+import paymentTypeApi from '../../../api/paymentTypeApi';
+import paymentPlanApi from '../../../api/paymentPlanApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -673,6 +675,61 @@ export const masterConfigs = {
     fields: [
       { name: 'motivation_name', label: 'Motivation Name', required: true },
       { name: 'short_code', label: 'Short Code' },
+      { name: 'color_code', label: 'Color', type: 'color' },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  paymentTypes: {
+    title: 'Payment Types',
+    api: paymentTypeApi,
+    columns: [
+      { header: 'Type', path: 'type_name' },
+      { header: 'Code', path: 'type_code' },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'type_name', label: 'Type Name', required: true },
+      { name: 'type_code', label: 'Type Code', required: true },
+      { name: 'color_code', label: 'Color', type: 'color' },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  paymentPlans: {
+    title: 'Payment Plans',
+    api: paymentPlanApi,
+    columns: [
+      { header: 'Plan', path: 'plan_name' },
+      { header: 'Code', path: 'plan_code' },
+      { header: 'Type', path: 'plan_type' },
+      { header: 'EMI Months', path: 'emi_months' },
+      { header: 'Down %', path: 'down_payment_percentage' },
+      { header: 'Interest %', path: 'interest_rate' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'plan_name', label: 'Plan Name', required: true },
+      { name: 'plan_code', label: 'Plan Code', required: true },
+      {
+        name: 'plan_type',
+        label: 'Plan Type',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'EMI', label: 'EMI (Monthly Installments)' },
+          { value: 'DIRECT', label: 'Direct (Full Payment)' },
+        ],
+      },
+      { name: 'emi_months', label: 'EMI Months', type: 'number' },
+      { name: 'emi_start_offset_days', label: 'EMI Start After (Days)', type: 'number' },
+      { name: 'down_payment_percentage', label: 'Down Payment %', type: 'number' },
+      { name: 'interest_rate', label: 'Interest Rate %', type: 'number' },
       { name: 'color_code', label: 'Color', type: 'color' },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'description', label: 'Description', type: 'textarea' },

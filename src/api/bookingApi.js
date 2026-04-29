@@ -21,6 +21,9 @@ const bookingApi = {
   getCustomers: () => api.get('/bookings/customers'),
   getCustomerById: (id) => api.get(`/bookings/customers/${id}`),
   updateCustomer: (id, data) => api.patch(`/bookings/customers/${id}`, data),
+
+  // Development cost (Collection Manager)
+  updateDevelopmentCost: (bookingId, data) => api.patch(`/bookings/${bookingId}/development-cost`, data),
 };
 
 export default bookingApi;

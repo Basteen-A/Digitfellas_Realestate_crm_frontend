@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
+import customerTypeApi from '../../../api/customerTypeApi';
+import motivationApi from '../../../api/motivationApi';
 import locationApi from '../../../api/locationApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
@@ -106,10 +108,9 @@ const initialNewLead = {
   location_ids: [],
   nextFollowUpAt: '',
   lead_status_id: '',
+  customerRequirement: '',
+  customerTypeId: '',
   motivationType: '',
-  motivationNote: '',
-  primaryRequirement: '',
-  secondaryRequirement: '',
   svDate: new Date().toISOString().split('T')[0],
   timeSpent: '',
   latitude: null,
@@ -137,6 +138,22 @@ const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
   date.setDate(date.getDate() + dayOffset);
   date.setHours(hour, minute, 0, 0);
   return toDateTimeLocalValue(date.toISOString());
+};
+
+const toDayStart = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const isFollowUpMissedByDate = (value, referenceDate = new Date()) => {
+  const followUpDate = toDayStart(value);
+  if (!followUpDate) return false;
+
+  const referenceStart = new Date(referenceDate);
+  referenceStart.setHours(0, 0, 0, 0);
+  return followUpDate.getTime() < referenceStart.getTime();
 };
 
 const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
@@ -476,14 +493,20 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null); // 'Answered' | 'Not-Answered' | null
   const [quickMissingLocationId, setQuickMissingLocationId] = useState('');
   const [quickMissingProjectIds, setQuickMissingProjectIds] = useState([]);
+  const [quickLocationSearch, setQuickLocationSearch] = useState('');
+  const [quickProjectSearch, setQuickProjectSearch] = useState('');
+  const [quickLocationDropdownOpen, setQuickLocationDropdownOpen] = useState(false);
+  const [quickProjectDropdownOpen, setQuickProjectDropdownOpen] = useState(false);
   const [closureReasons, setClosureReasons] = useState([]);
-  const [activeTab, setActiveTab] = useState('today'); // 'all' | 'new' | 'today' | 'missed'
+  const [activeTab, setActiveTab] = useState('today'); // 'all' | 'new' | 'today' | 'missed' | 'sh_leads' | 'sm_leads'
   const [qaActiveTab, setQaActiveTab] = useState('history'); // 'activity' | 'history'
 
   // ── Create lead ──
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [newLeadForm, setNewLeadForm] = useState(initialNewLead);
   const [projectOptions, setProjectOptions] = useState([]);
+  const [customerTypeOptions, setCustomerTypeOptions] = useState([]);
+  const [motivationOptions, setMotivationOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
   const [subSourceMap, setSubSourceMap] = useState({});
@@ -514,7 +537,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   useEffect(() => {
     const timer = setInterval(() => setTimeTick(Date.now()), 60000);
     return () => clearInterval(timer);
-  }, []);
+  }, [workspaceRole, user?.id]);
   const [recordSvForm, setRecordSvForm] = useState({
     svDate: new Date().toISOString().split('T')[0],
     svProjectId: '',
@@ -659,32 +682,63 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   );
 
   const quickLeadHasLocation = useMemo(
-    () => Boolean(
-      quickActionLead?.interestedLocations?.length
-      || quickActionLead?.locationId
-      || quickActionLead?.location
-    ),
+    () => {
+      const locId = quickActionLead?.locationId;
+      const intLocs = (quickActionLead?.interestedLocations || []).filter(id => id && String(id).trim() !== '');
+      return Boolean(locId || intLocs.length > 0);
+    },
+    [quickActionLead]
+  );
+  
+  const quickLeadHasProject = useMemo(
+    () => {
+      const projId = quickActionLead?.projectId;
+      const intProjs = (quickActionLead?.interestedProjects || []).filter(id => id && String(id).trim() !== '');
+      return Boolean(projId || intProjs.length > 0);
+    },
     [quickActionLead]
   );
 
-  const quickLeadHasProject = useMemo(
+  const selectedLeadHasLocation = useMemo(
     () => Boolean(
-      quickActionLead?.interestedProjects?.length
-      || quickActionLead?.projectId
-      || quickActionLead?.project
+      selectedLead?.interestedLocations?.length
+      || selectedLead?.locationId
+      || selectedLead?.location
+      || quickMissingLocationId
     ),
-    [quickActionLead]
+    [selectedLead, quickMissingLocationId]
+  );
+
+  const selectedLeadHasProject = useMemo(
+    () => Boolean(
+      selectedLead?.interestedProjects?.length
+      || selectedLead?.projectId
+      || selectedLead?.project
+      || quickMissingProjectIds?.length > 0
+    ),
+    [selectedLead, quickMissingProjectIds]
+  );
+
+  // Variant that only checks whether the lead already has a project (ignores quick picks)
+  const selectedLeadHasProjectFromLead = useMemo(
+    () => Boolean(
+      selectedLead?.interestedProjects?.length
+      || selectedLead?.projectId
+      || selectedLead?.project
+    ),
+    [selectedLead]
   );
 
   const quickMissingProjectOptions = useMemo(
     () => {
-      if (!quickMissingLocationId) return projectOptions;
+      const activeLocId = quickWorkflowForm.locationId || quickMissingLocationId;
+      if (!activeLocId) return projectOptions;
       return projectOptions.filter((project) => {
         const projectLocationId = project.location_id || project.locationId || '';
-        return String(projectLocationId) === String(quickMissingLocationId);
+        return String(projectLocationId) === String(activeLocId);
       });
     },
-    [projectOptions, quickMissingLocationId]
+    [projectOptions, quickWorkflowForm.locationId, quickMissingLocationId]
   );
 
   const toolbarStageOptions = useMemo(() => {
@@ -719,22 +773,42 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const searchText = (filters.search || '').trim().toLowerCase();
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrowStart = new Date(todayStart.getTime() + 86400000);
     const useFollowUpTabs = FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole);
 
     return leads.filter((lead) => {
-      if (useFollowUpTabs && !searchText) {
-        if (lead.isClosed) return false;
+      if (useFollowUpTabs) {
+        const isSmReadOnlyLead = workspaceRole === 'SM' && isSmHandoffReadOnlyLead(lead);
+        const isShReadOnlyLead = workspaceRole === 'SH' && isShTaggedReadOnlyLead(lead);
+        const isCrossRoleReadOnlyLead = isSmReadOnlyLead || isShReadOnlyLead;
 
-        const followUpAt = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null;
-        if (!followUpAt || Number.isNaN(followUpAt.getTime())) return false;
+        if (workspaceRole === 'SM' && activeTab === 'sh_leads') {
+          if (!isSmReadOnlyLead) return false;
+        } else if (workspaceRole === 'SH' && activeTab === 'sm_leads') {
+          if (!isShReadOnlyLead) return false;
+        } else {
+          // Today/Missed tabs must never mix in cross-role read-only leads.
+          if (isCrossRoleReadOnlyLead) return false;
 
-        const isTodayFollowUp = followUpAt >= todayStart && followUpAt < tomorrowStart;
-        const isMissedFollowUp = followUpAt < now;
+          if (lead.isClosed) return false;
 
-        if (activeTab === 'today' && !isTodayFollowUp) return false;
-        if (activeTab === 'missed' && !isMissedFollowUp) return false;
-        if (activeTab !== 'today' && activeTab !== 'missed' && !isTodayFollowUp && !isMissedFollowUp) return false;
+          const followUpAt = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null;
+          const followUpDay = followUpAt ? toDayStart(followUpAt) : null;
+          if (!followUpDay) return false;
+
+          const isTodayFollowUp = followUpDay.getTime() === todayStart.getTime();
+          const isMissedFollowUp = isFollowUpMissedByDate(followUpDay, todayStart);
+
+          if (activeTab === 'today' && !isTodayFollowUp) return false;
+          if (activeTab === 'missed' && !isMissedFollowUp) return false;
+
+          if (
+            activeTab !== 'today'
+            && activeTab !== 'missed'
+            && activeTab !== 'new'
+            && !isTodayFollowUp
+            && !isMissedFollowUp
+          ) return false;
+        }
       }
 
       if (searchText) {
@@ -765,7 +839,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
       return true;
     });
-  }, [leads, filters.search, multiFilters, activeTab, workspaceRole]);
+  }, [leads, filters.search, multiFilters, activeTab, workspaceRole, isSmHandoffReadOnlyLead, isShTaggedReadOnlyLead]);
 
   const selectedSourceSubSources = useMemo(
     () => subSourceMap[newLeadForm.lead_source_id] || [],
@@ -781,8 +855,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
 
     if (workspaceRole === 'SM') {
-      const allowedSmCreateStatuses = new Set(['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST']);
-      const filtered = statusOptions.filter((st) => allowedSmCreateStatuses.has(toCanonicalStatusCode(st.value)));
+      const allowedSmCreateStatuses = new Set(['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST', 'REVISIT', 'SV_SCHEDULED']);
+      const filtered = statusOptions
+        .filter((st) => allowedSmCreateStatuses.has(toCanonicalStatusCode(st.value)))
+        .map((st) => {
+          // Rename Scheduled Revisit / SV Scheduled to Revisit
+          const code = toCanonicalStatusCode(st.value);
+          if (code === 'REVISIT') {
+            return { ...st, label: 'Revisit' };
+          }
+          return st;
+        });
       return filtered.length > 0 ? filtered : statusOptions;
     }
 
@@ -830,11 +913,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const tcStatusNeedsFollowUp = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED', 'RNR'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
     const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
-  const smStatusNeedsFollowUp = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEW'].includes(selectedNewLeadStatusCode);
+  const smStatusNeedsFollowUp = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEW', 'REVISIT', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const smStatusNeedsReason = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'LOST';
-  const smStatusNeedsAssignee = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'NEGOTIATION_HOT';
+  const smStatusNeedsAssignee = false; // SM/SH leads are now automatically self-assigned as per user request
   const smStatusNeedsCallStatus = workspaceRole === 'SM' && ['FOLLOW_UP', 'LOST'].includes(selectedNewLeadStatusCode);
-  const smStatusNeedsRemark = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST'].includes(selectedNewLeadStatusCode);
+  const smStatusNeedsRemark = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST', 'REVISIT', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const createLeadNeedsRemark = workspaceRole === 'SM' ? smStatusNeedsRemark : needsRemark;
   const shouldShowCreateCallStatus = workspaceRole === 'SM'
     ? smStatusNeedsCallStatus
@@ -907,6 +990,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (!newLeadForm.lead_status_id) errors.push('Lead status is required');
       if (!newLeadForm.location_id) errors.push('Location is required');
       if (!newLeadForm.project_ids?.length) errors.push('At least one project is required');
+      if (!newLeadForm.customerTypeId) errors.push('Customer type is required');
+      if (!newLeadForm.motivationType) errors.push('Motivation is required');
 
       if (smStatusNeedsFollowUp && !newLeadForm.nextFollowUpAt) {
         errors.push('Next follow up date is required');
@@ -960,11 +1045,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const computedStats = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 86400000);
     const totalLeads = leads.length;
     const newToday = leads.filter((l) => l.createdAt && new Date(l.createdAt) >= todayStart).length;
-    const todayFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) >= todayStart && new Date(l.nextFollowUpAt) < todayEnd && !l.isClosed).length;
-    const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < now && !l.isClosed).length;
+    const todayFollowUps = leads.filter((l) => l.nextFollowUpAt && toDayStart(l.nextFollowUpAt)?.getTime() === todayStart.getTime() && !l.isClosed).length;
+    const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && isFollowUpMissedByDate(l.nextFollowUpAt, todayStart) && !l.isClosed).length;
     const svScheduled = leads.filter((l) => l.stageCode && l.stageCode.includes('SV_SCHED')).length;
     const svCompleted = leads.filter((l) => l.stageCode && (l.stageCode.includes('SV_DONE') || l.stageCode.includes('SV_COMPLET'))).length;
     const missedFollowups = overdueFollowUps;
@@ -975,6 +1059,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) return false;
 
     const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     return leads.some((lead) => {
       if (lead.isClosed) return false;
       if (!lead.nextFollowUpAt) return false;
@@ -982,10 +1067,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       const assignedToMe = lead.assignedToUserId && String(lead.assignedToUserId) === String(user?.id);
       if (!assignedToMe) return false;
 
-      const followUpAt = new Date(lead.nextFollowUpAt);
-      if (Number.isNaN(followUpAt.getTime())) return false;
-
-      return followUpAt < now;
+      return isFollowUpMissedByDate(lead.nextFollowUpAt, todayStart);
     });
   }, [leads, workspaceRole, user?.id]);
 
@@ -1070,7 +1152,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // Pre-load assignable users for relevant handoff roles
   useEffect(() => {
-    if (workspaceRole === 'TC') loadAssignableUsers('SM');
+    if (workspaceRole === 'TC') {
+      loadAssignableUsers('SM');
+      loadAssignableUsers('TC');
+    }
     if (workspaceRole === 'SM') loadAssignableUsers('SH');
     if (workspaceRole === 'SH') loadAssignableUsers('COL');
   }, [workspaceRole, loadAssignableUsers]);
@@ -1093,6 +1178,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) {
         if (activeTab === 'new') {
           queryParams.unassigned = true;
+        } else if ((workspaceRole === 'SM' && activeTab === 'sh_leads') || (workspaceRole === 'SH' && activeTab === 'sm_leads')) {
+          // Keep role visibility broad for cross-role read-only tabs; filtering is handled client-side.
         } else {
           // Assigned lead tabs (today / missed) — only show leads assigned to this user
           queryParams.assignedToMe = true;
@@ -1340,19 +1427,27 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (createOptionsLoading) return;
     setCreateOptionsLoading(true);
     try {
-      const [pResp, lResp, sResp] = await Promise.all([
+      const [pResp, ctResp, motResp, lResp, sResp] = await Promise.all([
         projectApi.getDropdown(),
+        customerTypeApi.getDropdown(),
+        motivationApi.getDropdown(),
         locationApi.getDropdown(),
         leadSourceApi.getWithSubSources().catch(() => leadSourceApi.getDropdown()),
       ]);
       const projects = pResp.data || [];
+      const customerTypes = ctResp.data || [];
+      const motivations = motResp.data || [];
       const locations = lResp.data || [];
       const sources = sResp.data || [];
+      const normalizedSourceName = (source) => String(source?.source_name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const filteredSources = workspaceRole === 'SM'
+        ? sources.filter((source) => ['walkin', 'others'].includes(normalizedSourceName(source)))
+        : sources;
       const map = {};
-      sources.forEach((s) => { map[s.id] = s.subSources || []; });
+      filteredSources.forEach((s) => { map[s.id] = s.subSources || []; });
 
       if (Object.values(map).every((v) => v.length === 0)) {
-        await Promise.all(sources.map(async (s) => {
+        await Promise.all(filteredSources.map(async (s) => {
           try {
             const sub = await leadSubSourceApi.getBySource(s.id);
             map[s.id] = sub.data || [];
@@ -1361,8 +1456,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       }
 
       setProjectOptions(projects);
+      setCustomerTypeOptions(customerTypes);
+      setMotivationOptions(motivations);
       setLocationOptions(locations);
-      setSourceOptions(sources);
+      setSourceOptions(filteredSources);
       setSubSourceMap(map);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load options'));
@@ -1425,14 +1522,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Handlers ──
   const resetNewLeadModal = useCallback(() => {
-    setNewLeadForm({ ...initialNewLead, latitude: null, longitude: null });
+    setNewLeadForm({ 
+      ...initialNewLead, 
+      latitude: null, 
+      longitude: null,
+      assigned_to: (workspaceRole === 'SM' || workspaceRole === 'SH') ? (user?.id || '') : ''
+    });
     setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
     setAltPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
     setReengageLeadId(null);
     setProjectDropdownOpen(false);
     setProjectSearch('');
     setNewLeadOpen(false);
-  }, []);
+  }, [workspaceRole, user?.id]);
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
@@ -1468,17 +1570,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         nextFollowUpAt: newLeadForm.nextFollowUpAt ? new Date(newLeadForm.nextFollowUpAt).toISOString() : undefined,
         lead_status_id: newLeadForm.lead_status_id || undefined,
         callResult: newLeadForm.callResult,
-        motivationType: newLeadForm.motivationType,
-        primaryRequirement: newLeadForm.primaryRequirement || undefined,
-        secondaryRequirement: newLeadForm.secondaryRequirement || undefined,
+        customerRequirement: newLeadForm.customerRequirement || undefined,
+          customerTypeId: newLeadForm.customerTypeId || undefined,
+          motivationType: newLeadForm.motivationType || undefined,
         svDate: newLeadForm.svDate ? new Date(newLeadForm.svDate).toISOString() : undefined,
         timeSpent: newLeadForm.timeSpent ? Number(newLeadForm.timeSpent) : undefined,
-        assignment_mode: workspaceRole === 'TC' ? (newLeadForm.assignment_mode || 'ME') : undefined,
-        assigned_to: workspaceRole === 'TC'
-          ? (selectedNewLeadStatusCode === 'RNR'
-            ? (user?.id || null)
-            : (newLeadForm.assignment_mode === 'POOL' ? null : (user?.id || null)))
-          : (newLeadForm.assigned_to || null),
+        assignment_mode: ['SM', 'SH', 'TC'].includes(workspaceRole) ? (newLeadForm.assignment_mode || 'ME') : undefined,
+        assigned_to: (workspaceRole === 'SM' || workspaceRole === 'SH')
+          ? (user?.id || null)
+          : (workspaceRole === 'TC'
+            ? (selectedNewLeadStatusCode === 'RNR'
+              ? (user?.id || null)
+              : (newLeadForm.assignment_mode === 'POOL' ? null : (user?.id || null)))
+            : (newLeadForm.assigned_to || null)),
         closure_reason_id: newLeadForm.closure_reason_id || undefined,
         note: newLeadForm.remark || undefined,
         remark: newLeadForm.remark || undefined,
@@ -1783,9 +1887,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       stageLabel: option.stageLabel || option.actionLabel || actionCode,
       followUpAt: '',
       reason: '',
+      assignToUserId: '',
       needsFollowUp: Boolean(option.needsFollowUp),
       callResult: nextStatusCode === 'RNR' ? 'Not Answered' : 'Answered',
     });
+
+    if (action?.needsAssignee) {
+      const role = getAssigneeRoleForAction(action, workspaceRole);
+      loadAssignableUsers(role);
+    }
+    // Initialize missing-location/project picks from the selected lead so validation works
+    setQuickMissingLocationId(
+      selectedLead?.interestedLocations?.[0]
+        ? String(selectedLead.interestedLocations[0])
+        : (selectedLead?.locationId ? String(selectedLead.locationId) : '')
+    );
+    setQuickMissingProjectIds(
+      selectedLead?.interestedProjects?.length
+        ? selectedLead.interestedProjects.map((id) => String(id))
+        : (selectedLead?.projectId ? [String(selectedLead.projectId)] : [])
+    );
+    setQuickLocationSearch('');
+    setQuickProjectSearch('');
     setStagePopupOpen(true);
   };
 
@@ -1828,12 +1951,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       return;
     }
 
+    if (!selectedLeadHasLocation || !selectedLeadHasProject) {
+      if (!selectedLeadHasLocation && !quickMissingLocationId) {
+        toast.error('Please select a location for this lead');
+        return;
+      }
+      if (!selectedLeadHasProject && quickMissingProjectIds.length === 0) {
+        toast.error('Please select a project for this lead');
+        return;
+      }
+    }
+
+    if (stagePopupAction?.needsAssignee && !stagePopupData.assignToUserId) {
+      toast.error(stagePopupAction.code === 'TC_SV_DONE' ? 'Please select a Sales Manager' : 'Please select an assignee');
+      return;
+    }
+
     setManualUpdateSaving(true);
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, stagePopupData.actionCode, {
         note: stagePopupData.reason.trim(),
         nextFollowUpAt: stagePopupData.followUpAt ? new Date(stagePopupData.followUpAt).toISOString() : undefined,
         callResult: shouldShowCallStatus(stagePopupAction?.targetStatusCode) ? stagePopupData.callResult : undefined,
+        assignToUserId: stagePopupData.assignToUserId || undefined,
+        location_id: quickMissingLocationId || undefined,
+        location_ids: quickMissingLocationId ? [quickMissingLocationId] : undefined,
+        project_id: quickMissingProjectIds[0] || undefined,
+        project_ids: quickMissingProjectIds.length > 0 ? quickMissingProjectIds : undefined,
       });
       toast.success('Stage updated successfully');
       setStagePopupOpen(false);
@@ -1866,6 +2010,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const commonPayload = {
       note: noteDraft.trim() || undefined,
       nextFollowUpAt: manualNextFollowUpAt ? new Date(manualNextFollowUpAt).toISOString() : undefined,
+      location_id: quickMissingLocationId || undefined,
+      location_ids: quickMissingLocationId ? [quickMissingLocationId] : undefined,
+      project_id: quickMissingProjectIds[0] || undefined,
+      project_ids: quickMissingProjectIds.length > 0 ? quickMissingProjectIds : undefined,
     };
 
     if (manualNextFollowUpAt && !isFollowUpAtLeastMinutesAhead(manualNextFollowUpAt)) {
@@ -1912,6 +2060,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     setQuickRemarkAnsNonAns(null);
     setQuickMissingLocationId('');
     setQuickMissingProjectIds([]);
+    setQuickLocationSearch('');
+    setQuickProjectSearch('');
+    setQuickLocationDropdownOpen(false);
+    setQuickProjectDropdownOpen(false);
     setQuickWorkflowForm({
       note: '',
       statusRemarkText: '',
@@ -1981,11 +2133,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     setQuickWorkflowAction(action);
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
-    setQuickMissingLocationId(quickActionLead?.interestedLocations?.[0] || quickActionLead?.locationId || '');
+    setQuickMissingLocationId(
+      quickActionLead?.interestedLocations?.[0]
+        ? String(quickActionLead.interestedLocations[0])
+        : (quickActionLead?.locationId ? String(quickActionLead.locationId) : '')
+    );
     setQuickMissingProjectIds(
       quickActionLead?.interestedProjects?.length
-        ? quickActionLead.interestedProjects
-        : (quickActionLead?.projectId ? [quickActionLead.projectId] : [])
+        ? quickActionLead.interestedProjects.map((id) => String(id))
+        : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : [])
     );
     setQuickWorkflowForm({
       note: '',
@@ -2005,6 +2161,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       longitude: quickActionLead?.geoLong || null,
       timeSpent: '',
       callResult: action.targetStatusCode === 'RNR' ? 'Not Answered' : 'Answered',
+      locationId: quickActionLead?.interestedLocations?.[0]
+        ? String(quickActionLead.interestedLocations[0])
+        : (quickActionLead?.locationId ? String(quickActionLead.locationId) : ''),
+      projectIds: quickActionLead?.interestedProjects?.length
+        ? quickActionLead.interestedProjects.map((id) => String(id))
+        : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : []),
     });
 
     if (action.needsAssignee) {
@@ -2109,8 +2271,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         }
 
         if (quickWorkflowNeedsMissingLocationProject) {
-          const hasLocationForSubmit = quickLeadHasLocation || Boolean(quickMissingLocationId);
-          const hasProjectForSubmit = quickLeadHasProject || quickMissingProjectIds.length > 0;
+          const hasLocationForSubmit = quickLeadHasLocation
+            || (f.locationId && String(f.locationId).trim() !== '')
+            || (quickMissingLocationId && String(quickMissingLocationId).trim() !== '');
+          const hasProjectForSubmit = quickLeadHasProject
+            || (f.projectIds && f.projectIds.length > 0)
+            || (quickMissingProjectIds && quickMissingProjectIds.length > 0);
 
           if (!hasLocationForSubmit) {
             toast.error('Please select a location for this lead before performing this action.');
@@ -2190,17 +2356,56 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           secondaryRequirement: f.secondaryRequirement || undefined,
           latitude: f.latitude || undefined,
           longitude: f.longitude || undefined,
-          timeSpent: f.timeSpent || undefined,
+          // server expects `time_spent`; keep camel-case for compatibility elsewhere
+          time_spent: f.timeSpent ? Number(f.timeSpent) : undefined,
         };
+        
+        // ── ALWAYS include location/project IDs from form state, quickMissing state, OR existing lead data ──
+        const intLocs = (quickActionLead?.interestedLocations || []).filter(id => id && String(id).trim() !== '');
+        const formLocId = (f.locationId && String(f.locationId).trim() !== '') ? f.locationId : '';
+        const missingLocId = (quickMissingLocationId && String(quickMissingLocationId).trim() !== '') ? quickMissingLocationId : '';
+        const resolvedLocationId = formLocId
+          || missingLocId
+          || quickActionLead?.locationId
+          || (intLocs.length > 0 ? intLocs[0] : '');
+        
+        const intProjs = (quickActionLead?.interestedProjects || []).filter(id => id && String(id).trim() !== '');
+        const formProjIds = (f.projectIds && f.projectIds.length > 0)
+          ? f.projectIds.filter(id => id && String(id).trim() !== '')
+          : [];
+        const missingProjIds = (quickMissingProjectIds && quickMissingProjectIds.length > 0)
+          ? quickMissingProjectIds.filter(id => id && String(id).trim() !== '')
+          : [];
+        const resolvedProjectIds = formProjIds.length > 0
+          ? formProjIds
+          : (missingProjIds.length > 0
+              ? missingProjIds
+              : (intProjs.length > 0 
+                  ? intProjs.map(String)
+                  : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : [])));
 
-        if (quickMissingLocationId && !quickLeadHasLocation) {
-          payload.location_id = quickMissingLocationId;
-          payload.location_ids = [quickMissingLocationId];
+        // eslint-disable-next-line no-console
+        console.warn('[TRANSITION PAYLOAD DEBUG]', {
+          formLocationId: f.locationId,
+          formProjectIds: f.projectIds,
+          quickMissingLocationId,
+          quickMissingProjectIds,
+          leadLocationId: quickActionLead?.locationId,
+          leadInterestedLocations: quickActionLead?.interestedLocations,
+          resolvedLocationId,
+          resolvedProjectIds,
+        });
+
+        if (resolvedLocationId) {
+          payload.location_id = resolvedLocationId;
+          payload.locationId = resolvedLocationId;
+          payload.location_ids = [resolvedLocationId];
         }
 
-        if (quickMissingProjectIds.length > 0 && !quickLeadHasProject) {
-          payload.project_id = quickMissingProjectIds[0];
-          payload.project_ids = quickMissingProjectIds;
+        if (resolvedProjectIds.length > 0) {
+          payload.project_id = resolvedProjectIds[0];
+          payload.projectId = resolvedProjectIds[0];
+          payload.project_ids = resolvedProjectIds;
         }
 
         // Enrich payload with customer profile if needed
@@ -2244,7 +2449,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           }
           await leadWorkflowApi.assignLead(quickActionLead.id, f.assignToUserId, f.note.trim() || 'Telecaller manual reassignment');
         } else {
-          await leadWorkflowApi.transitionLead(quickActionLead.id, quickWorkflowAction.code, payload);
+          // Log payload to help debug 400 errors from server
+          // eslint-disable-next-line no-console
+          console.debug('Submitting transition payload', { leadId: quickActionLead.id, action: quickWorkflowAction.code, payload });
+          try {
+            await leadWorkflowApi.transitionLead(quickActionLead.id, quickWorkflowAction.code, payload);
+          } catch (apiErr) {
+            // If server returned structured error, show it
+            if (apiErr?.response?.data) {
+              const msg = apiErr.response.data.message || apiErr.response.data.error || JSON.stringify(apiErr.response.data);
+              toast.error(msg);
+            }
+            throw apiErr;
+          }
         }
       }
 
@@ -2438,6 +2655,40 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 }}
               >
                 New (Unassigned)
+              </button>
+              )}
+              {workspaceRole === 'SM' && (
+              <button
+                onClick={() => setActiveTab('sh_leads')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: activeTab === 'sh_leads' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeTab === 'sh_leads' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                SH Leads (Read Only)
+              </button>
+              )}
+              {workspaceRole === 'SH' && (
+              <button
+                onClick={() => setActiveTab('sm_leads')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: activeTab === 'sm_leads' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeTab === 'sm_leads' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                SM Leads (Read Only)
               </button>
               )}
             </div>
@@ -3016,6 +3267,43 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <div className="followup-warning">⚠️ Follow-up date & time is required for this stage.</div>
               </div>
 
+              {/* Assignee selection in Modal */}
+              {stagePopupAction?.needsAssignee && (
+                <div style={{ marginBottom: 18 }}>
+                  <div className="crm-form-label" style={{ marginBottom: 6 }}>
+                    {getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SH' ? 'Select Sales Head (Negotiator) *' :
+                     getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SM' ? 'Select Sales Manager *' : 'Assign To *'}
+                  </div>
+                  <select
+                    className="crm-form-select"
+                    value={stagePopupData.assignToUserId}
+                    onChange={(e) => setStagePopupData(p => ({ ...p, assignToUserId: e.target.value }))}
+                  >
+                    <option value="">
+                      {getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SH' ? 'Select Sales Head...' :
+                       getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SM' ? 'Select Sales Manager...' : 'Select user...'}
+                    </option>
+                    {(assignableUsers[getAssigneeRoleForAction(stagePopupAction, workspaceRole)] || [])
+                      .filter((u) => {
+                        const currentAssigneeId = selectedLead?.assignedToUserId || null;
+                        if (String(u.id) === String(currentAssigneeId)) return false;
+
+                        if (stagePopupAction?.code === 'TC_REASSIGN') {
+                          const leadLocationId = selectedLead?.locationId || (selectedLead?.interestedLocations?.[0]) || null;
+                          if (!leadLocationId) return true;
+                          return Array.isArray(u.locationIds) && u.locationIds.some(locId => String(locId) === String(leadLocationId));
+                        }
+                        return true;
+                      })
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
               {/* Call Result Toggle */}
               {shouldShowCallStatus(stagePopupAction?.targetStatusCode) && (
                 <div className="call-result-wrap">
@@ -3052,6 +3340,43 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   autoFocus
                 />
               </div>
+
+              {/* Missing Information Block for Modal */}
+              {(!selectedLeadHasLocation || !selectedLeadHasProjectFromLead) && (
+                <div className="qa-drawer-ctx-block" style={{ border: '1px solid #fee2e2', background: '#fff1f1', margin: '0 0 15px', padding: '12px', borderRadius: '8px' }}>
+                  <div className="qa-drawer-section" style={{ color: '#991b1b', display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 8px', fontSize: 13, fontWeight: 700 }}>
+                    <ExclamationTriangleIcon style={{ width: 16, height: 16 }} /> Missing Information
+                  </div>
+                  {!selectedLeadHasLocation && (
+                    <div style={{ marginBottom: 10 }}>
+                      <label className="qa-drawer-field-label" style={{ color: '#7f1d1d' }}>Primary Location *</label>
+                      <select
+                        className="qa-drawer-field-select"
+                        style={{ width: '100%', borderColor: '#fca5a5' }}
+                        value={quickMissingLocationId}
+                        onChange={(e) => setQuickMissingLocationId(e.target.value)}
+                      >
+                        <option value="">Select Location...</option>
+                        {locationOptions.map(l => <option key={l.id} value={l.id}>{l.location_name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {!selectedLeadHasProject && (
+                    <div>
+                      <label className="qa-drawer-field-label" style={{ color: '#7f1d1d' }}>Interested Project *</label>
+                      <select
+                        className="qa-drawer-field-select"
+                        style={{ width: '100%', borderColor: '#fca5a5' }}
+                        value={quickMissingProjectIds[0] || ''}
+                        onChange={(e) => setQuickMissingProjectIds(e.target.value ? [e.target.value] : [])}
+                      >
+                        <option value="">Select Project...</option>
+                        {projectOptions.map(p => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Current Lead Summary */}
               {selectedLead && (
@@ -3530,7 +3855,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </div>
                       </div>
 
-                      <div className="create-lead-grid">
+                      <div className="create-lead-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                         <div className="create-lead-field">
                           <label className="create-lead-field__label">Visit Date</label>
                           <input
@@ -3540,34 +3865,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             onChange={(e) => setNewLeadForm((p) => ({ ...p, svDate: e.target.value }))}
                           />
                         </div>
-
                         <div className="create-lead-field">
-                          <label className="create-lead-field__label">Motivation Type</label>
-                          <input
-                            className="create-lead-input"
-                            value={newLeadForm.motivationType}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}
-                            placeholder="e.g. Investment / End Use"
-                          />
+                          <label className="create-lead-field__label">Customer Type</label>
+                          <select className="create-lead-input" value={newLeadForm.customerTypeId || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, customerTypeId: e.target.value }))}>
+                            <option value="">Select...</option>
+                            {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                          </select>
                         </div>
 
                         <div className="create-lead-field">
-                          <label className="create-lead-field__label">Primary Requirement</label>
+                          <label className="create-lead-field__label">Motivation</label>
+                          <select className="create-lead-input" value={newLeadForm.motivationType || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}>
+                            <option value="">Select...</option>
+                            {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="create-lead-field">
+                          <label className="create-lead-field__label">Customer Requirement</label>
                           <input
                             className="create-lead-input"
-                            value={newLeadForm.primaryRequirement}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
+                            value={newLeadForm.customerRequirement}
+                            onChange={(e) => setNewLeadForm((p) => ({ ...p, customerRequirement: e.target.value }))}
                             placeholder="e.g. 2BHK near metro"
-                          />
-                        </div>
-
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Secondary Requirement</label>
-                          <input
-                            className="create-lead-input"
-                            value={newLeadForm.secondaryRequirement}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
-                            placeholder="Any additional preferences"
                           />
                         </div>
 
@@ -3581,42 +3901,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             onChange={(e) => setNewLeadForm((p) => ({ ...p, timeSpent: e.target.value }))}
                             placeholder="e.g. 30"
                           />
-                        </div>
-
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Geo Location</label>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-                            <button
-                              type="button"
-                              className="calendar-shortcut-btn"
-                              onClick={() => {
-                                if (!navigator.geolocation) {
-                                  toast.error('Geolocation is not supported by this browser');
-                                  return;
-                                }
-                                navigator.geolocation.getCurrentPosition(
-                                  (pos) => {
-                                    setNewLeadForm((p) => ({
-                                      ...p,
-                                      latitude: pos.coords.latitude,
-                                      longitude: pos.coords.longitude,
-                                    }));
-                                    toast.success('Location captured');
-                                  },
-                                  () => toast.error('Unable to capture location')
-                                );
-                              }}
-                            >
-                              Capture
-                            </button>
-                            <input
-                              className="create-lead-input"
-                              value={newLeadForm.latitude && newLeadForm.longitude ? `${newLeadForm.latitude}, ${newLeadForm.longitude}` : ''}
-                              onChange={() => {}}
-                              placeholder="Latitude, Longitude"
-                              readOnly
-                            />
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -4366,7 +4650,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       const isNegotiation = a.code.includes('NEGOTIATION');
                       const isHotNegotiation = a.code.includes('NEGOTIATION_HOT') || a.targetStatusCode === 'NEGOTIATION_HOT';
                       const allowNegotiationAction = workspaceRole === 'SH' ? true : (!isNegotiation || isHotNegotiation);
-                      return a.tone !== 'danger' && !a.code.includes('REASSIGN') && allowNegotiationAction;
+                      return a.tone !== 'danger' && allowNegotiationAction;
                     }).map((action) => {
                       let icon = <ClipboardDocumentListIcon style={{ width: 18, height: 18 }} />;
                       let selClass = 'sel-default';
@@ -4472,9 +4756,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </option>
                         {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction, workspaceRole)] || [])
                           .filter((u) => {
-                            if (quickWorkflowAction?.code !== 'TC_REASSIGN') return true;
                             const currentAssigneeId = quickActionLead?.assignedToUserId || selectedLead?.assignedToUserId || null;
-                            return !currentAssigneeId || u.id !== currentAssigneeId;
+                            if (u.id === currentAssigneeId) return false;
+
+                            if (quickWorkflowAction?.code === 'TC_REASSIGN') {
+                              const leadLocationId = quickActionLead?.locationId || (quickActionLead?.interestedLocations?.[0]) || null;
+                              if (!leadLocationId) return true; // fallback if lead has no location
+                              return Array.isArray(u.locationIds) && u.locationIds.some(locId => String(locId) === String(leadLocationId));
+                            }
+                            return true;
                           })
                           .map((u) => (
                             <option key={u.id} value={u.id}>
@@ -4485,63 +4775,91 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     </div>
                   )}
 
-                  {quickWorkflowNeedsMissingLocationProject && (!quickLeadHasLocation || !quickLeadHasProject) && (
+                  {quickWorkflowNeedsMissingLocationProject && (
                     <div className="qa-drawer-ctx-block">
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Lead details required</div>
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Lead details {quickLeadHasLocation && quickLeadHasProject ? '✓' : ''}</div>
 
-                      {!quickLeadHasLocation && (
-                        <div style={{ marginBottom: 10 }}>
-                          <label className="qa-drawer-field-label">Location *</label>
-                          <select
-                            className="qa-drawer-field-select"
-                            value={quickMissingLocationId}
-                            onChange={(e) => {
-                              const selectedLocationId = e.target.value;
-                              setQuickMissingLocationId(selectedLocationId);
-                              setQuickMissingProjectIds((prev) => prev.filter((projectId) => {
-                                const project = projectOptions.find((item) => String(item.id) === String(projectId));
-                                const projectLocationId = project?.location_id || project?.locationId || '';
-                                return selectedLocationId ? String(projectLocationId) === String(selectedLocationId) : true;
-                              }));
-                            }}
-                            style={{ width: '100%' }}
-                          >
-                            <option value="">Select location...</option>
-                            {locationOptions.map((location) => (
-                              <option key={location.id} value={location.id}>
-                                {location.location_name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
-                      {!quickLeadHasProject && (
-                        <div>
-                          <label className="qa-drawer-field-label">Project *</label>
-                          <div className="qa-drawer-rchip-row">
-                            {quickMissingProjectOptions.map((project) => {
-                              const selected = quickMissingProjectIds.includes(project.id);
-                              return (
-                                <button
-                                  key={project.id}
-                                  type="button"
-                                  className={`qa-drawer-rchip ${selected ? 'sel' : ''}`}
-                                  onClick={() => {
-                                    setQuickMissingProjectIds((prev) => (
-                                      prev.includes(project.id)
-                                        ? prev.filter((id) => id !== project.id)
-                                        : [...prev, project.id]
-                                    ));
-                                  }}
-                                >
-                                  {project.project_name}
-                                </button>
-                              );
-                            })}
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        {/* Location Dropdown */}
+                        {!quickLeadHasLocation && (
+                          <div style={{ flex: 1, position: 'relative' }}>
+                            <label className="qa-drawer-field-label">Location *</label>
+                            <div
+                              className="qa-drawer-field-select"
+                              onClick={() => setQuickLocationDropdownOpen(p => !p)}
+                              style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 8px' }}
+                            >
+                              {!quickWorkflowForm.locationId && <span style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13 }}>Select location...</span>}
+                              {quickWorkflowForm.locationId && locationOptions.find(l => String(l.id) === String(quickWorkflowForm.locationId)) && (
+                                <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {locationOptions.find(l => String(l.id) === String(quickWorkflowForm.locationId))?.location_name}
+                                  <span onClick={(e) => { e.stopPropagation(); setQuickWorkflowForm(prev => ({ ...prev, locationId: '', projectIds: [] })); setQuickMissingLocationId(''); setQuickMissingProjectIds([]); }} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</span>
+                                </span>
+                              )}
+                            </div>
+                            {quickLocationDropdownOpen && (
+                              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 240, marginTop: 4 }}>
+                                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                                  <input type="text" placeholder="Search locations..." value={quickLocationSearch} onChange={(e) => setQuickLocationSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, outline: 'none', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)' }} />
+                                </div>
+                                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                                  {(quickLocationSearch.trim() ? locationOptions.filter(l => (l.location_name || '').toLowerCase().includes(quickLocationSearch.toLowerCase()) || (l.city || '').toLowerCase().includes(quickLocationSearch.toLowerCase())) : locationOptions).map((loc) => (
+                                    <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border-primary, #f1f5f9)', color: 'var(--text-primary, #0f172a)' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <input type="radio" checked={String(quickWorkflowForm.locationId) === String(loc.id)} onChange={() => { setQuickWorkflowForm(prev => ({ ...prev, locationId: String(loc.id), projectIds: [] })); setQuickMissingLocationId(String(loc.id)); setQuickMissingProjectIds([]); setQuickLocationDropdownOpen(false); setQuickLocationSearch(''); }} />
+                                      {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        )}
+
+                        {/* Project Dropdown */}
+                        {!quickLeadHasProject && (
+                          <div style={{ flex: 1, position: 'relative' }}>
+                            <label className="qa-drawer-field-label">Project * {quickWorkflowForm.projectIds?.length > 0 && `(${quickWorkflowForm.projectIds.length})`}</label>
+                            <div
+                              className="qa-drawer-field-select"
+                              onClick={() => setQuickProjectDropdownOpen(p => !p)}
+                              style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 8px' }}
+                            >
+                              {(quickWorkflowForm.projectIds || []).length === 0 && <span style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13 }}>Select projects...</span>}
+                              {(quickWorkflowForm.projectIds || []).map((projId, i) => {
+                                const projName = projectOptions.find(p => String(p.id) === String(projId))?.project_name;
+                                return projName ? (
+                                  <span key={i} style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    {projName}
+                                    <span onClick={(e) => { e.stopPropagation(); setQuickWorkflowForm(prev => ({ ...prev, projectIds: (prev.projectIds || []).filter((id) => String(id) !== String(projId)) })); setQuickMissingProjectIds(prev => (prev || []).filter((id) => String(id) !== String(projId))); }} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</span>
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                            {quickProjectDropdownOpen && (
+                              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 240, marginTop: 4 }}>
+                                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                                  <input type="text" placeholder="Search projects..." value={quickProjectSearch} onChange={(e) => setQuickProjectSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, outline: 'none', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)' }} />
+                                </div>
+                                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                                  {(quickProjectSearch.trim() ? quickMissingProjectOptions.filter(p => (p.project_name || '').toLowerCase().includes(quickProjectSearch.toLowerCase()) || (p.project_code || '').toLowerCase().includes(quickProjectSearch.toLowerCase())) : quickMissingProjectOptions).map((project) => (
+                                    <label key={project.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border-primary, #f1f5f9)', color: 'var(--text-primary, #0f172a)' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <input type="checkbox" checked={(quickWorkflowForm.projectIds || []).map(String).includes(String(project.id))} onChange={() => { setQuickWorkflowForm(prev => { const pIds = (prev.projectIds || []).map(String); const newIds = pIds.includes(String(project.id)) ? pIds.filter(id => id !== String(project.id)) : [...pIds, String(project.id)]; return { ...prev, projectIds: newIds }; }); setQuickMissingProjectIds(prev => { const pIds = (prev || []).map(String); return pIds.includes(String(project.id)) ? pIds.filter(id => id !== String(project.id)) : [...pIds, String(project.id)]; }); }} />
+                                      {project.project_name}{project.project_code ? ` (${project.project_code})` : ''}
+                                    </label>
+                                  ))}
+                                  {quickMissingProjectOptions.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No projects found</div>}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 

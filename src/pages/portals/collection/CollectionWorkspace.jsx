@@ -6,16 +6,7 @@ import { CollectionDashboard } from './CollectionDashboard';
 import { CollectionBookings } from './CollectionBookings';
 import { CollectionPayments } from './CollectionPayments';
 import { CollectionCustomerProfile } from './CollectionCustomerProfile';
-
-const collectionMenu = [
-  { group: 'Menu' },
-  { label: 'Dashboard', key: 'dashboard', icon: '📊', badge: null },
-  { label: 'My Leads', key: 'leads', icon: '👥', badgeColor: 'blue' },
-  { label: 'Bookings', key: 'bookings', icon: '📋', badgeColor: 'green' },
-  { group: 'Management' },
-  { label: 'Payments', key: 'payments', icon: '💳', badge: null },
-  { label: 'Customer Profiles', key: 'customers', icon: '👤', badge: null },
-];
+import { collectionMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const CollectionWorkspace = () => {
   const user = useSelector((state) => state.auth.user);

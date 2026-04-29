@@ -87,41 +87,54 @@ const FALLBACK_ACTIONS = {
  * Get role-specific actions from the workflow config
  */
 export const getActionsForRole = (actions = {}, roleCode) => {
-  const fromConfig = (actions[roleCode] || []).map((a) => {
-    if (['TC_LEAD_QUALIFIED', 'TC_SV_SCHEDULED', 'TC_RNR', 'SM_FOLLOW_UP', 'SM_SCHEDULE_REVISIT', 'SH_FOLLOW_UP'].includes(a.code) || a.targetStatusCode === 'NEW') {
-      return { ...a, needsFollowUp: true };
+  const roleActions = Array.isArray(actions)
+    ? actions
+    : (actions?.[roleCode] || actions?.[roleCode?.toLowerCase()] || []);
+
+  const fromConfig = roleActions.map((a) => {
+    const action = { ...a };
+
+    if (action.label === 'Scheduled Revisit' || action.label === 'SV Scheduled' || action.label === 'Site Visit Scheduled') {
+      action.label = 'Revisit';
     }
 
-    if (['SH_NEGOTIATION_HOT', 'SH_NEGOTIATION_WARM', 'SH_NEGOTIATION_COLD'].includes(a.code)) {
+    if (
+      ['TC_LEAD_QUALIFIED', 'TC_SV_SCHEDULED', 'TC_RNR', 'SM_FOLLOW_UP', 'SM_SCHEDULE_REVISIT', 'SH_FOLLOW_UP'].includes(action.code)
+      || action.targetStatusCode === 'NEW'
+    ) {
+      return { ...action, needsFollowUp: true };
+    }
+
+    if (['SH_NEGOTIATION_HOT', 'SH_NEGOTIATION_WARM', 'SH_NEGOTIATION_COLD'].includes(action.code)) {
       return {
-        ...a,
+        ...action,
         needsFollowUp: true,
         needsAssignee: false,
         targetStageCode: 'OPPORTUNITY',
       };
     }
 
-    if (a.code === 'SH_BOOKING') {
-      return { ...a, targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' };
+    if (action.code === 'SH_BOOKING') {
+      return { ...action, targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' };
     }
 
-    if (a.code === 'TC_SV_DONE') {
-      return { ...a, needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true };
+    if (action.code === 'TC_SV_DONE') {
+      return { ...action, needsAssignee: true, assigneeRole: 'SM', needsSvDetails: true };
     }
 
-    if (['TC_SPAM', 'TC_JUNK'].includes(a.code)) {
-      return { ...a, needsReason: true, reasonCategory: a.code === 'TC_SPAM' ? 'SPAM' : 'JUNK', needsFollowUp: false };
+    if (['TC_SPAM', 'TC_JUNK'].includes(action.code)) {
+      return { ...action, needsReason: true, reasonCategory: action.code === 'TC_SPAM' ? 'SPAM' : 'JUNK', needsFollowUp: false };
     }
 
-    if (a.code === 'TC_LOST') {
-      return { ...a, needsReason: true, reasonCategory: 'LOST', needsFollowUp: false };
+    if (action.code === 'TC_LOST') {
+      return { ...action, needsReason: true, reasonCategory: 'LOST', needsFollowUp: false };
     }
 
-    if (['SM_LOST', 'SH_LOST', 'COL_LOST'].includes(a.code)) {
-      return { ...a, needsReason: true, reasonCategory: 'COLD', needsFollowUp: false };
+    if (['SM_LOST', 'SH_LOST', 'COL_LOST'].includes(action.code)) {
+      return { ...action, needsReason: true, reasonCategory: 'COLD', needsFollowUp: false };
     }
 
-    return a;
+    return action;
   });
   
   const fallbacks = FALLBACK_ACTIONS[roleCode] || [];

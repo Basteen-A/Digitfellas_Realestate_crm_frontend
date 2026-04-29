@@ -27,14 +27,11 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     rating: '',
     interested_after_visit: null,
     // New fields matching incoming leads SV capture
+    customer_requirement: '',
     customer_type_id: '',
     motivation_type: '',
-    primary_requirement: '',
-    secondary_requirement: '',
     time_spent: '',
     sales_head_id: '',
-    geo_lat: '',
-    geo_long: '',
     action_code: '',
     next_follow_up_at: '',
     closure_reason_id: '',
@@ -43,9 +40,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   });
   const [projects, setProjects] = useState([]);
   const [leads, setLeads] = useState([]);
-  const [customerTypes, setCustomerTypes] = useState([]);
-  const [motivations, setMotivations] = useState([]);
   const [salesHeads, setSalesHeads] = useState([]);
+  const [customerTypeOptions, setCustomerTypeOptions] = useState([]);
+  const [motivationOptions, setMotivationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
   const [closureReasons, setClosureReasons] = useState([]);
   const [creating, setCreating] = useState(false);
@@ -187,10 +184,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
           return acc;
         }, []);
       setLeads(mergedLeads);
-      setCustomerTypes(ctResp.data || []);
-      setMotivations(motResp.data || []);
       setSalesHeads(shResp.data || []);
       setWorkflowConfig(wfResp?.data || null);
+      setCustomerTypeOptions(ctResp.data || []);
+      setMotivationOptions(motResp.data || []);
     } catch (err) {
       console.error('Failed to load options:', err);
     }
@@ -302,9 +299,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       if (!createForm.scheduled_date) { toast.error('Visit date is required'); return; }
       if (!createForm.customer_type_id) { toast.error('Customer Type is required'); return; }
       if (!createForm.motivation_type) { toast.error('Motivation is required'); return; }
-      if (!createForm.primary_requirement?.trim()) { toast.error('Primary Requirement is required'); return; }
+      if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
       if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
-      if (!createForm.geo_lat || !createForm.geo_long) { toast.error('Please capture geo-location'); return; }
     }
 
     if (selectedAction.needsAssignee && !createForm.sales_head_id) {
@@ -339,11 +335,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         nextFollowUpAt: createForm.next_follow_up_at ? new Date(createForm.next_follow_up_at).toISOString() : undefined,
         closureReasonId: createForm.closure_reason_id || undefined,
         reason: createForm.reason_note || undefined,
+        customerTypeId: createForm.customer_type_id || undefined,
         motivationType: createForm.motivation_type || undefined,
-        primaryRequirement: createForm.primary_requirement || undefined,
-        secondaryRequirement: createForm.secondary_requirement || undefined,
-        latitude: createForm.geo_lat ? Number(createForm.geo_lat) : undefined,
-        longitude: createForm.geo_long ? Number(createForm.geo_long) : undefined,
+        customerRequirement: createForm.customer_requirement || undefined,
         time_spent: createForm.time_spent ? Number(createForm.time_spent) : undefined,
         remarks: createForm.remarks || undefined,
         callStatus: createForm.call_status || undefined,
@@ -355,9 +349,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         scheduled_date: new Date().toISOString().split('T')[0],
         scheduled_time_slot: '', attended_by: '', remarks: '', feedback: '',
         rating: '', interested_after_visit: null,
-        customer_type_id: '', motivation_type: '', primary_requirement: '',
-        secondary_requirement: '', time_spent: '', sales_head_id: '',
-        geo_lat: '', geo_long: '',
+        customer_requirement: '', customer_type_id: '', motivation_type: '', time_spent: '', sales_head_id: '',
         action_code: '',
         next_follow_up_at: '', closure_reason_id: '', reason_note: '', call_status: '',
       });
@@ -697,31 +689,28 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   </div>
                 )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                     <div>
                       <label style={fieldLabelStyle}>Customer Type {svFieldsRequired ? '*' : ''}</label>
-                      <select value={createForm.customer_type_id} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                      <select value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
                         <option value="">Select...</option>
-                        {customerTypes.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                        {customerTypeOptions.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={fieldLabelStyle}>Motivation {svFieldsRequired ? '*' : ''}</label>
-                      <select value={createForm.motivation_type} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                      <select value={createForm.motivation_type || ''} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
                         <option value="">Select...</option>
-                        {motivations.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                        {motivationOptions.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
                       </select>
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Customer Requirement {svFieldsRequired ? '*' : ''}</label>
+                      <input value={createForm.customer_requirement} onChange={(e) => setCreateForm(p => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required={svFieldsRequired} />
                     </div>
                     <div>
                       <label style={fieldLabelStyle}>Time Spent (mins) {svFieldsRequired ? '*' : ''}</label>
                       <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required={svFieldsRequired} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={fieldLabelStyle}>Primary Requirement {svFieldsRequired ? '*' : ''}</label>
-                      <input value={createForm.primary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, primary_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required={svFieldsRequired} />
                     </div>
                     {selectedAction?.needsAssignee && (
                       <div>
@@ -732,30 +721,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         </select>
                       </div>
                     )}
-                  </div>
-
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <label style={{ ...fieldLabelStyle, marginBottom: 0 }}>Geo-Location {svFieldsRequired ? '*' : ''}</label>
-                      <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 10, padding: '4px 10px' }} onClick={() => {
-                        if (!navigator.geolocation) { toast.error('Geolocation not supported.'); return; }
-                        navigator.geolocation.getCurrentPosition(
-                          (pos) => { setCreateForm(p => ({ ...p, geo_lat: pos.coords.latitude, geo_long: pos.coords.longitude })); toast.success('Location captured!'); },
-                          () => toast.error('Unable to capture location.')
-                        );
-                      }}>
-                        <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
-                      </button>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                      <input type="number" step="any" placeholder="Latitude" value={createForm.geo_lat} onChange={(e) => setCreateForm(p => ({ ...p, geo_lat: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired} />
-                      <input type="number" step="any" placeholder="Longitude" value={createForm.geo_long} onChange={(e) => setCreateForm(p => ({ ...p, geo_long: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired} />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={fieldLabelStyle}>Secondary Requirement / Notes</label>
-                    <textarea value={createForm.secondary_requirement} onChange={(e) => setCreateForm(p => ({ ...p, secondary_requirement: e.target.value }))} rows={2} placeholder="Additional details..." style={fieldInputStyle} />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>

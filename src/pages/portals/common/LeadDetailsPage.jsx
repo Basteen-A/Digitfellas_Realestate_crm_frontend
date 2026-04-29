@@ -94,6 +94,21 @@ const toDateTimeLocalValue = (value) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+const toDayStart = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const isFollowUpMissedByDate = (value, referenceDate = new Date()) => {
+  const followUpDate = toDayStart(value);
+  if (!followUpDate) return false;
+  const referenceStart = new Date(referenceDate);
+  referenceStart.setHours(0, 0, 0, 0);
+  return followUpDate.getTime() <= referenceStart.getTime();
+};
+
 const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
   const date = new Date();
   date.setSeconds(0, 0);
@@ -110,6 +125,17 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
   date.setDate(date.getDate() + dayOffset);
   date.setHours(hour, minute, 0, 0);
   return toDateTimeLocalValue(date.toISOString());
+};
+
+const FOLLOW_UP_MINUTES_AHEAD = 5;
+
+const getFollowUpMinimumTime = (minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => new Date(Date.now() + (minutesAhead * 60 * 1000));
+
+const isFollowUpAtLeastMinutesAhead = (value, minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getTime() > getFollowUpMinimumTime(minutesAhead).getTime();
 };
 
 const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
@@ -316,6 +342,10 @@ const LeadDetailsPage = () => {
   const [hasPendingMissedFollowupsForMe, setHasPendingMissedFollowupsForMe] = useState(false);
   const [quickMissingLocationId, setQuickMissingLocationId] = useState('');
   const [quickMissingProjectIds, setQuickMissingProjectIds] = useState([]);
+  const [quickLocationSearch, setQuickLocationSearch] = useState('');
+  const [quickProjectSearch, setQuickProjectSearch] = useState('');
+  const [quickLocationDropdownOpen, setQuickLocationDropdownOpen] = useState(false);
+  const [quickProjectDropdownOpen, setQuickProjectDropdownOpen] = useState(false);
   const [customerProfileForm, setCustomerProfileForm] = useState({
     date_of_birth: '', marital_status: '', purchase_type: '',
     occupation: '', current_post: '',
@@ -424,9 +454,7 @@ const LeadDetailsPage = () => {
 
   const isCurrentLeadMissedFollowup = useMemo(() => {
     if (!lead?.nextFollowUpAt || lead?.isClosed) return false;
-    const followUpAt = new Date(lead.nextFollowUpAt);
-    if (Number.isNaN(followUpAt.getTime())) return false;
-    return followUpAt < new Date();
+    return isFollowUpMissedByDate(lead.nextFollowUpAt);
   }, [lead?.nextFollowUpAt, lead?.isClosed]);
 
   const isTcMissedFirstBlocked = useMemo(() => {
@@ -460,12 +488,11 @@ const LeadDetailsPage = () => {
 
       if (roleCode === 'TC') {
         const assignedLeads = Array.isArray(tcAssignedResp?.data) ? tcAssignedResp.data : [];
-        const now = new Date();
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
         const hasMissed = assignedLeads.some((item) => {
           if (!item?.nextFollowUpAt || item?.isClosed) return false;
-          const followUpAt = new Date(item.nextFollowUpAt);
-          if (Number.isNaN(followUpAt.getTime())) return false;
-          return followUpAt < now;
+          return isFollowUpMissedByDate(item.nextFollowUpAt, todayStart);
         });
         setHasPendingMissedFollowupsForMe(hasMissed);
       } else {
@@ -536,7 +563,8 @@ const LeadDetailsPage = () => {
 
     if (action.needsReason && action.reasonCategory) {
       try {
-        const resp = await leadWorkflowApi.getClosureReasons(action.reasonCategory);
+        const category = action.reasonCategory === 'LOST' ? '' : action.reasonCategory;
+        const resp = await leadWorkflowApi.getClosureReasons(category);
         setReasons(resp.data?.rows || resp.data || []);
       } catch {
         setReasons([]);
@@ -556,6 +584,11 @@ const LeadDetailsPage = () => {
     setQuickRemarkAnsNonAns(null);
     setQuickMissingLocationId('');
     setQuickMissingProjectIds([]);
+    setQuickLocationSearch('');
+    setQuickProjectSearch('');
+    setQuickLocationDropdownOpen(false);
+    setQuickProjectDropdownOpen(false);
+    setQuickActionActivities([]);
   }, []);
 
   const loadStatusRemarks = useCallback(async (action, setRemarks, setAnsNonAns) => {
@@ -727,8 +760,12 @@ const LeadDetailsPage = () => {
     setQuickRemarkAnsNonAns(null);
 
     // Pre-fill missing location/project selectors from current lead data
-    setQuickMissingLocationId(lead?.interestedLocations?.[0] || '');
-    setQuickMissingProjectIds(lead?.interestedProjects?.length ? lead.interestedProjects : (lead?.projectId ? [lead.projectId] : []));
+    setQuickMissingLocationId(lead?.interestedLocations?.[0] ? String(lead.interestedLocations[0]) : '');
+    setQuickMissingProjectIds(
+      lead?.interestedProjects?.length
+        ? lead.interestedProjects.map((id) => String(id))
+        : (lead?.projectId ? [String(lead.projectId)] : [])
+    );
 
     // For TC_REASSIGN, load TCs as assignable users
     if (code === 'TC_REASSIGN') {
@@ -760,6 +797,15 @@ const LeadDetailsPage = () => {
       return;
     }
 
+    const leadHasLocation = Boolean(
+      lead?.interestedLocations?.length || lead?.locationId
+    );
+    const leadHasProject = Boolean(
+      lead?.interestedProjects?.length || lead?.projectId
+    );
+    const isTerminalAction = ['TC_JUNK', 'TC_SPAM', 'TC_LOST', 'SM_LOST', 'COL_CANCELLED'].includes(quickSelectedAction.code);
+    const isRnrAction = quickSelectedAction?.targetStatusCode === 'RNR' || quickSelectedAction?.code?.includes('RNR');
+
     if (isRemarkMandatoryForAction(quickSelectedAction)) {
       const hasRemark = Boolean((quickActionForm.statusRemarkText || '').trim() || (quickActionForm.note || '').trim());
       if (!hasRemark) {
@@ -768,24 +814,23 @@ const LeadDetailsPage = () => {
       }
     }
 
-    // Check: lead missing project/location — require user to fill them
-    const leadHasLocation = Boolean(
-      lead?.interestedLocations?.length || lead?.location || quickMissingLocationId
-    );
-    const leadHasProject = Boolean(
-      lead?.interestedProjects?.length || lead?.projectId || lead?.project || quickMissingProjectIds.length
-    );
-    // For non-terminal actions, require location and project
-    const isTerminalAction = ['TC_JUNK', 'TC_SPAM', 'TC_LOST', 'SM_LOST', 'COL_CANCELLED'].includes(quickSelectedAction.code);
-    if (!isTerminalAction && roleCode === 'TC') {
-      if (!leadHasLocation) {
+    if (!isTerminalAction && !isRnrAction && roleCode === 'TC') {
+      const hasLocationForSubmit = leadHasLocation || Boolean(quickMissingLocationId);
+      const hasProjectForSubmit = leadHasProject || quickMissingProjectIds.length > 0;
+      
+      if (!hasLocationForSubmit) {
         toast.error('Please select a location for this lead before performing this action.');
         return;
       }
-      if (!leadHasProject) {
+      if (!hasProjectForSubmit) {
         toast.error('Please select a project for this lead before performing this action.');
         return;
       }
+    }
+
+    if (quickActionForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(quickActionForm.nextFollowUpAt)) {
+      toast.error('Follow-up time must be greater than current time');
+      return;
     }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -801,16 +846,30 @@ const LeadDetailsPage = () => {
       callResult: undefined,
       statusRemarkText: quickActionForm.statusRemarkText.trim() || undefined,
       statusRemarkResponseType: quickRemarkAnsNonAns || quickActionForm.callResult || undefined,
+      nextFollowUpAt: quickActionForm.nextFollowUpAt ? new Date(quickActionForm.nextFollowUpAt).toISOString() : undefined,
+      assignToUserId: quickActionForm.assignToUserId || undefined,
+      closureReasonId: quickActionForm.closureReasonId || undefined,
+      reason: quickActionForm.reason.trim() || undefined,
+      svDate: quickSelectedAction.code !== 'TC_SV_DONE' ? (quickActionForm.svDate || undefined) : undefined,
+      svProjectId: quickActionForm.svProjectId || undefined,
+      budgetMin: (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMin !== '') ? Number(quickActionForm.budgetMin) : undefined,
+      budgetMax: (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMax !== '') ? Number(quickActionForm.budgetMax) : undefined,
+      motivationType: quickActionForm.motivationType || undefined,
+      primaryRequirement: quickActionForm.primaryRequirement || undefined,
+      secondaryRequirement: quickActionForm.secondaryRequirement || undefined,
+      latitude: quickActionForm.latitude ? Number(quickActionForm.latitude) : undefined,
+      longitude: quickActionForm.longitude ? Number(quickActionForm.longitude) : undefined,
+      time_spent: quickActionForm.timeSpent ? Number(quickActionForm.timeSpent) : undefined,
     };
 
-    // Attach missing location/project if user filled them in the quick action modal
-    if (quickMissingLocationId && !lead?.interestedLocations?.length) {
-      payload.locationId = quickMissingLocationId;
-      payload.interestedLocations = [quickMissingLocationId];
+    if (quickMissingLocationId) {
+      payload.location_id = quickMissingLocationId;
+      payload.location_ids = [quickMissingLocationId];
     }
-    if (quickMissingProjectIds.length && !lead?.interestedProjects?.length && !lead?.projectId) {
-      payload.projectId = quickMissingProjectIds[0];
-      payload.projectIds = quickMissingProjectIds;
+
+    if (quickMissingProjectIds.length > 0) {
+      payload.project_id = quickMissingProjectIds[0];
+      payload.project_ids = quickMissingProjectIds;
     }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -848,29 +907,10 @@ const LeadDetailsPage = () => {
         toast.error('Follow-up date & time is required');
         return;
       }
-      payload.nextFollowUpAt = new Date(quickActionForm.nextFollowUpAt).toISOString();
-    }
-
-    if (quickSelectedAction.needsAssignee || quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
-      if (!quickActionForm.assignToUserId) {
-        toast.error(getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Please select Sales Head negotiator' : 'Please select assignee');
+      if (!isFollowUpAtLeastMinutesAhead(quickActionForm.nextFollowUpAt)) {
+        toast.error('Follow-up time must be greater than current time');
         return;
       }
-      payload.assignToUserId = quickActionForm.assignToUserId;
-    }
-
-    if (quickSelectedAction.needsReason) {
-      if (!quickActionForm.closureReasonId && !quickActionForm.reason.trim()) {
-        toast.error('Reason is required for this action');
-        return;
-      }
-      // Ensure closure reason for Lost/Cold
-      if (quickSelectedAction.code === 'TC_LOST' && !quickActionForm.closureReasonId) {
-        toast.error('Please select a closure reason');
-        return;
-      }
-      payload.closureReasonId = quickActionForm.closureReasonId || undefined;
-      payload.reason = quickActionForm.reason.trim() || undefined;
     }
 
     if (quickSelectedAction.needsSvDetails || quickSelectedAction.code === 'TC_SV_DONE') {
@@ -900,19 +940,6 @@ const LeadDetailsPage = () => {
           return;
         }
       }
-      payload.assignToUserId = quickActionForm.assignToUserId || payload.assignToUserId;
-      if (quickActionForm.svDate) {
-        payload.svDate = new Date(quickActionForm.svDate).toISOString();
-      }
-      payload.svProjectId = quickActionForm.svProjectId;
-      payload.budgetMin = quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMin !== '' ? Number(quickActionForm.budgetMin) : undefined;
-      payload.budgetMax = quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMax !== '' ? Number(quickActionForm.budgetMax) : undefined;
-      payload.motivationType = quickActionForm.motivationType || undefined;
-      payload.primaryRequirement = quickActionForm.primaryRequirement || undefined;
-      payload.secondaryRequirement = quickActionForm.secondaryRequirement || undefined;
-      payload.latitude = quickActionForm.latitude ? Number(quickActionForm.latitude) : undefined;
-      payload.longitude = quickActionForm.longitude ? Number(quickActionForm.longitude) : undefined;
-      payload.time_spent = quickActionForm.timeSpent ? Number(quickActionForm.timeSpent) : undefined;
     }
 
     if (['TC_SPAM', 'TC_JUNK'].includes(quickSelectedAction.code) && !quickActionForm.reason.trim() && !quickActionForm.note.trim()) {
@@ -930,6 +957,12 @@ const LeadDetailsPage = () => {
         await leadWorkflowApi.assignLead(lead.id, quickActionForm.assignToUserId, quickActionForm.note.trim() || 'Telecaller manual reassignment');
         toast.success('Lead reassigned successfully');
       } else {
+        if (quickSelectedAction.needsAssignee || quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING' || quickSelectedAction.code === 'TC_SV_DONE') {
+          if (!quickActionForm.assignToUserId) {
+            toast.error(getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Please select Sales Head negotiator' : 'Please select assignee');
+            return;
+          }
+        }
         await leadWorkflowApi.transitionLead(lead.id, quickSelectedAction.code, payload);
         toast.success(`${quickSelectedAction.label} completed`);
       }
@@ -1768,6 +1801,124 @@ const LeadDetailsPage = () => {
                   </div>
 
                 </>
+              )}
+
+              {/* ── Contextual: Missing Lead Details (Location/Project) ── */}
+              {quickSelectedAction && (
+                (() => {
+                  const hasLoc = !!(lead?.interestedLocations?.length || lead?.locationId);
+                  const hasProj = !!(lead?.interestedProjects?.length || lead?.projectId);
+                  const isTerminal = ['TC_JUNK', 'TC_SPAM', 'TC_LOST', 'SM_LOST', 'COL_CANCELLED'].includes(quickSelectedAction.code);
+                  const isRnrAction = quickSelectedAction?.targetStatusCode === 'RNR' || quickSelectedAction?.code?.includes('RNR');
+                  const needsLocAndProj = !isTerminal && !isRnrAction && roleCode === 'TC';
+
+                  if (needsLocAndProj) {
+                    const filteredLocations = !quickLocationSearch.trim() ? locationOptions :
+                      locationOptions.filter(l => (l.location_name || '').toLowerCase().includes(quickLocationSearch.toLowerCase()) || (l.city || '').toLowerCase().includes(quickLocationSearch.toLowerCase()));
+                    
+                    const filteredProjects = !quickProjectSearch.trim() ? (!quickMissingLocationId
+                      ? projectOptions
+                      : projectOptions.filter(p => {
+                          const pLocId = p.location_id || p.locationId || '';
+                          return String(pLocId) === String(quickMissingLocationId);
+                        }))
+                      : projectOptions.filter(p => {
+                          const matchesSearch = (p.project_name || '').toLowerCase().includes(quickProjectSearch.toLowerCase()) || (p.project_code || '').toLowerCase().includes(quickProjectSearch.toLowerCase());
+                          const matchesLocation = !quickMissingLocationId || String(p.location_id || p.locationId) === String(quickMissingLocationId);
+                          return matchesSearch && matchesLocation;
+                        });
+
+                    const selectedLocName = locationOptions.find(l => String(l.id) === String(quickMissingLocationId))?.location_name || '';
+                      const selectedProjNames = quickMissingProjectIds.map(pid => projectOptions.find(p => String(p.id) === String(pid))?.project_name).filter(Boolean);
+
+                    return (
+                      <div className="qa-drawer-ctx-block" style={{ border: '1px solid #fee2e2', background: '#fff1f1', margin: '0 20px 15px', padding: '15px', borderRadius: '12px' }}>
+                        <div className="qa-drawer-section" style={{ color: '#991b1b', display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 10px', margin: 0, fontSize: 13, fontWeight: 700 }}>
+                          <ExclamationTriangleIcon style={{ width: 16, height: 16 }} /> Lead Details {hasLoc && hasProj ? '✓' : ''}
+                        </div>
+
+                        {/* Location Dropdown */}
+                        {!hasLoc && (
+                          <div style={{ marginBottom: 12, position: 'relative' }}>
+                            <label className="qa-drawer-field-label" style={{ color: '#7f1d1d' }}>Primary Location *</label>
+                            <div
+                              className="qa-drawer-field-select"
+                              onClick={() => setQuickLocationDropdownOpen(p => !p)}
+                              style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 8px', borderColor: '#fca5a5' }}
+                            >
+                              {!selectedLocName && <span style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13 }}>Select location...</span>}
+                              {selectedLocName && (
+                                <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {selectedLocName}
+                                  <span onClick={(e) => { e.stopPropagation(); setQuickMissingLocationId(''); setQuickMissingProjectIds([]); }} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</span>
+                                </span>
+                              )}
+                            </div>
+                            {quickLocationDropdownOpen && (
+                              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 240, marginTop: 4 }}>
+                                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                                  <input type="text" placeholder="Search locations..." value={quickLocationSearch} onChange={(e) => setQuickLocationSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, outline: 'none', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)' }} />
+                                </div>
+                                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                                  {filteredLocations.map((loc) => (
+                                    <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border-primary, #f1f5f9)', color: 'var(--text-primary, #0f172a)' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <input type="radio" checked={String(quickMissingLocationId) === String(loc.id)} onChange={() => { setQuickMissingLocationId(String(loc.id)); setQuickMissingProjectIds([]); setQuickLocationDropdownOpen(false); setQuickLocationSearch(''); }} />
+                                      {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
+                                    </label>
+                                  ))}
+                                  {filteredLocations.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No locations found</div>}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Project Dropdown */}
+                        {!hasProj && (
+                          <div style={{ position: 'relative' }}>
+                            <label className="qa-drawer-field-label" style={{ color: '#7f1d1d' }}>Interested Project * {quickMissingProjectIds.length > 0 && `(${quickMissingProjectIds.length})`}</label>
+                            <div
+                              className="qa-drawer-field-select"
+                              onClick={() => setQuickProjectDropdownOpen(p => !p)}
+                              style={{ cursor: 'pointer', minHeight: 38, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 8px', borderColor: '#fca5a5' }}
+                            >
+                              {selectedProjNames.length === 0 && <span style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13 }}>Select projects...</span>}
+                              {selectedProjNames.map((name, i) => (
+                                <span key={i} style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {name}
+                                  <span onClick={(e) => { e.stopPropagation(); setQuickMissingProjectIds(prev => prev.filter((_, idx) => idx !== i)); }} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</span>
+                                </span>
+                              ))}
+                            </div>
+                            {quickProjectDropdownOpen && (
+                              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card, #fff)', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 240, marginTop: 4 }}>
+                                <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                                  <input type="text" placeholder="Search projects..." value={quickProjectSearch} onChange={(e) => setQuickProjectSearch(e.target.value)} onClick={(e) => e.stopPropagation()} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 6, fontSize: 12, outline: 'none', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #0f172a)' }} />
+                                </div>
+                                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                                  {filteredProjects.map((proj) => (
+                                    <label key={proj.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border-primary, #f1f5f9)', color: 'var(--text-primary, #0f172a)' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <input type="checkbox" checked={quickMissingProjectIds.map(String).includes(String(proj.id))} onChange={() => { setQuickMissingProjectIds(prev => prev.map(String).includes(String(proj.id)) ? prev.filter((id) => String(id) !== String(proj.id)) : [...prev.map(String), String(proj.id)]); }} />
+                                      {proj.project_name}{proj.project_code ? ` (${proj.project_code})` : ''}
+                                    </label>
+                                  ))}
+                                  {filteredProjects.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No projects found</div>}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
               )}
 
               {/* ── Dynamic Form: Shows only after selecting a status ── */}

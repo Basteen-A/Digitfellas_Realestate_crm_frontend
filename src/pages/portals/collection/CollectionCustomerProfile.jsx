@@ -3,6 +3,10 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  UserIcon, ArrowPathIcon, PhoneIcon, EnvelopeIcon,
+  PencilSquareIcon, DocumentCheckIcon, ClipboardDocumentListIcon,
+} from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
 const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
@@ -84,15 +88,15 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
     <div>
       <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
-          <h1>👤 Customer Profiles</h1>
+          <h1><UserIcon style={{ width: 22, height: 22, display: 'inline', verticalAlign: 'text-bottom', marginRight: 8 }} />Customer Profiles</h1>
           <p className="hidden sm:block">View and manage customer details, KYC, and booking history</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="col-empty"><div className="col-empty-icon">⏳</div><div className="col-empty-title">Loading customers...</div></div>
+        <div className="col-empty"><div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">Loading customers...</div></div>
       ) : customers.length === 0 ? (
-        <div className="col-section"><div className="col-empty"><div className="col-empty-icon">👤</div><div className="col-empty-title">No customers yet</div><div className="col-empty-desc">Customers are auto-created when a booking is approved</div></div></div>
+        <div className="col-section"><div className="col-empty"><div className="col-empty-icon"><UserIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">No customers yet</div><div className="col-empty-desc">Customers are auto-created when a booking is approved</div></div></div>
       ) : (
         <>
           <div style={{ marginBottom: 16 }}>
@@ -106,7 +110,7 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                   {filtered.map(c => (
                     <tr key={c.id} className="is-clickable" onClick={() => setSelectedId(c.id)}>
                       <td style={{ fontWeight: 600 }}>{c.first_name} {c.last_name || ''}</td>
-                      <td>📞 {c.phone}</td>
+                      <td>{c.phone}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{c.email || '-'}</td>
                       <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{c.bookings_count || 0}</span></td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(c.total_booking_value)}</td>
@@ -126,14 +130,14 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
         <div className="col-modal-overlay" onClick={() => { setSelectedId(null); setCustomer(null); }}>
           <div className="col-modal col-modal-lg" onClick={e => e.stopPropagation()}>
             {detailLoading ? (
-              <div className="col-modal-body"><div className="col-empty"><div className="col-empty-icon">⏳</div></div></div>
+              <div className="col-modal-body"><div className="col-empty"><div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div></div></div>
             ) : (
               <>
                 <div className="col-profile-header">
                   <div className="col-profile-avatar">{initials}</div>
                   <div className="col-profile-info">
                     <h2>{customer.first_name} {customer.last_name || ''}</h2>
-                    <p>📞 {customer.phone} {customer.email ? `· ✉️ ${customer.email}` : ''}</p>
+                    <p>{customer.phone}{customer.email ? ` · ${customer.email}` : ''}</p>
                   </div>
                   <button className="col-modal-close" onClick={() => { setSelectedId(null); setCustomer(null); }} style={{ marginLeft: 'auto' }}>×</button>
                 </div>
@@ -181,13 +185,13 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                       </div>
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
                         <button className="crm-btn crm-btn-ghost" onClick={() => setEditMode(false)}>Cancel</button>
-                        <button className="crm-btn crm-btn-primary" onClick={handleSave}>💾 Save Profile</button>
+                        <button className="crm-btn crm-btn-primary" onClick={handleSave}><DocumentCheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Save Profile</button>
                       </div>
                     </>
                   ) : (
                     <>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}>✏️ Edit Profile</button>
+                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Profile</button>
                       </div>
                       <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>Personal Details</h3>
                       <div className="col-profile-info-grid">
@@ -197,7 +201,7 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                       </div>
 
                       {/* Bookings for this customer */}
-                      <h3 style={{ fontSize: 14, fontWeight: 700, margin: '24px 0 12px', color: 'var(--text-primary)' }}>📋 Bookings ({(customer.bookings || []).length})</h3>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, margin: '24px 0 12px', color: 'var(--text-primary)' }}><ClipboardDocumentListIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Bookings ({(customer.bookings || []).length})</h3>
                       {(customer.bookings || []).length === 0 ? (
                         <div className="col-empty" style={{ padding: 16 }}><div className="col-empty-desc">No bookings linked</div></div>
                       ) : (

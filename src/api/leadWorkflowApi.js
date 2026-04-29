@@ -73,7 +73,10 @@ const leadWorkflowApi = {
    * PATCH /leads/:id/transition
    */
   transitionLead: async (leadId, actionCode, payload = {}) => {
-    const { data } = await api.patch(`/leads/${leadId}/transition`, { actionCode, ...payload });
+    const body = { actionCode, ...payload };
+    // eslint-disable-next-line no-console
+    console.warn('[API transitionLead] Sending body:', JSON.stringify(body, null, 2));
+    const { data } = await api.patch(`/leads/${leadId}/transition`, body);
     return data;
   },
 
