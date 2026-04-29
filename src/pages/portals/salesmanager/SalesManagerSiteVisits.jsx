@@ -7,7 +7,6 @@ import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
-import { MapPinIcon } from '@heroicons/react/24/outline';
 
 const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);

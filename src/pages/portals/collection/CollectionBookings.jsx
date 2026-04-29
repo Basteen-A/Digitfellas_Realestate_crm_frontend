@@ -6,7 +6,7 @@ import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   ClipboardDocumentListIcon, PencilSquareIcon, CreditCardIcon, UserIcon,
-  ArrowPathIcon, CheckCircleIcon, ClockIcon, ChartBarIcon,
+  ArrowPathIcon, CheckCircleIcon, ChartBarIcon,
   WrenchScrewdriverIcon, DocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { clearAuthState, login } from '../../redux/slices/authSlice';
 import './Login.css';
 
@@ -15,6 +16,7 @@ const Login = () => {
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,14 +58,25 @@ const Login = () => {
         <label className="auth-card__label" htmlFor="login-password">
           Password
         </label>
-        <input
-          id="login-password"
-          type="password"
-          className="auth-card__input"
-          value={form.password}
-          onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-          required
-        />
+        <div className="auth-card__password-wrap">
+          <input
+            id="login-password"
+            type={showPassword ? 'text' : 'password'}
+            className="auth-card__input auth-card__input--password"
+            value={form.password}
+            onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+            required
+          />
+          <button
+            type="button"
+            className="auth-card__password-toggle"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-pressed={showPassword}
+          >
+            {showPassword ? <EyeSlashIcon style={{ width: 18, height: 18 }} /> : <EyeIcon style={{ width: 18, height: 18 }} />}
+          </button>
+        </div>
 
         {error && <p className="auth-card__error">{error}</p>}
 

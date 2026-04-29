@@ -52,6 +52,32 @@
   margin-bottom: 8px;
 }
 
+.auth-card__password-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.auth-card__input--password {
+  width: 100%;
+  padding-right: 42px;
+  margin-bottom: 0;
+}
+
+.auth-card__password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 .auth-card__submit {
   margin-top: 8px;
   border: 0;

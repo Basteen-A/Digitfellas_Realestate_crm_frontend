@@ -4,7 +4,7 @@ import bookingApi from '../../../api/bookingApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
-  UserIcon, ArrowPathIcon, PhoneIcon, EnvelopeIcon,
+  UserIcon, ArrowPathIcon,
   PencilSquareIcon, DocumentCheckIcon, ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
