@@ -345,7 +345,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
       ) : (
         <div style={{ border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 12, overflow: 'hidden' }}>
           {/* Table Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1.2fr 0.8fr 40px', padding: '10px 16px', background: 'var(--bg-primary, #f8fafc)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)' }}>
+          <div className="sm-incoming-grid hide-mobile" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1.2fr 0.8fr 40px', padding: '10px 16px', background: 'var(--bg-primary, #f8fafc)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)' }}>
             <span>Lead</span><span>Lead #</span><span>Project</span><span>From (TC)</span><span>Handed Off</span><span>Status</span><span></span>
           </div>
 
@@ -498,7 +498,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
 
                       <div className="qa-drawer-section">Site Visit Details (All * fields are mandatory)</div>
                       <div style={{ padding: '0 20px 10px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                           <div>
                             <label className="qa-drawer-field-label">SV Date *</label>
                             <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.svDate || ''} onChange={(e) => updateAcceptForm(handoff.id, { svDate: e.target.value })} />
@@ -571,7 +571,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
 
             return (
               <div key={handoff.id} style={{ borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
-                <div onClick={() => toggleExpand(handoff.id)} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1.2fr 0.8fr 40px', padding: '12px 16px', cursor: 'pointer', background: isExpanded ? 'var(--bg-card)' : 'transparent', transition: 'background 0.15s', alignItems: 'center', fontSize: 13 }}>
+                <div className="sm-incoming-grid" onClick={() => toggleExpand(handoff.id)} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1.2fr 0.8fr 40px', padding: '12px 16px', cursor: 'pointer', background: isExpanded ? 'var(--bg-card)' : 'transparent', transition: 'background 0.15s', alignItems: 'center', fontSize: 13 }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{handoff.leadName || 'Unnamed'}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{handoff.leadPhone || '—'}</div>

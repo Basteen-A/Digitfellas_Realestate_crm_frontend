@@ -881,3 +881,440 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
 .s-badge-orange { background: var(--accent-orange-bg); color: var(--accent-orange); }
 .s-badge-purple { background: var(--accent-purple-bg); color: var(--accent-purple); }
 .s-badge-green { background: var(--accent-green-bg); color: var(--accent-green); }
+
+/* ============================================================
+   MOBILE RESPONSIVE — PropCRM Design System
+   SM & SH portal pages all use these classes
+   ============================================================ */
+
+/* ── 768px: Tablet ── */
+@media (max-width: 768px) {
+  /* Stats grid */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-card-value {
+    font-size: 20px;
+  }
+
+  .stat-card-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  /* Page header: stack */
+  .page-header {
+    flex-direction: column !important;
+    gap: 10px;
+    align-items: flex-start !important;
+    margin-bottom: 16px;
+  }
+
+  .page-header h1 {
+    font-size: 18px !important;
+  }
+
+  .page-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* CRM Grid: single column */
+  .crm-grid-2,
+  .crm-grid-3,
+  .crm-grid-2-1 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .crm-grid {
+    gap: 14px;
+  }
+
+  /* Cards */
+  .crm-card-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .crm-card-title {
+    font-size: 13px;
+  }
+
+  .crm-card-body {
+    padding: 12px 14px;
+  }
+
+  /* Handoff banner */
+  .handoff-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .handoff-banner-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .handoff-banner-title {
+    font-size: 13px;
+  }
+
+  /* Filter bar */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .filter-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+  }
+
+  .filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  /* CRM Table */
+  .crm-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .crm-table thead th {
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+
+  .crm-table tbody td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  /* Modal: full-width */
+  .crm-modal-overlay {
+    padding: 12px;
+  }
+
+  .crm-modal {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .crm-modal-header {
+    padding: 14px 16px;
+  }
+
+  .crm-modal-body {
+    padding: 16px;
+  }
+
+  .crm-modal-footer {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+
+  /* Follow-up items */
+  .followup-item {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .followup-time-block {
+    min-width: 50px;
+  }
+
+  .followup-name {
+    font-size: 12px;
+  }
+
+  .followup-note {
+    font-size: 11px;
+  }
+
+  /* Mini bar chart */
+  .mini-bars {
+    height: 120px;
+    gap: 6px;
+  }
+
+  .mini-bar-val {
+    font-size: 11px;
+  }
+
+  .mini-bar-lbl {
+    font-size: 9px;
+  }
+
+  /* Approval cards */
+  .approval-card {
+    padding: 14px;
+  }
+
+  .approval-header {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .approval-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .approval-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Kanban: horizontal scroll */
+  .kanban-col {
+    min-width: 260px;
+    max-width: 260px;
+  }
+
+  /* Incoming leads grid rows → card layout */
+  .incoming-leads-page [style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+
+  /* SM Site Visits inline grids */
+  .incoming-leads-page .qa-drawer-body [style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── 640px: Large phones ── */
+@media (max-width: 640px) {
+  .stats-grid {
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card-value {
+    font-size: 18px;
+  }
+
+  .stat-card-label {
+    font-size: 11px;
+  }
+
+  .stat-card-change {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  /* Buttons compact */
+  .crm-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .crm-btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  /* Form inputs: prevent iOS zoom */
+  .crm-form-input,
+  .crm-form-select,
+  textarea.crm-form-input {
+    font-size: 16px;
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+
+  .filter-select {
+    font-size: 16px;
+    padding: 8px 12px;
+    min-height: 40px;
+  }
+
+  /* Kanban narrower */
+  .kanban-col {
+    min-width: 240px;
+    max-width: 240px;
+  }
+
+  .kanban-card {
+    padding: 10px;
+  }
+
+  .kanban-card-name {
+    font-size: 12px;
+  }
+
+  /* Empty state compact */
+  .empty-state {
+    padding: 32px 16px;
+  }
+
+  .empty-state .empty-icon {
+    font-size: 36px;
+  }
+
+  .empty-state .empty-title {
+    font-size: 14px;
+  }
+
+  .empty-state .empty-desc {
+    font-size: 12px;
+  }
+
+  /* Approval grid single col */
+  .approval-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 480px: Small phones ── */
+@media (max-width: 480px) {
+  .stats-grid {
+    gap: 6px;
+  }
+
+  .stat-card {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .stat-card-value {
+    font-size: 16px;
+  }
+
+  .stat-card-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+
+  .page-header h1 {
+    font-size: 16px !important;
+  }
+
+  .crm-card {
+    border-radius: 10px;
+  }
+
+  .crm-card-header {
+    padding: 10px 12px;
+  }
+
+  .crm-card-body {
+    padding: 10px 12px;
+  }
+
+  .crm-modal-overlay {
+    padding: 6px;
+  }
+
+  .crm-modal {
+    border-radius: 10px;
+    max-height: calc(100vh - 12px);
+  }
+
+  .crm-modal-body {
+    padding: 12px;
+  }
+
+  .followup-item {
+    padding: 8px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .followup-time-block {
+    text-align: left;
+    min-width: auto;
+  }
+
+  /* Handoff banner even more compact */
+  .handoff-banner {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .handoff-banner-title {
+    font-size: 12px;
+  }
+
+  .handoff-banner-desc {
+    font-size: 11px;
+  }
+}
+
+/* ============================================================
+   SM/SH PORTAL — Inline Grid Mobile Overrides
+   ============================================================ */
+
+/* SM Incoming leads: 7-col grid → stacked card on mobile */
+@media (max-width: 768px) {
+  .sm-incoming-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px 12px !important;
+    padding: 10px 14px !important;
+    font-size: 12px !important;
+  }
+
+  .sm-incoming-grid > span:last-child {
+    grid-column: 1 / -1;
+    text-align: right;
+  }
+
+  .sm-sv-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sm-incoming-grid {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* SH Team Leads: sidebar + content layout → stacked on mobile */
+@media (max-width: 768px) {
+  .sh-team-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sh-team-layout > .crm-card[style*="sticky"] {
+    position: static !important;
+  }
+
+  .sh-visit-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}

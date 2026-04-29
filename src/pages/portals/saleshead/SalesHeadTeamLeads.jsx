@@ -107,7 +107,7 @@ const SalesHeadTeamLeads = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedSM ? '300px 1fr' : '1fr', gap: 16, alignItems: 'start' }}>
+      <div className="sh-team-layout" style={{ display: 'grid', gridTemplateColumns: selectedSM ? '300px 1fr' : '1fr', gap: 16, alignItems: 'start' }}>
         {/* SM List Panel */}
         <div className="crm-card" style={{ position: 'sticky', top: 16 }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-primary)', fontWeight: 700, fontSize: 14 }}>
@@ -382,7 +382,7 @@ const SalesHeadTeamLeads = () => {
               <button className="col-modal-close" onClick={() => setSelectedVisit(null)}>×</button>
             </div>
             <div className="col-modal-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="sh-visit-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '—'}</div>
