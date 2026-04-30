@@ -94,7 +94,7 @@ export const getActionsForRole = (actions = {}, roleCode) => {
   const fromConfig = roleActions.map((a) => {
     const action = { ...a };
 
-    if (action.label === 'Scheduled Revisit' || action.label === 'SV Scheduled' || action.label === 'Site Visit Scheduled') {
+    if (action.label === 'Scheduled Revisit' || action.label === 'Site Visit Scheduled') {
       action.label = 'Revisit';
     }
 
