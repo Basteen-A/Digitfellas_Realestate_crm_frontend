@@ -78,7 +78,7 @@ const isClosedLostLead = (lead) => {
 };
 
 const getLeadOwnerName = (lead) => {
-  const ownerFromFlat = String(lead?.assignedToName || '').trim();
+  const ownerFromFlat = String(lead?.assignedToUserName || lead?.assignedToName || '').trim();
   if (ownerFromFlat) return ownerFromFlat;
 
   const ownerFromNested = `${lead?.assignedTo?.first_name || ''} ${lead?.assignedTo?.last_name || ''}`.trim();
@@ -792,8 +792,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           const isTodayFollowUp = followUpDay.getTime() === todayStart.getTime();
           const isMissedFollowUp = isFollowUpMissedByDate(followUpDay, todayStart);
 
-          if (activeTab === 'today' && !isTodayFollowUp) return false;
-          if (activeTab === 'missed' && !isMissedFollowUp) return false;
+          // If searching, bypass the date-based tab filters for follow-up roles
+          if (filters.search) {
+            // For Today/Missed tabs, we already have assignedToMe leads from the API.
+            // For the New tab, we have unassigned leads from the API.
+            // Just let the standard filter proceed.
+          } else {
+            if (activeTab === 'today' && !isTodayFollowUp) return false;
+            if (activeTab === 'missed' && !isMissedFollowUp) return false;
+          }
 
           if (
             activeTab !== 'today'
