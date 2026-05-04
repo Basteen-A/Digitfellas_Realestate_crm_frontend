@@ -16,8 +16,6 @@ const SalesManagerVisits = ({ onNavigate }) => {
     time_spent: '',
     requirement_details: '',
     remarks_long: '',
-    latitude: null,
-    longitude: null,
   });
 
   const loadVisits = useCallback(async () => {
@@ -208,29 +206,6 @@ const SalesManagerVisits = ({ onNavigate }) => {
                       value={feedbackForm.time_spent} 
                       onChange={e => setFeedbackForm(p => ({...p, time_spent: e.target.value}))} 
                     />
-                  </div>
-                  <div className="col-form-group">
-                    <label className="col-form-label">Geo-location*</label>
-                    <button
-                      type="button"
-                      className={`crm-btn ${feedbackForm.latitude ? 'crm-btn-ghost' : 'crm-btn-primary'} crm-btn-sm`}
-                      style={{ width: '100%' }}
-                      onClick={() => {
-                        if (!navigator.geolocation) {
-                          toast.error('Geolocation not supported');
-                          return;
-                        }
-                        navigator.geolocation.getCurrentPosition(
-                          (pos) => {
-                            setFeedbackForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                            toast.success('Location captured!');
-                          },
-                          (err) => toast.error(`Error: ${err.message}`)
-                        );
-                      }}
-                    >
-                      {feedbackForm.latitude ? '📍 Captured' : '📍 Get Location'}
-                    </button>
                   </div>
                 </div>
 

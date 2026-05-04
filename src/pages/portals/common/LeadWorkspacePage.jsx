@@ -113,8 +113,6 @@ const initialNewLead = {
   motivationType: '',
   svDate: new Date().toISOString().split('T')[0],
   timeSpent: '',
-  latitude: null,
-  longitude: null,
   assignment_mode: 'ME',
   assigned_to: '',
   assignment_mode_manual: false,
@@ -481,8 +479,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     motivationType: '',
     primaryRequirement: '',
     secondaryRequirement: '',
-    latitude: null,
-    longitude: null,
     timeSpent: '',
     callResult: 'Answered',
   });
@@ -547,8 +543,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     motivationType: '',
     primaryRequirement: '',
     secondaryRequirement: '',
-    latitude: null,
-    longitude: null,
     timeSpent: '',
     note: '',
   });
@@ -689,7 +683,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     },
     [quickActionLead]
   );
-  
+
   const quickLeadHasProject = useMemo(
     () => {
       const projId = quickActionLead?.projectId;
@@ -912,7 +906,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const tcStatusNeedsFullDetails = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const tcStatusNeedsFollowUp = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED', 'RNR'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
-    const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
+  const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
   const smStatusNeedsFollowUp = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEW', 'REVISIT', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
   const smStatusNeedsReason = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'LOST';
   const smStatusNeedsAssignee = false; // SM/SH leads are now automatically self-assigned as per user request
@@ -1522,10 +1516,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   // ── Handlers ──
   const resetNewLeadModal = useCallback(() => {
-    setNewLeadForm({ 
-      ...initialNewLead, 
-      latitude: null, 
-      longitude: null,
+    setNewLeadForm({
+      ...initialNewLead,
       assigned_to: (workspaceRole === 'SM' || workspaceRole === 'SH') ? (user?.id || '') : ''
     });
     setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
@@ -1571,8 +1563,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         lead_status_id: newLeadForm.lead_status_id || undefined,
         callResult: newLeadForm.callResult,
         customerRequirement: newLeadForm.customerRequirement || undefined,
-          customerTypeId: newLeadForm.customerTypeId || undefined,
-          motivationType: newLeadForm.motivationType || undefined,
+        customerTypeId: newLeadForm.customerTypeId || undefined,
+        motivationType: newLeadForm.motivationType || undefined,
         svDate: newLeadForm.svDate ? new Date(newLeadForm.svDate).toISOString() : undefined,
         timeSpent: newLeadForm.timeSpent ? Number(newLeadForm.timeSpent) : undefined,
         assignment_mode: ['SM', 'SH', 'TC'].includes(workspaceRole) ? (newLeadForm.assignment_mode || 'ME') : undefined,
@@ -1659,8 +1651,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         motivationType: selectedLead.motivationType || '',
         primaryRequirement: selectedLead.primaryRequirement || '',
         secondaryRequirement: selectedLead.secondaryRequirement || '',
-        latitude: null,
-        longitude: null,
         timeSpent: '',
         note: actionState.note || '',
       });
@@ -1741,7 +1731,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (recordSvForm.budgetMin === '' || recordSvForm.budgetMax === '') { toast.error('Budget Min and Budget Max are mandatory'); return; }
     if (Number(recordSvForm.budgetMax) < Number(recordSvForm.budgetMin)) { toast.error('Budget Max must be greater than or equal to Budget Min'); return; }
     if (!recordSvForm.motivationType) { toast.error('Buying Motivation is mandatory'); return; }
-    if (!recordSvForm.latitude) { toast.error('Geo-location is mandatory'); return; }
 
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SM_SITE_VISIT', {
@@ -1753,8 +1742,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         motivationType: recordSvForm.motivationType,
         primaryRequirement: recordSvForm.primaryRequirement,
         secondaryRequirement: recordSvForm.secondaryRequirement,
-        latitude: recordSvForm.latitude,
-        longitude: recordSvForm.longitude,
         time_spent: recordSvForm.timeSpent ? Number(recordSvForm.timeSpent) : undefined,
         note: recordSvForm.note?.trim() || undefined,
       });
@@ -2078,8 +2065,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       motivationType: '',
       primaryRequirement: '',
       secondaryRequirement: '',
-      latitude: null,
-      longitude: null,
       timeSpent: '',
     });
   }, []);
@@ -2157,8 +2142,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       motivationType: quickActionLead?.motivationType || '',
       primaryRequirement: quickActionLead?.primaryRequirement || '',
       secondaryRequirement: quickActionLead?.secondaryRequirement || '',
-      latitude: quickActionLead?.geoLat || null,
-      longitude: quickActionLead?.geoLong || null,
       timeSpent: '',
       callResult: action.targetStatusCode === 'RNR' ? 'Not Answered' : 'Answered',
       locationId: quickActionLead?.interestedLocations?.[0]
@@ -2354,12 +2337,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           motivationType: f.motivationType || undefined,
           primaryRequirement: f.primaryRequirement || undefined,
           secondaryRequirement: f.secondaryRequirement || undefined,
-          latitude: f.latitude || undefined,
-          longitude: f.longitude || undefined,
           // server expects `time_spent`; keep camel-case for compatibility elsewhere
           time_spent: f.timeSpent ? Number(f.timeSpent) : undefined,
         };
-        
+
         // ── ALWAYS include location/project IDs from form state, quickMissing state, OR existing lead data ──
         const intLocs = (quickActionLead?.interestedLocations || []).filter(id => id && String(id).trim() !== '');
         const formLocId = (f.locationId && String(f.locationId).trim() !== '') ? f.locationId : '';
@@ -2368,7 +2349,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           || missingLocId
           || quickActionLead?.locationId
           || (intLocs.length > 0 ? intLocs[0] : '');
-        
+
         const intProjs = (quickActionLead?.interestedProjects || []).filter(id => id && String(id).trim() !== '');
         const formProjIds = (f.projectIds && f.projectIds.length > 0)
           ? f.projectIds.filter(id => id && String(id).trim() !== '')
@@ -2379,10 +2360,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         const resolvedProjectIds = formProjIds.length > 0
           ? formProjIds
           : (missingProjIds.length > 0
-              ? missingProjIds
-              : (intProjs.length > 0 
-                  ? intProjs.map(String)
-                  : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : [])));
+            ? missingProjIds
+            : (intProjs.length > 0
+              ? intProjs.map(String)
+              : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : [])));
 
         // eslint-disable-next-line no-console
         console.warn('[TRANSITION PAYLOAD DEBUG]', {
@@ -2624,72 +2605,72 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 Today&apos;s Follow Ups
               </button>
               {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
-              <button
-                onClick={() => setActiveTab('missed')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeTab === 'missed' ? 'var(--accent-blue)' : 'transparent',
-                  color: activeTab === 'missed' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                Missed Follow Ups
-              </button>
+                <button
+                  onClick={() => setActiveTab('missed')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: activeTab === 'missed' ? 'var(--accent-blue)' : 'transparent',
+                    color: activeTab === 'missed' ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Missed Follow Ups
+                </button>
               )}
               {workspaceRole === 'TC' && (
-              <button
-                onClick={() => setActiveTab('new')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeTab === 'new' ? 'var(--accent-blue)' : 'transparent',
-                  color: activeTab === 'new' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 500,
-                }}
-              >
-                New (Unassigned)
-              </button>
+                <button
+                  onClick={() => setActiveTab('new')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: activeTab === 'new' ? 'var(--accent-blue)' : 'transparent',
+                    color: activeTab === 'new' ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 500,
+                  }}
+                >
+                  New (Unassigned)
+                </button>
               )}
               {workspaceRole === 'SM' && (
-              <button
-                onClick={() => setActiveTab('sh_leads')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeTab === 'sh_leads' ? 'var(--accent-blue)' : 'transparent',
-                  color: activeTab === 'sh_leads' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                SH Leads (Read Only)
-              </button>
+                <button
+                  onClick={() => setActiveTab('sh_leads')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: activeTab === 'sh_leads' ? 'var(--accent-blue)' : 'transparent',
+                    color: activeTab === 'sh_leads' ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  SH Leads (Read Only)
+                </button>
               )}
               {workspaceRole === 'SH' && (
-              <button
-                onClick={() => setActiveTab('sm_leads')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeTab === 'sm_leads' ? 'var(--accent-blue)' : 'transparent',
-                  color: activeTab === 'sm_leads' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                SM Leads (Read Only)
-              </button>
+                <button
+                  onClick={() => setActiveTab('sm_leads')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: activeTab === 'sm_leads' ? 'var(--accent-blue)' : 'transparent',
+                    color: activeTab === 'sm_leads' ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  SM Leads (Read Only)
+                </button>
               )}
             </div>
           )}
@@ -2723,7 +2704,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <td>
                       <p className="lead-title">{lead.fullName}</p>
                       <small>
-                        <a 
+                        <a
                           href={`/portal/lead/${lead.id}`}
                           onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
                           style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
@@ -3272,7 +3253,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <div style={{ marginBottom: 18 }}>
                   <div className="crm-form-label" style={{ marginBottom: 6 }}>
                     {getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SH' ? 'Select Sales Head (Negotiator) *' :
-                     getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SM' ? 'Select Sales Manager *' : 'Assign To *'}
+                      getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SM' ? 'Select Sales Manager *' : 'Assign To *'}
                   </div>
                   <select
                     className="crm-form-select"
@@ -3281,7 +3262,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   >
                     <option value="">
                       {getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SH' ? 'Select Sales Head...' :
-                       getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SM' ? 'Select Sales Manager...' : 'Select user...'}
+                        getAssigneeRoleForAction(stagePopupAction, workspaceRole) === 'SM' ? 'Select Sales Manager...' : 'Select user...'}
                     </option>
                     {(assignableUsers[getAssigneeRoleForAction(stagePopupAction, workspaceRole)] || [])
                       .filter((u) => {
@@ -3647,87 +3628,87 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     </div>
                   </div>
 
-                    {(workspaceRole === 'SM' || ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode)) && (
-                      <div className="create-lead-grid">
-                        {/* Location */}
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">
-                            Location <span className="create-lead-field__required">*</span>
-                          </label>
-                          <select
-                            className="create-lead-select"
-                            value={newLeadForm.location_id}
-                            onChange={(e) => setNewLeadForm((p) => ({
-                              ...p,
-                              location_id: e.target.value,
-                              location_ids: e.target.value ? [e.target.value] : [],
-                              project_ids: [],
-                            }))}
-                            required
+                  {(workspaceRole === 'SM' || ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode)) && (
+                    <div className="create-lead-grid">
+                      {/* Location */}
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">
+                          Location <span className="create-lead-field__required">*</span>
+                        </label>
+                        <select
+                          className="create-lead-select"
+                          value={newLeadForm.location_id}
+                          onChange={(e) => setNewLeadForm((p) => ({
+                            ...p,
+                            location_id: e.target.value,
+                            location_ids: e.target.value ? [e.target.value] : [],
+                            project_ids: [],
+                          }))}
+                          required
+                        >
+                          <option value="">Select location</option>
+                          {locationOptions.map((loc) => (
+                            <option key={loc.id} value={loc.id}>{loc.location_name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Project Multi-Select */}
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">
+                          Project <span className="create-lead-field__required">*</span>
+                        </label>
+                        <div ref={projectDropdownRef} style={{ position: 'relative' }}>
+                          <div
+                            className="create-lead-project-trigger"
+                            onClick={() => setProjectDropdownOpen((p) => !p)}
                           >
-                            <option value="">Select location</option>
-                            {locationOptions.map((loc) => (
-                              <option key={loc.id} value={loc.id}>{loc.location_name}</option>
+                            {selectedProjectNames.length === 0 && <span className="create-lead-project-trigger__placeholder">Select projects...</span>}
+                            {selectedProjectNames.map((name, i) => (
+                              <span key={i} className="create-lead-project-chip">
+                                {name}
+                                <span
+                                  className="create-lead-project-chip__remove"
+                                  onClick={(ev) => { ev.stopPropagation(); toggleProject((newLeadForm.project_ids || [])[i]); }}
+                                >×</span>
+                              </span>
                             ))}
-                          </select>
-                        </div>
-
-                        {/* Project Multi-Select */}
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">
-                            Project <span className="create-lead-field__required">*</span>
-                          </label>
-                          <div ref={projectDropdownRef} style={{ position: 'relative' }}>
-                            <div
-                              className="create-lead-project-trigger"
-                              onClick={() => setProjectDropdownOpen((p) => !p)}
-                            >
-                              {selectedProjectNames.length === 0 && <span className="create-lead-project-trigger__placeholder">Select projects...</span>}
-                              {selectedProjectNames.map((name, i) => (
-                                <span key={i} className="create-lead-project-chip">
-                                  {name}
-                                  <span
-                                    className="create-lead-project-chip__remove"
-                                    onClick={(ev) => { ev.stopPropagation(); toggleProject((newLeadForm.project_ids || [])[i]); }}
-                                  >×</span>
-                                </span>
-                              ))}
-                            </div>
-
-                            {projectDropdownOpen && (
-                              <div className="create-lead-project-dropdown" style={{ zIndex: 100 }}>
-                                <div className="create-lead-project-dropdown__search">
-                                  <input
-                                    type="text"
-                                    placeholder="Search projects..."
-                                    value={projectSearch}
-                                    onChange={(e) => setProjectSearch(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                </div>
-                                <div className="create-lead-project-dropdown__list">
-                                  {filteredProjectOptions.map((project) => (
-                                    <label key={project.id} className="create-lead-project-dropdown__item">
-                                      <input
-                                        type="checkbox"
-                                        checked={(newLeadForm.project_ids || []).includes(project.id)}
-                                        onChange={() => toggleProject(project.id)}
-                                      />
-                                      <span>
-                                        {getProjectDisplayName(project)}
-                                      </span>
-                                    </label>
-                                  ))}
-                                  {filteredProjectOptions.length === 0 && (
-                                    <div className="create-lead-project-dropdown__empty">No projects found</div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                           </div>
+
+                          {projectDropdownOpen && (
+                            <div className="create-lead-project-dropdown" style={{ zIndex: 100 }}>
+                              <div className="create-lead-project-dropdown__search">
+                                <input
+                                  type="text"
+                                  placeholder="Search projects..."
+                                  value={projectSearch}
+                                  onChange={(e) => setProjectSearch(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="create-lead-project-dropdown__list">
+                                {filteredProjectOptions.map((project) => (
+                                  <label key={project.id} className="create-lead-project-dropdown__item">
+                                    <input
+                                      type="checkbox"
+                                      checked={(newLeadForm.project_ids || []).includes(project.id)}
+                                      onChange={() => toggleProject(project.id)}
+                                    />
+                                    <span>
+                                      {getProjectDisplayName(project)}
+                                    </span>
+                                  </label>
+                                ))}
+                                {filteredProjectOptions.length === 0 && (
+                                  <div className="create-lead-project-dropdown__empty">No projects found</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
                   {/* Source & Sub-Source */}
                   <div className="create-lead-grid" style={{ marginTop: 16 }}>
@@ -3821,90 +3802,90 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
                     {/* Call Status Selection for New Lead */}
                     {shouldShowCreateCallStatus && (
-                        <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
-                          <div className="call-result-label">Call Status <span className="create-lead-field__required">*</span></div>
-                          <div className="call-result-toggle">
-                            <button
-                              type="button"
-                              className={`call-result-btn ${newLeadForm.callResult === 'Answered' ? 'active' : ''}`}
-                              onClick={() => setNewLeadForm((p) => ({ ...p, callResult: 'Answered' }))}
-                            >
-                              Answered
-                            </button>
-                            <button
-                              type="button"
-                              className={`call-result-btn ${newLeadForm.callResult === 'Not Answered' ? 'active' : ''}`}
-                              onClick={() => setNewLeadForm((p) => ({ ...p, callResult: 'Not Answered' }))}
-                            >
-                              Not Answered
-                            </button>
-                          </div>
+                      <div className="create-lead-field" style={{ gridColumn: 'span 2' }}>
+                        <div className="call-result-label">Call Status <span className="create-lead-field__required">*</span></div>
+                        <div className="call-result-toggle">
+                          <button
+                            type="button"
+                            className={`call-result-btn ${newLeadForm.callResult === 'Answered' ? 'active' : ''}`}
+                            onClick={() => setNewLeadForm((p) => ({ ...p, callResult: 'Answered' }))}
+                          >
+                            Answered
+                          </button>
+                          <button
+                            type="button"
+                            className={`call-result-btn ${newLeadForm.callResult === 'Not Answered' ? 'active' : ''}`}
+                            onClick={() => setNewLeadForm((p) => ({ ...p, callResult: 'Not Answered' }))}
+                          >
+                            Not Answered
+                          </button>
                         </div>
-                      )}
+                      </div>
+                    )}
 
                   </div>
                 </div>
 
-                  {workspaceRole === 'SM' && (
-                    <div className="create-lead-section">
-                      <div className="create-lead-section__header">
-                        <div className="create-lead-section__icon create-lead-section__icon--location"><HomeModernIcon style={{ width: 20, height: 20 }} /></div>
-                        <div>
-                          <div className="create-lead-section__title">Site Visit Details</div>
-                          <div className="create-lead-section__subtitle">Capture visit details while creating lead</div>
-                        </div>
-                      </div>
-
-                      <div className="create-lead-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Visit Date</label>
-                          <input
-                            type="date"
-                            className="create-lead-input"
-                            value={newLeadForm.svDate}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, svDate: e.target.value }))}
-                          />
-                        </div>
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Customer Type</label>
-                          <select className="create-lead-input" value={newLeadForm.customerTypeId || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, customerTypeId: e.target.value }))}>
-                            <option value="">Select...</option>
-                            {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                          </select>
-                        </div>
-
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Motivation</label>
-                          <select className="create-lead-input" value={newLeadForm.motivationType || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}>
-                            <option value="">Select...</option>
-                            {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                          </select>
-                        </div>
-
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Customer Requirement</label>
-                          <input
-                            className="create-lead-input"
-                            value={newLeadForm.customerRequirement}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, customerRequirement: e.target.value }))}
-                            placeholder="e.g. 2BHK near metro"
-                          />
-                        </div>
-
-                        <div className="create-lead-field">
-                          <label className="create-lead-field__label">Time Spent (mins)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            className="create-lead-input"
-                            value={newLeadForm.timeSpent}
-                            onChange={(e) => setNewLeadForm((p) => ({ ...p, timeSpent: e.target.value }))}
-                            placeholder="e.g. 30"
-                          />
-                        </div>
+                {workspaceRole === 'SM' && (
+                  <div className="create-lead-section">
+                    <div className="create-lead-section__header">
+                      <div className="create-lead-section__icon create-lead-section__icon--location"><HomeModernIcon style={{ width: 20, height: 20 }} /></div>
+                      <div>
+                        <div className="create-lead-section__title">Site Visit Details</div>
+                        <div className="create-lead-section__subtitle">Capture visit details while creating lead</div>
                       </div>
                     </div>
-                  )}
+
+                    <div className="create-lead-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">Visit Date</label>
+                        <input
+                          type="date"
+                          className="create-lead-input"
+                          value={newLeadForm.svDate}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, svDate: e.target.value }))}
+                        />
+                      </div>
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">Customer Type</label>
+                        <select className="create-lead-input" value={newLeadForm.customerTypeId || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, customerTypeId: e.target.value }))}>
+                          <option value="">Select...</option>
+                          {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">Motivation</label>
+                        <select className="create-lead-input" value={newLeadForm.motivationType || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}>
+                          <option value="">Select...</option>
+                          {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">Customer Requirement</label>
+                        <input
+                          className="create-lead-input"
+                          value={newLeadForm.customerRequirement}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, customerRequirement: e.target.value }))}
+                          placeholder="e.g. 2BHK near metro"
+                        />
+                      </div>
+
+                      <div className="create-lead-field">
+                        <label className="create-lead-field__label">Time Spent (mins)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="create-lead-input"
+                          value={newLeadForm.timeSpent}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, timeSpent: e.target.value }))}
+                          placeholder="e.g. 30"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* ══ Section: Notes & Remarks ══ */}
                 <div className="create-lead-section">
@@ -4127,32 +4108,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 <textarea rows={2} value={recordSvForm.secondaryRequirement} onChange={(e) => setRecordSvForm(p => ({ ...p, secondaryRequirement: e.target.value }))} placeholder="Additional details..." style={{ width: '100%' }} />
               </label>
 
-              <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>📍 Geo-location*</div>
-                  <button
-                    type="button"
-                    className={`workspace-btn ${recordSvForm.latitude ? 'workspace-btn--ghost' : 'workspace-btn--primary'} workspace-btn--sm`}
-                    onClick={() => {
-                      if (!navigator.geolocation) { toast.error('Not supported'); return; }
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          setRecordSvForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                          toast.success('Location captured');
-                        },
-                        (err) => toast.error(err.message)
-                      );
-                    }}
-                  >
-                    {recordSvForm.latitude ? 'Update location' : 'Get Location'}
-                  </button>
-                </div>
-                {recordSvForm.latitude && (
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                    Lat: {recordSvForm.latitude.toFixed(6)}, Lng: {recordSvForm.longitude.toFixed(6)}
-                  </div>
-                )}
-              </div>
+
 
               <div className="assign-modal__footer">
                 <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setRecordSvModalOpen(false)}>Cancel</button>
@@ -4160,7 +4116,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   type="button"
                   className="workspace-btn workspace-btn--primary"
                   onClick={handleRecordSvSubmit}
-                  disabled={!recordSvForm.assignToUserId || !recordSvForm.latitude || !recordSvForm.svProjectId || !recordSvForm.motivationType || recordSvForm.budgetMin === '' || recordSvForm.budgetMax === ''}
+                  disabled={!recordSvForm.assignToUserId || !recordSvForm.svProjectId || !recordSvForm.motivationType || recordSvForm.budgetMin === '' || recordSvForm.budgetMax === ''}
                 >
                   ✓ Record Visit
                 </button>
@@ -4998,36 +4954,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                             />
                           </div>
 
-                          <div style={{ marginBottom: 10 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                              <label className="qa-drawer-field-label" style={{ marginBottom: 0 }}>Geo-Location</label>
-                              <button
-                                type="button"
-                                className="qa-drawer-rchip"
-                                style={{ fontSize: '10px', padding: '4px 10px' }}
-                                onClick={() => {
-                                  if (navigator.geolocation) {
-                                    navigator.geolocation.getCurrentPosition((pos) => {
-                                      setQuickWorkflowForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                      toast.success('Location captured!');
-                                    }, () => toast.error('Check location permissions'));
-                                  }
-                                }}
-                              >
-                                <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
-                              </button>
-                            </div>
-                            <div className="qa-drawer-field-row">
-                              <input type="number" step="any" placeholder="Latitude" className="qa-drawer-field-input"
-                                value={quickWorkflowForm.latitude || ''}
-                                onChange={(e) => setQuickWorkflowForm(p => ({ ...p, latitude: e.target.value }))}
-                              />
-                              <input type="number" step="any" placeholder="Longitude" className="qa-drawer-field-input"
-                                value={quickWorkflowForm.longitude || ''}
-                                onChange={(e) => setQuickWorkflowForm(p => ({ ...p, longitude: e.target.value }))}
-                              />
-                            </div>
-                          </div>
+
                         </>
                       )}
                     </div>

@@ -298,8 +298,6 @@ const actionInitialState = {
   motivationType: '',
   primaryRequirement: '',
   secondaryRequirement: '',
-  latitude: '',
-  longitude: '',
   timeSpent: '',
   callResult: 'Answered',
 };
@@ -734,8 +732,6 @@ const LeadDetailsPage = () => {
       payload.motivationType = actionForm.motivationType || undefined;
       payload.primaryRequirement = actionForm.primaryRequirement || undefined;
       payload.secondaryRequirement = actionForm.secondaryRequirement || undefined;
-      payload.latitude = actionForm.latitude ? Number(actionForm.latitude) : undefined;
-      payload.longitude = actionForm.longitude ? Number(actionForm.longitude) : undefined;
       payload.time_spent = actionForm.timeSpent ? Number(actionForm.timeSpent) : undefined;
     }
 
@@ -877,8 +873,6 @@ const LeadDetailsPage = () => {
       motivationType: quickActionForm.motivationType || undefined,
       primaryRequirement: quickActionForm.primaryRequirement || undefined,
       secondaryRequirement: quickActionForm.secondaryRequirement || undefined,
-      latitude: quickActionForm.latitude ? Number(quickActionForm.latitude) : undefined,
-      longitude: quickActionForm.longitude ? Number(quickActionForm.longitude) : undefined,
       time_spent: quickActionForm.timeSpent ? Number(quickActionForm.timeSpent) : undefined,
     };
 
@@ -1503,22 +1497,6 @@ const LeadDetailsPage = () => {
                                 value={actionForm.timeSpent}
                                 onChange={(e) => setActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
                                 placeholder="30"
-                              />
-                            </label>
-                            <label className="lead-actions-label">
-                              Latitude
-                              <input
-                                value={actionForm.latitude}
-                                onChange={(e) => setActionForm((p) => ({ ...p, latitude: e.target.value }))}
-                                placeholder="17.3850"
-                              />
-                            </label>
-                            <label className="lead-actions-label">
-                              Longitude
-                              <input
-                                value={actionForm.longitude}
-                                onChange={(e) => setActionForm((p) => ({ ...p, longitude: e.target.value }))}
-                                placeholder="78.4867"
                               />
                             </label>
                           </div>
@@ -2197,36 +2175,7 @@ const LeadDetailsPage = () => {
                             />
                           </div>
 
-                          <div style={{ marginBottom: 10 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                              <label className="qa-drawer-field-label" style={{ marginBottom: 0 }}>Geo-Location</label>
-                              <button
-                                type="button"
-                                className="qa-drawer-rchip"
-                                style={{ fontSize: '10px', padding: '4px 10px' }}
-                                onClick={() => {
-                                  if (navigator.geolocation) {
-                                    navigator.geolocation.getCurrentPosition((pos) => {
-                                      setQuickActionForm(p => ({ ...p, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                      toast.success('Location captured!');
-                                    }, () => toast.error('Check location permissions'));
-                                  }
-                                }}
-                              >
-                                <MapPinIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Get Position
-                              </button>
-                            </div>
-                            <div className="qa-drawer-field-row">
-                              <input type="number" step="any" placeholder="Latitude" className="qa-drawer-field-input"
-                                value={quickActionForm.latitude || ''}
-                                onChange={(e) => setQuickActionForm(p => ({ ...p, latitude: e.target.value }))}
-                              />
-                              <input type="number" step="any" placeholder="Longitude" className="qa-drawer-field-input"
-                                value={quickActionForm.longitude || ''}
-                                onChange={(e) => setQuickActionForm(p => ({ ...p, longitude: e.target.value }))}
-                              />
-                            </div>
-                          </div>
+
                         </>
                       )}
                     </div>
