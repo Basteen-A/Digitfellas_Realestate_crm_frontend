@@ -11,7 +11,6 @@ import {
   ChartBarIcon,
   CreditCardIcon,
   ArrowPathIcon,
-  CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
