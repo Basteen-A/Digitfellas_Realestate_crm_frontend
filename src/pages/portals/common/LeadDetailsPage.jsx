@@ -8,6 +8,7 @@ import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
+import paymentPlanApi from '../../../api/paymentPlanApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
@@ -352,8 +353,10 @@ const LeadDetailsPage = () => {
     sameAsCurrent: true,
     permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
     inventoryUnitId: '',
+    paymentPlanId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [paymentPlans, setPaymentPlans] = useState([]);
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -574,6 +577,10 @@ const LeadDetailsPage = () => {
             setAvailableUnits(resp.data || []);
           }).catch(() => setAvailableUnits([]));
         }
+        // Load payment plans for booking
+        paymentPlanApi.getDropdown().then(resp => {
+          setPaymentPlans(resp.data || []);
+        }).catch(() => setPaymentPlans([]));
       }
     } else {
       setUsers([]);
@@ -914,6 +921,7 @@ const LeadDetailsPage = () => {
         ...permAddr,
       };
       payload.inventoryUnitId = pF.inventoryUnitId || undefined;
+      payload.payment_plan_id = pF.paymentPlanId || undefined;
     }
 
     if (quickSelectedAction.needsFollowUp) {
@@ -2219,6 +2227,20 @@ const LeadDetailsPage = () => {
                           })()}
                         </>
                       )}
+
+                      {/* ── Payment Plan Selection ── */}
+                      <div className="qa-drawer-profile-section"><BanknotesIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Payment Plan *</div>
+                      <div>
+                        <label className="qa-drawer-field-label">Select Payment Plan</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.paymentPlanId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, paymentPlanId: e.target.value }))}>
+                          <option value="">— Select Payment Plan —</option>
+                          {paymentPlans.map(plan => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.plan_name}{plan.plan_type ? ` (${plan.plan_type})` : ''}{plan.emi_months ? ` — ${plan.emi_months} months` : ''}{plan.down_payment_percentage ? ` — ${plan.down_payment_percentage}% down` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Personal Details</div>
                       <div className="qa-drawer-profile-grid-3">

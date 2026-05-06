@@ -6,8 +6,9 @@ import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   ClipboardDocumentListIcon, PencilSquareIcon, CreditCardIcon, UserIcon,
-  ArrowPathIcon, CheckCircleIcon, ChartBarIcon,
-  WrenchScrewdriverIcon, DocumentCheckIcon,
+  ArrowPathIcon, ArrowLeftIcon, CheckCircleIcon, ChartBarIcon,
+  WrenchScrewdriverIcon, DocumentCheckIcon, PhoneIcon,
+  XCircleIcon, CalendarDaysIcon, BoltIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
@@ -18,12 +19,21 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({});
-  const [paymentModal, setPaymentModal] = useState(false);
+  const [paymentModalBooking, setPaymentModalBooking] = useState(null);
   const [paymentForm, setPaymentForm] = useState({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '' });
   const [statusOptions, setStatusOptions] = useState([]);
   const [devCostModal, setDevCostModal] = useState(null); // booking object
   const [devCostForm, setDevCostForm] = useState({ guideline_value: '', plot_area: '', development_cost_per_sqft: '' });
   const [devCostSaving, setDevCostSaving] = useState(false);
+  const [followUpModal, setFollowUpModal] = useState(null);
+  const [followUpForm, setFollowUpForm] = useState({ next_calling_date: '', call_status: '', remarks: '' });
+  const [followUpSaving, setFollowUpSaving] = useState(false);
+  const [closeModal, setCloseModal] = useState(null);
+  const [closeForm, setCloseForm] = useState({ close_reason: '', close_remarks: '' });
+  const [closeSaving, setCloseSaving] = useState(false);
+  const [quickActionOpen, setQuickActionOpen] = useState(false);
+  const [quickActionType, setQuickActionType] = useState(null); // 'status' | 'followup' | 'close'
+  const [quickActionMode, setQuickActionMode] = useState(false); // true when quick action is open without detail modal
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -82,15 +92,15 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
 
   const handleAddPayment = async (e) => {
     e.preventDefault();
-    if (!selectedBooking || !paymentForm.amount || !paymentForm.payment_date) {
+    if (!paymentModalBooking || !paymentForm.amount || !paymentForm.payment_date) {
       toast.error('Amount and date are required'); return;
     }
     try {
-      await bookingApi.addPayment(selectedBooking.id, paymentForm);
+      await bookingApi.addPayment(paymentModalBooking.id, paymentForm);
       toast.success('Payment recorded');
-      setPaymentModal(false);
+      setPaymentModalBooking(null);
       setPaymentForm({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '' });
-      openDetail(selectedBooking.id);
+      if (selectedBooking) openDetail(selectedBooking.id);
       loadBookings();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to add payment')); }
   };
@@ -159,6 +169,61 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
     }
   };
 
+  const openFollowUp = (booking) => {
+    setFollowUpModal(booking);
+    setFollowUpForm({
+      next_calling_date: booking.next_calling_date || '',
+      call_status: booking.call_status || '',
+      remarks: '',
+    });
+  };
+
+  const handleFollowUpSave = async () => {
+    if (!followUpModal) return;
+    setFollowUpSaving(true);
+    try {
+      await bookingApi.update(followUpModal.id, {
+        next_calling_date: followUpForm.next_calling_date || null,
+        call_status: followUpForm.call_status || null,
+        remarks: followUpForm.remarks || null,
+      });
+      toast.success('Follow-up scheduled');
+      setFollowUpModal(null);
+      openDetail(followUpModal.id);
+      loadBookings();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to save follow-up'));
+    } finally {
+      setFollowUpSaving(false);
+    }
+  };
+
+  const openCloseBooking = (booking) => {
+    setCloseModal(booking);
+    setCloseForm({ close_reason: '', close_remarks: '' });
+  };
+
+  const handleCloseBooking = async () => {
+    if (!closeModal) return;
+    setCloseSaving(true);
+    try {
+      await bookingApi.update(closeModal.id, {
+        booking_status_id: null,
+        is_cancelled: true,
+        cancellation_reason: closeForm.close_reason,
+        cancellation_remarks: closeForm.close_remarks,
+      });
+      toast.success('Booking closed');
+      setCloseModal(null);
+      loadBookings();
+      setSelectedBooking(null);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to close booking'));
+    } finally {
+      setCloseSaving(false);
+    }
+  };
+
   return (
     <div>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -209,8 +274,9 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(b.id); }}>View</button>
-                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(b.id); setPaymentModal(true); }}>+ Pay</button>
+                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={(e) => { e.stopPropagation(); setPaymentModalBooking(b); }}>+ Pay</button>
                         <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); openDevCostModal(b); }}>Dev Cost</button>
+                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); setSelectedBooking(b); setQuickActionOpen(true); setQuickActionMode(true); }} title="Quick Actions"><BoltIcon style={{ width: 14, height: 14 }} /></button>
                       </div>
                     </td>
                   </tr>
@@ -222,7 +288,7 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
       )}
 
       {/* ── Booking Detail Modal ── */}
-      {selectedBooking && (
+      {selectedBooking && !quickActionMode && (
         <div className="col-modal-overlay" onClick={() => setSelectedBooking(null)}>
           <div className="col-modal col-modal-lg" onClick={e => e.stopPropagation()}>
             <div className="col-modal-header">
@@ -294,8 +360,9 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Details</button>
-                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => setPaymentModal(true)}><CreditCardIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Add Payment</button>
+                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => setPaymentModalBooking(selectedBooking)}><CreditCardIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Add Payment</button>
                         {selectedBooking.customer && <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onSelectCustomer?.(selectedBooking.customer.id)}><UserIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />View Customer</button>}
+                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { setQuickActionOpen(true); setQuickActionMode(true); }}><BoltIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Quick Actions</button>
                       </div>
                     </div>
 
@@ -343,12 +410,12 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
       )}
 
       {/* ── Add Payment Modal ── */}
-      {paymentModal && (
-        <div className="col-modal-overlay" onClick={() => setPaymentModal(false)}>
+      {paymentModalBooking && (
+        <div className="col-modal-overlay" onClick={() => setPaymentModalBooking(null)} style={{ zIndex: 1010 }}>
           <div className="col-modal" onClick={e => e.stopPropagation()}>
             <div className="col-modal-header">
-              <h2><CreditCardIcon style={{ width: 20, height: 20, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Add Payment</h2>
-              <button className="col-modal-close" onClick={() => setPaymentModal(false)}>×</button>
+              <h2><CreditCardIcon style={{ width: 20, height: 20, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Add Payment {paymentModalBooking?.booking_number ? `— ${paymentModalBooking.booking_number}` : ''}</h2>
+              <button className="col-modal-close" onClick={() => setPaymentModalBooking(null)}>×</button>
             </div>
             <form onSubmit={handleAddPayment}>
               <div className="col-modal-body">
@@ -384,7 +451,7 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
                 </div>
               </div>
               <div className="col-modal-footer">
-                <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setPaymentModal(false)}>Cancel</button>
+                <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setPaymentModalBooking(null)}>Cancel</button>
                 <button type="submit" className="crm-btn crm-btn-success"><CreditCardIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Record Payment</button>
               </div>
             </form>
@@ -475,6 +542,212 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
               <button className="crm-btn crm-btn-primary" onClick={handleDevCostSave} disabled={devCostSaving}>
                 {devCostSaving ? 'Saving...' : 'Save Development Costs'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick Action Drawer (Like LeadWorkspacePage) ── */}
+      {quickActionOpen && selectedBooking && (
+        <div className="lead-workspace__modal" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); } }}>
+          <div className="qa-modal-panel" onClick={(e) => e.stopPropagation()}>
+            {/* Drawer Handle */}
+            <div className="qa-drawer-handle" />
+
+            {/* Drawer Header */}
+            <div className="qa-drawer-header">
+              <div className="qa-drawer-header-left">
+                <div className="qa-drawer-avatar">
+                  <BoltIcon style={{ width: 20, height: 20, color: '#4f46e5' }} />
+                </div>
+                <div>
+                  <div className="qa-drawer-name">Quick Actions</div>
+                  <div className="qa-drawer-meta">
+                    {selectedBooking.booking_number} - {selectedBooking.customer_name}
+                  </div>
+                  <div className="qa-drawer-budget">
+                    {selectedBooking.project_name || 'No Project'}
+                  </div>
+                </div>
+              </div>
+              <button className="qa-drawer-close" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); }}>
+                <XMarkIcon style={{ width: 18, height: 18 }} />
+              </button>
+            </div>
+
+            {/* Drawer Body */}
+            <div className="qa-drawer-body">
+              {/* Action Type Selector */}
+              {!quickActionType ? (
+                <div className="qa-drawer-section">Select Action</div>
+              ) : (
+                <button
+                  onClick={() => { setQuickActionType(null); setEditMode(false); setQuickActionMode(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '14px 20px 8px', fontSize: 13 }}
+                >
+                  <ArrowLeftIcon style={{ width: 14, height: 14 }} /> Back to Actions
+                </button>
+              )}
+
+              {!quickActionType ? (
+                <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <button
+                    className="qa-drawer-st-btn"
+                    onClick={() => { setQuickActionType('status'); startEdit(); }}
+                  >
+                    <PhoneIcon className="qa-drawer-st-icon" style={{ width: 22, height: 22, color: '#4f46e5' }} />
+                    <div className="qa-drawer-st-label">Update Status</div>
+                  </button>
+                  <button
+                    className="qa-drawer-st-btn"
+                    onClick={() => { setQuickActionType('followup'); openFollowUp(selectedBooking); }}
+                  >
+                    <CalendarDaysIcon className="qa-drawer-st-icon" style={{ width: 22, height: 22, color: '#16a34a' }} />
+                    <div className="qa-drawer-st-label">Follow-up</div>
+                  </button>
+                  <button
+                    className="qa-drawer-st-btn"
+                    onClick={() => { setQuickActionType('close'); openCloseBooking(selectedBooking); }}
+                  >
+                    <XCircleIcon className="qa-drawer-st-icon" style={{ width: 22, height: 22, color: '#dc2626' }} />
+                    <div className="qa-drawer-st-label">Close Booking</div>
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {quickActionType === 'status' && editMode && (
+                    <>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Edit Booking Details</h3>
+                      <div className="col-form-grid-3">
+                        {[['unit_number','Unit #'],['tower_block','Tower/Block'],['floor_number','Floor'],['configuration','Config'],['carpet_area','Carpet Area'],['base_price','Base Price'],['total_amount','Total Amount'],['discount_amount','Discount'],['net_amount','Net Amount'],['gst_amount','GST'],['stamp_duty','Stamp Duty'],['registration_charges','Reg. Charges']].map(([k,l]) => (
+                          <div className="col-form-group" key={k}>
+                            <label className="col-form-label">{l}</label>
+                            <input className="col-form-input" value={editForm[k] || ''} onChange={e => setEditForm(p => ({...p, [k]: e.target.value}))} />
+                          </div>
+                        ))}
+                        <div className="col-form-group">
+                          <label className="col-form-label">Status</label>
+                          <select className="col-form-select" value={editForm.booking_status_id || ''} onChange={e => setEditForm(p => ({...p, booking_status_id: e.target.value}))}>
+                            <option value="">Select...</option>
+                            {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
+                          </select>
+                        </div>
+                        <div className="col-form-group">
+                          <label className="col-form-label">Registration Status</label>
+                          <select className="col-form-select" value={editForm.registration_status || ''} onChange={e => setEditForm(p => ({...p, registration_status: e.target.value}))}>
+                            <option value="">Select...</option>
+                            <option value="Registered">Registered</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="EMI">EMI</option>
+                            <option value="Bank Loan">Bank Loan</option>
+                            <option value="Registration Confirmed">Registration Confirmed</option>
+                            <option value="Request to Cancel">Request to Cancel</option>
+                          </select>
+                        </div>
+                        <div className="col-form-group">
+                          <label className="col-form-label">Registration Number</label>
+                          <input className="col-form-input" value={editForm.registration_number || ''} onChange={e => setEditForm(p => ({...p, registration_number: e.target.value}))} placeholder="Enter registration number" />
+                        </div>
+                        <div className="col-form-group">
+                          <label className="col-form-label">Payment Plan</label>
+                          <select className="col-form-select" value={editForm.payment_plan_id || ''} onChange={e => setEditForm(p => ({...p, payment_plan_id: e.target.value}))}>
+                            <option value="">Select...</option>
+                            <option value="EMI">EMI</option>
+                            <option value="Down Payment">Down Payment</option>
+                            <option value="Tenure">Tenure</option>
+                            <option value="Outright">Outright</option>
+                          </select>
+                        </div>
+                        <div className="col-form-group">
+                          <label className="col-form-label">Next Calling Date</label>
+                          <input className="col-form-input" type="date" value={editForm.next_calling_date || ''} onChange={e => setEditForm(p => ({...p, next_calling_date: e.target.value}))} />
+                        </div>
+                        <div className="col-form-group">
+                          <label className="col-form-label">Call Status</label>
+                          <select className="col-form-select" value={editForm.call_status || ''} onChange={e => setEditForm(p => ({...p, call_status: e.target.value}))}>
+                            <option value="">Select...</option>
+                            <option value="Not Reachable">Not Reachable</option>
+                            <option value="Busy">Busy</option>
+                            <option value="Callback Requested">Callback Requested</option>
+                            <option value="Connected">Connected</option>
+                            <option value="Committed to Pay">Committed to Pay</option>
+                            <option value="Refused / Issue">Refused / Issue</option>
+                          </select>
+                        </div>
+                        <div className="col-form-group full-width">
+                          <label className="col-form-label">Remarks</label>
+                          <textarea className="col-form-textarea" value={editForm.remarks || ''} onChange={e => setEditForm(p => ({...p, remarks: e.target.value}))} rows={2} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+                        <button className="crm-btn crm-btn-ghost" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setEditMode(false); setQuickActionMode(false); }}>Cancel</button>
+                        <button className="crm-btn crm-btn-primary" onClick={handleEditSave}><DocumentCheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Save Changes</button>
+                      </div>
+                    </>
+                  )}
+                  {quickActionType === 'followup' && (
+                    <>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Schedule Follow-up</h3>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Next Calling Date</label>
+                        <input className="col-form-input" type="date" value={followUpForm.next_calling_date} onChange={e => setFollowUpForm(p => ({...p, next_calling_date: e.target.value}))} />
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Call Status</label>
+                        <select className="col-form-select" value={followUpForm.call_status} onChange={e => setFollowUpForm(p => ({...p, call_status: e.target.value}))}>
+                          <option value="">Select...</option>
+                          <option value="Not Reachable">Not Reachable</option>
+                          <option value="Busy">Busy</option>
+                          <option value="Callback Requested">Callback Requested</option>
+                          <option value="Connected">Connected</option>
+                          <option value="Committed to Pay">Committed to Pay</option>
+                          <option value="Refused / Issue">Refused / Issue</option>
+                        </select>
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Remarks</label>
+                        <textarea className="col-form-textarea" value={followUpForm.remarks} onChange={e => setFollowUpForm(p => ({...p, remarks: e.target.value}))} rows={3} placeholder="Add notes about this follow-up..." />
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+                        <button className="crm-btn crm-btn-ghost" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); }}>Cancel</button>
+                        <button className="crm-btn crm-btn-primary" onClick={handleFollowUpSave} disabled={followUpSaving}>
+                          {followUpSaving ? 'Saving...' : 'Save Follow-up'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {quickActionType === 'close' && (
+                    <>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Close Booking</h3>
+                      <div style={{ padding: '12px 16px', background: '#fef2f2', borderRadius: 8, marginBottom: 16 }}>
+                        <div style={{ fontWeight: 600, color: '#dc2626' }}>Warning: This action will close the booking</div>
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Close Reason</label>
+                        <select className="col-form-select" value={closeForm.close_reason} onChange={e => setCloseForm(p => ({...p, close_reason: e.target.value}))}>
+                          <option value="">Select reason...</option>
+                          <option value="Cancelled by Customer">Cancelled by Customer</option>
+                          <option value="Payment Default">Payment Default</option>
+                          <option value="Legal Issue">Legal Issue</option>
+                          <option value="Developer Cancelled">Developer Cancelled</option>
+                          <option value="Mutual Agreement">Mutual Agreement</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Remarks</label>
+                        <textarea className="col-form-textarea" value={closeForm.close_remarks} onChange={e => setCloseForm(p => ({...p, close_remarks: e.target.value}))} rows={3} placeholder="Additional details..." />
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+                        <button className="crm-btn crm-btn-ghost" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); }}>Cancel</button>
+                        <button className="crm-btn crm-btn-danger" onClick={handleCloseBooking} disabled={closeSaving || !closeForm.close_reason}>
+                          {closeSaving ? 'Closing...' : 'Confirm Close'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

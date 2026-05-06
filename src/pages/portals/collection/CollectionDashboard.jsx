@@ -1,50 +1,58 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
+import bookingApi from '../../../api/bookingApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
-  UsersIcon,
   ClipboardDocumentListIcon,
   BanknotesIcon,
   ClockIcon,
-  UserIcon,
   ChartBarIcon,
   CreditCardIcon,
   ArrowPathIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
 const ICON_SIZE = { width: 22, height: 22 };
-const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
 
 /* ═══════════════════════════════════════════
-   COLLECTION DASHBOARD
+   COLLECTION DASHBOARD — Redesigned
    ═══════════════════════════════════════════ */
 const CollectionDashboard = ({ user, onNavigate }) => {
   const [stats, setStats] = useState(null);
+  const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await dashboardApi.getCollectionStats();
-      setStats(resp.data || null);
+      const [statsResp, bookingsResp] = await Promise.all([
+        dashboardApi.getCollectionStats(),
+        bookingApi.getMyBookings({ limit: 5 }),
+      ]);
+      setStats(statsResp.data || null);
+      setRecentBookings(bookingsResp.data?.data || bookingsResp.data || []);
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to load dashboard')); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="col-empty"><div className="col-empty-icon"><ClockIcon style={{ width: 40, height: 40, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">Loading dashboard...</div></div>;
+  if (loading) return (
+    <div className="col-empty">
+      <div className="col-empty-icon"><ClockIcon style={{ width: 40, height: 40, color: 'var(--text-muted)' }} /></div>
+      <div className="col-empty-title">Loading dashboard...</div>
+    </div>
+  );
 
   const cards = [
-    { label: 'Assigned Leads', value: stats?.totalLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' },
-    { label: 'Active Bookings', value: stats?.activeBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
-    { label: 'Total Collected', value: formatCurrency(stats?.totalCollected ?? 0), icon: <BanknotesIcon style={ICON_SIZE} />, bg: 'var(--accent-cyan-bg)', color: 'var(--accent-cyan, #22d3ee)' },
-    { label: 'Pending Dues', value: formatCurrency(stats?.pendingDues ?? 0), icon: <ClockIcon style={ICON_SIZE} />, bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },
-    { label: 'Customers', value: stats?.customersCount ?? 0, icon: <UserIcon style={ICON_SIZE} />, bg: 'var(--accent-purple-bg, #ede9fe)', color: 'var(--accent-purple, #8b5cf6)' },
-    { label: 'This Month', value: formatCurrency(stats?.monthRevenue ?? 0), icon: <ChartBarIcon style={ICON_SIZE} />, bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+    { label: 'Active Bookings', value: stats?.activeBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' },
+    { label: 'Total Collected', value: formatCurrency(stats?.totalCollected ?? 0), icon: <BanknotesIcon style={ICON_SIZE} />, bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+    { label: 'Pending Dues', value: formatCurrency(stats?.pendingDues ?? 0), icon: <ExclamationTriangleIcon style={ICON_SIZE} />, bg: 'var(--accent-red-bg)', color: 'var(--accent-red)' },
+    { label: 'This Month', value: formatCurrency(stats?.monthRevenue ?? 0), icon: <ChartBarIcon style={ICON_SIZE} />, bg: 'var(--accent-cyan-bg)', color: 'var(--accent-cyan, #22d3ee)' },
   ];
 
   const statusData = stats?.statusBreakdown || [];
@@ -52,17 +60,19 @@ const CollectionDashboard = ({ user, onNavigate }) => {
 
   return (
     <div>
+      {/* ── Header ── */}
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Welcome, {user?.first_name || 'Collection Manager'} <BanknotesIcon style={{ width: 24, height: 24 }} /></h1>
-          <p className="hidden sm:block">Manage bookings, payments, and customer profiles</p>
+          <p className="hidden sm:block">Manage bookings, payments, and development charges</p>
         </div>
         <div className="page-header-actions">
           <button className="crm-btn crm-btn-ghost" onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 
-      <div className="col-stats-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── KPI Cards ── */}
+      <div className="col-stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {cards.map(c => (
           <div className="col-stat-card" key={c.label}>
             <div className="col-stat-icon" style={{ background: c.bg, color: c.color }}>{c.icon}</div>
@@ -74,10 +84,12 @@ const CollectionDashboard = ({ user, onNavigate }) => {
         ))}
       </div>
 
+      {/* ── Two Column: Status Chart + Recent Payments ── */}
       <div className="col-two-col">
+        {/* Booking Status Breakdown */}
         <div className="col-section">
           <div className="col-section-header">
-            <div className="col-section-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ChartBarIcon style={ICON_SM} /> Booking Status Breakdown</div>
+            <div className="col-section-title"><ChartBarIcon style={{ width: 16, height: 16 }} /> Booking Status Breakdown</div>
           </div>
           <div className="col-section-body">
             {statusData.length === 0 ? (
@@ -99,9 +111,10 @@ const CollectionDashboard = ({ user, onNavigate }) => {
           </div>
         </div>
 
+        {/* Recent Payments */}
         <div className="col-section">
           <div className="col-section-header">
-            <div className="col-section-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CreditCardIcon style={ICON_SM} /> Recent Payments</div>
+            <div className="col-section-title"><CreditCardIcon style={{ width: 16, height: 16 }} /> Recent Payments</div>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate('payments')}>View All →</button>
           </div>
           <div className="col-section-body-flush">
@@ -126,11 +139,56 @@ const CollectionDashboard = ({ user, onNavigate }) => {
         </div>
       </div>
 
+      {/* ── Recent Bookings ── */}
+      <div className="col-section">
+        <div className="col-section-header">
+          <div className="col-section-title"><ClipboardDocumentListIcon style={{ width: 16, height: 16 }} /> Recent Bookings</div>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate('bookings')}>View All →</button>
+        </div>
+        <div className="col-section-body-flush" style={{ overflowX: 'auto' }}>
+          {recentBookings.length === 0 ? (
+            <div className="col-empty" style={{ padding: 24 }}><div className="col-empty-desc">No bookings yet</div></div>
+          ) : (
+            <table className="col-table">
+              <thead>
+                <tr>
+                  <th>Booking #</th><th>Customer</th><th>Project</th><th>Unit</th>
+                  <th>Total Amount</th><th>Paid</th><th>Balance</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentBookings.map(b => {
+                  const paid = parseFloat(b.total_paid || 0);
+                  const net = parseFloat(b.net_amount || 0);
+                  const balance = net - paid;
+                  return (
+                    <tr key={b.id} className="is-clickable" onClick={() => onNavigate('bookings')}>
+                      <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{b.booking_number}</td>
+                      <td style={{ fontWeight: 600 }}>{b.customer_name || '-'}</td>
+                      <td>{b.project_name || '-'}</td>
+                      <td>{b.unit_display || b.unit_number || '-'}</td>
+                      <td style={{ fontWeight: 600 }}>{formatCurrency(net)}</td>
+                      <td style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(paid)}</td>
+                      <td style={{ color: balance > 0 ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(balance)}</td>
+                      <td>
+                        <span className="col-badge" style={{ background: (b.status_color || '#6B7280') + '22', color: b.status_color || '#6B7280' }}>
+                          <span className="col-badge-dot" style={{ background: b.status_color || '#6B7280' }} />
+                          {b.status_label || 'Pending'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* ── Quick Actions ── */}
       <div className="col-actions-row" style={{ marginTop: 20 }}>
         <button className="crm-btn crm-btn-primary" onClick={() => onNavigate('bookings')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ClipboardDocumentListIcon style={{ width: 16, height: 16 }} /> Manage Bookings</button>
         <button className="crm-btn crm-btn-success" onClick={() => onNavigate('payments')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CreditCardIcon style={{ width: 16, height: 16 }} /> Payment History</button>
-        <button className="crm-btn crm-btn-ghost" onClick={() => onNavigate('customers')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><UserIcon style={{ width: 16, height: 16 }} /> Customer Profiles</button>
-        <button className="crm-btn crm-btn-ghost" onClick={() => onNavigate('leads')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><UsersIcon style={{ width: 16, height: 16 }} /> View Leads</button>
       </div>
     </div>
   );

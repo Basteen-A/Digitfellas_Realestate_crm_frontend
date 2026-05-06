@@ -159,12 +159,12 @@ const InventoryUnitList = () => {
   const handleFieldChange = (name, value) => {
     setFormValues((prev) => {
       const next = { ...prev, [name]: value };
-      // Auto-calculate total_price when area or price_per_sqft changes
-      if (name === 'unit_area' || name === 'price_per_sqft') {
+      // Auto-calculate total_price when area or guided_value changes
+      if (name === 'unit_area' || name === 'guided_value') {
         const area = parseFloat(name === 'unit_area' ? value : prev.unit_area) || 0;
-        const ppsf = parseFloat(name === 'price_per_sqft' ? value : prev.price_per_sqft) || 0;
-        if (area > 0 && ppsf > 0) {
-          next.total_price = (area * ppsf).toFixed(2);
+        const gv = parseFloat(name === 'guided_value' ? value : prev.guided_value) || 0;
+        if (area > 0 && gv > 0) {
+          next.total_price = (area * gv).toFixed(2);
         }
       }
       return next;
@@ -312,9 +312,8 @@ const InventoryUnitList = () => {
               {!projectId && <th>Project</th>}
               <th>Config</th>
               <th>Area</th>
-              <th>₹/sqft</th>
+              <th>Guided Value / sqft</th>
               <th>Total Price</th>
-              <th>Guided Value</th>
               <th>Block/Tower</th>
               <th>Status</th>
               <th>Active</th>
@@ -324,12 +323,12 @@ const InventoryUnitList = () => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={projectId ? 10 : 11} className="inv-table__empty">Loading...</td>
+                <td colSpan={projectId ? 9 : 10} className="inv-table__empty">Loading...</td>
               </tr>
             )}
             {!loading && units.length === 0 && (
               <tr>
-                <td colSpan={projectId ? 10 : 11} className="inv-table__empty">No units found</td>
+                <td colSpan={projectId ? 9 : 10} className="inv-table__empty">No units found</td>
               </tr>
             )}
             {!loading && units.map((unit) => (
@@ -340,9 +339,8 @@ const InventoryUnitList = () => {
                 )}
                 <td>{unit.configuration || '-'}</td>
                 <td>{unit.unit_area ? `${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : '-'}</td>
-                <td>{unit.price_per_sqft ? `₹${parseFloat(unit.price_per_sqft).toLocaleString('en-IN')}` : '-'}</td>
+                <td>{unit.guided_value ? `₹${parseFloat(unit.guided_value).toLocaleString('en-IN')}` : '-'}</td>
                 <td>{unit.total_price ? formatCurrency(unit.total_price) : '-'}</td>
-                <td>{unit.guided_value ? formatCurrency(unit.guided_value) : '-'}</td>
                 <td>{unit.tower_block || '-'}</td>
                 <td>
                   <span className={`inv-status ${statusClass(unit.unit_status)}`}>
@@ -447,7 +445,7 @@ const InventoryUnitList = () => {
                   />
                 </div>
 
-                {/* <div className="inv-form__field">
+                <div className="inv-form__field">
                   <label>Configuration</label>
                   <input
                     type="text"
@@ -455,7 +453,7 @@ const InventoryUnitList = () => {
                     placeholder="e.g. 2BHK, Villa, Plot"
                     onChange={(e) => handleFieldChange('configuration', e.target.value)}
                   />
-                </div> */}
+                </div>
 
                 <div className="inv-form__field">
                   <label>Unit Area</label>
@@ -483,17 +481,17 @@ const InventoryUnitList = () => {
                 </div>
 
                 <div className="inv-form__field">
-                  <label>Guided  value per sqft (₹)</label>
+                  <label>Guided value per sqft (₹)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={formValues.price_per_sqft}
-                    placeholder="e.g. 500"
-                    onChange={(e) => handleFieldChange('price_per_sqft', e.target.value)}
+                    value={formValues.guided_value}
+                    placeholder="e.g. 450"
+                    onChange={(e) => handleFieldChange('guided_value', e.target.value)}
                   />
                 </div>
 
-                {/* <div className="inv-form__field">
+                <div className="inv-form__field">
                   <label>Total Price (₹)</label>
                   <input
                     type="number"
@@ -502,7 +500,8 @@ const InventoryUnitList = () => {
                     placeholder="Auto-calculated or enter manually"
                     onChange={(e) => handleFieldChange('total_price', e.target.value)}
                   />
-                </div> */}
+                </div>
+
                 <div className="inv-form__field">
                   <label>Facing</label>
                   <select
@@ -521,7 +520,7 @@ const InventoryUnitList = () => {
                   </select>
                 </div>
 
-                {/* <div className="inv-form__field">
+                <div className="inv-form__field">
                   <label>Block / Tower</label>
                   <input
                     type="text"
@@ -539,7 +538,7 @@ const InventoryUnitList = () => {
                     placeholder="e.g. Ground, 1st, 2nd"
                     onChange={(e) => handleFieldChange('floor_number', e.target.value)}
                   />
-                </div> */}
+                </div>
 
                 <div className="inv-form__field">
                   <label>Sort Order</label>

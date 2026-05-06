@@ -9,7 +9,6 @@ import {
   BoltIcon,
   HandRaisedIcon,
   BriefcaseIcon,
-  BanknotesIcon,
   CreditCardIcon,
   DevicePhoneMobileIcon,
   InboxArrowDownIcon,
@@ -139,7 +138,7 @@ const salesHeadSidebar = [
 // ── Collection Manager ──
 const collectionSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
-  { label: 'Leads', path: '/collection/leads', icon: BanknotesIcon },
+  { label: 'Bookings', path: '/collection/bookings', icon: ClipboardDocumentListIcon },
   { label: 'Payments', path: '/collection/payments', icon: CreditCardIcon },
 ];
 
@@ -184,11 +183,10 @@ export const salesHeadMenu = [
 export const collectionMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
-  { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
   { group: 'Bookings & Payments' },
   { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'Customers', key: 'customers', icon: UserGroupIcon, badge: null },
   { label: 'Payments', key: 'payments', icon: CreditCardIcon, badge: null },
-  { label: 'Customer Profiles', key: 'customers', icon: UserGroupIcon, badge: null },
 ];
 
 export const ROLE_LABELS = {

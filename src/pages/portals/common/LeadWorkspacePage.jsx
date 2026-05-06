@@ -11,6 +11,7 @@ import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
+import paymentPlanApi from '../../../api/paymentPlanApi';
 // userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
@@ -568,9 +569,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
     current_address: '', current_city: '', current_state: '', current_pincode: '',
     permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-    sameAsCurrent: false, assignToUserId: '', note: '', inventoryUnitId: '',
+    sameAsCurrent: false, assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [paymentPlans, setPaymentPlans] = useState([]);
 
   // ── Assignment ──
   const [assignableUsers, setAssignableUsers] = useState({});
@@ -1685,6 +1687,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           setAvailableUnits(resp.data || []);
         }).catch(() => setAvailableUnits([]));
       }
+      // Load payment plans
+      paymentPlanApi.getDropdown().then(resp => {
+        setPaymentPlans(resp.data || []);
+      }).catch(() => setPaymentPlans([]));
       return;
     }
 
@@ -1844,6 +1850,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         assignToUserId: f.assignToUserId,
         note: f.note?.trim() || 'Booking approved by Sales Head',
         inventoryUnitId: f.inventoryUnitId || undefined,
+        payment_plan_id: f.paymentPlanId || undefined,
         customerProfile: {
           date_of_birth: f.date_of_birth ? new Date(f.date_of_birth).toISOString() : undefined,
           pan_number: f.pan_number,
@@ -2170,6 +2177,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           setAvailableUnits(resp.data || []);
         }).catch(() => setAvailableUnits([]));
       }
+      // Load payment plans
+      paymentPlanApi.getDropdown().then(resp => {
+        setPaymentPlans(resp.data || []);
+      }).catch(() => setPaymentPlans([]));
     }
 
     if (action.needsSvDetails && action.code !== 'TC_SV_DONE') {
@@ -2427,6 +2438,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             note: pF.note,
           };
           payload.inventoryUnitId = pF.inventoryUnitId || undefined;
+          payload.payment_plan_id = pF.paymentPlanId || undefined;
         }
 
         if (quickWorkflowAction.code === 'TC_REASSIGN') {
@@ -5005,6 +5017,20 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           })()}
                         </>
                       )}
+
+                      {/* ── Payment Plan Selection ── */}
+                      <div className="qa-drawer-profile-section"><BanknotesIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Payment Plan *</div>
+                      <div>
+                        <label className="qa-drawer-field-label">Select Payment Plan</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.paymentPlanId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, paymentPlanId: e.target.value }))}>
+                          <option value="">— Select Payment Plan —</option>
+                          {paymentPlans.map(plan => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.plan_name}{plan.plan_type ? ` (${plan.plan_type})` : ''}{plan.emi_months ? ` — ${plan.emi_months} months` : ''}{plan.down_payment_percentage ? ` — ${plan.down_payment_percentage}% down` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Personal Details</div>
                       <div className="qa-drawer-profile-grid-3">

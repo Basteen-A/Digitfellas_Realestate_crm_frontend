@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
-import LeadWorkspacePage from '../common/LeadWorkspacePage';
 import { CollectionDashboard } from './CollectionDashboard';
 import { CollectionBookings } from './CollectionBookings';
 import { CollectionPayments } from './CollectionPayments';
@@ -10,7 +9,6 @@ import { collectionMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const CollectionWorkspace = () => {
   const user = useSelector((state) => state.auth.user);
-  const [customerIdFromBooking, setCustomerIdFromBooking] = useState(null);
 
   return (
     <PortalLayout
@@ -18,33 +16,21 @@ const CollectionWorkspace = () => {
       roleName="Collection Manager"
       user={user}
       defaultScreen="dashboard"
-      searchPlaceholder="Search bookings, customers..."
+      searchPlaceholder="Search bookings, payments..."
     >
       {({ activeScreen, setActiveScreen }) => (
         <>
           {activeScreen === 'dashboard' && (
             <CollectionDashboard user={user} onNavigate={setActiveScreen} />
           )}
-          {activeScreen === 'leads' && (
-            <LeadWorkspacePage user={user} workspaceRole="COL" />
-          )}
           {activeScreen === 'bookings' && (
-            <CollectionBookings
-              user={user}
-              onSelectCustomer={(id) => {
-                setCustomerIdFromBooking(id);
-                setActiveScreen('customers');
-              }}
-            />
+            <CollectionBookings user={user} onSelectCustomer={(id) => setActiveScreen('customers')} />
+          )}
+          {activeScreen === 'customers' && (
+            <CollectionCustomerProfile user={user} />
           )}
           {activeScreen === 'payments' && (
             <CollectionPayments user={user} />
-          )}
-          {activeScreen === 'customers' && (
-            <CollectionCustomerProfile
-              user={user}
-              initialCustomerId={customerIdFromBooking}
-            />
           )}
         </>
       )}
