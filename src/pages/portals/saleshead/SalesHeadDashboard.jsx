@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { formatCurrency } from '../../../utils/formatters';
@@ -20,6 +21,7 @@ const formatSqft = (value) => {
 };
 
 const SalesHeadDashboard = ({ user, onNavigate }) => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -78,21 +80,23 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4">
         {/* Negotiation Leads Today */}
-        <div className="col-container">
-          <div className="col-header">
-            <h3><HandRaisedIcon style={{ width: 18, height: 18, marginRight: 8 }} /> Negotiation Leads Today (Latest 10)</h3>
+        <div className="crm-card">
+          <div className="crm-card-header">
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HandRaisedIcon style={{ width: 18, height: 18 }} /> Negotiation Leads Today (Latest 10)</div>
           </div>
-          <div className="col-card" style={{ padding: 0 }}>
+          <div className="crm-card-body-flush" style={{ padding: 0 }}>
             {(!stats?.negotiationLeads || stats.negotiationLeads.length === 0) ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No leads in negotiation today.</div>
             ) : (
-              <table className="col-table">
+              <table className="crm-table">
                 <thead>
                   <tr>
                     <th>Lead</th>
                     <th>Project</th>
+                    <th>Customer Type</th>
+                    <th>Motivation</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
@@ -106,12 +110,34 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                       </td>
                       <td>{lead.projectName}</td>
                       <td>
+                        {lead.customerType ? (
+                          <span className="col-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontSize: 11 }}>
+                            {lead.customerType}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td>
+                        {lead.motivationType ? (
+                          <span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                            {lead.motivationType}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td>
                         <span className="col-badge" style={{ background: `${lead.statusColor}22`, color: lead.statusColor }}>
                           {lead.statusName}
                         </span>
                       </td>
                       <td>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate('LEAD_DETAILS', { leadId: lead.id })}>View</button>
+                        <button
+                          className="crm-btn crm-btn-ghost crm-btn-sm"
+                          onClick={() => {
+                            if (!lead?.id) return;
+                            navigate(`/portal/lead/${lead.id}`);
+                          }}
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -122,15 +148,15 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
         </div>
 
         {/* Latest Bookings */}
-        <div className="col-container">
-          <div className="col-header">
-            <h3><DocumentTextIcon style={{ width: 18, height: 18, marginRight: 8 }} /> Latest 10 Bookings</h3>
+        <div className="crm-card">
+          <div className="crm-card-header">
+            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><DocumentTextIcon style={{ width: 18, height: 18 }} /> Latest 10 Bookings</div>
           </div>
-          <div className="col-card" style={{ padding: 0 }}>
+          <div className="crm-card-body-flush" style={{ padding: 0 }}>
             {(!stats?.latestBookings || stats.latestBookings.length === 0) ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No recent bookings found.</div>
             ) : (
-              <table className="col-table">
+              <table className="crm-table">
                 <thead>
                   <tr>
                     <th>Buyer</th>

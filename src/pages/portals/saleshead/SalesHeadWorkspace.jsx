@@ -29,7 +29,7 @@ const SalesHeadWorkspace = () => {
           {activeScreen === 'bookings' && <SalesHeadBookings user={user} />}
           {activeScreen === 'approvals' && <SalesHeadApprovals user={user} />}
           {activeScreen === 'sitevisits' && <SalesHeadSiteVisits user={user} />}
-          {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SH" />}
+          {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SH" defaultType="outgoing" />}
           {activeScreen === 'allleads' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
           {activeScreen === 'smteam' && <SalesHeadTeamLeads user={user} />}
           {activeScreen === 'team' && <SalesHeadTeamPerformance />}

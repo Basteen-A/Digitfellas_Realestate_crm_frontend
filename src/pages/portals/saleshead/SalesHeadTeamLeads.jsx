@@ -229,6 +229,7 @@ const SalesHeadTeamLeads = () => {
                             <th>Stage</th>
                             <th>Status</th>
                             <th>Project</th>
+                            <th>SV Date</th>
                             <th>Last Contact</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                           </tr>
@@ -251,7 +252,10 @@ const SalesHeadTeamLeads = () => {
                                   {lead.statusLabel}
                                 </span>
                               </td>
-                              <td style={{ fontSize: 12 }}>{lead.project || '—'}</td>
+                              <td style={{ fontSize: 12 }}>{lead.svDoneProject || lead.project || '—'}</td>
+                              <td style={{ fontSize: 12, color: lead.svDoneDate ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                                {lead.svDoneDate ? formatDate(lead.svDoneDate) : '—'}
+                              </td>
                               <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDateTime(lead.lastContactedAt)}</td>
                               <td style={{ textAlign: 'right' }}>
                                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => handleReassignOpen(lead)} title="Reassign to another SM">

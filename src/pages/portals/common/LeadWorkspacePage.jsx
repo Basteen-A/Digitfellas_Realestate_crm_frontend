@@ -122,6 +122,8 @@ const initialNewLead = {
   callResult: 'Answered',
 };
 
+const SM_CREATE_STATUS_CODE = 'SV_DONE';
+
 const toDateTimeLocalValue = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -502,7 +504,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [newLeadForm, setNewLeadForm] = useState(initialNewLead);
   const [projectOptions, setProjectOptions] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [customerTypeOptions, setCustomerTypeOptions] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [motivationOptions, setMotivationOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
@@ -858,18 +862,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
 
     if (workspaceRole === 'SM') {
-      const allowedSmCreateStatuses = new Set(['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST', 'REVISIT', 'SV_SCHEDULED']);
-      const filtered = statusOptions
-        .filter((st) => allowedSmCreateStatuses.has(toCanonicalStatusCode(st.value)))
-        .map((st) => {
-          // Rename Scheduled Revisit / SV Scheduled to Revisit
-          const code = toCanonicalStatusCode(st.value);
-          if (code === 'REVISIT') {
-            return { ...st, label: 'Revisit' };
-          }
-          return st;
-        });
-      return filtered.length > 0 ? filtered : statusOptions;
+      const filtered = statusOptions.filter((st) => toCanonicalStatusCode(st.value) === SM_CREATE_STATUS_CODE);
+      if (filtered.length > 0) return filtered;
+      return [{ value: SM_CREATE_STATUS_CODE, label: 'SV Done', category: 'ACTIVE', isTerminal: false }];
     }
 
     const actionStatusCodes = new Set(
@@ -916,11 +911,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const tcStatusNeedsFollowUp = ['NEW', 'FOLLOW_UP', 'SV_SCHEDULED', 'RNR'].includes(selectedNewLeadStatusCode);
   const isTerminalCreateStatus = ['LOST', 'JUNK', 'SPAM', 'COLD_LOST'].includes(selectedNewLeadStatusCode);
   const needsRemark = Boolean(selectedNewLeadStatusCode) && selectedNewLeadStatusCode !== 'NEW';
-  const smStatusNeedsFollowUp = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEW', 'REVISIT', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
+  const smStatusNeedsFollowUp = workspaceRole === 'SM' && false;
   const smStatusNeedsReason = workspaceRole === 'SM' && selectedNewLeadStatusCode === 'LOST';
   const smStatusNeedsAssignee = false; // SM/SH leads are now automatically self-assigned as per user request
-  const smStatusNeedsCallStatus = workspaceRole === 'SM' && ['FOLLOW_UP', 'LOST'].includes(selectedNewLeadStatusCode);
-  const smStatusNeedsRemark = workspaceRole === 'SM' && ['FOLLOW_UP', 'NEGOTIATION_HOT', 'LOST', 'REVISIT', 'SV_SCHEDULED'].includes(selectedNewLeadStatusCode);
+  const smStatusNeedsCallStatus = workspaceRole === 'SM' && false;
+  const smStatusNeedsRemark = workspaceRole === 'SM' && false;
   const createLeadNeedsRemark = workspaceRole === 'SM' ? smStatusNeedsRemark : needsRemark;
   const shouldShowCreateCallStatus = workspaceRole === 'SM'
     ? smStatusNeedsCallStatus
@@ -991,10 +986,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
     if (workspaceRole === 'SM') {
       if (!newLeadForm.lead_status_id) errors.push('Lead status is required');
+      if (selectedNewLeadStatusCode && selectedNewLeadStatusCode !== SM_CREATE_STATUS_CODE) {
+        errors.push('Sales Manager can create leads only with SV Done status');
+      }
       if (!newLeadForm.location_id) errors.push('Location is required');
       if (!newLeadForm.project_ids?.length) errors.push('At least one project is required');
-      if (!newLeadForm.customerTypeId) errors.push('Customer type is required');
-      if (!newLeadForm.motivationType) errors.push('Motivation is required');
 
       if (smStatusNeedsFollowUp && !newLeadForm.nextFollowUpAt) {
         errors.push('Next follow up date is required');
@@ -1042,6 +1038,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     smStatusNeedsAssignee,
     smStatusNeedsCallStatus,
     smStatusNeedsRemark,
+    selectedNewLeadStatusCode,
   ]);
 
   // ── Stats (Telecaller KPI cards) ──
@@ -1527,6 +1524,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const resetNewLeadModal = useCallback(() => {
     setNewLeadForm({
       ...initialNewLead,
+      lead_status_id: workspaceRole === 'SM' ? SM_CREATE_STATUS_CODE : '',
       assigned_to: (workspaceRole === 'SM' || workspaceRole === 'SH') ? (user?.id || '') : ''
     });
     setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
@@ -1536,6 +1534,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     setProjectSearch('');
     setNewLeadOpen(false);
   }, [workspaceRole, user?.id]);
+
+  useEffect(() => {
+    if (!newLeadOpen || workspaceRole !== 'SM') return;
+    setNewLeadForm((prev) => {
+      if (toCanonicalStatusCode(prev.lead_status_id) === SM_CREATE_STATUS_CODE) return prev;
+      return { ...prev, lead_status_id: SM_CREATE_STATUS_CODE };
+    });
+  }, [newLeadOpen, workspaceRole]);
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
@@ -1570,12 +1576,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         location: selectedLocation ? `${selectedLocation.location_name}${selectedLocation.city ? `, ${selectedLocation.city}` : ''}` : null,
         nextFollowUpAt: newLeadForm.nextFollowUpAt ? new Date(newLeadForm.nextFollowUpAt).toISOString() : undefined,
         lead_status_id: newLeadForm.lead_status_id || undefined,
-        callResult: newLeadForm.callResult,
-        customerRequirement: newLeadForm.customerRequirement || undefined,
-        customerTypeId: newLeadForm.customerTypeId || undefined,
-        motivationType: newLeadForm.motivationType || undefined,
-        svDate: newLeadForm.svDate ? new Date(newLeadForm.svDate).toISOString() : undefined,
-        timeSpent: newLeadForm.timeSpent ? Number(newLeadForm.timeSpent) : undefined,
+        callResult: workspaceRole === 'SM' ? undefined : newLeadForm.callResult,
+        customerRequirement: workspaceRole === 'SM' ? undefined : (newLeadForm.customerRequirement || undefined),
+        customerTypeId: workspaceRole === 'SM' ? undefined : (newLeadForm.customerTypeId || undefined),
+        motivationType: workspaceRole === 'SM' ? undefined : (newLeadForm.motivationType || undefined),
+        svDate: workspaceRole === 'SM' ? undefined : (newLeadForm.svDate ? new Date(newLeadForm.svDate).toISOString() : undefined),
+        timeSpent: workspaceRole === 'SM' ? undefined : (newLeadForm.timeSpent ? Number(newLeadForm.timeSpent) : undefined),
         assignment_mode: ['SM', 'SH', 'TC'].includes(workspaceRole) ? (newLeadForm.assignment_mode || 'ME') : undefined,
         assigned_to: (workspaceRole === 'SM' || workspaceRole === 'SH')
           ? (user?.id || null)
@@ -2699,10 +2705,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <thead>
                 <tr>
                   <th>Lead</th>
-                  <th>Contact</th>
+                  {workspaceRole !== 'SH' && <th>Contact</th>}
                   <th>Status</th>
-                  <th className="hide-mobile">Source</th>
-                  <th className="hide-mobile">Medium</th>
+                  {workspaceRole !== 'SH' && <th className="hide-mobile">Source</th>}
+                  {workspaceRole !== 'SH' && <th className="hide-mobile">Medium</th>}
                   <th className="hide-mobile">Project/Location</th>
                   <th>Assignment / Ownership</th>
                   <th style={{ textAlign: 'right' }}>Follow up</th>
@@ -2710,10 +2716,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={8} className="lead-workspace__empty">Loading leads...</td></tr>
+                  <tr><td colSpan={workspaceRole === 'SH' ? 5 : 8} className="lead-workspace__empty">Loading leads...</td></tr>
                 )}
                 {!loading && !filteredLeads.length && (
-                  <tr><td colSpan={8} className="lead-workspace__empty">No leads found for current filters</td></tr>
+                  <tr><td colSpan={workspaceRole === 'SH' ? 5 : 8} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
                 {!loading && filteredLeads.map((lead) => (
                   <tr
@@ -2732,10 +2738,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </a>
                       </small>
                     </td>
-                    <td>
-                      <p>{lead.phone}</p>
-                      <small>{lead.email || '-'}</small>
-                    </td>
+                    {workspaceRole !== 'SH' && (
+                      <td>
+                        <p>{lead.phone}</p>
+                        <small>{lead.email || '-'}</small>
+                      </td>
+                    )}
                     <td>
                       <span
                         className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
@@ -2744,12 +2752,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         {lead.statusLabel}
                       </span>
                     </td>
-                    <td className="hide-mobile">
-                      <p>{lead.source || '-'}</p>
-                    </td>
-                    <td className="hide-mobile">
-                      <p>{lead.subSource || '-'}</p>
-                    </td>
+                    {workspaceRole !== 'SH' && (
+                      <td className="hide-mobile">
+                        <p>{lead.source || '-'}</p>
+                      </td>
+                    )}
+                    {workspaceRole !== 'SH' && (
+                      <td className="hide-mobile">
+                        <p>{lead.subSource || '-'}</p>
+                      </td>
+                    )}
                     <td className="hide-mobile">
                       <small>{(() => {
                         const projText = lead.interestedProjects?.length > 0
@@ -3591,7 +3603,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               key={st.value}
                               type="button"
                               className={`status-chip-btn ${isSelected ? 'status-chip-btn--active' : ''} ${isTerminal ? 'status-chip-btn--terminal' : ''}`}
+                              disabled={workspaceRole === 'SM'}
                               onClick={() => {
+                                if (workspaceRole === 'SM') return;
                                 const val = st.value;
                                 setNewLeadForm((p) => ({
                                   ...p,
@@ -3748,6 +3762,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </select>
                     </div>
 
+                    {workspaceRole !== 'SM' && (
                     <div className="create-lead-field">
                       <label className="create-lead-field__label">
                         Lead Sub-Source {workspaceRole === 'TC' && <span className="create-lead-field__required">*</span>}
@@ -3765,6 +3780,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         ))}
                       </select>
                     </div>
+                    )}
                   </div>
                 </div>
 
@@ -3845,66 +3861,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   </div>
                 </div>
 
-                {workspaceRole === 'SM' && (
-                  <div className="create-lead-section">
-                    <div className="create-lead-section__header">
-                      <div className="create-lead-section__icon create-lead-section__icon--location"><HomeModernIcon style={{ width: 20, height: 20 }} /></div>
-                      <div>
-                        <div className="create-lead-section__title">Site Visit Details</div>
-                        <div className="create-lead-section__subtitle">Capture visit details while creating lead</div>
-                      </div>
-                    </div>
-
-                    <div className="create-lead-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">Visit Date</label>
-                        <input
-                          type="date"
-                          className="create-lead-input"
-                          value={newLeadForm.svDate}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, svDate: e.target.value }))}
-                        />
-                      </div>
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">Customer Type</label>
-                        <select className="create-lead-input" value={newLeadForm.customerTypeId || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, customerTypeId: e.target.value }))}>
-                          <option value="">Select...</option>
-                          {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                        </select>
-                      </div>
-
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">Motivation</label>
-                        <select className="create-lead-input" value={newLeadForm.motivationType || ''} onChange={(e) => setNewLeadForm((p) => ({ ...p, motivationType: e.target.value }))}>
-                          <option value="">Select...</option>
-                          {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                        </select>
-                      </div>
-
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">Customer Requirement</label>
-                        <input
-                          className="create-lead-input"
-                          value={newLeadForm.customerRequirement}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, customerRequirement: e.target.value }))}
-                          placeholder="e.g. 2BHK near metro"
-                        />
-                      </div>
-
-                      <div className="create-lead-field">
-                        <label className="create-lead-field__label">Time Spent (mins)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="create-lead-input"
-                          value={newLeadForm.timeSpent}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, timeSpent: e.target.value }))}
-                          placeholder="e.g. 30"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {workspaceRole === 'SM' && null}
 
                 {/* ══ Section: Notes & Remarks ══ */}
                 <div className="create-lead-section">

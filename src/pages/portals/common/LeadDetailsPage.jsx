@@ -1269,6 +1269,16 @@ const LeadDetailsPage = () => {
                     </span>
                   </div>
                 )}
+                {lead.customerType && (
+                  <div className="lead-details-info-item">
+                    <span className="lead-details-label">Customer Type</span>
+                    <span className="lead-details-value">
+                      <span className="crm-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontSize: 11 }}>
+                        {lead.customerType}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 {lead.primaryRequirement && (
                   <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
                     <span className="lead-details-label">Primary Requirement</span>
