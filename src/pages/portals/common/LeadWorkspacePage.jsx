@@ -48,7 +48,6 @@ import {
   HomeIcon,
   HomeModernIcon,
   IdentificationIcon,
-  TrophyIcon,
   TableCellsIcon,
   BoltIcon,
   EyeIcon,
@@ -574,6 +573,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     current_address: '', current_city: '', current_state: '', current_pincode: '',
     permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
     sameAsCurrent: false, assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
+    bookingProjectId: '', bookingLocationId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
   const [paymentPlans, setPaymentPlans] = useState([]);
@@ -2177,11 +2177,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
       loadAssignableUsers('COL');
-      // Load available inventory units for the lead's project
-      if (quickActionLead?.projectId) {
-        inventoryUnitApi.getDropdown({ project_id: quickActionLead.projectId }).then(resp => {
+      // Load available inventory units for the lead's project or selected booking project
+      const projectIdForUnits = customerProfileForm.bookingProjectId || quickActionLead?.projectId;
+      if (projectIdForUnits) {
+        inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(resp => {
           setAvailableUnits(resp.data || []);
         }).catch(() => setAvailableUnits([]));
+      } else {
+        setAvailableUnits([]);
       }
       // Load payment plans
       paymentPlanApi.getDropdown().then(resp => {
@@ -4939,7 +4942,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {/* ── Contextual: Customer Profile ── */}
                   {(quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && (
                     <div className="qa-drawer-profile-block">
-                      <div className="qa-drawer-profile-section"><TrophyIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Customer Profile Details</div>
+                    {/* ── Project Selection for Booking ── */}
+                      <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>
+                      <div className="qa-drawer-profile-grid">
+                        <div>
+                          <label className="qa-drawer-field-label">Location</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }}>
+                            <option value="">— Select Location —</option>
+                            {locationOptions.filter(l => l.is_active !== false).map(loc => (
+                              <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Project</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingProjectId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingProjectId: e.target.value, inventoryUnitId: '' })); if (e.target.value) { inventoryUnitApi.getDropdown({ project_id: e.target.value }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } else { setAvailableUnits([]); } }}>
+                            <option value="">— Select Project —</option>
+                            {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
+                              <option key={proj.id} value={proj.id}>{proj.project_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
 
                       {/* ── Inventory Unit Selection ── */}
                       {availableUnits.length > 0 && (
