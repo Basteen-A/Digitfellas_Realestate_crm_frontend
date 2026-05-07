@@ -2567,7 +2567,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       {/* ── Toolbar ── */}
       <div className="lead-workspace__toolbar">
         <div className="lead-workspace__toolbar-search">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon"></span>
           <input
             value={filters.search}
             onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}

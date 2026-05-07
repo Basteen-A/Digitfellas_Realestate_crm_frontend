@@ -21,7 +21,7 @@ const SalesManagerPullLead = ({ user }) => {
     try {
       const resp = await leadWorkflowApi.searchLeadByPhone(phone);
       setResults(resp.data || []);
-      if (!resp.data?.length) toast('No leads found for this number', { icon: '🔍' });
+      if (!resp.data?.length) toast('No leads found for this number', { icon: '' });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Search failed'));
       setResults([]);
@@ -55,7 +55,7 @@ const SalesManagerPullLead = ({ user }) => {
     <div>
       <div className="page-header flex-col md:flex-row md:items-center gap-3">
         <div className="page-header-left">
-          <h1>🔍 Pull Lead</h1>
+          <h1> Pull Lead</h1>
           <p className="hidden sm:block">Search by customer phone number to request a lead from a Telecaller</p>
         </div>
       </div>
@@ -81,7 +81,7 @@ const SalesManagerPullLead = ({ user }) => {
             disabled={searching || phone.length < 7}
             style={{ height: 42, padding: '0 24px' }}
           >
-            {searching ? '⏳ Searching...' : '🔍 Search'}
+            {searching ? '⏳ Searching...' : ' Search'}
           </button>
         </div>
       </div>
@@ -91,7 +91,7 @@ const SalesManagerPullLead = ({ user }) => {
         <div className="crm-card">
           {results.length === 0 && !searching && (
             <div className="empty-state">
-              <div className="empty-icon">🔍</div>
+              <div className="empty-icon"></div>
               <div className="empty-title">No leads found</div>
               <div className="empty-desc">No leads match this phone number. The customer may be a new lead.</div>
             </div>
