@@ -109,6 +109,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   }, []);
 
   const filteredVisits = visits.filter(v => {
+    // Only show visits that have time_spent
+    if (!v.time_spent && v.time_spent !== 0) return false;
     if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
     if (filter === 'completed') return v.status === 'Completed';
     if (filter === 'cancelled') return v.status === 'Cancelled';

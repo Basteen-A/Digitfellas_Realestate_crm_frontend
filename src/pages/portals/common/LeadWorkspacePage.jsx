@@ -1305,18 +1305,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         try {
           const detailResp = await leadWorkflowApi.getLeadById(matchedLead.id);
           const fullLead = detailResp?.data || matchedLead;
-          const duplicateLeadName = (
-            fullLead.fullName
-            || fullLead.full_name
-            || `${fullLead.firstName || fullLead.first_name || ''} ${fullLead.lastName || fullLead.last_name || ''}`.trim()
-          ).trim();
-          const stageName = fullLead.stage?.stage_name || fullLead.stageLabel || 'No Stage';
           const statusName = fullLead.status?.status_name || fullLead.statusLabel || 'No Status';
           const ownerName = getLeadOwnerName(fullLead);
           const blockedNote = isClosedLostLead(fullLead)
             ? 'Use this lead to re-engage.'
             : 'New lead cannot be created for this contact.';
-          const info = `${fullLead.leadNumber || fullLead.lead_number || 'Lead'} - ${duplicateLeadName || 'Unnamed'} | Stage: ${stageName} | Status: ${statusName} | Owner: ${ownerName} | ${blockedNote}`;
+          const phoneNum = fullLead.phone || '';
+          const info = `Lead ${fullLead.leadNumber || fullLead.lead_number || ''} - Phone: ${phoneNum} - Status: ${statusName} - Owner: ${ownerName} | ${blockedNote}`;
           if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
         } catch {
@@ -1324,7 +1319,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           const blockedNote = isClosedLostLead(matchedLead)
             ? 'Use this lead to re-engage.'
             : 'New lead cannot be created for this contact.';
-          const info = `${matchedLead.leadNumber || 'Lead'} - ${matchedLead.fullName || ''} | Stage: ${matchedLead.stageLabel || 'No Stage'} | Status: ${matchedLead.statusLabel || 'No Status'} | Owner: ${getLeadOwnerName(matchedLead)} | ${blockedNote}`;
+          const phoneNum = matchedLead.phone || '';
+          const info = `Lead ${matchedLead.leadNumber || ''} - Phone: ${phoneNum} - Status: ${matchedLead.statusLabel || 'No Status'} - Owner: ${getLeadOwnerName(matchedLead)} | ${blockedNote}`;
           if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
         }
