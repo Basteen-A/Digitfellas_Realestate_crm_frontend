@@ -13,6 +13,7 @@ const bookingApi = {
   addPayment: (bookingId, data) => api.post(`/bookings/${bookingId}/payments`, data),
   approvePaymentAccounts: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/accounts`),
   approvePaymentManagement: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/management`),
+  verifyPayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/verify`, data),
 
   // Scoped to current user (Collection Manager)
   getMyBookings: (params = {}) => api.get('/bookings/my', { params }),
@@ -24,6 +25,15 @@ const bookingApi = {
 
   // Development cost (Collection Manager)
   updateDevelopmentCost: (bookingId, data) => api.patch(`/bookings/${bookingId}/development-cost`, data),
+
+  // Payment status (Collection Manager)
+  updatePaymentStatus: (bookingId, data) => api.patch(`/bookings/${bookingId}/payment-status`, data),
+
+  // Activities
+  getActivities: (bookingId) => api.get(`/bookings/${bookingId}/activities`),
+
+  // Cancel reasons dropdown
+  getCancelReasons: () => api.get('/bookings/cancel-reasons'),
 };
 
 export default bookingApi;

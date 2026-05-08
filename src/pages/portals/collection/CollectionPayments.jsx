@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
-const CollectionPayments = ({ user }) => {
+const CollectionPayments = ({ user, onSelectBooking }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -18,7 +18,8 @@ const CollectionPayments = ({ user }) => {
     setLoading(true);
     try {
       const resp = await bookingApi.getMyBookings({ limit: 200 });
-      setBookings(resp.data?.data || resp.data || []);
+      const raw = resp.data?.data?.rows || resp.data?.data || resp.data || [];
+      setBookings(Array.isArray(raw) ? raw : []);
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to load')); }
     finally { setLoading(false); }
   }, []);
@@ -104,7 +105,7 @@ const CollectionPayments = ({ user }) => {
                 {filtered.map(p => (
                   <tr key={p.id} className={p.is_verified ? 'col-payment-verified' : p.is_bounced ? 'col-payment-bounced' : ''}>
                     <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
-                    <td style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{p.booking_number}</td>
+                    <td style={{ color: 'var(--accent-blue)', fontWeight: 600, cursor: onSelectBooking ? 'pointer' : undefined, textDecoration: onSelectBooking ? 'underline' : undefined }} onClick={() => onSelectBooking && onSelectBooking(p.booking_id)}>{p.booking_number}</td>
                     <td>{p.customer_name}</td>
                     <td>{p.payment_type}</td>
                     <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
@@ -127,3 +128,4 @@ const CollectionPayments = ({ user }) => {
 };
 
 export { CollectionPayments };
+export default CollectionPayments;

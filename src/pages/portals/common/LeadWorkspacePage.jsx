@@ -568,6 +568,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Customer Profile Modal (SH Close Won) ──
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
   const [customerProfileForm, setCustomerProfileForm] = useState({
+    buyer_name: '',
     date_of_birth: '', pan_number: '', aadhar_number: '',
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
     current_address: '', current_city: '', current_state: '', current_pincode: '',
@@ -4942,6 +4943,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {/* ── Contextual: Customer Profile ── */}
                   {(quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && (
                     <div className="qa-drawer-profile-block">
+                    {/* ── Buyer Name ── */}
+                      <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Buyer Name</div>
+                      <div style={{ marginBottom: 12 }}>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter buyer name (if different from lead)" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} />
+                      </div>
                     {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>
                       <div className="qa-drawer-profile-grid">

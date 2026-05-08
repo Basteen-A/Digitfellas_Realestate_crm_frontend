@@ -345,6 +345,7 @@ const LeadDetailsPage = () => {
   const [quickLocationDropdownOpen, setQuickLocationDropdownOpen] = useState(false);
   const [quickProjectDropdownOpen, setQuickProjectDropdownOpen] = useState(false);
   const [customerProfileForm, setCustomerProfileForm] = useState({
+    buyer_name: '',
     date_of_birth: '', marital_status: '', purchase_type: '',
     occupation: '', current_post: '',
     pan_number: '', aadhar_number: '',

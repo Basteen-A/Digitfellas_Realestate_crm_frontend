@@ -695,3 +695,115 @@
 .col-payment-bounced {
   background: var(--accent-red-bg) !important;
 }
+
+/* ── Quick Action Buttons (Table Row) ── */
+.col-qa-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+.col-qa-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-primary, #e2e8f0);
+  background: var(--bg-secondary, #f8fafc);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-secondary, #64748b);
+}
+
+.col-qa-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.col-qa-btn:active {
+  transform: scale(0.94);
+}
+
+.col-qa-view:hover {
+  background: #3b82f615;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.col-qa-pay:hover {
+  background: #10b98115;
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.col-qa-status:hover {
+  background: #f59e0b15;
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.col-qa-verify:hover {
+  background: #8b5cf615;
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+}
+
+/* ── Profile info grid for detail page ── */
+.col-profile-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.col-profile-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.col-profile-field-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Amount Cards (Detail) ── */
+.col-amount-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.col-amount-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.col-amount-value.blue { color: var(--accent-blue); }
+.col-amount-value.green { color: var(--accent-green, #10b981); }
+.col-amount-value.red { color: var(--accent-red, #ef4444); }
+
+/* ── Form grid 3-col ── */
+.col-form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .col-qa-actions { gap: 4px; }
+  .col-qa-btn { width: 28px; height: 28px; border-radius: 8px; }
+  .col-profile-info-grid { grid-template-columns: 1fr; }
+  .col-form-grid-3 { grid-template-columns: 1fr; }
+  .col-booking-amounts { grid-template-columns: repeat(2, 1fr) !important; }
+}

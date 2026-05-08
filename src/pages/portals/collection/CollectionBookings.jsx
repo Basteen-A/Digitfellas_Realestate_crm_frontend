@@ -1,751 +1,564 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
-  ClipboardDocumentListIcon, PencilSquareIcon, CreditCardIcon, UserIcon,
-  ArrowPathIcon, ArrowLeftIcon, CheckCircleIcon, ChartBarIcon,
-  WrenchScrewdriverIcon, DocumentCheckIcon, PhoneIcon,
-  XCircleIcon, CalendarDaysIcon, BoltIcon, XMarkIcon,
+  MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
+  EyeIcon, BanknotesIcon, PencilSquareIcon, CheckCircleIcon,
+  CreditCardIcon, ShieldCheckIcon, CalendarDaysIcon,
+  ClockIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
+import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
-const CollectionBookings = ({ user, onSelectCustomer }) => {
+export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [paymentModalBooking, setPaymentModalBooking] = useState(null);
-  const [paymentForm, setPaymentForm] = useState({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '' });
+  const [activeTab, setActiveTab] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusOptions, setStatusOptions] = useState([]);
-  const [devCostModal, setDevCostModal] = useState(null); // booking object
-  const [devCostForm, setDevCostForm] = useState({ guideline_value: '', plot_area: '', development_cost_per_sqft: '' });
-  const [devCostSaving, setDevCostSaving] = useState(false);
-  const [followUpModal, setFollowUpModal] = useState(null);
-  const [followUpForm, setFollowUpForm] = useState({ next_calling_date: '', call_status: '', remarks: '' });
-  const [followUpSaving, setFollowUpSaving] = useState(false);
-  const [closeModal, setCloseModal] = useState(null);
-  const [closeForm, setCloseForm] = useState({ close_reason: '', close_remarks: '' });
-  const [closeSaving, setCloseSaving] = useState(false);
-  const [quickActionOpen, setQuickActionOpen] = useState(false);
-  const [quickActionType, setQuickActionType] = useState(null); // 'status' | 'followup' | 'close'
-  const [quickActionMode, setQuickActionMode] = useState(false); // true when quick action is open without detail modal
+
+  // Quick Action Drawer state
+  const [drawerBooking, setDrawerBooking] = useState(null);
+  const [drawerMode, setDrawerMode] = useState(null); // 'status' | 'pay' | 'verify' | 'payStatus'
+  // Status form
+  const [newStatusId, setNewStatusId] = useState('');
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [cancelReasonId, setCancelReasonId] = useState('');
+  const [cancelReasons, setCancelReasons] = useState([]);
+  const [cancelRemarks, setCancelRemarks] = useState('');
+  // Payment form
+  const [payForm, setPayForm] = useState({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+  const [paySaving, setPaySaving] = useState(false);
+  // Verify form
+  const [verifyPaymentId, setVerifyPaymentId] = useState('');
+  const [verifyForm, setVerifyForm] = useState({ transaction_id: '', verification_note: '' });
+  const [verifySaving, setVerifySaving] = useState(false);
+  // Payment status form
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [payStatusSaving, setPayStatusSaving] = useState(false);
+  // Activity history
+  const [activities, setActivities] = useState([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+
+  const PAYMENT_STATUSES = ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Full Payment Received', 'Follow Up'];
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await bookingApi.getMyBookings({ limit: 100 });
-      setBookings(resp.data?.data || resp.data || []);
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load bookings')); }
-    finally { setLoading(false); }
+      const params = { limit: 200 };
+      if (activeTab === 'Active') params.is_cancelled = 'false';
+      if (activeTab === 'Cancelled') params.is_cancelled = 'true';
+      const resp = await bookingApi.getMyBookings(params);
+      const raw = resp.data?.data?.rows || resp.data?.data || [];
+      setBookings(Array.isArray(raw) ? raw : []);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to load bookings'));
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => { loadBookings(); }, [loadBookings]);
+  useEffect(() => {
+    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
+    bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
   }, []);
 
-  const loadStatuses = useCallback(async () => {
-    try {
-      const resp = await bookingStatusApi.getDropdown();
-      setStatusOptions(resp.data?.data || resp.data || []);
-    } catch { /* silent */ }
-  }, []);
+  const filteredBookings = useMemo(() => {
+    if (!searchQuery.trim()) return bookings;
+    const q = searchQuery.toLowerCase();
+    return bookings.filter((b) =>
+      (b.booking_number || '').toLowerCase().includes(q) ||
+      (b.customer_name || '').toLowerCase().includes(q) ||
+      (b.project_name || '').toLowerCase().includes(q) ||
+      (b.unit_display || b.unit_number || '').toLowerCase().includes(q) ||
+      (b.buyer_name || '').toLowerCase().includes(q)
+    );
+  }, [bookings, searchQuery]);
 
-  useEffect(() => { loadBookings(); loadStatuses(); }, [loadBookings, loadStatuses]);
-
-  const openDetail = async (bookingId) => {
-    setDetailLoading(true);
-    try {
-      const resp = await bookingApi.getById(bookingId);
-      setSelectedBooking(resp.data?.data || resp.data);
-      setEditMode(false);
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load booking')); }
-    finally { setDetailLoading(false); }
+  // ── Drawer helpers ──
+  const openDrawer = (booking, mode) => {
+    setDrawerBooking(booking);
+    setDrawerMode(mode);
+    setNewStatusId('');
+    setCancelReasonId(''); setCancelRemarks('');
+    setPayForm({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+    setVerifyPaymentId('');
+    setVerifyForm({ transaction_id: '', verification_note: '' });
+    setPaymentStatus(booking.payment_status || '');
+    setFollowUpDate('');
+    // Load activities
+    setActivitiesLoading(true);
+    bookingApi.getActivities(booking.id).then(r => setActivities(r.data?.data || r.data || [])).catch(() => {}).finally(() => setActivitiesLoading(false));
   };
+  const closeDrawer = () => { setDrawerBooking(null); setDrawerMode(null); setActivities([]); };
 
-  const handleEditSave = async () => {
-    if (!selectedBooking) return;
+  const handleStatusUpdate = async () => {
+    if (!newStatusId || !drawerBooking) return;
+    // Find selected status to check if it's Cancelled
+    const selectedStatus = statusOptions.find(s => String(s.id) === newStatusId);
+    const isCancelled = selectedStatus?.status_code === 'CANCELLED';
+    if (isCancelled && !cancelReasonId) { toast.error('Select a cancellation reason'); return; }
+    setStatusSaving(true);
     try {
-      await bookingApi.update(selectedBooking.id, editForm);
-      toast.success('Booking updated');
-      setEditMode(false);
-      openDetail(selectedBooking.id);
+      const payload = { booking_status_id: newStatusId };
+      if (isCancelled) { payload.cancel_reason_id = cancelReasonId; payload.cancel_remarks = cancelRemarks; }
+      await bookingApi.update(drawerBooking.id, payload);
+      toast.success('Booking status updated');
+      closeDrawer();
       loadBookings();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to update')); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to update status')); }
+    finally { setStatusSaving(false); }
   };
 
-  const handleApproveAccounts = async (paymentId) => {
+  const handlePaymentStatusUpdate = async () => {
+    if (!paymentStatus || !drawerBooking) return;
+    if (paymentStatus === 'Follow Up' && !followUpDate) { toast.error('Select a follow-up date'); return; }
+    setPayStatusSaving(true);
     try {
-      await bookingApi.approvePaymentAccounts(selectedBooking.id, paymentId);
-      toast.success('Payment approved by Accounts');
-      openDetail(selectedBooking.id);
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to approve (Accounts)')); }
-  };
-
-  const handleApproveManagement = async (paymentId) => {
-    try {
-      await bookingApi.approvePaymentManagement(selectedBooking.id, paymentId);
-      toast.success('Payment approved by Management');
-      openDetail(selectedBooking.id);
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to approve (Management)')); }
-  };
-
-  const handleAddPayment = async (e) => {
-    e.preventDefault();
-    if (!paymentModalBooking || !paymentForm.amount || !paymentForm.payment_date) {
-      toast.error('Amount and date are required'); return;
-    }
-    try {
-      await bookingApi.addPayment(paymentModalBooking.id, paymentForm);
-      toast.success('Payment recorded');
-      setPaymentModalBooking(null);
-      setPaymentForm({ payment_type: 'Token Amount', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '' });
-      if (selectedBooking) openDetail(selectedBooking.id);
-      loadBookings();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to add payment')); }
-  };
-
-  const startEdit = () => {
-    setEditForm({
-      unit_number: selectedBooking.unit_number || '',
-      tower_block: selectedBooking.tower_block || '',
-      floor_number: selectedBooking.floor_number || '',
-      configuration: selectedBooking.configuration || '',
-      carpet_area: selectedBooking.carpet_area || '',
-      base_price: selectedBooking.base_price || '',
-      total_amount: selectedBooking.total_amount || '',
-      discount_amount: selectedBooking.discount_amount || '',
-      net_amount: selectedBooking.net_amount || '',
-      gst_amount: selectedBooking.gst_amount || '',
-      stamp_duty: selectedBooking.stamp_duty || '',
-      registration_charges: selectedBooking.registration_charges || '',
-      booking_status_id: selectedBooking.booking_status_id || '',
-      next_calling_date: selectedBooking.next_calling_date || '',
-      call_status: selectedBooking.call_status || '',
-      remarks: selectedBooking.remarks || '',
-    });
-    setEditMode(true);
-  };
-
-  // Development cost handlers
-  const openDevCostModal = (booking) => {
-    setDevCostModal(booking);
-    setDevCostForm({
-      guideline_value: booking.guideline_value || '',
-      plot_area: booking.plot_area || booking.carpet_area || '',
-      development_cost_per_sqft: booking.development_cost_per_sqft || '',
-    });
-  };
-
-  const computeDerived = (form) => {
-    const gv = parseFloat(form.guideline_value) || 0;
-    const pa = parseFloat(form.plot_area) || 0;
-    const dcps = parseFloat(form.development_cost_per_sqft) || 0;
-    const plotValue = gv * pa;
-    return {
-      plot_value: Math.round(plotValue * 100) / 100,
-      stamp_value: Math.ceil((plotValue * 0.07) / 100) * 100,
-      registration_exp: Math.ceil((plotValue * 0.02) / 100) * 100,
-      development_charges: Math.round(pa * dcps * 1.18 * 100) / 100,
-    };
-  };
-
-  const handleDevCostSave = async () => {
-    if (!devCostModal) return;
-    setDevCostSaving(true);
-    try {
-      await bookingApi.updateDevelopmentCost(devCostModal.id, {
-        guideline_value: parseFloat(devCostForm.guideline_value) || 0,
-        plot_area: parseFloat(devCostForm.plot_area) || 0,
-        development_cost_per_sqft: parseFloat(devCostForm.development_cost_per_sqft) || 0,
+      await bookingApi.updatePaymentStatus(drawerBooking.id, {
+        payment_status: paymentStatus,
+        next_follow_up_at: paymentStatus === 'Follow Up' ? followUpDate : null,
       });
-      toast.success('Development costs updated');
-      setDevCostModal(null);
+      toast.success('Payment status updated');
+      closeDrawer();
       loadBookings();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update development costs'));
-    } finally {
-      setDevCostSaving(false);
-    }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to update payment status')); }
+    finally { setPayStatusSaving(false); }
   };
 
-  const openFollowUp = (booking) => {
-    setFollowUpModal(booking);
-    setFollowUpForm({
-      next_calling_date: booking.next_calling_date || '',
-      call_status: booking.call_status || '',
-      remarks: '',
-    });
-  };
-
-  const handleFollowUpSave = async () => {
-    if (!followUpModal) return;
-    setFollowUpSaving(true);
+  const handleAddPayment = async () => {
+    if (!payForm.amount || parseFloat(payForm.amount) <= 0 || !drawerBooking) { toast.error('Enter valid amount'); return; }
+    setPaySaving(true);
     try {
-      await bookingApi.update(followUpModal.id, {
-        next_calling_date: followUpForm.next_calling_date || null,
-        call_status: followUpForm.call_status || null,
-        remarks: followUpForm.remarks || null,
-      });
-      toast.success('Follow-up scheduled');
-      setFollowUpModal(null);
-      openDetail(followUpModal.id);
+      await bookingApi.addPayment(drawerBooking.id, { ...payForm, amount: parseFloat(payForm.amount) });
+      toast.success('Payment recorded successfully');
+      closeDrawer();
       loadBookings();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to save follow-up'));
-    } finally {
-      setFollowUpSaving(false);
-    }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to record payment')); }
+    finally { setPaySaving(false); }
   };
 
-  const openCloseBooking = (booking) => {
-    setCloseModal(booking);
-    setCloseForm({ close_reason: '', close_remarks: '' });
-  };
-
-  const handleCloseBooking = async () => {
-    if (!closeModal) return;
-    setCloseSaving(true);
+  const handleVerifyPayment = async () => {
+    if (!verifyPaymentId || !drawerBooking) return;
+    setVerifySaving(true);
     try {
-      await bookingApi.update(closeModal.id, {
-        booking_status_id: null,
-        is_cancelled: true,
-        cancellation_reason: closeForm.close_reason,
-        cancellation_remarks: closeForm.close_remarks,
-      });
-      toast.success('Booking closed');
-      setCloseModal(null);
+      await bookingApi.verifyPayment(drawerBooking.id, verifyPaymentId, verifyForm);
+      toast.success('Payment verified');
+      closeDrawer();
       loadBookings();
-      setSelectedBooking(null);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to close booking'));
-    } finally {
-      setCloseSaving(false);
-    }
+    } catch (err) { toast.error(getErrorMessage(err, 'Verification failed')); }
+    finally { setVerifySaving(false); }
+  };
+
+  const getProgressClass = (pct) => {
+    if (pct >= 100) return 'success';
+    if (pct >= 50) return '';
+    return 'warning';
   };
 
   return (
-    <div>
+    <div className="col-bookings-page">
+      {/* Page Header */}
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1> Bookings</h1>
-          <p className="hidden sm:block">Manage bookings, update details, and record payments</p>
+          <h1>Bookings</h1>
+          <p className="hidden sm:block">Manage all property bookings and collections</p>
         </div>
-        <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={loadBookings}> Refresh</button>
+        <div className="page-header-actions flex-wrap" style={{ gap: 8 }}>
+          <div style={{ position: 'relative', minWidth: 220 }}>
+            <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: 'var(--text-muted)' }} />
+            <input type="text" placeholder="Search bookings..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              className="col-form-input" style={{ paddingLeft: 32, height: 36, fontSize: 13, width: '100%' }} />
+          </div>
+          <div className="filter-tabs">
+            {['All', 'Active', 'Cancelled'].map((tab) => (
+              <button key={tab} className={`filter-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>{tab}</button>
+            ))}
+          </div>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadBookings}>
+            <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Refresh
+          </button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="col-empty"><div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">Loading bookings...</div></div>
-      ) : bookings.length === 0 ? (
-        <div className="col-section"><div className="col-empty"><div className="col-empty-icon"><ClipboardDocumentListIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">No bookings yet</div><div className="col-empty-desc">Bookings are auto-created when Sales Head approves a deal</div></div></div>
-      ) : (
-        <div className="col-section">
-          <div className="col-section-body-flush" style={{ overflowX: 'auto' }}>
-            <table className="col-table">
-              <thead>
-                <tr>
-                  <th>Booking #</th><th>Customer</th><th>Project</th><th>Status</th>
-                  <th>Net Amount</th><th>Paid</th><th>Progress</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map(b => (
-                  <tr key={b.id} className="is-clickable" onClick={() => openDetail(b.id)}>
-                    <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{b.booking_number}</td>
-                    <td style={{ fontWeight: 600 }}>{b.customer_name || '-'}</td>
-                    <td>{b.project_name || '-'}</td>
-                    <td>
-                      <span className="col-badge" style={{ background: (b.status_color || '#6B7280') + '22', color: b.status_color || '#6B7280' }}>
-                        <span className="col-badge-dot" style={{ background: b.status_color || '#6B7280' }} />
-                        {b.status_label || 'Pending'}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{formatCurrency(b.net_amount)}</td>
-                    <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(b.total_paid)}</td>
-                    <td style={{ minWidth: 100 }}>
-                      <div className="col-progress">
-                        <div className={`col-progress-bar ${b.payment_percentage >= 100 ? 'success' : b.payment_percentage >= 50 ? '' : 'warning'}`}
-                          style={{ width: `${Math.min(b.payment_percentage || 0, 100)}%` }} />
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{b.payment_percentage || 0}%</div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(b.id); }}>View</button>
-                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={(e) => { e.stopPropagation(); setPaymentModalBooking(b); }}>+ Pay</button>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); openDevCostModal(b); }}>Dev Cost</button>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); setSelectedBooking(b); setQuickActionOpen(true); setQuickActionMode(true); }} title="Quick Actions"><BoltIcon style={{ width: 14, height: 14 }} /></button>
-                      </div>
-                    </td>
+      {/* Bookings Table */}
+      <div className="crm-card">
+        <div className="crm-card-body-flush">
+          {loading ? (
+            <div style={{ padding: 48, textAlign: 'center' }}>
+              <ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: 'var(--text-muted)', marginTop: 12 }}>Loading bookings...</p>
+            </div>
+          ) : filteredBookings.length === 0 ? (
+            <div className="col-empty">
+              <div className="col-empty-icon"><ClipboardDocumentListIcon style={{ width: 48, height: 48, color: 'var(--text-muted)' }} /></div>
+              <div className="col-empty-title">{searchQuery ? 'No bookings match your search' : 'No bookings found'}</div>
+              <div className="col-empty-desc">{searchQuery ? 'Try a different search term' : 'Bookings from Sales Head will appear here'}</div>
+            </div>
+          ) : (
+            <div className="crm-table-wrap">
+              <table className="crm-table">
+                <thead>
+                  <tr>
+                    <th>Booking #</th>
+                    <th>Buyer</th>
+                    <th>Project · Unit</th>
+                    <th>Net Value</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th style={{ textAlign: 'center' }}>Quick Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredBookings.map((booking) => {
+                    const pct = booking.payment_percentage || 0;
+                    return (
+                      <tr key={booking.id}>
+                        <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{booking.customer_name || booking.buyer_name || '-'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.lead?.lead_number || ''}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{booking.project_name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</div>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{formatCurrency(booking.net_amount)}</td>
+                        <td style={{ minWidth: 90 }}>
+                          <div className="col-progress" style={{ height: 6, width: '100%' }}>
+                            <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{pct}%</div>
+                        </td>
+                        <td>
+                          <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color }}>
+                            <span className="col-badge-dot" style={{ background: booking.status_color }} />
+                            {booking.status_label}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(booking.booking_date)}</td>
+                        <td>
+                          <div className="col-qa-actions">
+                            <button className="col-qa-btn col-qa-view" title="View Details" onClick={() => onSelectBooking(booking.id)}>
+                              <EyeIcon style={{ width: 15, height: 15 }} />
+                            </button>
+                            <button className="col-qa-btn col-qa-pay" title="Record Payment" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'pay'); }}>
+                              <BanknotesIcon style={{ width: 15, height: 15 }} />
+                            </button>
+                            <button className="col-qa-btn col-qa-status" title="Update Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'status'); }}>
+                              <PencilSquareIcon style={{ width: 15, height: 15 }} />
+                            </button>
+                            <button className="col-qa-btn col-qa-verify" title="Verify Payment" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'verify'); }}>
+                              <ShieldCheckIcon style={{ width: 15, height: 15 }} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary */}
+      {!loading && filteredBookings.length > 0 && (
+        <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+          <span><strong>{filteredBookings.length}</strong> bookings</span>
+          <span>Value: <strong style={{ color: 'var(--accent-blue)' }}>{formatCurrency(filteredBookings.reduce((s, b) => s + parseFloat(b.net_amount || 0), 0))}</strong></span>
+          <span>Collected: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(filteredBookings.reduce((s, b) => s + parseFloat(b.total_paid || 0), 0))}</strong></span>
         </div>
       )}
 
-      {/* ── Booking Detail Modal ── */}
-      {selectedBooking && !quickActionMode && (
-        <div className="col-modal-overlay" onClick={() => setSelectedBooking(null)}>
-          <div className="col-modal col-modal-lg" onClick={e => e.stopPropagation()}>
-            <div className="col-modal-header">
-              <h2><ClipboardDocumentListIcon style={{ width: 20, height: 20, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />{selectedBooking.booking_number}</h2>
-              <button className="col-modal-close" onClick={() => setSelectedBooking(null)}>×</button>
+      {/* ══════════ QUICK ACTION DRAWER ══════════ */}
+      {drawerBooking && (
+        <div className="col-modal-overlay" onClick={closeDrawer}>
+          <div className="qa-modal-panel" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+            {/* Handle */}
+            <div className="qa-drawer-handle" />
+
+            {/* Header */}
+            <div className="qa-drawer-header">
+              <div className="qa-drawer-header-left">
+                <div className="qa-drawer-avatar" style={{ background: `${drawerBooking.status_color}22`, color: drawerBooking.status_color, border: `2px solid ${drawerBooking.status_color}` }}>
+                  {(drawerBooking.customer_name || 'B')[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <div className="qa-drawer-name">{drawerBooking.customer_name || drawerBooking.buyer_name || 'Customer'}</div>
+                  <div className="qa-drawer-meta">{drawerBooking.booking_number} · {drawerBooking.project_name}</div>
+                  <div className="qa-drawer-budget">
+                    Net: {formatCurrency(drawerBooking.net_amount)} · Paid: <span style={{ color: 'var(--accent-green)' }}>{formatCurrency(drawerBooking.total_paid || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              <button className="qa-drawer-close" onClick={closeDrawer}>×</button>
             </div>
-            {detailLoading ? (
-              <div className="col-modal-body"><div className="col-empty"><div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div></div></div>
-            ) : (
-              <div className="col-modal-body">
-                {/* Amount cards */}
-                <div className="col-booking-amounts">
-                  <div className="col-amount-card"><div className="col-amount-label">Total Amount</div><div className="col-amount-value">{formatCurrency(selectedBooking.total_amount)}</div></div>
-                  <div className="col-amount-card"><div className="col-amount-label">Net Amount</div><div className="col-amount-value blue">{formatCurrency(selectedBooking.net_amount)}</div></div>
-                  <div className="col-amount-card"><div className="col-amount-label">Total Paid</div><div className="col-amount-value green">{formatCurrency(selectedBooking.total_paid)}</div></div>
-                  <div className="col-amount-card"><div className="col-amount-label">Due</div><div className="col-amount-value red">{formatCurrency(selectedBooking.total_due ?? (parseFloat(selectedBooking.net_amount || 0) - parseFloat(selectedBooking.total_paid || 0)))}</div></div>
+
+            {/* Mode Tabs */}
+            <div className="qa-drawer-section" style={{ paddingBottom: 0 }}>Quick Actions</div>
+            <div className="qa-drawer-status-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', padding: '8px 20px 16px' }}>
+              <button className={`qa-drawer-st-btn ${drawerMode === 'status' ? 'sel-default' : ''}`} onClick={() => setDrawerMode('status')}>
+                <div className="qa-drawer-st-icon"><PencilSquareIcon style={{ width: 22, height: 22 }} /></div>
+                <div className="qa-drawer-st-label">Booking Status</div>
+              </button>
+              <button className={`qa-drawer-st-btn ${drawerMode === 'payStatus' ? 'sel-follow-up' : ''}`} onClick={() => setDrawerMode('payStatus')}>
+                <div className="qa-drawer-st-icon"><CreditCardIcon style={{ width: 22, height: 22 }} /></div>
+                <div className="qa-drawer-st-label">Pay Status</div>
+              </button>
+              <button className={`qa-drawer-st-btn ${drawerMode === 'pay' ? 'sel-sv-done' : ''}`} onClick={() => setDrawerMode('pay')}>
+                <div className="qa-drawer-st-icon"><BanknotesIcon style={{ width: 22, height: 22 }} /></div>
+                <div className="qa-drawer-st-label">Record Pay</div>
+              </button>
+              <button className={`qa-drawer-st-btn ${drawerMode === 'verify' ? 'sel-default' : ''}`} onClick={() => setDrawerMode('verify')}>
+                <div className="qa-drawer-st-icon"><ShieldCheckIcon style={{ width: 22, height: 22 }} /></div>
+                <div className="qa-drawer-st-label">Verify Pay</div>
+              </button>
+              <button className={`qa-drawer-st-btn`} onClick={() => { closeDrawer(); onSelectBooking(drawerBooking.id); }}>
+                <div className="qa-drawer-st-icon"><EyeIcon style={{ width: 22, height: 22 }} /></div>
+                <div className="qa-drawer-st-label">View Detail</div>
+              </button>
+            </div>
+
+            <div className="qa-drawer-divider" />
+
+            {/* ── BOOKING STATUS UPDATE MODE ── */}
+            {drawerMode === 'status' && (
+              <div style={{ padding: '16px 20px' }}>
+                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
+                <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  {statusOptions.map(s => (
+                    <button key={s.id} className={`qa-drawer-st-btn ${newStatusId === String(s.id) ? 'sel-default' : ''}`}
+                      onClick={() => setNewStatusId(String(s.id))}>
+                      <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                        {s.status_code === 'CANCELLED' ? (
+                          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: s.color_code || '#EF4444' }} />
+                        ) : (
+                          <CheckCircleIcon style={{ width: 18, height: 18, color: s.color_code || 'var(--accent-blue)' }} />
+                        )}
+                      </div>
+                      <div className="qa-drawer-st-label">{s.status_name}</div>
+                    </button>
+                  ))}
                 </div>
 
-                {editMode ? (
-                  <>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Edit Booking Details</h3>
-                    <div className="col-form-grid-3">
-                      {[['unit_number','Unit #'],['tower_block','Tower/Block'],['floor_number','Floor'],['configuration','Config'],['carpet_area','Carpet Area'],['base_price','Base Price'],['total_amount','Total Amount'],['discount_amount','Discount'],['net_amount','Net Amount'],['gst_amount','GST'],['stamp_duty','Stamp Duty'],['registration_charges','Reg. Charges']].map(([k,l]) => (
-                        <div className="col-form-group" key={k}>
-                          <label className="col-form-label">{l}</label>
-                          <input className="col-form-input" value={editForm[k] || ''} onChange={e => setEditForm(p => ({...p, [k]: e.target.value}))} />
+                {/* Cancel reason dropdown — shown when Cancelled is selected */}
+                {(() => {
+                  const sel = statusOptions.find(s => String(s.id) === newStatusId);
+                  if (sel?.status_code === 'CANCELLED') {
+                    return (
+                      <div style={{ marginTop: 14 }}>
+                        <label className="qa-drawer-field-label">Cancel Reason *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
+                          onChange={e => setCancelReasonId(e.target.value)}>
+                          <option value="">— Select reason —</option>
+                          {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name}</option>)}
+                        </select>
+                        <div style={{ marginTop: 8 }}>
+                          <label className="qa-drawer-field-label">Cancel Remarks</label>
+                          <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Additional remarks..."
+                            value={cancelRemarks} onChange={e => setCancelRemarks(e.target.value)} />
                         </div>
-                      ))}
-                      <div className="col-form-group">
-                        <label className="col-form-label">Status</label>
-                        <select className="col-form-select" value={editForm.booking_status_id || ''} onChange={e => setEditForm(p => ({...p, booking_status_id: e.target.value}))}>
-                          <option value="">Select...</option>
-                          {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
-                        </select>
                       </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Next Calling Date</label>
-                        <input className="col-form-input" type="date" value={editForm.next_calling_date || ''} onChange={e => setEditForm(p => ({...p, next_calling_date: e.target.value}))} />
+                    );
+                  }
+                  return null;
+                })()}
+
+                <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                  <button className="qa-drawer-save-btn" disabled={!newStatusId || statusSaving} onClick={handleStatusUpdate}>
+                    {statusSaving ? 'Updating...' : '✓ Update Booking Status'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── PAYMENT STATUS UPDATE MODE ── */}
+            {drawerMode === 'payStatus' && (
+              <div style={{ padding: '16px 20px' }}>
+                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
+                <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  {PAYMENT_STATUSES.map(ps => (
+                    <button key={ps} className={`qa-drawer-st-btn ${paymentStatus === ps ? 'sel-follow-up' : ''}`}
+                      onClick={() => setPaymentStatus(ps)}>
+                      <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                        {ps === 'Follow Up' ? (
+                          <CalendarDaysIcon style={{ width: 18, height: 18, color: '#F59E0B' }} />
+                        ) : ps === 'Full Payment Received' ? (
+                          <CheckCircleIcon style={{ width: 18, height: 18, color: '#10B981' }} />
+                        ) : (
+                          <CreditCardIcon style={{ width: 18, height: 18, color: '#3B82F6' }} />
+                        )}
                       </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Call Status</label>
-                        <select className="col-form-select" value={editForm.call_status || ''} onChange={e => setEditForm(p => ({...p, call_status: e.target.value}))}>
-                          <option value="">Select...</option>
-                          <option value="Not Reachable">Not Reachable</option>
-                          <option value="Busy">Busy</option>
-                          <option value="Callback Requested">Callback Requested</option>
-                          <option value="Connected">Connected</option>
-                          <option value="Committed to Pay">Committed to Pay</option>
-                          <option value="Refused / Issue">Refused / Issue</option>
-                        </select>
-                      </div>
-                      <div className="col-form-group full-width">
-                        <label className="col-form-label">Remarks</label>
-                        <textarea className="col-form-textarea" value={editForm.remarks || ''} onChange={e => setEditForm(p => ({...p, remarks: e.target.value}))} rows={2} />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                      <button className="crm-btn crm-btn-ghost" onClick={() => setEditMode(false)}>Cancel</button>
-                      <button className="crm-btn crm-btn-primary" onClick={handleEditSave}><DocumentCheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Save Changes</button>
-                    </div>
-                  </>
+                      <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Follow Up date — shown when Follow Up is selected */}
+                {paymentStatus === 'Follow Up' && (
+                  <div style={{ marginTop: 14 }}>
+                    <label className="qa-drawer-field-label">Follow-Up Date *</label>
+                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="date" value={followUpDate}
+                      onChange={e => setFollowUpDate(e.target.value)} />
+                  </div>
+                )}
+
+                <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                  <button className="qa-drawer-save-btn" style={{ background: '#6366F1' }} disabled={!paymentStatus || payStatusSaving} onClick={handlePaymentStatusUpdate}>
+                    {payStatusSaving ? 'Updating...' : '💳 Update Payment Status'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── RECORD PAYMENT MODE ── */}
+            {drawerMode === 'pay' && (
+              <div style={{ padding: '16px 20px' }}>
+                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label className="qa-drawer-field-label">Payment Type</label>
+                    <select className="qa-drawer-field-select" style={{ width: '100%' }} value={payForm.payment_type} onChange={e => setPayForm(p => ({ ...p, payment_type: e.target.value }))}>
+                      {['Token', 'Down Payment', 'Installment', 'EMI', 'Final Payment', 'Other'].map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="qa-drawer-field-label">Payment Mode</label>
+                    <select className="qa-drawer-field-select" style={{ width: '100%' }} value={payForm.payment_mode} onChange={e => setPayForm(p => ({ ...p, payment_mode: e.target.value }))}>
+                      {['Cash', 'Cheque', 'Online', 'NEFT/RTGS', 'UPI', 'DD'].map(m => <option key={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="qa-drawer-field-label">Amount (₹) *</label>
+                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="number" placeholder="0.00" value={payForm.amount}
+                      onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="qa-drawer-field-label">Payment Date</label>
+                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="date" value={payForm.payment_date}
+                      onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="qa-drawer-field-label">Transaction Ref</label>
+                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" placeholder="UTR / Cheque #" value={payForm.transaction_ref}
+                      onChange={e => setPayForm(p => ({ ...p, transaction_ref: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="qa-drawer-field-label">Remarks</label>
+                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" placeholder="Optional" value={payForm.remarks}
+                      onChange={e => setPayForm(p => ({ ...p, remarks: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount} onClick={handleAddPayment}>
+                    {paySaving ? 'Recording...' : '💰 Record Payment'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── VERIFY PAYMENT MODE ── */}
+            {drawerMode === 'verify' && (
+              <div style={{ padding: '16px 20px' }}>
+                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Verify a Payment</div>
+                {/* Payment list for this booking */}
+                {(drawerBooking.payments || []).length === 0 ? (
+                  <div className="col-empty" style={{ padding: 20 }}>
+                    <div className="col-empty-title">No payments to verify</div>
+                    <div className="col-empty-desc">Record a payment first</div>
+                  </div>
                 ) : (
                   <>
-                    <div className="col-booking-header">
-                      <div>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Customer: <strong style={{ color: 'var(--text-primary)' }}>{selectedBooking.customer ? `${selectedBooking.customer.first_name} ${selectedBooking.customer.last_name || ''}` : '-'}</strong></div>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Project: <strong style={{ color: 'var(--text-primary)' }}>{selectedBooking.project?.project_name || '-'}</strong></div>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Unit: <strong>{selectedBooking.unit_number || 'Not set'}</strong> | Floor: <strong>{selectedBooking.floor_number || '-'}</strong> | Config: <strong>{selectedBooking.configuration || '-'}</strong></div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Details</button>
-                        <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => setPaymentModalBooking(selectedBooking)}><CreditCardIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Add Payment</button>
-                        {selectedBooking.customer && <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onSelectCustomer?.(selectedBooking.customer.id)}><UserIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />View Customer</button>}
-                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { setQuickActionOpen(true); setQuickActionMode(true); }}><BoltIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Quick Actions</button>
-                      </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label className="qa-drawer-field-label">Select Payment to Verify</label>
+                      <select className="qa-drawer-field-select" style={{ width: '100%' }} value={verifyPaymentId}
+                        onChange={e => {
+                          setVerifyPaymentId(e.target.value);
+                          const p = (drawerBooking.payments || []).find(pm => String(pm.id) === e.target.value);
+                          if (p) setVerifyForm({ transaction_id: p.transaction_ref || '', verification_note: '' });
+                        }}>
+                        <option value="">— Select payment —</option>
+                        {(drawerBooking.payments || []).filter(p => !p.is_verified).map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.payment_number || `#${p.id}`} — {formatCurrency(p.amount)} ({p.payment_mode}) {p.is_verified ? '✓' : ''}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-
-                    {/* Payments table */}
-                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: '20px 0 12px' }}><CreditCardIcon style={{ width: 18, height: 18, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Payment History</h3>
-                    {(selectedBooking.payments || []).length === 0 ? (
-                      <div className="col-empty" style={{ padding: 24 }}><div className="col-empty-desc">No payments recorded. Click "Add Payment" to start.</div></div>
-                    ) : (
-                      <div style={{ overflowX: 'auto' }}>
-                        <table className="col-table">
-                          <thead><tr><th>Payment #</th><th>Type</th><th>Mode</th><th>Amount</th><th>Date</th><th>Account</th><th>Accounts</th><th>Mgmt</th><th>Status</th></tr></thead>
-                          <tbody>
-                            {(selectedBooking.payments || []).map(p => {
-                              const approvalStatus = p.management_approved ? 'APPROVED' : p.accounts_approved ? 'ACCOUNTS_OK' : 'PENDING';
-                              const statusColors = { PENDING: '#f59e0b', ACCOUNTS_OK: '#3b82f6', APPROVED: '#10b981' };
-                              const statusLabels = { PENDING: 'Pending', ACCOUNTS_OK: 'Accounts OK', APPROVED: 'Approved' };
-                              return (
-                                <tr key={p.id} className={p.is_verified ? 'col-payment-verified' : p.is_bounced ? 'col-payment-bounced' : ''}>
-                                  <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
-                                  <td>{p.payment_type}</td>
-                                  <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
-                                  <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
-                                  <td style={{ fontSize: 12 }}>{formatDate(p.payment_date)}</td>
-                                  <td style={{ fontSize: 12 }}>{p.account_name || '-'}</td>
-                                  <td>{p.accounts_approved ? <CheckCircleIcon style={{ width: 16, height: 16, color: 'var(--accent-green)' }} /> : (
-                                    <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleApproveAccounts(p.id)} style={{ padding: '4px 8px', fontSize: 11 }}>Approve A/C</button>
-                                  )}</td>
-                                  <td>{p.management_approved ? <CheckCircleIcon style={{ width: 16, height: 16, color: 'var(--accent-green)' }} /> : (
-                                    <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => handleApproveManagement(p.id)} disabled={!p.accounts_approved} style={{ padding: '4px 8px', fontSize: 11 }}>Approve Mgmt</button>
-                                  )}</td>
-                                  <td><span className="col-badge" style={{ background: statusColors[approvalStatus] + '22', color: statusColors[approvalStatus], fontWeight: 600 }}>{statusLabels[approvalStatus]}</span></td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                    {verifyPaymentId && (
+                      <>
+                        <div style={{ marginBottom: 12 }}>
+                          <label className="qa-drawer-field-label">Transaction ID *</label>
+                          <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" placeholder="Enter transaction ID"
+                            value={verifyForm.transaction_id} onChange={e => setVerifyForm(p => ({ ...p, transaction_id: e.target.value }))} />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label className="qa-drawer-field-label">Verification Note</label>
+                          <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Optional note..."
+                            value={verifyForm.verification_note} onChange={e => setVerifyForm(p => ({ ...p, verification_note: e.target.value }))} />
+                        </div>
+                        <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                          <button className="qa-drawer-save-btn" style={{ background: '#5B3FA6' }} disabled={verifySaving} onClick={handleVerifyPayment}>
+                            {verifySaving ? 'Verifying...' : '🛡️ Verify Payment'}
+                          </button>
+                        </div>
+                      </>
                     )}
                   </>
                 )}
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* ── Add Payment Modal ── */}
-      {paymentModalBooking && (
-        <div className="col-modal-overlay" onClick={() => setPaymentModalBooking(null)} style={{ zIndex: 1010 }}>
-          <div className="col-modal" onClick={e => e.stopPropagation()}>
-            <div className="col-modal-header">
-              <h2><CreditCardIcon style={{ width: 20, height: 20, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Add Payment {paymentModalBooking?.booking_number ? `— ${paymentModalBooking.booking_number}` : ''}</h2>
-              <button className="col-modal-close" onClick={() => setPaymentModalBooking(null)}>×</button>
-            </div>
-            <form onSubmit={handleAddPayment}>
-              <div className="col-modal-body">
-                <div className="col-form-grid">
-                  <div className="col-form-group">
-                    <label className="col-form-label">Payment Type *</label>
-                    <select className="col-form-select" value={paymentForm.payment_type} onChange={e => setPaymentForm(p => ({...p, payment_type: e.target.value}))}>
-                      {['Token Amount','Down Payment','Installment','Loan Disbursement','Registration Charge','Stamp Duty','GST','Maintenance Deposit','Other'].map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-form-group">
-                    <label className="col-form-label">Payment Mode *</label>
-                    <select className="col-form-select" value={paymentForm.payment_mode} onChange={e => setPaymentForm(p => ({...p, payment_mode: e.target.value}))}>
-                      {['Cash','Cheque','NEFT','RTGS','IMPS','UPI','Demand Draft','Credit Card','Debit Card','Loan Disbursement','Other'].map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-form-group">
-                    <label className="col-form-label">Amount (₹) *</label>
-                    <input className="col-form-input" type="number" step="0.01" required value={paymentForm.amount} onChange={e => setPaymentForm(p => ({...p, amount: e.target.value}))} />
-                  </div>
-                  <div className="col-form-group">
-                    <label className="col-form-label">Payment Date *</label>
-                    <input className="col-form-input" type="date" required value={paymentForm.payment_date} onChange={e => setPaymentForm(p => ({...p, payment_date: e.target.value}))} />
-                  </div>
-                  <div className="col-form-group full-width">
-                    <label className="col-form-label">Account Name</label>
-                    <input className="col-form-input" value={paymentForm.account_name} onChange={e => setPaymentForm(p => ({...p, account_name: e.target.value}))} placeholder="Account holder name" />
-                  </div>
-                  <div className="col-form-group full-width">
-                    <label className="col-form-label">Remarks</label>
-                    <textarea className="col-form-textarea" rows={2} value={paymentForm.remarks} onChange={e => setPaymentForm(p => ({...p, remarks: e.target.value}))} />
-                  </div>
-                </div>
+            {/* ── ACTIVITY HISTORY ── */}
+            <div className="qa-drawer-divider" />
+            <div style={{ padding: '12px 20px 20px' }}>
+              <div className="qa-drawer-section" style={{ padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ClockIcon style={{ width: 14, height: 14 }} /> Activity History
               </div>
-              <div className="col-modal-footer">
-                <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setPaymentModalBooking(null)}>Cancel</button>
-                <button type="submit" className="crm-btn crm-btn-success"><CreditCardIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Record Payment</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Development Cost Modal */}
-      {devCostModal && (
-        <div className="col-modal-overlay" onClick={() => setDevCostModal(null)}>
-          <div className="col-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
-            <div className="col-modal-header">
-              <h2><WrenchScrewdriverIcon style={{ width: 20, height: 20, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Development Cost — {devCostModal.booking_number}</h2>
-              <button className="col-modal-close" onClick={() => setDevCostModal(null)}>×</button>
-            </div>
-            <div className="col-modal-body">
-              <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
-                <strong>{devCostModal.customer_name}</strong> — {devCostModal.project_name} | Unit: {devCostModal.unit_display || devCostModal.unit_number || 'N/A'}
-              </div>
-
-              <div className="col-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                <div className="col-form-group">
-                  <label className="col-form-label">Guideline Value (₹/sq.ft.)</label>
-                  <input
-                    className="col-form-input"
-                    type="number" step="0.01"
-                    value={devCostForm.guideline_value}
-                    onChange={e => setDevCostForm(p => ({ ...p, guideline_value: e.target.value }))}
-                    placeholder="e.g. 2500"
-                  />
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Plot Area (sq.ft.)</label>
-                  <input
-                    className="col-form-input"
-                    type="number" step="0.01"
-                    value={devCostForm.plot_area}
-                    onChange={e => setDevCostForm(p => ({ ...p, plot_area: e.target.value }))}
-                    placeholder="e.g. 1200"
-                  />
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Dev Cost (₹/sq.ft.)</label>
-                  <input
-                    className="col-form-input"
-                    type="number" step="0.01"
-                    value={devCostForm.development_cost_per_sqft}
-                    onChange={e => setDevCostForm(p => ({ ...p, development_cost_per_sqft: e.target.value }))}
-                    placeholder="e.g. 500"
-                  />
-                </div>
-              </div>
-
-              {/* Live computed preview */}
-              {(() => {
-                const d = computeDerived(devCostForm);
-                return (
-                  <div style={{ marginTop: 20, background: 'var(--bg-secondary)', borderRadius: 10, padding: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--accent-blue)' }}><ChartBarIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Computed Values (Live Preview)</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Plot Value</div>
-                        <div style={{ fontSize: 16, fontWeight: 700 }}>{formatCurrency(d.plot_value)}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Guideline × Plot Area</div>
+              {activitiesLoading ? (
+                <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>Loading...</div>
+              ) : activities.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>No activity yet</div>
+              ) : (
+                <div style={{ maxHeight: 220, overflowY: 'auto', paddingRight: 4 }}>
+                  {activities.slice(0, 20).map((act, i) => (
+                    <div key={act.id || i} style={{
+                      display: 'flex', gap: 10, paddingBottom: 10, marginBottom: 10,
+                      borderBottom: i < activities.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                    }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
+                          act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
+                          act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
+                          act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
+                          act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
+                        fontSize: 12, fontWeight: 700,
+                      }}>
+                        {act.activity_type === 'STATUS_CHANGE' ? '📋' :
+                         act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '💳' :
+                         act.activity_type === 'PAYMENT_RECORDED' ? '💰' :
+                         act.activity_type === 'PAYMENT_VERIFIED' ? '🛡️' : '📌'}
                       </div>
-                      <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Stamp Value (7%)</div>
-                        <div style={{ fontSize: 16, fontWeight: 700 }}>{formatCurrency(d.stamp_value)}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Plot Value × 7% (rounded ↑100)</div>
-                      </div>
-                      <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Registration Exp (2%)</div>
-                        <div style={{ fontSize: 16, fontWeight: 700 }}>{formatCurrency(d.registration_exp)}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Plot Value × 2% (rounded ↑100)</div>
-                      </div>
-                      <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Development Charges</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(d.development_charges)}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>(Area × Dev/sqft) + 18% GST</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
+                        {act.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{act.description}</div>}
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                          {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : ''} · {new Date(act.performed_at).toLocaleString()}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
-            <div className="col-modal-footer">
-              <button className="crm-btn crm-btn-ghost" onClick={() => setDevCostModal(null)}>Cancel</button>
-              <button className="crm-btn crm-btn-primary" onClick={handleDevCostSave} disabled={devCostSaving}>
-                {devCostSaving ? 'Saving...' : 'Save Development Costs'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Quick Action Drawer (Like LeadWorkspacePage) ── */}
-      {quickActionOpen && selectedBooking && (
-        <div className="lead-workspace__modal" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); } }}>
-          <div className="qa-modal-panel" onClick={(e) => e.stopPropagation()}>
-            {/* Drawer Handle */}
-            <div className="qa-drawer-handle" />
-
-            {/* Drawer Header */}
-            <div className="qa-drawer-header">
-              <div className="qa-drawer-header-left">
-                <div className="qa-drawer-avatar">
-                  <BoltIcon style={{ width: 20, height: 20, color: '#4f46e5' }} />
-                </div>
-                <div>
-                  <div className="qa-drawer-name">Quick Actions</div>
-                  <div className="qa-drawer-meta">
-                    {selectedBooking.booking_number} - {selectedBooking.customer_name}
-                  </div>
-                  <div className="qa-drawer-budget">
-                    {selectedBooking.project_name || 'No Project'}
-                  </div>
-                </div>
-              </div>
-              <button className="qa-drawer-close" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); }}>
-                <XMarkIcon style={{ width: 18, height: 18 }} />
-              </button>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="qa-drawer-body">
-              {/* Action Type Selector */}
-              {!quickActionType ? (
-                <div className="qa-drawer-section">Select Action</div>
-              ) : (
-                <button
-                  onClick={() => { setQuickActionType(null); setEditMode(false); setQuickActionMode(false); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '14px 20px 8px', fontSize: 13 }}
-                >
-                  <ArrowLeftIcon style={{ width: 14, height: 14 }} /> Back to Actions
-                </button>
-              )}
-
-              {!quickActionType ? (
-                <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                  <button
-                    className="qa-drawer-st-btn"
-                    onClick={() => { setQuickActionType('status'); startEdit(); }}
-                  >
-                    <PhoneIcon className="qa-drawer-st-icon" style={{ width: 22, height: 22, color: '#4f46e5' }} />
-                    <div className="qa-drawer-st-label">Update Status</div>
-                  </button>
-                  <button
-                    className="qa-drawer-st-btn"
-                    onClick={() => { setQuickActionType('followup'); openFollowUp(selectedBooking); }}
-                  >
-                    <CalendarDaysIcon className="qa-drawer-st-icon" style={{ width: 22, height: 22, color: '#16a34a' }} />
-                    <div className="qa-drawer-st-label">Follow-up</div>
-                  </button>
-                  <button
-                    className="qa-drawer-st-btn"
-                    onClick={() => { setQuickActionType('close'); openCloseBooking(selectedBooking); }}
-                  >
-                    <XCircleIcon className="qa-drawer-st-icon" style={{ width: 22, height: 22, color: '#dc2626' }} />
-                    <div className="qa-drawer-st-label">Close Booking</div>
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  {quickActionType === 'status' && editMode && (
-                    <>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Edit Booking Details</h3>
-                      <div className="col-form-grid-3">
-                        {[['unit_number','Unit #'],['tower_block','Tower/Block'],['floor_number','Floor'],['configuration','Config'],['carpet_area','Carpet Area'],['base_price','Base Price'],['total_amount','Total Amount'],['discount_amount','Discount'],['net_amount','Net Amount'],['gst_amount','GST'],['stamp_duty','Stamp Duty'],['registration_charges','Reg. Charges']].map(([k,l]) => (
-                          <div className="col-form-group" key={k}>
-                            <label className="col-form-label">{l}</label>
-                            <input className="col-form-input" value={editForm[k] || ''} onChange={e => setEditForm(p => ({...p, [k]: e.target.value}))} />
-                          </div>
-                        ))}
-                        <div className="col-form-group">
-                          <label className="col-form-label">Status</label>
-                          <select className="col-form-select" value={editForm.booking_status_id || ''} onChange={e => setEditForm(p => ({...p, booking_status_id: e.target.value}))}>
-                            <option value="">Select...</option>
-                            {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
-                          </select>
-                        </div>
-                        <div className="col-form-group">
-                          <label className="col-form-label">Registration Status</label>
-                          <select className="col-form-select" value={editForm.registration_status || ''} onChange={e => setEditForm(p => ({...p, registration_status: e.target.value}))}>
-                            <option value="">Select...</option>
-                            <option value="Registered">Registered</option>
-                            <option value="Cancelled">Cancelled</option>
-                            <option value="EMI">EMI</option>
-                            <option value="Bank Loan">Bank Loan</option>
-                            <option value="Registration Confirmed">Registration Confirmed</option>
-                            <option value="Request to Cancel">Request to Cancel</option>
-                          </select>
-                        </div>
-                        <div className="col-form-group">
-                          <label className="col-form-label">Registration Number</label>
-                          <input className="col-form-input" value={editForm.registration_number || ''} onChange={e => setEditForm(p => ({...p, registration_number: e.target.value}))} placeholder="Enter registration number" />
-                        </div>
-                        <div className="col-form-group">
-                          <label className="col-form-label">Payment Plan</label>
-                          <select className="col-form-select" value={editForm.payment_plan_id || ''} onChange={e => setEditForm(p => ({...p, payment_plan_id: e.target.value}))}>
-                            <option value="">Select...</option>
-                            <option value="EMI">EMI</option>
-                            <option value="Down Payment">Down Payment</option>
-                            <option value="Tenure">Tenure</option>
-                            <option value="Outright">Outright</option>
-                          </select>
-                        </div>
-                        <div className="col-form-group">
-                          <label className="col-form-label">Next Calling Date</label>
-                          <input className="col-form-input" type="date" value={editForm.next_calling_date || ''} onChange={e => setEditForm(p => ({...p, next_calling_date: e.target.value}))} />
-                        </div>
-                        <div className="col-form-group">
-                          <label className="col-form-label">Call Status</label>
-                          <select className="col-form-select" value={editForm.call_status || ''} onChange={e => setEditForm(p => ({...p, call_status: e.target.value}))}>
-                            <option value="">Select...</option>
-                            <option value="Not Reachable">Not Reachable</option>
-                            <option value="Busy">Busy</option>
-                            <option value="Callback Requested">Callback Requested</option>
-                            <option value="Connected">Connected</option>
-                            <option value="Committed to Pay">Committed to Pay</option>
-                            <option value="Refused / Issue">Refused / Issue</option>
-                          </select>
-                        </div>
-                        <div className="col-form-group full-width">
-                          <label className="col-form-label">Remarks</label>
-                          <textarea className="col-form-textarea" value={editForm.remarks || ''} onChange={e => setEditForm(p => ({...p, remarks: e.target.value}))} rows={2} />
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                        <button className="crm-btn crm-btn-ghost" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setEditMode(false); setQuickActionMode(false); }}>Cancel</button>
-                        <button className="crm-btn crm-btn-primary" onClick={handleEditSave}><DocumentCheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Save Changes</button>
-                      </div>
-                    </>
-                  )}
-                  {quickActionType === 'followup' && (
-                    <>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Schedule Follow-up</h3>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Next Calling Date</label>
-                        <input className="col-form-input" type="date" value={followUpForm.next_calling_date} onChange={e => setFollowUpForm(p => ({...p, next_calling_date: e.target.value}))} />
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Call Status</label>
-                        <select className="col-form-select" value={followUpForm.call_status} onChange={e => setFollowUpForm(p => ({...p, call_status: e.target.value}))}>
-                          <option value="">Select...</option>
-                          <option value="Not Reachable">Not Reachable</option>
-                          <option value="Busy">Busy</option>
-                          <option value="Callback Requested">Callback Requested</option>
-                          <option value="Connected">Connected</option>
-                          <option value="Committed to Pay">Committed to Pay</option>
-                          <option value="Refused / Issue">Refused / Issue</option>
-                        </select>
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Remarks</label>
-                        <textarea className="col-form-textarea" value={followUpForm.remarks} onChange={e => setFollowUpForm(p => ({...p, remarks: e.target.value}))} rows={3} placeholder="Add notes about this follow-up..." />
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                        <button className="crm-btn crm-btn-ghost" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); }}>Cancel</button>
-                        <button className="crm-btn crm-btn-primary" onClick={handleFollowUpSave} disabled={followUpSaving}>
-                          {followUpSaving ? 'Saving...' : 'Save Follow-up'}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  {quickActionType === 'close' && (
-                    <>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Close Booking</h3>
-                      <div style={{ padding: '12px 16px', background: '#fef2f2', borderRadius: 8, marginBottom: 16 }}>
-                        <div style={{ fontWeight: 600, color: '#dc2626' }}>Warning: This action will close the booking</div>
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Close Reason</label>
-                        <select className="col-form-select" value={closeForm.close_reason} onChange={e => setCloseForm(p => ({...p, close_reason: e.target.value}))}>
-                          <option value="">Select reason...</option>
-                          <option value="Cancelled by Customer">Cancelled by Customer</option>
-                          <option value="Payment Default">Payment Default</option>
-                          <option value="Legal Issue">Legal Issue</option>
-                          <option value="Developer Cancelled">Developer Cancelled</option>
-                          <option value="Mutual Agreement">Mutual Agreement</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Remarks</label>
-                        <textarea className="col-form-textarea" value={closeForm.close_remarks} onChange={e => setCloseForm(p => ({...p, close_remarks: e.target.value}))} rows={3} placeholder="Additional details..." />
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                        <button className="crm-btn crm-btn-ghost" onClick={() => { setQuickActionOpen(false); setQuickActionType(null); setQuickActionMode(false); }}>Cancel</button>
-                        <button className="crm-btn crm-btn-danger" onClick={handleCloseBooking} disabled={closeSaving || !closeForm.close_reason}>
-                          {closeSaving ? 'Closing...' : 'Confirm Close'}
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
@@ -756,4 +569,4 @@ const CollectionBookings = ({ user, onSelectCustomer }) => {
   );
 };
 
-export { CollectionBookings };
+export default CollectionBookings;
