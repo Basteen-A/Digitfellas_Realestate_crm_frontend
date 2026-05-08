@@ -6,7 +6,7 @@ import { formatDateTime } from '../../../utils/formatters';
 import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
 import './HandoffLeadsPage.css';
 
-const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true }) => {
+const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState([]);
@@ -58,7 +58,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
     <div className="handoff-leads">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>{workspaceRole === 'TC' ? 'SV Leads' : (workspaceRole === 'SM' ? 'Negotiations' : 'Handoff Leads')}</h1>
+          <h1>{workspaceRole === 'TC' ? 'SV Leads' : (workspaceRole === 'SM' ? 'Negotiations' : 'Bookings')}</h1>
           <p>{workspaceRole === 'TC' ? 'Leads you have handed off to Sales Managers.' : (workspaceRole === 'SM' ? 'Leads currently in negotiation phase.' : 'Track who handed off leads, to whom, and current stage/status.')}</p>
         </div>
         <div className="page-header-right">
@@ -87,7 +87,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
           onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
           placeholder="Search by lead number, name, phone, email"
         />
-        {defaultType === 'all' && (
+        {defaultType === 'all' ? (
           <select
             value={filters.type}
             onChange={(event) => setFilters((prev) => ({ ...prev, type: event.target.value }))}
@@ -95,6 +95,13 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = true
             <option value="all">All Handoffs</option>
             <option value="incoming">Incoming to Me</option>
             <option value="outgoing">Outgoing from Me</option>
+          </select>
+        ) : (
+          <select
+            value={defaultType}
+            disabled
+          >
+            <option value={defaultType}>{defaultType === 'outgoing' ? 'Outgoing from Me' : 'Incoming to Me'}</option>
           </select>
         )}
       </div>

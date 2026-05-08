@@ -48,7 +48,9 @@ const SalesHeadTeamLeads = () => {
       ]);
       setSMLeads(leadsResp.data || []);
       const vData = visitsResp.data?.data || visitsResp.data?.rows || visitsResp.data || [];
-      setSMVisits(Array.isArray(vData) ? vData : []);
+      // Only show visits with time_spent
+      const validVisits = Array.isArray(vData) ? vData.filter(v => v.time_spent || v.time_spent === 0) : [];
+      setSMVisits(validVisits);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load SM data'));
     } finally {
@@ -162,9 +164,6 @@ const SalesHeadTeamLeads = () => {
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontWeight: 600 }}>
                         {sm.completedVisits} visits
                       </span>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)', fontWeight: 600 }}>
-                        {sm.upcomingVisits} upcoming
-                      </span>
                     </div>
                   </div>
                 );
@@ -225,9 +224,8 @@ const SalesHeadTeamLeads = () => {
                         <thead>
                           <tr>
                             <th>Lead</th>
-                            <th>Phone</th>
                             <th>Stage</th>
-                            <th>Status</th>
+                            
                             <th>Project</th>
                             <th>SV Date</th>
                             <th>Last Contact</th>
@@ -241,15 +239,9 @@ const SalesHeadTeamLeads = () => {
                                 <div style={{ fontWeight: 700, fontSize: 13 }}>{lead.fullName}</div>
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{lead.leadNumber}</div>
                               </td>
-                              <td style={{ fontSize: 13 }}>{lead.phone}</td>
                               <td>
                                 <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: (lead.stageColor || '#6B7280') + '22', color: lead.stageColor || '#6B7280' }}>
                                   {lead.stageLabel}
-                                </span>
-                              </td>
-                              <td>
-                                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: (lead.statusColor || '#6B7280') + '22', color: lead.statusColor || '#6B7280' }}>
-                                  {lead.statusLabel}
                                 </span>
                               </td>
                               <td style={{ fontSize: 12 }}>{lead.svDoneProject || lead.project || '—'}</td>

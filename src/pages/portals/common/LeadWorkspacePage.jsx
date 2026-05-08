@@ -2710,15 +2710,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {workspaceRole !== 'SH' && <th className="hide-mobile">Medium</th>}
                   <th className="hide-mobile">Project/Location</th>
                   <th>Assignment / Ownership</th>
+                  <th className="hide-mobile">Last Communication</th>
                   <th style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={workspaceRole === 'SH' ? 5 : 8} className="lead-workspace__empty">Loading leads...</td></tr>
+                  <tr><td colSpan={workspaceRole === 'SH' ? 6 : 9} className="lead-workspace__empty">Loading leads...</td></tr>
                 )}
                 {!loading && !filteredLeads.length && (
-                  <tr><td colSpan={workspaceRole === 'SH' ? 5 : 8} className="lead-workspace__empty">No leads found for current filters</td></tr>
+                  <tr><td colSpan={workspaceRole === 'SH' ? 6 : 9} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
                 {!loading && filteredLeads.map((lead) => (
                   <tr
@@ -2782,6 +2783,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <small className="assigned-role">
                         {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
                       </small>
+                    </td>
+                    <td className="hide-mobile">
+                      <small style={{ color: 'var(--text-secondary)' }}>{lead.remarks || lead.latestRemark || '-'}</small>
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {activeTab !== 'new' && activeTab !== 'unassigned' && (

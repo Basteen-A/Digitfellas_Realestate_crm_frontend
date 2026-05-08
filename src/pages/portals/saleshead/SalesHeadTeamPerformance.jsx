@@ -45,20 +45,12 @@ const SalesHeadTeamPerformance = () => {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         <div className="crm-card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Total SMs</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent-blue)' }}>{teamData.length}</div>
-        </div>
-        <div className="crm-card" style={{ padding: 20 }}>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Active Leads</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: '#7c3aed' }}>{teamData.reduce((sum, sm) => sum + sm.activeLeads, 0)}</div>
         </div>
         <div className="crm-card" style={{ padding: 20 }}>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Visits Done</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent-green)' }}>{teamData.reduce((sum, sm) => sum + sm.completedVisits, 0)}</div>
-        </div>
-        <div className="crm-card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Upcoming Visits</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#d97706' }}>{teamData.reduce((sum, sm) => sum + sm.upcomingVisits, 0)}</div>
         </div>
       </div>
 
@@ -83,7 +75,6 @@ const SalesHeadTeamPerformance = () => {
                     <th style={{ textAlign: 'right' }}>Active Leads</th>
                     <th style={{ textAlign: 'right' }}>Total Leads</th>
                     <th style={{ textAlign: 'right' }}>Visits Done</th>
-                    <th style={{ textAlign: 'right' }}>Upcoming</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -96,7 +87,6 @@ const SalesHeadTeamPerformance = () => {
                       <td style={{ textAlign: 'right', fontWeight: 600, color: '#7c3aed' }}>{sm.activeLeads}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>{sm.totalLeads}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--accent-green)' }}>{sm.completedVisits}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#d97706' }}>{sm.upcomingVisits}</td>
                     </tr>
                   ))}
                 </tbody>

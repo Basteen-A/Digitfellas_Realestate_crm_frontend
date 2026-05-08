@@ -420,7 +420,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{lead?.first_name} {lead?.last_name || ''}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lead?.lead_number} · {lead?.phone}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lead?.lead_number} </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -448,7 +448,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                             <th>Date</th>
                             <th>Time Slot</th>
                             <th>Status</th>
-                            <th>Rating</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -465,13 +464,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                               </td>
                               <td>{v.scheduled_time_slot || formatTime(v.scheduled_date) || '—'}</td>
                               <td>{getStatusBadge(v.status)}</td>
-                              <td>
-                                {v.rating ? (
-                                  <span style={{ fontWeight: 700, color: v.rating >= 4 ? 'var(--accent-green)' : v.rating >= 3 ? 'var(--accent-yellow)' : 'var(--accent-red)' }}>
-                                    {'★'.repeat(v.rating)}{'☆'.repeat(5 - v.rating)}
-                                  </span>
-                                ) : '—'}
-                              </td>
                               <td>
                                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setSelectedVisit(v)}>
                                   Details
