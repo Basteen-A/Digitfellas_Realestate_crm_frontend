@@ -58,11 +58,10 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FOLLOW_UP_MINUTES_AHEAD = 5;
 
 const NEW_LEAD_FOLLOW_UP_SHORTCUTS = [
-  { label: 'Today 2 PM', kind: 'dayOffset', dayOffset: 0, hour: 14, minute: 0 },
-  { label: 'Today 6 PM', kind: 'dayOffset', dayOffset: 0, hour: 18, minute: 0 },
-  { label: 'Tomorrow 11 AM', kind: 'dayOffset', dayOffset: 1, hour: 11, minute: 0 },
-  { label: 'This Sat 11 AM', kind: 'weekday', weekday: 6, hour: 11, minute: 0 },
-  { label: 'This Sun 11 AM', kind: 'weekday', weekday: 0, hour: 11, minute: 0 },
+  { label: 'Today ', kind: 'dayOffset', dayOffset: 0, hour: 18, minute: 0 },
+  { label: 'Tomorrow', kind: 'dayOffset', dayOffset: 1, hour: 11, minute: 0 },
+  { label: 'This Sat ', kind: 'weekday', weekday: 6, hour: 11, minute: 0 },
+  { label: 'This Sun', kind: 'weekday', weekday: 0, hour: 11, minute: 0 },
 ];
 
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
@@ -958,8 +957,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
     if (!newLeadForm.lead_source_id) errors.push('Lead source is required');
 
-    if (workspaceRole === 'TC') {
+    const hasSubSourcesAvailable = selectedSourceSubSources.length > 0;
+    if (workspaceRole === 'TC' || (workspaceRole === 'SM' && hasSubSourcesAvailable)) {
       if (!newLeadForm.lead_sub_source_id) errors.push('Lead sub-source is required');
+    }
+    if (workspaceRole === 'TC') {
       if (!newLeadForm.lead_status_id) errors.push('Lead status is required');
 
       if (tcStatusNeedsFullDetails) {
@@ -1040,6 +1042,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     smStatusNeedsCallStatus,
     smStatusNeedsRemark,
     selectedNewLeadStatusCode,
+    selectedSourceSubSources,
   ]);
 
   // ── Stats (Telecaller KPI cards) ──
@@ -1438,7 +1441,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       const sources = sResp.data || [];
       const normalizedSourceName = (source) => String(source?.source_name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
       const filteredSources = workspaceRole === 'SM'
-        ? sources.filter((source) => ['walkin', 'others'].includes(normalizedSourceName(source)))
+        ? sources.filter((source) => ['walkin', 'others', 'other'].includes(normalizedSourceName(source)))
         : sources;
       const map = {};
       filteredSources.forEach((s) => { map[s.id] = s.subSources || []; });
@@ -3159,11 +3162,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         disabled={selectedLeadReadOnly}
                       />
                       <div className="lead-detail__calendar-shortcuts">
-                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 14, 0))}>Today 2 PM</button>
-                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today 6 PM</button>
-                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow 11 AM</button>
-                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(6, 11, 0))}>This Sat 11 AM</button>
-                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(0, 11, 0))}>This Sun 11 AM</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(0, 18, 0))}>Today</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(6, 11, 0))}>This Sat</button>
+                        <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(0, 11, 0))}>This Sun</button>
                         <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
                       </div>
                     </div>
@@ -3273,11 +3275,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   minDate={getFollowUpMinimumTime().toISOString()}
                 />
                 <div className="lead-detail__calendar-shortcuts">
-                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
-                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
-                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
-                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11 AM</button>
-                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11 AM</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today </button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
+                  <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
                   <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: '' }))}>✕ Clear</button>
                 </div>
                 <div className="followup-warning">⚠️ Follow-up date & time is required for this stage.</div>
@@ -3766,17 +3767,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </select>
                     </div>
 
-                    {workspaceRole !== 'SM' && (
                     <div className="create-lead-field">
                       <label className="create-lead-field__label">
-                        Lead Sub-Source {workspaceRole === 'TC' && <span className="create-lead-field__required">*</span>}
+                        Lead Sub-Source {(workspaceRole === 'TC' || (workspaceRole === 'SM' && selectedSourceSubSources.length > 0)) && <span className="create-lead-field__required">*</span>}
                       </label>
                       <select
                         className={`create-lead-select ${workspaceRole === 'TC' && newLeadForm.lead_source_id && !newLeadForm.lead_sub_source_id ? 'create-lead-select--highlight' : ''}`}
                         value={newLeadForm.lead_sub_source_id}
                         onChange={(e) => setNewLeadForm((p) => ({ ...p, lead_sub_source_id: e.target.value }))}
                         disabled={!newLeadForm.lead_source_id || !selectedSourceSubSources.length}
-                        required={workspaceRole === 'TC'}
+                        required={workspaceRole === 'TC' || (workspaceRole === 'SM' && selectedSourceSubSources.length > 0)}
                       >
                         <option value="">Select sub-source</option>
                         {selectedSourceSubSources.map((s) => (
@@ -3784,7 +3784,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         ))}
                       </select>
                     </div>
-                    )}
                   </div>
                 </div>
 
@@ -4638,9 +4637,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     <div className="qa-drawer-ctx-block">
                       <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2PM</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6PM</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tmrw 11AM</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today </button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tmrw </button>
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(2, 11, 0) }))}>In 2 days</button>

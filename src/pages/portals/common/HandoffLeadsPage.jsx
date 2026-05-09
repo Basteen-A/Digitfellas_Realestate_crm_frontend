@@ -117,7 +117,6 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               {showStage && <th>Stage</th>}
               <th>Status</th>
               <th>Reason / Remarks</th>
-              <th>Direction</th>
               <th>Current Owner</th>
             </tr>
           </thead>
@@ -161,11 +160,6 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 </td>
                 <td>
                   <small>{row.remarks || '-'}</small>
-                </td>
-                <td>
-                  <span className={`handoff-direction handoff-direction--${row.direction || 'internal'}`}>
-                    {row.direction || 'internal'}
-                  </span>
                 </td>
                 <td>
                   <div>{row.currentAssigneeName || '-'}</div>

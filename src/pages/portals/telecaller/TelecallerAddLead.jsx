@@ -492,11 +492,10 @@ const TelecallerAddLead = ({ onNavigate }) => {
               <div className="crm-form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="crm-form-label">Next Follow Up Date {tcStatusNeedsFullDetails ? '*' : ''}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
-                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 14, 0) }))}>Today 2 PM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today 6 PM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow 11 AM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11 AM</button>
-                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11 AM</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today </button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
+                  <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
                 </div>
                 <CalendarPicker
                   type="datetime"

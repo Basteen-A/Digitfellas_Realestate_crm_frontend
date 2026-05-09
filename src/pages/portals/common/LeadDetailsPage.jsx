@@ -1996,9 +1996,8 @@ const LeadDetailsPage = () => {
                     <div className="qa-drawer-ctx-block">
                       <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 14, 0) }))}>Today 2PM</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today 6PM</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tmrw 11AM</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today </button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tmrw </button>
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2, 11, 0) }))}>In 2 days</button>
