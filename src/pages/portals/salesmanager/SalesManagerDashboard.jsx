@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -17,6 +18,7 @@ const ICON_SIZE = { width: 22, height: 22 };
 const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
 
 const SalesManagerDashboard = ({ onNavigate }) => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [incomingPendingCount, setIncomingPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -54,11 +56,14 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       setIncomingPendingCount(Number.isFinite(resolvedPending) ? resolvedPending : incomingTotal);
 
       // Try dedicated follow-up arrays from dashboard stats first
-      let todayLeads = Array.isArray(dashData.todaysFollowUpLeads) ? dashData.todaysFollowUpLeads : [];
-      let missedLeads = Array.isArray(dashData.missedFollowUpLeads) ? dashData.missedFollowUpLeads : [];
+      if (Array.isArray(dashData.todaysFollowUpLeads)) setTodayFollowUps(dashData.todaysFollowUpLeads);
+      if (Array.isArray(dashData.missedFollowUpLeads)) setMissedFollowUps(dashData.missedFollowUpLeads);
 
-      // Fallback: if stats didn't return follow-up lead lists, fetch via getLeads
-      if (todayLeads.length === 0 && missedLeads.length === 0) {
+     
+
+      // FALLBACK: If lists are empty or stats fetch failed, fetch lists explicitly
+      if (!dashData.todaysFollowUpLeads && !dashData.missedFollowUpLeads) {
+        console.warn('[SM Dashboard] Backend lists missing, triggering fallback fetch...');
         const extractLeads = (resp) => {
           if (Array.isArray(resp?.data)) return resp.data;
           if (Array.isArray(resp?.data?.data)) return resp.data.data;
@@ -72,22 +77,19 @@ const SalesManagerDashboard = ({ onNavigate }) => {
             nextFollowUpFrom: startOfDay.toISOString(),
             nextFollowUpTo: endOfDay.toISOString(),
             includeClosed: false,
-            limit: 100,
+            limit: 50,
           }).catch(() => ({ data: [] })),
           leadWorkflowApi.getLeads({
             roleCode: 'SM',
             assignedToMe: true,
             nextFollowUpTo: new Date(startOfDay.getTime() - 1).toISOString(),
             includeClosed: false,
-            limit: 100,
+            limit: 50,
           }).catch(() => ({ data: [] })),
         ]);
-        todayLeads = extractLeads(todayFuResp);
-        missedLeads = extractLeads(missedFuResp);
+        setTodayFollowUps(extractLeads(todayFuResp));
+        setMissedFollowUps(extractLeads(missedFuResp));
       }
-
-      setTodayFollowUps(todayLeads);
-      setMissedFollowUps(missedLeads);
 
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load dashboard'));
@@ -164,7 +166,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
                         {lead.phone || '-'} · {lead.projectName || lead.project || '-'}
                       </div>
                     </div>
-                    <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => onNavigate?.('leads')}>View</button>
+                    <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => navigate(`/portal/lead/${lead.id}`)}>View</button>
                   </div>
                 ))}
               </div>
@@ -188,7 +190,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
                         {lead.phone || '-'} · {lead.projectName || lead.project || '-'}
                       </div>
                     </div>
-                    <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => onNavigate?.('leads')}>View</button>
+                    <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => navigate(`/portal/lead/${lead.id}`)}>View</button>
                   </div>
                 ))}
               </div>
