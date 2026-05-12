@@ -17,7 +17,7 @@ const authApi = {
     try {
       await api.post('/auth/logout');
     } catch {
-      // Continue logout even if API fails
+      // Continue logout even if API fail
     } finally {
       clearAuth();
     }
