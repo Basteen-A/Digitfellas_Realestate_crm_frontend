@@ -2341,6 +2341,26 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           }
         }
 
+        // Validation: Booking Location, Project and Unit are mandatory for SH_BOOKING
+        if (quickWorkflowAction.code === 'SH_BOOKING') {
+          const cpF = customerProfileForm;
+          if (!cpF.bookingLocationId) {
+            toast.error('Please select Location *');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!cpF.bookingProjectId) {
+            toast.error('Please select Project *');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!cpF.inventoryUnitId) {
+            toast.error('Please select Unit/Plot *');
+            setQuickActionLoading(false);
+            return;
+          }
+        }
+
         // Validation: Reason selection is mandatory for reason-based actions
         if (quickWorkflowAction.needsReason && !f.closureReasonId) {
           toast.error('Please select Reason *');
@@ -2448,6 +2468,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           };
           payload.inventoryUnitId = pF.inventoryUnitId || undefined;
           payload.payment_plan_id = pF.paymentPlanId || undefined;
+          payload.bookingLocationId = pF.bookingLocationId || undefined;
+          payload.bookingProjectId = pF.bookingProjectId || undefined;
+          payload.location_id = pF.bookingLocationId || undefined;
         }
 
         if (quickWorkflowAction.code === 'TC_REASSIGN') {
@@ -2666,23 +2689,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   New (Unassigned)
                 </button>
               )}
-              {workspaceRole === 'SM' && (
-                <button
-                  onClick={() => setActiveTab('sh_leads')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: activeTab === 'sh_leads' ? 'var(--accent-blue)' : 'transparent',
-                    color: activeTab === 'sh_leads' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  SH Leads (Read Only)
-                </button>
-              )}
               {workspaceRole === 'SH' && (
                 <button
                   onClick={() => setActiveTab('sm_leads')}
@@ -2714,16 +2720,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {workspaceRole !== 'SH' && <th className="hide-mobile">Medium</th>}
                   <th className="hide-mobile">Project/Location</th>
                   <th>Assignment / Ownership</th>
-                  <th className="hide-mobile">Last Communication</th>
+                  <th>Last Communication</th>
                   <th style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={workspaceRole === 'SH' ? 6 : 9} className="lead-workspace__empty">Loading leads...</td></tr>
+                  <tr><td colSpan={workspaceRole === 'SH' ? 7 : 10} className="lead-workspace__empty">Loading leads...</td></tr>
                 )}
                 {!loading && !filteredLeads.length && (
-                  <tr><td colSpan={workspaceRole === 'SH' ? 6 : 9} className="lead-workspace__empty">No leads found for current filters</td></tr>
+                  <tr><td colSpan={workspaceRole === 'SH' ? 7 : 10} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
                 {!loading && filteredLeads.map((lead) => (
                   <tr
@@ -2788,7 +2794,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
                       </small>
                     </td>
-                    <td className="hide-mobile">
+                    <td>
                       <small style={{ color: 'var(--text-secondary)' }}>{lead.remarks || lead.latestRemark || '-'}</small>
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>

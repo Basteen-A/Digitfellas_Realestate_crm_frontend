@@ -424,11 +424,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {lead?.stage && (
-                      <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: lead.stage.color_code + '22', color: lead.stage.color_code }}>
-                        {lead.stage.stage_name}
-                      </span>
-                    )}
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
                       {leadVisits.length} visit{leadVisits.length !== 1 ? 's' : ''} · {completedCount} done
                     </span>

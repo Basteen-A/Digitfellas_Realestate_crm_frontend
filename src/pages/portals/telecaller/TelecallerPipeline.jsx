@@ -13,11 +13,10 @@ const DATE_FILTER_OPTIONS = [
 ];
 
 const PIPELINE_COLUMNS = [
-  { key: 'RNR', title: 'RNR LEADS', statusCode: 'RNR' },
-  { key: 'FOLLOW_UP', title: 'FOLLOW UP LEADS', statusCode: 'FOLLOW_UP' },
-  { key: 'SV_SCHEDULED', title: 'SV SCHEDULED', statusCode: 'SV_SCHEDULED' },
-  { key: 'SV_DONE', title: 'SV DONE', statusCode: 'SV_DONE' },
-  { key: 'DISQUALIFIED', title: 'DISQUALIFIED' },
+  { key: 'RNR', title: 'RNR', statusCode: 'RNR' },
+  { key: 'FOLLOW_UP', title: 'Follow Up', statusCode: 'FOLLOW_UP' },
+  { key: 'SV_SCHEDULED', title: 'Scheduled', statusCode: 'SV_SCHEDULED' },
+  { key: 'DISQUALIFIED', title: 'Unqualified' },
 ];
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -61,14 +60,14 @@ const TelecallerPipeline = ({ onNavigate }) => {
   const [leads, setLeads] = useState([]);
   const [statusMetaByCode, setStatusMetaByCode] = useState({});
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState('today');
+  const [dateFilter, setDateFilter] = useState('all');
   const [customFromDate, setCustomFromDate] = useState('');
   const [customToDate, setCustomToDate] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const leadParams = { roleCode: 'TC', includeClosed: true, limit: 100, page: 1 };
+      const leadParams = { roleCode: 'TC', assignedToMe: true, includeClosed: true, limit: 100, page: 1 };
       const [firstLeadsResp, configResp] = await Promise.all([
         leadWorkflowApi.getLeads(leadParams),
         leadWorkflowApi.getWorkflowConfig(),
@@ -162,16 +161,16 @@ const TelecallerPipeline = ({ onNavigate }) => {
 
   const filteredLeads = useMemo(() => leads.filter(matchesDateFilter), [leads, matchesDateFilter]);
 
+  // Calculate totals
+  const totalLeads = filteredLeads.length;
+  const qualifiedLeads = filteredLeads.filter((lead) => !isDisqualifiedLead(lead)).length;
+
   const getLeadsByColumn = useCallback((column) => {
     if (column.key === 'DISQUALIFIED') {
       return filteredLeads.filter(isDisqualifiedLead);
     }
     return filteredLeads.filter((lead) => {
       const leadStatus = (lead.statusCode || '').toUpperCase();
-      if (column.key === 'SV_DONE') {
-        // Include explicit SV_DONE status or any lead in SITE_VISIT stage that isn't just scheduled
-        return leadStatus === 'SV_DONE' || (lead.stageCode === 'SITE_VISIT' && leadStatus !== 'SV_SCHEDULED');
-      }
       return leadStatus === column.statusCode;
     });
   }, [filteredLeads]);
@@ -228,7 +227,18 @@ const TelecallerPipeline = ({ onNavigate }) => {
           <p>Loading your pipeline...</p>
         </div>
       ) : (
-        <div className="kanban" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+        <>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+            <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border-primary)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Total Leads</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent-blue)' }}>{totalLeads}</span>
+            </div>
+            <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border-primary)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Qualified Leads</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: '#10b981' }}>{qualifiedLeads}</span>
+            </div>
+          </div>
+          <div className="kanban" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
           {PIPELINE_COLUMNS.map((column) => {
             const stageLeads = getLeadsByColumn(column);
             const columnColor = getColumnColor(column);
@@ -264,6 +274,7 @@ const TelecallerPipeline = ({ onNavigate }) => {
             );
           })}
         </div>
+        </>
       )}
 
       <style>{`

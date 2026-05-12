@@ -77,7 +77,7 @@ const SalesManagerVisits = ({ onNavigate }) => {
         </div>
         <div className="page-header-actions flex-wrap">
           <div className="crm-btn-group">
-            <button className={`crm-btn ${filter === 'upcoming' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('upcoming')}>Upcoming</button>
+           
             <button className={`crm-btn ${filter === 'completed' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('completed')}>Completed</button>
             <button className={`crm-btn ${filter === 'cancelled' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('cancelled')}>Cancelled</button>
           </div>

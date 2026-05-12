@@ -6,19 +6,12 @@ import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   HandRaisedIcon,
-  ClipboardDocumentListIcon,
   UsersIcon,
   ArrowPathIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 const ICON_SIZE = { width: 22, height: 22 };
-
-const formatSqft = (value) => {
-  const num = Number(value || 0);
-  if (!Number.isFinite(num)) return '0 sq.ft';
-  return `${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} sq.ft`;
-};
 
 const SalesHeadDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -49,9 +42,10 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'In Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'Active negotiation leads', changeType: 'neutral' },
-    { label: 'Bookings', value: stats?.totalBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: `${formatSqft(stats?.bookedAreaSqft)} booked`, changeType: 'up' },
-    { label: 'All Leads', value: stats?.allLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: 'Across pipeline', changeType: 'neutral' },
+    { label: 'Under Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In negotiation stage', changeType: 'neutral' },
+    { label: 'Hot Negotiations', value: stats?.hotNegotiations ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'High priority leads', changeType: 'up' },
+    { label: 'Warm Negotiations', value: stats?.warmNegotiations ?? 0, icon: <ArrowPathIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Medium priority leads', changeType: 'neutral' },
+    { label: 'Follow Up', value: stats?.followUpCount ?? 0, icon: <DocumentTextIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: 'Pending follow-ups', changeType: 'neutral' },
   ];
 
   return (
@@ -67,7 +61,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
       </div>
 
       {/* Stats */}
-      <div className="stats-grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="stats-grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {statCards.map((card) => (
           <div className="stat-card" key={card.label}>
             <div className="stat-card-header">

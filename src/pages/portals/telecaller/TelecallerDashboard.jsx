@@ -97,13 +97,13 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const statCardsData = [
-    { label: 'New Leads', value: stats?.unassignedLeads ?? stats?.unassignedLeadCount ?? unassignedLeads.length, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
-    { label: 'My Leads', value: stats?.myLeads ?? 0, icon: <UserIcon style={ICON_SIZE} />, color: 'var(--accent-blue)' },
-    { label: "Today's FU", value: stats?.todaysFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: 'var(--accent-green)' },
-    { label: 'Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
-    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
-    { label: 'SV Completed', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
-    { label: 'Missed FU', value: missedFollowUps.length ?? stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
+    { label: 'New Leads Today', value: stats?.newLeadsToday ?? 0, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
+    { label: 'All Active Leads', value: stats?.activeLeads ?? 0, icon: <UserIcon style={ICON_SIZE} />, color: 'var(--accent-blue)' },
+    { label: "Today's Pending FU", value: stats?.todaysPendingFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: 'var(--accent-green)' },
+    { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
+    { label: 'SV Scheduled Count', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
+    { label: 'SV Done Count', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
+    { label: 'Missed Follow Ups', value: stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
   ];
 
   const handleLeadClick = (leadId) => {

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { EyeIcon } from '@heroicons/react/24/outline';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
@@ -7,6 +9,7 @@ import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
 import './HandoffLeadsPage.css';
 
 const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState([]);
@@ -118,17 +121,18 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               <th>Status</th>
               <th>Reason / Remarks</th>
               <th>Current Owner</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={showStage ? 9 : 8} className="handoff-leads__empty">Loading handoff leads...</td>
+                <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">Loading handoff leads...</td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={showStage ? 9 : 8} className="handoff-leads__empty">No handoff leads found</td>
+                <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">No handoff leads found</td>
               </tr>
             )}
             {!loading && rows.map((row) => (
@@ -164,6 +168,15 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 <td>
                   <div>{row.currentAssigneeName || '-'}</div>
                   <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
+                </td>
+                <td>
+                  <button
+                    className="crm-btn crm-btn-sm crm-btn-ghost"
+                    onClick={() => navigate(`/portal/lead/${row.leadId}`)}
+                    title="View Lead"
+                  >
+                    <EyeIcon style={{ width: 14, height: 14 }} />
+                  </button>
                 </td>
               </tr>
             ))}

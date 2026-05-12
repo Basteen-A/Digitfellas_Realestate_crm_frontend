@@ -23,7 +23,8 @@ const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'm
 const SCREEN_TITLES = {
   dashboard: 'Dashboard',
   leads: 'My Leads',
-  handoffs: 'Handoff Leads',
+  'leads-addnew': '',
+  handoffs: '',
   followups: "Today's Follow Ups",
   pipeline: 'Pipeline Board',
   addlead: 'Add New Lead',
@@ -135,9 +136,17 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
               : <ChevronLeftIcon style={{ width: 18, height: 18 }} />
             }
           </button>
-          <div className="portal-topbar__title">
-            {SCREEN_TITLES[activeScreen] || activeScreen}
-          </div>
+          {SCREEN_TITLES[activeScreen] !== undefined ? (
+            SCREEN_TITLES[activeScreen] ? (
+              <div className="portal-topbar__title">
+                {SCREEN_TITLES[activeScreen]}
+              </div>
+            ) : null
+          ) : (
+            <div className="portal-topbar__title">
+              {activeScreen}
+            </div>
+          )}
           <div className="portal-topbar__center">
             {/* Search bar placeholder */}
           </div>
