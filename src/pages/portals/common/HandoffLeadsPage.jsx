@@ -115,12 +115,12 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
             <tr>
               <th>When</th>
               <th>Lead</th>
-              <th>From</th>
+              <th className="hide-tablet">From</th>
               <th>To</th>
               {showStage && <th>Stage</th>}
               <th>Status</th>
-              <th>Reason / Remarks</th>
-              <th>Current Owner</th>
+              <th className="hide-tablet">Reason / Remarks</th>
+              <th className="hide-tablet">Current Owner</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -142,7 +142,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                   <div className="handoff-lead-name">{row.leadName || '-'}</div>
                   <small>{row.leadNumber || '-'}</small>
                 </td>
-                <td>
+                <td className="hide-tablet">
                   <div>{row.fromUserName || '-'}</div>
                   <small>{ROLE_LABELS[row.fromUserRole] || row.fromUserRoleName || '-'}</small>
                 </td>
@@ -162,10 +162,10 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                     {row.statusName || '-'}
                   </span>
                 </td>
-                <td>
+                <td className="hide-tablet">
                   <small>{row.remarks || '-'}</small>
                 </td>
-                <td>
+                <td className="hide-tablet">
                   <div>{row.currentAssigneeName || '-'}</div>
                   <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
                 </td>

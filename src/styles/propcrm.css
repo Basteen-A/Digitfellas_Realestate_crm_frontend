@@ -189,9 +189,9 @@
 .badge-overdue { background: var(--accent-red-bg); color: var(--accent-red); }
 
 /* ===== TABLE ===== */
-.crm-table-wrap { overflow-x: auto; }
+.crm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-.crm-table { width: 100%; border-collapse: collapse; }
+.crm-table { width: 100%; border-collapse: collapse; min-width: 500px; }
 
 .crm-table thead th {
   text-align: left;
@@ -212,6 +212,9 @@
   border-bottom: 1px solid var(--border-secondary);
   font-size: 13px;
   white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .crm-table tbody tr { transition: background 0.1s; }
@@ -1002,6 +1005,10 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
     -webkit-overflow-scrolling: touch;
   }
 
+  .crm-table {
+    min-width: 400px;
+  }
+
   .crm-table thead th {
     padding: 8px 12px;
     font-size: 10px;
@@ -1010,6 +1017,15 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
   .crm-table tbody td {
     padding: 10px 12px;
     font-size: 12px;
+    max-width: 150px;
+  }
+
+  /* Responsive utility: hide columns on tablet */
+  .crm-table .hide-tablet,
+  .crm-table .hide-mobile,
+  .lead-workspace__table .hide-tablet,
+  .lead-workspace__table .hide-mobile {
+    display: none;
   }
 
   /* Modal: full-width */

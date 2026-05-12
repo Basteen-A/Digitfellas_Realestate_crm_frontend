@@ -49,7 +49,7 @@
 .handoff-leads__table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1020px;
+  min-width: 700px;
 }
 
 .handoff-leads__table th,
@@ -59,6 +59,10 @@
   text-align: left;
   vertical-align: top;
   font-size: 12px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .handoff-leads__table th {
@@ -150,9 +154,19 @@
   .handoff-leads__table td {
     padding: 8px;
     font-size: 11px;
+    max-width: 120px;
   }
 
   .handoff-leads__table th {
     font-size: 10px;
+  }
+
+  .handoff-leads__table .hide-tablet,
+  .handoff-leads__table .hide-mobile {
+    display: none;
+  }
+
+  .handoff-leads__table {
+    min-width: 450px;
   }
 }

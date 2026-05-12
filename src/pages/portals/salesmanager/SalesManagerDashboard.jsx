@@ -32,7 +32,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       const endOfDay = new Date(now);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const [statsResp, handoffsResp, todayFuResp, missedFuResp] = await Promise.all([
+      const [statsResp, handoffsResp] = await Promise.all([
         dashboardApi.getSalesManagerStats().catch(() => ({ data: {} })),
         leadWorkflowApi.getHandoffs({
           type: 'incoming',
@@ -42,37 +42,52 @@ const SalesManagerDashboard = ({ onNavigate }) => {
           pendingAcceptance: true,
           limit: 100,
         }).catch(() => ({ data: [], meta: { total: 0 } })),
-        leadWorkflowApi.getLeads({
-          roleCode: 'SM',
-          nextFollowUpFrom: startOfDay.toISOString(),
-          nextFollowUpTo: endOfDay.toISOString(),
-          limit: 100,
-        }).catch(() => ({ data: [] })),
-        leadWorkflowApi.getLeads({
-          roleCode: 'SM',
-          nextFollowUpTo: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-          includeClosed: false,
-          limit: 100,
-        }).catch(() => ({ data: [] })),
       ]);
 
-      setStats(statsResp?.data || {});
+      const dashData = statsResp?.data || {};
+      setStats(dashData);
 
-      const incomingTotal = Number(statsResp?.data?.incomingLeads ?? 0);
+      const incomingTotal = Number(dashData?.incomingLeads ?? 0);
       const resolvedPending = Number(
         handoffsResp?.meta?.total ?? (Array.isArray(handoffsResp?.data) ? handoffsResp.data.length : 0)
       );
       setIncomingPendingCount(Number.isFinite(resolvedPending) ? resolvedPending : incomingTotal);
 
-      // Set follow-up data
-      const extractLeads = (resp) => {
-        if (Array.isArray(resp?.data)) return resp.data;
-        if (Array.isArray(resp?.data?.data)) return resp.data.data;
-        if (Array.isArray(resp?.data?.rows)) return resp.data.rows;
-        return [];
-      };
-      setTodayFollowUps(extractLeads(todayFuResp));
-      setMissedFollowUps(extractLeads(missedFuResp));
+      // Try dedicated follow-up arrays from dashboard stats first
+      let todayLeads = Array.isArray(dashData.todaysFollowUpLeads) ? dashData.todaysFollowUpLeads : [];
+      let missedLeads = Array.isArray(dashData.missedFollowUpLeads) ? dashData.missedFollowUpLeads : [];
+
+      // Fallback: if stats didn't return follow-up lead lists, fetch via getLeads
+      if (todayLeads.length === 0 && missedLeads.length === 0) {
+        const extractLeads = (resp) => {
+          if (Array.isArray(resp?.data)) return resp.data;
+          if (Array.isArray(resp?.data?.data)) return resp.data.data;
+          if (Array.isArray(resp?.data?.rows)) return resp.data.rows;
+          return [];
+        };
+        const [todayFuResp, missedFuResp] = await Promise.all([
+          leadWorkflowApi.getLeads({
+            roleCode: 'SM',
+            assignedToMe: true,
+            nextFollowUpFrom: startOfDay.toISOString(),
+            nextFollowUpTo: endOfDay.toISOString(),
+            includeClosed: false,
+            limit: 100,
+          }).catch(() => ({ data: [] })),
+          leadWorkflowApi.getLeads({
+            roleCode: 'SM',
+            assignedToMe: true,
+            nextFollowUpTo: new Date(startOfDay.getTime() - 1).toISOString(),
+            includeClosed: false,
+            limit: 100,
+          }).catch(() => ({ data: [] })),
+        ]);
+        todayLeads = extractLeads(todayFuResp);
+        missedLeads = extractLeads(missedFuResp);
+      }
+
+      setTodayFollowUps(todayLeads);
+      setMissedFollowUps(missedLeads);
 
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load dashboard'));

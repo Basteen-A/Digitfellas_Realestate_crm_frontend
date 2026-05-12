@@ -2714,13 +2714,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <thead>
                 <tr>
                   <th>Lead</th>
-                  {workspaceRole !== 'SH' && <th>Contact</th>}
+                  {workspaceRole !== 'SH' && <th className="hide-tablet">Contact</th>}
                   <th>Status</th>
                   {workspaceRole !== 'SH' && <th className="hide-mobile">Source</th>}
                   {workspaceRole !== 'SH' && <th className="hide-mobile">Medium</th>}
                   <th className="hide-mobile">Project/Location</th>
-                  <th>Assignment / Ownership</th>
-                  <th>Last Communication</th>
+                  <th className="hide-tablet">Assignment / Ownership</th>
+                  <th className="hide-tablet">Last Communication</th>
                   <th style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
               </thead>
@@ -2749,7 +2749,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       </small>
                     </td>
                     {workspaceRole !== 'SH' && (
-                      <td>
+                      <td className="hide-tablet">
                         <p>{lead.phone}</p>
                         <small>{lead.email || '-'}</small>
                       </td>
@@ -2788,13 +2788,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         ) : null;
                       })()}
                     </td>
-                    <td>
+                    <td className="hide-tablet">
                       <p className="assigned-name">{lead.assignedToUserName || 'Unassigned'}</p>
                       <small className="assigned-role">
                         {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
                       </small>
                     </td>
-                    <td>
+                    <td className="hide-tablet">
                       <small style={{ color: 'var(--text-secondary)' }}>{lead.remarks || lead.latestRemark || '-'}</small>
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>

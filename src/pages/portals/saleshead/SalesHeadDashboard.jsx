@@ -89,8 +89,8 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                   <tr>
                     <th>Lead</th>
                     <th>Project</th>
-                    <th>Customer Type</th>
-                    <th>Motivation</th>
+                    <th className="hide-tablet">Customer Type</th>
+                    <th className="hide-tablet">Motivation</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
@@ -103,14 +103,14 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.lead_number}</div>
                       </td>
                       <td>{lead.projectName}</td>
-                      <td>
+                      <td className="hide-tablet">
                         {lead.customerType ? (
                           <span className="col-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontSize: 11 }}>
                             {lead.customerType}
                           </span>
                         ) : '—'}
                       </td>
-                      <td>
+                      <td className="hide-tablet">
                         {lead.motivationType ? (
                           <span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
                             {lead.motivationType}
