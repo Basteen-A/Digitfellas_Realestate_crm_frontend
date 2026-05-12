@@ -61,7 +61,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
 
      
 
-      // FALLBACK: If lists are empty or stats fetch failed, fetch lists explicitly
+      // FALLBACK: If lists are empty or stats fetch failed, fetch lists explicitl
       if (!dashData.todaysFollowUpLeads && !dashData.missedFollowUpLeads) {
         console.warn('[SM Dashboard] Backend lists missing, triggering fallback fetch...');
         const extractLeads = (resp) => {
