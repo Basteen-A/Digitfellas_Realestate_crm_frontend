@@ -6,7 +6,6 @@ import {
   UsersIcon,
   CheckCircleIcon,
   PhoneIcon,
-  ArrowPathIcon,
   CalendarDaysIcon,
   NoSymbolIcon,
   ArrowPathRoundedSquareIcon,
@@ -67,7 +66,6 @@ const extractLeadRows = (response) => {
 
 const TelecallerPipeline = ({ onNavigate }) => {
   const [leads, setLeads] = useState([]);
-  const [statusMetaByCode, setStatusMetaByCode] = useState({});
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('all');
   const [customFromDate, setCustomFromDate] = useState('');
@@ -77,10 +75,7 @@ const TelecallerPipeline = ({ onNavigate }) => {
     setLoading(true);
     try {
       const leadParams = { roleCode: 'TC', assignedToMe: true, includeClosed: true, limit: 100, page: 1 };
-      const [firstLeadsResp, configResp] = await Promise.all([
-        leadWorkflowApi.getLeads(leadParams),
-        leadWorkflowApi.getWorkflowConfig(),
-      ]);
+      const firstLeadsResp = await leadWorkflowApi.getLeads(leadParams);
 
       // Handle leads data
       let leadRows = extractLeadRows(firstLeadsResp);
@@ -99,14 +94,6 @@ const TelecallerPipeline = ({ onNavigate }) => {
 
       const uniqueRows = Array.from(new Map(leadRows.map((lead) => [lead.id, lead])).values());
       setLeads(uniqueRows);
-
-      // Handle status config data for colors/labels
-      const allStatuses = configResp?.data?.statuses || [];
-      const statusMap = allStatuses.reduce((acc, status) => {
-        acc[status.status_code] = status;
-        return acc;
-      }, {});
-      setStatusMetaByCode(statusMap);
 
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load pipeline'));
@@ -183,13 +170,6 @@ const TelecallerPipeline = ({ onNavigate }) => {
       return leadStatus === column.statusCode;
     });
   }, [filteredLeads]);
-
-  const getColumnColor = useCallback((column) => {
-    if (column.key === 'DISQUALIFIED') {
-      return statusMetaByCode.JUNK?.color_code || statusMetaByCode.SPAM?.color_code || statusMetaByCode.LOST?.color_code || '#dc2626';
-    }
-    return statusMetaByCode[column.statusCode]?.color_code || '#94a3b8';
-  }, [statusMetaByCode]);
 
   return (
     <div className="telecaller-pipeline">
