@@ -2769,15 +2769,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             <table className="lead-workspace__table">
               <thead>
                 <tr>
-                  <th className="show-mobile lead-col-toggle" style={{ width: 24 }}></th>
+                  <th className="show-mobile lead-col-toggle"></th>
                   <th className="lead-col-lead" style={{ width: 'auto' }}>Lead</th>
                   {workspaceRole !== 'SH' && <th className="hide-mobile" style={{ width: 150 }}>Contact</th>}
-                  <th className="lead-col-status" style={{ width: 85 }}>Status</th>
+                  <th className="lead-col-status">Status</th>
                   {workspaceRole !== 'SH' && <th className="hide-mobile" style={{ width: 120 }}>Source/Medium</th>}
                   <th className="hide-mobile" style={{ width: 150 }}>Project/Location</th>
                   <th className="hide-tablet" style={{ width: 120 }}>Assign TO</th>
                   <th className="hide-tablet" style={{ width: 150 }}>Remarks</th>
-                  <th className="lead-col-followup" style={{ textAlign: 'right', width: 90 }}>Follow up</th>
+                  <th className="lead-col-followup" style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
               </thead>
               <tbody>
@@ -2803,7 +2803,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   return (
                     <React.Fragment key={lead.id}>
                       <tr className={selectedLeadId === lead.id ? 'is-selected' : ''}>
-                        <td className="show-mobile lead-col-toggle" style={{ width: 24, padding: '10px 0', textAlign: 'center' }}>
+                    <td className="show-mobile lead-col-toggle" style={{ padding: '10px 0', textAlign: 'center' }}>
                           <button 
                             onClick={(e) => { e.stopPropagation(); toggleExpandLead(lead.id); }}
                             style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}

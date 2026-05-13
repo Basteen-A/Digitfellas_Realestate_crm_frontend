@@ -3917,6 +3917,11 @@ textarea.crm-form-input {
   }
 
   .lead-workspace__header-actions .workspace-btn {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .lead-workspace__header-actions .workspace-btn {
     flex: 1;
     min-width: 0;
     justify-content: center;
@@ -3950,6 +3955,13 @@ textarea.crm-form-input {
     gap: 8px;
   }
 
+  .lead-workspace__toolbar-filters {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
   .lead-workspace__toolbar-search {
     min-width: 100%;
     width: 100%;
@@ -3957,7 +3969,8 @@ textarea.crm-form-input {
 
   .lead-filter-dropdown,
   .lead-workspace__clear-filters {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .lead-filter-dropdown__summary {
@@ -3970,24 +3983,21 @@ textarea.crm-form-input {
     right: auto;
   }
 
-  /* Filter tabs scroll horizontally */
   .filter-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 2px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 4px;
     padding: 3px;
-  }
-
-  .filter-tabs::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
   }
 
   .filter-tab {
-    flex-shrink: 0;
-    padding: 5px 10px;
+    min-width: 0;
+    padding: 5px 6px;
     font-size: 11px;
+    text-overflow: ellipsis;
+    overflow: hidden;
   }
 
   /* Table: fixed mobile layout (no horizontal scroll) */
@@ -4257,12 +4267,18 @@ textarea.crm-form-input {
     width: 100%;
     justify-content: flex-start !important;
     gap: 4px !important;
+    flex-wrap: wrap;
   }
 
   .workspace-btn {
     padding: 4px 8px !important;
     font-size: 11px !important;
     height: 32px !important;
+  }
+
+  .lead-workspace__header-actions .workspace-btn {
+    flex: 1 1 140px;
+    min-width: 0;
   }
 
   .lead-workspace__toolbar {
@@ -4279,6 +4295,7 @@ textarea.crm-form-input {
     width: 100%;
     order: 1;
     margin-bottom: 0 !important;
+    flex-wrap: nowrap;
   }
 
   .lead-workspace__toolbar-search {
@@ -4297,7 +4314,7 @@ textarea.crm-form-input {
   }
 
   .mobile-compact-tabs {
-    margin: 4px 8px !important;
+    margin: 4px 0 !important;
   }
 
   .lead-workspace__list-header {
@@ -4314,55 +4331,74 @@ textarea.crm-form-input {
     max-width: 100%;
     margin: 0;
     padding: 0;
+    -webkit-overflow-scrolling: touch;
   }
 
   .lead-workspace__table {
-    min-width: 100% !important;
     width: 100%;
     max-width: 100%;
     table-layout: fixed;
   }
 
   .lead-workspace__table td {
-    padding: 6px 4px !important;
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  .lead-workspace__table th {
+    padding: 8px 4px !important;
+    font-size: 11px !important;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+    min-width: 0;
   }
 
   .lead-workspace__table td.lead-col-toggle,
   .lead-workspace__table th.lead-col-toggle {
-    width: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
-    padding-left: 6px !important;
-    padding-right: 2px !important;
+    width: 12% !important;
+    min-width: 12% !important;
+    max-width: 12% !important;
+    padding: 8px 4px !important;
     text-align: center !important;
     overflow: visible !important;
   }
 
-  .lead-workspace__table td.lead-col-lead,
+  .lead-workspace__table td.lead-col-lead {
+    width: 32% !important;
+    padding: 8px 4px !important;
+  }
+
   .lead-workspace__table th.lead-col-lead {
-    width: 41% !important;
-    padding-left: 12px !important;
+    width: 32% !important;
+    padding: 8px 4px !important;
   }
 
   .lead-workspace__table td.lead-col-status,
   .lead-workspace__table th.lead-col-status {
-    width: 20% !important;
+    width: 18% !important;
+    padding: 8px 4px !important;
   }
 
-  .lead-workspace__table td.lead-col-followup,
+  .lead-workspace__table td.lead-col-followup {
+    width: 38% !important;
+  }
+
   .lead-workspace__table th.lead-col-followup {
-    width: 27% !important;
+    width: 38% !important;
+    padding: 8px 4px !important;
+  }
+
+  .lead-workspace__table td.lead-col-followup {
+    white-space: normal !important;
   }
 
   .lead-workspace__table td.lead-col-toggle button {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-  }
-
-  .lead-workspace__table th {
-    padding: 4px 8px !important;
-    font-size: 10px !important;
   }
 
   .hide-mobile {
@@ -4374,7 +4410,7 @@ textarea.crm-form-input {
   }
 
   .lead-filter-dropdown {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
   }
 
@@ -4393,7 +4429,7 @@ textarea.crm-form-input {
   }
 
   .lead-workspace__clear-filters {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
     height: 32px;
     padding: 0 4px;
@@ -4419,6 +4455,49 @@ textarea.crm-form-input {
     align-items: flex-end;
     gap: 4px;
     width: 100%;
+    min-width: 0;
+  }
+
+  .lead-workspace__actions-cell .crm-btn-sm,
+  .lead-workspace__actions-cell .lead-action-view-btn {
+    width: 100%;
+    max-width: 100%;
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+    border-radius: 6px !important;
+    justify-content: center;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .lead-workspace__actions-cell .crm-btn-sm svg,
+  .lead-workspace__actions-cell .lead-action-view-btn svg {
+    width: 12px !important;
+    height: 12px !important;
+    margin-right: 2px !important;
+  }
+
+  .lead-col-lead .lead-title,
+  .lead-col-lead small,
+  .lead-col-lead a,
+  .lead-col-status .status-chip {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lead-col-status .status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .lead-workspace__table th.lead-col-followup,
+  .lead-workspace__table td.lead-col-followup {
+    text-align: right !important;
   }
 
   /* Expandable Row Styles */
@@ -4471,7 +4550,7 @@ textarea.crm-form-input {
 
   /* Filter Tabs Single Row - No Scroller */
   .filter-tabs {
-    padding: 4px;
+    padding: 8px 4px !important;
     gap: 4px;
     width: 100%;
     display: flex !important;
@@ -4482,7 +4561,7 @@ textarea.crm-form-input {
   }
 
   .filter-tab {
-    padding: 6px 2px !important;
+    padding: 6px 4px !important;
     font-size: 10px !important;
     flex: 1;
     text-align: center;
