@@ -4358,21 +4358,21 @@ textarea.crm-form-input {
 
   .lead-workspace__table td.lead-col-toggle,
   .lead-workspace__table th.lead-col-toggle {
-    width: 12% !important;
-    min-width: 12% !important;
-    max-width: 12% !important;
-    padding: 8px 4px !important;
+    width: 8% !important;
+    min-width: 8% !important;
+    max-width: 8% !important;
+    padding: 8px 2px !important;
     text-align: center !important;
     overflow: visible !important;
   }
 
   .lead-workspace__table td.lead-col-lead {
-    width: 32% !important;
+    width: 35% !important;
     padding: 8px 4px !important;
   }
 
   .lead-workspace__table th.lead-col-lead {
-    width: 32% !important;
+    width: 35% !important;
     padding: 8px 4px !important;
   }
 
@@ -4383,11 +4383,11 @@ textarea.crm-form-input {
   }
 
   .lead-workspace__table td.lead-col-followup {
-    width: 38% !important;
+    width: 39% !important;
   }
 
   .lead-workspace__table th.lead-col-followup {
-    width: 38% !important;
+    width: 39% !important;
     padding: 8px 4px !important;
   }
 
