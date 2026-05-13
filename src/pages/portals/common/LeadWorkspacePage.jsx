@@ -2789,9 +2789,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 )}
                 {!loading && filteredLeads.map((lead) => {
                   const isExpanded = expandedLeadIds.has(lead.id);
-                  const cleanRemarks = getUserRemarkText({ description: lead.remarks, metadata: lead.metadata });
-                  const cleanLatest = getUserRemarkText({ description: lead.latestRemark, metadata: lead.latestRemarkMetadata });
-                  const latestNote = cleanRemarks || cleanLatest || '-';
+                  const leadTableRemarks = getUserRemarkText({ description: lead.remarks, metadata: lead.metadata })
+                    || String(lead.remarks || '').trim();
+                  const latestNote = leadTableRemarks
+                    ? Array.from(new Set(
+                      leadTableRemarks
+                        .split('|')
+                        .map((part) => part.trim())
+                        .filter(Boolean)
+                    )).join(' | ')
+                    : '-';
                   
                   return (
                     <React.Fragment key={lead.id}>
