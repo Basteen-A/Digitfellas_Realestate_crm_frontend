@@ -59,7 +59,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       if (Array.isArray(dashData.todaysFollowUpLeads)) setTodayFollowUps(dashData.todaysFollowUpLeads);
       if (Array.isArray(dashData.missedFollowUpLeads)) setMissedFollowUps(dashData.missedFollowUpLeads);
 
-     
+
 
       // FALLBACK: If lists are empty or stats fetch failed, fetch lists explicitl
       if (!dashData.todaysFollowUpLeads && !dashData.missedFollowUpLeads) {

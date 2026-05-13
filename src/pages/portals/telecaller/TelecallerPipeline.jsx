@@ -2,6 +2,15 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  UsersIcon,
+  CheckCircleIcon,
+  PhoneIcon,
+  ArrowPathIcon,
+  CalendarDaysIcon,
+  NoSymbolIcon,
+  ArrowPathRoundedSquareIcon,
+} from '@heroicons/react/24/outline';
 
 const DATE_FILTER_OPTIONS = [
   { value: 'all', label: 'All Dates' },
@@ -13,10 +22,10 @@ const DATE_FILTER_OPTIONS = [
 ];
 
 const PIPELINE_COLUMNS = [
-  { key: 'RNR', title: 'RNR', statusCode: 'RNR' },
-  { key: 'FOLLOW_UP', title: 'Follow Up', statusCode: 'FOLLOW_UP' },
-  { key: 'SV_SCHEDULED', title: 'Scheduled', statusCode: 'SV_SCHEDULED' },
-  { key: 'DISQUALIFIED', title: 'Unqualified' },
+  { key: 'RNR', title: 'RNR', statusCode: 'RNR', icon: <NoSymbolIcon />, gradient: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', color: '#d97706' },
+  { key: 'FOLLOW_UP', title: 'Follow Up', statusCode: 'FOLLOW_UP', icon: <PhoneIcon />, gradient: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)', color: '#2563eb' },
+  { key: 'SV_SCHEDULED', title: 'Scheduled', statusCode: 'SV_SCHEDULED', icon: <CalendarDaysIcon />, gradient: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', color: '#7c3aed' },
+  { key: 'DISQUALIFIED', title: 'Unqualified', icon: <NoSymbolIcon />, gradient: 'linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%)', color: '#dc2626' },
 ];
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -186,38 +195,44 @@ const TelecallerPipeline = ({ onNavigate }) => {
     <div className="telecaller-pipeline">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>Pipeline Board</h1>
+          <h1>Performance Tracker</h1>
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             className="crm-form-select"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            style={{ minWidth: 150, height: 36 }}
+            style={{ minWidth: 150, height: 38, borderRadius: 10, border: '1.5px solid var(--border-primary)' }}
           >
             {DATE_FILTER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
           {dateFilter === 'custom' && (
-            <>
+            <div style={{ display: 'flex', gap: 4 }}>
               <input
                 type="date"
                 className="crm-form-input"
                 value={customFromDate}
                 onChange={(e) => setCustomFromDate(e.target.value)}
-                style={{ height: 36 }}
+                style={{ height: 38, borderRadius: 10, width: 130 }}
               />
               <input
                 type="date"
                 className="crm-form-input"
                 value={customToDate}
                 onChange={(e) => setCustomToDate(e.target.value)}
-                style={{ height: 36 }}
+                style={{ height: 38, borderRadius: 10, width: 130 }}
               />
-            </>
+            </div>
           )}
-          <button className="crm-btn crm-btn-ghost" onClick={load}> Refresh</button>
+          <button
+            className="crm-btn crm-btn-ghost"
+            style={{ height: 38, borderRadius: 10, border: '1.5px solid var(--border-primary)', background: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={load}
+          >
+            <ArrowPathRoundedSquareIcon style={{ width: 18, height: 18 }} /> Refresh
+          </button>
         </div>
       </div>
 
@@ -228,60 +243,45 @@ const TelecallerPipeline = ({ onNavigate }) => {
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border-primary)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Total Leads</span>
-              <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent-blue)' }}>{totalLeads}</span>
+          <div className="pipeline-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+            <div className="pipeline-stat-card" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', borderRadius: 16, padding: '20px 24px', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)' }}>
+              <UsersIcon style={{ position: 'absolute', right: -10, top: -10, width: 80, height: 80, opacity: 0.15 }} />
+              <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.9, marginBottom: 4 }}>Total Leads</div>
+              <div style={{ fontSize: 32, fontWeight: 800 }}>{totalLeads}</div>
             </div>
-            <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border-primary)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Qualified Leads</span>
-              <span style={{ fontSize: 28, fontWeight: 800, color: '#10b981' }}>{qualifiedLeads}</span>
-            </div>
-          </div>
-          <div className="kanban" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
-          {PIPELINE_COLUMNS.map((column) => {
-            const stageLeads = getLeadsByColumn(column);
-            const columnColor = getColumnColor(column);
-            return (
-              <div className="kanban-col" key={column.key} style={{ minWidth: 210, maxWidth: 210, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary, #f8fafc)', borderRadius: 12, border: '1px solid var(--border-primary, #e2e8f0)' }}>
-                <div className="kanban-col-header" style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card, #fff)', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-                  <div className="kanban-col-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
-                    <span className="col-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: columnColor }}></span>
-                    {column.title}
-                  </div>
-                  <div className="kanban-col-count" style={{ fontSize: 11, fontWeight: 700, background: 'var(--bg-primary, #f1f5f9)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: 10 }}>
-                    {stageLeads.length}
-                  </div>
-                </div>
 
-                <div className="kanban-col-body" style={{ padding: 12 }}>
-                  <div style={{
-                    minHeight: 64,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 10,
-                    background: 'var(--bg-card, #fff)',
-                    border: '1px solid var(--border-primary, #e2e8f0)',
-                    color: 'var(--text-primary)',
-                    fontWeight: 800,
-                    fontSize: 24,
-                  }}>
-                    {stageLeads.length}
+            <div className="pipeline-stat-card" style={{ background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', borderRadius: 16, padding: '20px 24px', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}>
+              <CheckCircleIcon style={{ position: 'absolute', right: -10, top: -10, width: 80, height: 80, opacity: 0.15 }} />
+              <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.9, marginBottom: 4 }}>Qualified Leads</div>
+              <div style={{ fontSize: 32, fontWeight: 800 }}>{qualifiedLeads}</div>
+            </div>
+
+            {PIPELINE_COLUMNS.map(col => {
+              const count = getLeadsByColumn(col).length;
+              return (
+                <div key={col.key} className="pipeline-stat-card" style={{ background: '#fff', border: '1px solid var(--border-primary)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>{col.title}</div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>{count}</div>
+                    </div>
+                    <div style={{ background: col.gradient || '#f8fafc', color: col.color || 'var(--text-secondary)', width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {React.cloneElement(col.icon, { style: { width: 22, height: 22 } })}
+                    </div>
+                  </div>
+                  <div style={{ height: 4, width: '100%', background: '#f1f5f9', borderRadius: 2, marginTop: 12, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: totalLeads > 0 ? `${(count / totalLeads) * 100}%` : '0%', background: col.color || 'var(--accent-blue)', borderRadius: 2 }}></div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         </>
       )}
 
       <style>{`
         @keyframes tc-spin { to { transform: rotate(360deg); } }
-        .kanban::-webkit-scrollbar { height: 8px; }
-        .kanban::-webkit-scrollbar-track { background: transparent; }
-        .kanban::-webkit-scrollbar-thumb { background: var(--border-primary, #e2e8f0); borderRadius: 10px; }
+        .pipeline-stat-card:hover { transform: translateY(-2px); }
       `}</style>
     </div>
   );

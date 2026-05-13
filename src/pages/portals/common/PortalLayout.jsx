@@ -26,7 +26,7 @@ const SCREEN_TITLES = {
   'leads-addnew': '',
   handoffs: '',
   followups: "Today's Follow Ups",
-  pipeline: 'Pipeline Board',
+  pipeline: '',
   addlead: 'Add New Lead',
   calllog: 'Call Log',
   visits: 'Site Visits',

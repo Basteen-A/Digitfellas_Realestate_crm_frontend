@@ -401,6 +401,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .portal-topbar-btn {
@@ -572,10 +575,17 @@
 
   .portal-topbar__title {
     font-size: 14px;
+    min-width: 0;
+    flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 140px;
+  }
+
+  .portal-topbar__right {
+    margin-left: auto;
+    gap: 4px;
   }
 
   .portal-topbar__center {

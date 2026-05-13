@@ -11,7 +11,6 @@ import {
   BriefcaseIcon,
   CreditCardIcon,
   DevicePhoneMobileIcon,
-  InboxArrowDownIcon,
   HomeModernIcon,
   ArrowsRightLeftIcon,
   BuildingStorefrontIcon,
@@ -152,9 +151,8 @@ export const telecallerMenu = [
   { label: 'Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
   { label: 'SV Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Performance Tracker', key: 'pipeline', icon: ClipboardDocumentListIcon, badge: null },
-  { group: 'Quick Actions' },
   { label: 'Call Log', key: 'calllog', icon: DevicePhoneMobileIcon, badge: null },
-  { label: 'Pull Requests', key: 'pullrequests', icon: InboxArrowDownIcon, badgeColor: 'red' },
+  // { label: 'Pull Requests', key: 'pullrequests', icon: InboxArrowDownIcon, badgeColor: 'red' },
 ];
 
 export const salesManagerMenu = [
@@ -163,7 +161,6 @@ export const salesManagerMenu = [
   { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'green' },
   { label: 'Negotiations', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
-  { group: 'Workflow' },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
   // { label: 'Pull Lead', key: 'pull', icon: MagnifyingGlassIcon, badge: null },
 ];

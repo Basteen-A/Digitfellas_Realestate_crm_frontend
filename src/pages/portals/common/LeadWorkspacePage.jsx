@@ -51,6 +51,8 @@ import {
   TableCellsIcon,
   BoltIcon,
   EyeIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import './LeadWorkspacePage.css';
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
@@ -182,7 +184,18 @@ const buildNewLeadFollowUpShortcut = (shortcut) => {
   return getQuickFollowUpValue(shortcut.dayOffset, shortcut.hour, shortcut.minute);
 };
 
-const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
+const SYSTEM_REMARK_PREFIXES = [
+  'Lead created with status:',
+  'Response:',
+  'Quick action:',
+  'Follow-up call scheduled for',
+  'Action:',
+  'Status updated to',
+  'Stage changed to',
+  'Assigned to',
+  'Reassigned to',
+  'Site visit',
+];
 const FOLLOW_UP_SCHEDULED_PREFIX = 'Follow-up call scheduled for';
 
 const MANDATORY_REMARK_STATUS_CODES = new Set([
@@ -291,32 +304,45 @@ const getRemarkHistoryStatusLabel = (activity, workflowConfig) => {
 };
 
 const getUserRemarkText = (activity) => {
-  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity?.type)) {
-    return '';
-  }
+  if (!activity) return '';
 
-  const statusRemark = typeof activity?.metadata?.statusRemarkText === 'string'
+  // 1. Prioritize explicit metadata fields if they exist
+  const statusRemark = typeof activity.metadata?.statusRemarkText === 'string'
     ? activity.metadata.statusRemarkText.trim()
     : '';
   if (statusRemark) return statusRemark;
 
-  const description = typeof activity?.description === 'string' ? activity.description.trim() : '';
+  const note = typeof activity.metadata?.note === 'string' ? activity.metadata.note.trim() : '';
+  if (note) return note;
+
+  // 2. Filter out activities that are purely system-level without remarks
+  if (['ASSIGNMENT', 'REASSIGNMENT', 'FOLLOW_UP_SCHEDULED'].includes(activity.type)) {
+    return '';
+  }
+
+  const description = typeof activity.description === 'string' ? activity.description.trim() : '';
   if (!description) return '';
 
-  if (SYSTEM_REMARK_PREFIXES.some((prefix) => description.startsWith(prefix))) return '';
-
+  // 3. Parse the description. 
   const parts = description.split('|').map((part) => part.trim()).filter(Boolean);
+
+  // Check for explicit "remark:" or "note:" labels within the description parts
   const remarkPart = parts.find((part) => /^remark\s*:/i.test(part));
   if (remarkPart) return remarkPart.replace(/^remark\s*:/i, '').trim();
 
   const notePart = parts.find((part) => /^note\s*:/i.test(part));
   if (notePart) return notePart.replace(/^note\s*:/i, '').trim();
 
+  const noteAddedPart = parts.find((part) => /^note\s*added\s*:/i.test(part));
+  if (noteAddedPart) return noteAddedPart.replace(/^note\s*added\s*:/i, '').trim();
+
+  // Filter out parts that are known system messages (case-insensitive)
   const nonSystemParts = parts.filter((part) => (
     !/^action\s*:/i.test(part)
     && !/^response\s*:/i.test(part)
     && !/^call\s*status\s*:/i.test(part)
     && !/^status\s*:/i.test(part)
+    && !SYSTEM_REMARK_PREFIXES.some((prefix) => part.toLowerCase().startsWith(prefix.toLowerCase()))
   ));
 
   if (!nonSystemParts.length) return '';
@@ -343,36 +369,27 @@ const getScheduledFollowUpIso = (activity) => {
   return firstValid ? new Date(firstValid).toISOString() : null;
 };
 
-const parseAsUtcIfNeeded = (rawDateText) => {
-  const direct = new Date(rawDateText);
-  if (!Number.isNaN(direct.getTime())) {
-    // If timezone is absent, backend activity text generally carries UTC clock time.
-    const hasExplicitTimeZone = /\b(UTC|GMT|IST)\b|Z$|[+-]\d{2}:?\d{2}$/i.test(rawDateText);
-    if (hasExplicitTimeZone) return direct;
-  }
 
-  const utcFallback = new Date(`${rawDateText} UTC`);
-  if (!Number.isNaN(utcFallback.getTime())) return utcFallback;
-  return direct;
-};
 
 const formatActivityDescription = (description, activity) => {
   if (typeof description !== 'string') return '';
   const text = description.trim();
-  if (!text.startsWith(FOLLOW_UP_SCHEDULED_PREFIX)) return text;
 
-  const metadataIso = getScheduledFollowUpIso(activity);
-  if (metadataIso) {
-    return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(metadataIso)} IST`;
+  // Extract any additional info after the follow-up part (e.g. "| remark: ...")
+  const pipeIndex = text.indexOf('|');
+  const suffix = pipeIndex !== -1 ? text.slice(pipeIndex).trim() : '';
+
+  // If it's a follow-up scheduled activity, format the date part
+  if (text.toLowerCase().startsWith(FOLLOW_UP_SCHEDULED_PREFIX.toLowerCase())) {
+    const metadataIso = getScheduledFollowUpIso(activity);
+    if (metadataIso) {
+      const formattedDate = `Next Follow-up: ${formatDateTimeInTimeZone(metadataIso)} IST`;
+      return suffix ? `${formattedDate} | ${getUserRemarkText(activity)}` : formattedDate;
+    }
   }
 
-  const rawDateText = text.slice(FOLLOW_UP_SCHEDULED_PREFIX.length).trim();
-  if (!rawDateText) return text;
-
-  const parsed = parseAsUtcIfNeeded(rawDateText);
-  if (Number.isNaN(parsed.getTime())) return text;
-
-  return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(parsed.toISOString())} IST`;
+  // Otherwise, just return the clean user remark
+  return getUserRemarkText(activity);
 };
 
 const getAssigneeRoleForAction = (action, workspaceRole) => {
@@ -402,10 +419,28 @@ const getClosureReasonCategoryForAction = (action) => {
   }
 };
 
-const FilterDropdown = ({ label, options, selectedValues, onToggle, onClear }) => (
-  <details className="lead-filter-dropdown">
-    <summary className="lead-filter-dropdown__summary">
-      <span>{label}</span>
+const FilterDropdown = ({
+  label,
+  mobileLabel,
+  options,
+  selectedValues,
+  onToggle,
+  onClear,
+  isOpen,
+  onToggleOpen,
+  onClose,
+}) => (
+  <details className="lead-filter-dropdown" open={isOpen}>
+    <summary
+      className="lead-filter-dropdown__summary"
+      aria-expanded={isOpen}
+      onClick={(e) => {
+        e.preventDefault();
+        onToggleOpen();
+      }}
+    >
+      <span className="hide-mobile">{label}</span>
+      <span className="show-mobile">{mobileLabel || label}</span>
       <span className="lead-filter-dropdown__count">{selectedValues.length ? selectedValues.length : 'All'}</span>
     </summary>
     <div className="lead-filter-dropdown__menu">
@@ -416,6 +451,7 @@ const FilterDropdown = ({ label, options, selectedValues, onToggle, onClear }) =
           onClick={(e) => {
             e.preventDefault();
             onClear();
+            onClose();
           }}
         >
           Clear
@@ -455,6 +491,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Leads ──
   const [filters, setFilters] = useState({ search: '', stageCode: '', statusCode: '', includeClosed: false });
   const [multiFilters, setMultiFilters] = useState({ stageCodes: [], statusCodes: [], sources: [] });
+  const [openFilterKey, setOpenFilterKey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [leads, setLeads] = useState([]);
@@ -512,6 +549,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [createOptionsLoading, setCreateOptionsLoading] = useState(false);
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const projectDropdownRef = useRef(null);
+  const toolbarFiltersRef = useRef(null);
   const [projectSearch, setProjectSearch] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -537,6 +575,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const timer = setInterval(() => setTimeTick(Date.now()), 60000);
     return () => clearInterval(timer);
   }, [workspaceRole, user?.id]);
+
+  useEffect(() => {
+    const handleOutsideFilterClick = (event) => {
+      if (!toolbarFiltersRef.current?.contains(event.target)) {
+        setOpenFilterKey(null);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setOpenFilterKey(null);
+    };
+
+    document.addEventListener('mousedown', handleOutsideFilterClick);
+    document.addEventListener('touchstart', handleOutsideFilterClick, { passive: true });
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideFilterClick);
+      document.removeEventListener('touchstart', handleOutsideFilterClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
   const [recordSvForm, setRecordSvForm] = useState({
     svDate: new Date().toISOString().split('T')[0],
     svProjectId: '',
@@ -1417,9 +1477,21 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     });
   };
 
+  const [expandedLeadIds, setExpandedLeadIds] = useState(new Set());
+
+  const toggleExpandLead = (leadId) => {
+    setExpandedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
+      return next;
+    });
+  };
+
   const clearMultiFilters = () => {
     setMultiFilters({ stageCodes: [], statusCodes: [], sources: [] });
     setFilters((prev) => ({ ...prev, search: '' }));
+    setOpenFilterKey(null);
   };
 
   // ── Create lead options ──
@@ -2529,7 +2601,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       <header className="lead-workspace__header">
         <div>
           <h1>{wsTitle.title}</h1>
-          <p>{wsTitle.subtitle}</p>
+          <p className="hide-mobile">{wsTitle.subtitle}</p>
         </div>
         <div className="lead-workspace__header-actions">
           <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => loadLeads({ silent: true })} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -2589,40 +2661,56 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
       {/* ── Toolbar ── */}
       <div className="lead-workspace__toolbar">
+        <div className="lead-workspace__toolbar-filters" ref={toolbarFiltersRef}>
+          {workspaceRole !== 'TC' && (
+            <FilterDropdown
+              label="Stages"
+              mobileLabel="Stage"
+              options={toolbarStageOptions}
+              selectedValues={multiFilters.stageCodes}
+              onToggle={(value) => toggleMultiFilter('stageCodes', value)}
+              onClear={() => setMultiFilters((prev) => ({ ...prev, stageCodes: [] }))}
+              isOpen={openFilterKey === 'stages'}
+              onToggleOpen={() => setOpenFilterKey((prev) => (prev === 'stages' ? null : 'stages'))}
+              onClose={() => setOpenFilterKey(null)}
+            />
+          )}
+          <FilterDropdown
+            label="Statuses"
+            mobileLabel="Status"
+            options={workspaceRole === 'TC' ? statusOptions.filter(opt => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(opt.value)) : statusOptions}
+            selectedValues={multiFilters.statusCodes}
+            onToggle={(value) => toggleMultiFilter('statusCodes', value)}
+            onClear={() => setMultiFilters((prev) => ({ ...prev, statusCodes: [] }))}
+            isOpen={openFilterKey === 'statuses'}
+            onToggleOpen={() => setOpenFilterKey((prev) => (prev === 'statuses' ? null : 'statuses'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <FilterDropdown
+            label="Sources"
+            mobileLabel="Source"
+            options={sourceFilterOptions}
+            selectedValues={multiFilters.sources}
+            onToggle={(value) => toggleMultiFilter('sources', value)}
+            onClear={() => setMultiFilters((prev) => ({ ...prev, sources: [] }))}
+            isOpen={openFilterKey === 'sources'}
+            onToggleOpen={() => setOpenFilterKey((prev) => (prev === 'sources' ? null : 'sources'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <button type="button" className="lead-workspace__clear-filters" onClick={clearMultiFilters}>
+            <span className="hide-mobile">Clear All</span>
+            <span className="show-mobile">Clear</span>
+          </button>
+        </div>
+
         <div className="lead-workspace__toolbar-search">
-          <span className="search-icon"></span>
+          <span className="search-icon">🔍</span>
           <input
             value={filters.search}
             onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
             placeholder="Search leads by name, phone, email..."
           />
         </div>
-        {workspaceRole !== 'TC' && (
-          <FilterDropdown
-            label="Stages"
-            options={toolbarStageOptions}
-            selectedValues={multiFilters.stageCodes}
-            onToggle={(value) => toggleMultiFilter('stageCodes', value)}
-            onClear={() => setMultiFilters((prev) => ({ ...prev, stageCodes: [] }))}
-          />
-        )}
-        <FilterDropdown
-          label="Statuses"
-          options={workspaceRole === 'TC' ? statusOptions.filter(opt => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(opt.value)) : statusOptions}
-          selectedValues={multiFilters.statusCodes}
-          onToggle={(value) => toggleMultiFilter('statusCodes', value)}
-          onClear={() => setMultiFilters((prev) => ({ ...prev, statusCodes: [] }))}
-        />
-        <FilterDropdown
-          label="Sources"
-          options={sourceFilterOptions}
-          selectedValues={multiFilters.sources}
-          onToggle={(value) => toggleMultiFilter('sources', value)}
-          onClear={() => setMultiFilters((prev) => ({ ...prev, sources: [] }))}
-        />
-        <button type="button" className="lead-workspace__clear-filters" onClick={clearMultiFilters}>
-          Clear All
-        </button>
       </div>
 
       {/* ── Main Grid ── */}
@@ -2639,71 +2727,39 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
           {/* Tabs for follow-up roles */}
           {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
-            <div style={{ display: 'flex', gap: 4, padding: '10px 16px 12px', borderBottom: '1px solid var(--border-secondary)' }}>
+            <div className="filter-tabs mobile-compact-tabs">
               <button
                 onClick={() => setActiveTab('today')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeTab === 'today' ? 'var(--accent-blue)' : 'transparent',
-                  color: activeTab === 'today' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
+                className={`filter-tab ${activeTab === 'today' ? 'active' : ''}`}
               >
-                Today&apos;s Follow Ups
+                <span className="hide-mobile">Today&apos;s Follow Ups</span>
+                <span className="show-mobile">Today</span>
               </button>
               {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
                 <button
                   onClick={() => setActiveTab('missed')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: activeTab === 'missed' ? 'var(--accent-blue)' : 'transparent',
-                    color: activeTab === 'missed' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
+                  className={`filter-tab ${activeTab === 'missed' ? 'active' : ''}`}
                 >
-                  Missed Follow Ups
+                  <span className="hide-mobile">Missed Follow Ups</span>
+                  <span className="show-mobile">Missed</span>
                 </button>
               )}
               {workspaceRole === 'TC' && (
                 <button
                   onClick={() => setActiveTab('new')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: activeTab === 'new' ? 'var(--accent-blue)' : 'transparent',
-                    color: activeTab === 'new' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 500,
-                  }}
+                  className={`filter-tab ${activeTab === 'new' ? 'active' : ''}`}
                 >
-                  New (Unassigned)
+                  <span className="hide-mobile">New (Unassigned)</span>
+                  <span className="show-mobile">New</span>
                 </button>
               )}
               {workspaceRole === 'SH' && (
                 <button
                   onClick={() => setActiveTab('sm_leads')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: activeTab === 'sm_leads' ? 'var(--accent-blue)' : 'transparent',
-                    color: activeTab === 'sm_leads' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
+                  className={`filter-tab ${activeTab === 'sm_leads' ? 'active' : ''}`}
                 >
-                  SM Leads (Read Only)
+                  <span className="hide-mobile">SM Leads (Read Only)</span>
+                  <span className="show-mobile">SM Leads</span>
                 </button>
               )}
             </div>
@@ -2713,15 +2769,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             <table className="lead-workspace__table">
               <thead>
                 <tr>
-                  <th>Lead</th>
-                  {workspaceRole !== 'SH' && <th className="hide-tablet">Contact</th>}
-                  <th>Status</th>
-                  {workspaceRole !== 'SH' && <th className="hide-mobile">Source</th>}
-                  {workspaceRole !== 'SH' && <th className="hide-mobile">Medium</th>}
-                  <th className="hide-mobile">Project/Location</th>
-                  <th className="hide-tablet">Assignment / Ownership</th>
-                  <th className="hide-tablet">Last Communication</th>
-                  <th style={{ textAlign: 'right' }}>Follow up</th>
+                  <th className="show-mobile lead-col-toggle" style={{ width: 24 }}></th>
+                  <th className="lead-col-lead" style={{ width: 'auto' }}>Lead</th>
+                  {workspaceRole !== 'SH' && <th className="hide-mobile" style={{ width: 150 }}>Contact</th>}
+                  <th className="lead-col-status" style={{ width: 85 }}>Status</th>
+                  {workspaceRole !== 'SH' && <th className="hide-mobile" style={{ width: 120 }}>Source/Medium</th>}
+                  <th className="hide-mobile" style={{ width: 150 }}>Project/Location</th>
+                  <th className="hide-tablet" style={{ width: 120 }}>Assign TO</th>
+                  <th className="hide-tablet" style={{ width: 150 }}>Remarks</th>
+                  <th className="lead-col-followup" style={{ textAlign: 'right', width: 90 }}>Follow up</th>
                 </tr>
               </thead>
               <tbody>
@@ -2731,12 +2787,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 {!loading && !filteredLeads.length && (
                   <tr><td colSpan={workspaceRole === 'SH' ? 7 : 10} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
-                {!loading && filteredLeads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    className={selectedLeadId === lead.id ? 'is-selected' : ''}
-                  >
-                    <td>
+                {!loading && filteredLeads.map((lead) => {
+                  const isExpanded = expandedLeadIds.has(lead.id);
+                  const cleanRemarks = getUserRemarkText({ description: lead.remarks, metadata: lead.metadata });
+                  const cleanLatest = getUserRemarkText({ description: lead.latestRemark, metadata: lead.latestRemarkMetadata });
+                  const latestNote = cleanRemarks || cleanLatest || '-';
+                  
+                  return (
+                    <React.Fragment key={lead.id}>
+                      <tr className={selectedLeadId === lead.id ? 'is-selected' : ''}>
+                        <td className="show-mobile lead-col-toggle" style={{ width: 24, padding: '10px 0', textAlign: 'center' }}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); toggleExpandLead(lead.id); }}
+                            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+                          >
+                            {isExpanded ? <ChevronDownIcon style={{ width: 14, height: 14 }} /> : <ChevronRightIcon style={{ width: 14, height: 14 }} />}
+                          </button>
+                        </td>
+                        <td className="lead-col-lead">
                       <p className="lead-title">{lead.fullName}</p>
                       <small>
                         <a
@@ -2748,59 +2816,56 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         </a>
                       </small>
                     </td>
-                    {workspaceRole !== 'SH' && (
-                      <td className="hide-tablet">
-                        <p>{lead.phone}</p>
-                        <small>{lead.email || '-'}</small>
-                      </td>
-                    )}
-                    <td>
-                      <span
-                        className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
-                        style={{ backgroundColor: lead.statusColor + '22', color: lead.statusColor, borderColor: lead.statusColor }}
-                      >
-                        {lead.statusLabel}
-                      </span>
-                    </td>
-                    {workspaceRole !== 'SH' && (
-                      <td className="hide-mobile">
-                        <p>{lead.source || '-'}</p>
-                      </td>
-                    )}
-                    {workspaceRole !== 'SH' && (
-                      <td className="hide-mobile">
-                        <p>{lead.subSource || '-'}</p>
-                      </td>
-                    )}
-                    <td className="hide-mobile">
-                      <small>{(() => {
-                        const projText = lead.interestedProjects?.length > 0
-                          ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
-                          : lead.project;
-                        return projText || '-';
-                      })()}</small>
-                      {(() => {
-                        const locText = lead.interestedLocations?.length > 0
-                          ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
-                          : lead.location;
-                        return locText ? (
-                          <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>Location: {locText}</small>
-                        ) : null;
-                      })()}
-                    </td>
-                    <td className="hide-tablet">
-                      <p className="assigned-name">{lead.assignedToUserName || 'Unassigned'}</p>
-                      <small className="assigned-role">
-                        {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
-                      </small>
-                    </td>
-                    <td className="hide-tablet">
-                      <small style={{ color: 'var(--text-secondary)' }}>{lead.remarks || lead.latestRemark || '-'}</small>
-                    </td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {workspaceRole !== 'SH' && (
+                          <td className="hide-mobile">
+                            <p>{lead.phone}</p>
+                            <small>{lead.email || '-'}</small>
+                          </td>
+                        )}
+                        <td className="lead-col-status">
+                          <span
+                            className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
+                            style={{ backgroundColor: lead.statusColor + '22', color: lead.statusColor, borderColor: lead.statusColor }}
+                          >
+                            {lead.statusLabel}
+                          </span>
+                        </td>
+                        {workspaceRole !== 'SH' && (
+                          <td className="hide-mobile">
+                            <small>{lead.source || '-'}</small><br />
+                            <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>{lead.subSource || '-'}</small>
+                          </td>
+                        )}
+                        <td className="hide-mobile">
+                          <small>{(() => {
+                            const projText = lead.interestedProjects?.length > 0
+                              ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
+                              : lead.project;
+                            return projText || '-';
+                          })()}</small>
+                          {(() => {
+                            const locText = lead.interestedLocations?.length > 0
+                              ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
+                              : lead.location;
+                            return locText ? (
+                              <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>Location: {locText}</small>
+                            ) : null;
+                          })()}
+                        </td>
+                        <td className="hide-mobile">
+                          <p className="assigned-name">{lead.assignedToUserName || 'Unassigned'}</p>
+                          <small className="assigned-role">
+                            {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
+                          </small>
+                        </td>
+                        <td className="hide-mobile">
+                          <small style={{ color: 'var(--text-secondary)' }}>{latestNote}</small>
+                        </td>
+                    <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div className="lead-workspace__actions-cell">
                       {activeTab !== 'new' && activeTab !== 'unassigned' && (
                         <button
-                          className="crm-btn crm-btn-sm"
+                          className="crm-btn crm-btn-sm lead-action-view-btn"
                           style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                           onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
                         >
@@ -2875,9 +2940,44 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
                         </button>
                       )}
-                    </td>
+                    </div>
+                  </td>
                   </tr>
-                ))}
+                  {isExpanded && (
+                    <tr className="lead-workspace__expanded-row show-mobile">
+                      <td colSpan={4}>
+                        <div className="lead-workspace__expanded-card">
+                          <div className="expanded-info-grid">
+                            {workspaceRole !== 'SH' && (
+                              <div className="expanded-info-item">
+                                <label>Contact</label>
+                                <p>{lead.phone} {lead.email ? `| ${lead.email}` : ''}</p>
+                              </div>
+                            )}
+                            <div className="expanded-info-item">
+                              <label>Source</label>
+                              <p>{lead.source || '-'} {lead.subSource ? ` (${lead.subSource})` : ''}</p>
+                            </div>
+                            <div className="expanded-info-item">
+                              <label>Project/Location</label>
+                              <p>{lead.project} {lead.location ? `/ ${lead.location}` : ''}</p>
+                            </div>
+                            <div className="expanded-info-item">
+                              <label>Assigned To</label>
+                              <p>{lead.assignedToUserName || 'Unassigned'} ({lead.assignedRoleLabel || lead.ownerRoleLabel || 'Pool'})</p>
+                            </div>
+                            <div className="expanded-info-item full-width">
+                              <label>Latest Remarks</label>
+                              <p>{latestNote}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -4578,6 +4678,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
             {/* ── Scrollable Drawer Body ── */}
             <div className="qa-drawer-body">
+              {/* ── Latest Remark Context Card ── */}
+              {(() => {
+                const lastAct = quickActionActivities.find(act => getUserRemarkText(act));
+                if (!lastAct) return null;
+                const remark = getUserRemarkText(lastAct);
+                const statusLabel = getRemarkHistoryStatusLabel(lastAct, workflowConfig);
+                const callStatus = lastAct.metadata?.statusRemarkResponseType
+                  || lastAct.metadata?.callResult
+                  || lastAct.metadata?.last_call_result;
+
+                return (
+                  <div className="qa-drawer-last-remark-card">
+                    <div className="qa-drawer-last-remark-header">
+                      <span className="qa-drawer-last-remark-status">{statusLabel || 'Last Update'}</span>
+                      <span className="qa-drawer-last-remark-date">{formatDateTime(lastAct.at || lastAct.created_at)}</span>
+                    </div>
+                    <div className="qa-drawer-last-remark-content">
+                      {remark}
+                    </div>
+                    {callStatus && (
+                      <div className={`qa-drawer-last-remark-call ${String(callStatus).toLowerCase().includes('not') ? 'missed' : 'answered'}`}>
+                        {String(callStatus).replace('-', ' ')}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ── Update Status (Status Grid) ── */}
               {!quickActionLead.isClosed && (
@@ -4947,12 +5074,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   {/* ── Contextual: Customer Profile ── */}
                   {(quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && (
                     <div className="qa-drawer-profile-block">
-                    {/* ── Buyer Name ── */}
+                      {/* ── Buyer Name ── */}
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Buyer Name</div>
                       <div style={{ marginBottom: 12 }}>
                         <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter buyer name (if different from lead)" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} />
                       </div>
-                    {/* ── Project Selection for Booking ── */}
+                      {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>
                       <div className="qa-drawer-profile-grid">
                         <div>
