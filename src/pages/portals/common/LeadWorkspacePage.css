@@ -4338,6 +4338,8 @@ textarea.crm-form-input {
     width: 100%;
     max-width: 100%;
     table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
   }
 
   .lead-workspace__table td {
@@ -4358,21 +4360,21 @@ textarea.crm-form-input {
 
   .lead-workspace__table td.lead-col-toggle,
   .lead-workspace__table th.lead-col-toggle {
-    width: 8% !important;
-    min-width: 8% !important;
-    max-width: 8% !important;
-    padding: 8px 2px !important;
+    width: 6% !important;
+    min-width: 6% !important;
+    max-width: 6% !important;
+    padding: 8px 1px !important;
     text-align: center !important;
     overflow: visible !important;
   }
 
   .lead-workspace__table td.lead-col-lead {
-    width: 35% !important;
+    width: 36% !important;
     padding: 8px 4px !important;
   }
 
   .lead-workspace__table th.lead-col-lead {
-    width: 35% !important;
+    width: 36% !important;
     padding: 8px 4px !important;
   }
 
@@ -4383,11 +4385,11 @@ textarea.crm-form-input {
   }
 
   .lead-workspace__table td.lead-col-followup {
-    width: 39% !important;
+    width: 40% !important;
   }
 
   .lead-workspace__table th.lead-col-followup {
-    width: 39% !important;
+    width: 40% !important;
     padding: 8px 4px !important;
   }
 
@@ -4398,7 +4400,8 @@ textarea.crm-form-input {
   .lead-workspace__table td.lead-col-toggle button {
     display: inline-flex !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
+    padding-left: 1px !important;
   }
 
   .hide-mobile {
