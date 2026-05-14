@@ -32,19 +32,53 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const [loading, setLoading] = useState(true);
 
   const isLeadAssignedToCurrentUser = useCallback((item) => {
-    const currentUserId = String(user?.id || user?.user_id || '');
+    const currentUserId = String(user?.id ?? user?.user_id ?? user?.userId ?? '');
+    const currentUserEmail = String((user?.email || user?.user_email || user?.emailAddress || '')).toLowerCase();
     if (!currentUserId) return false;
 
-    const assignedToId = item?.assignedToUserId
-      || item?.assigned_to
-      || item?.lead?.assignedToUserId
-      || item?.lead?.assigned_to
-      || item?.lead?.assignedTo?.id
-      || item?.assignedTo?.id
-      || null;
+    const candidates = [
+      item?.assignedToUserId,
+      item?.assigned_to,
+      item?.assigned_to_user_id,
+      item?.assigned_to_id,
+      item?.assignedTo?.id,
+      item?.assignedTo?.user_id,
+      item?.assignedTo?.userId,
+      item?.scheduled_by,
+      item?.scheduledBy,
+      item?.lead?.assignedToUserId,
+      item?.lead?.assigned_to,
+      item?.lead?.assigned_to_user_id,
+      item?.lead?.assigned_to_id,
+      item?.lead?.assignedTo?.id,
+      item?.lead?.assignedTo?.user_id,
+      item?.lead?.assignedTo?.userId,
+      item?.lead?.ownerId,
+      item?.lead?.owner?.id,
+      item?.lead?.owner_user_id,
+      item?.lead?.scheduled_by,
+    ];
 
-    return String(assignedToId || '') === currentUserId;
-  }, [user?.id, user?.user_id]);
+    // Check id-based candidates first
+    const idMatch = candidates.some((c) => String(c ?? '') === currentUserId);
+    if (idMatch) return true;
+
+    // Also check email matches for APIs that return assigned emails instead of ids
+    if (currentUserEmail) {
+      const emailCandidates = [
+        item?.assignedToEmail,
+        item?.assigned_to_email,
+        item?.assignedTo?.email,
+        item?.lead?.assignedTo?.email,
+        item?.lead?.email,
+        item?.lead?.owner_email,
+        item?.ownerEmail,
+      ];
+      if (emailCandidates.some((e) => String(e || '').toLowerCase() === currentUserEmail)) return true;
+    }
+
+    return false;
+  }, [user?.id, user?.user_id, user?.userId, user?.email, user?.emailAddress, user?.user_email]);
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
@@ -62,11 +96,29 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
       };
 
       const dashboardData = resp?.data?.data || resp?.data || resp || {};
-      const overdueData = overdueResp?.data?.data || overdueResp?.data || overdueResp || {};
+
+      // Normalize overdue response: try multiple possible shapes returned by the API
+      const tryExtract = (val) => {
+        if (!val) return undefined;
+        if (Array.isArray(val)) return val;
+        if (Array.isArray(val.data)) return val.data;
+        if (Array.isArray(val.rows)) return val.rows;
+        if (Array.isArray(val.result)) return val.result;
+        if (Array.isArray(val.payload)) return val.payload;
+        return undefined;
+      };
+
+      let missedArray = tryExtract(overdueResp) || tryExtract(overdueResp?.data) || tryExtract(overdueResp?.data?.data) || [];
+      // Fallback: some endpoints may return missed followups inside dashboard payload
+      if ((!missedArray || missedArray.length === 0) && dashboardData) {
+        missedArray = tryExtract(dashboardData.overdueFollowUps) || tryExtract(dashboardData.overdue) || missedArray || [];
+      }
 
       setStats(dashboardData.stats || null);
       setUnassignedLeads(ensureArray(dashboardData.unassignedLeads));
-      setMissedFollowUps(ensureArray(overdueData).filter(isLeadAssignedToCurrentUser));
+      const normalizedMissed = missedArray || [];
+      const filteredMissed = normalizedMissed.filter((item) => isLeadAssignedToCurrentUser(item));
+      setMissedFollowUps(filteredMissed);
       setTodayFollowUps(ensureArray(dashboardData.todaysFollowUps));
       setUpcomingVisits(ensureArray(dashboardData.upcomingVisits));
     } catch (err) {

@@ -5478,27 +5478,27 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
                               return (
                                 <tr key={act.id}>
-                                  <td>
+                                  <td data-label="Status">
                                     <span className="qa-remark-status-badge">{statusLabel || '—'}</span>
                                   </td>
-                                  <td>
+                                  <td data-label="Remarks">
                                     <div>{remarkText || '—'}</div>
                                     {closureReason && (
                                       <div className="qa-remark-closure">Reason: {closureReason}</div>
                                     )}
                                   </td>
-                                  <td>
+                                  <td data-label="Call / Response">
                                     {callStatus ? (
                                       <span className={`qa-remark-call-badge ${callStatus.toLowerCase().includes('not') ? 'qa-remark-call-badge--missed' : 'qa-remark-call-badge--answered'}`}>
                                         {callStatus.replace('-', ' ')}
                                       </span>
                                     ) : '—'}
                                   </td>
-                                  <td>
+                                  <td data-label="By">
                                     <div className="qa-remark-by-name">{byName}</div>
                                     {byRole && <div className="qa-remark-by-role">{byRole}</div>}
                                   </td>
-                                  <td className="qa-remark-date">{formatDateTime(act.at || act.created_at)}</td>
+                                  <td data-label="Date & Time" className="qa-remark-date">{formatDateTime(act.at || act.created_at)}</td>
                                 </tr>
                               );
                             })}

@@ -3679,6 +3679,13 @@ textarea.crm-form-input {
   border-bottom: 2px solid var(--border-primary, #e2e8f0);
   padding: 0 20px;
   background: var(--bg-card, #fff);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.qa-drawer-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .qa-drawer-tab {
@@ -4413,17 +4420,18 @@ textarea.crm-form-input {
   }
 
   .lead-filter-dropdown {
-    flex: 1 1 0;
+    flex: 0 0 27%;
+    max-width: 27%;
     min-width: 0;
   }
 
   .lead-filter-dropdown__summary {
     width: 100%;
-    height: 32px;
-    padding: 0 4px;
-    font-size: 10px;
+    height: 28px;
+    padding: 0 3px;
+    font-size: 9px;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     display: flex;
     align-items: center;
     border: 1px solid var(--border-primary, #e2e8f0);
@@ -4432,11 +4440,12 @@ textarea.crm-form-input {
   }
 
   .lead-workspace__clear-filters {
-    flex: 1 1 0;
+    flex: 0 0 27%;
+    max-width: 17%;
     min-width: 0;
-    height: 32px;
-    padding: 0 4px;
-    font-size: 11px;
+    height: 6px;
+    padding: 0 2px;
+    font-size: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4679,11 +4688,54 @@ textarea.crm-form-input {
     gap: 6px;
   }
 
-  /* Remark table compact */
+  /* Remark History Tab Scroller & Alignment */
+  .qa-remark-table-wrap {
+    overflow-x: auto !important;
+    display: block;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-primary, #e2e8f0);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .qa-remark-table {
+    min-width: 700px; /* Force scroller on small screens */
+    table-layout: auto;
+    width: 100%;
+  }
+
   .qa-remark-table th,
   .qa-remark-table td {
-    padding: 6px 8px;
-    font-size: 11px;
+    display: table-cell !important; /* Revert block display */
+    padding: 10px 12px !important;
+    font-size: 11px !important;
+    text-align: left !important;
+    vertical-align: top !important;
+    white-space: normal !important;
+    width: auto !important;
+  }
+
+  .qa-remark-table th {
+    white-space: nowrap !important;
+    background: var(--bg-secondary, #f8fafc);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .qa-remark-table td::before {
+    display: none !important; /* Hide labels from previous card layout */
+  }
+
+  .qa-remark-status-badge,
+  .qa-remark-call-badge {
+    align-self: unset;
+    display: inline-block;
+  }
+
+  .qa-remark-date {
+    white-space: nowrap !important;
   }
 }
 
