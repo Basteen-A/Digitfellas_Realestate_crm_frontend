@@ -4,15 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import { getRoleCode } from '../../../utils/permissions';
 import { telecallerMenu, salesManagerMenu, salesHeadMenu } from '../../../components/layout/Sidebar/menuConfig';
+import {
+  ChartBarIcon,
+  UsersIcon,
+  ClipboardDocumentListIcon,
+  CreditCardIcon,
+  UserCircleIcon,
+} from '@heroicons/react/24/outline';
 
 const collectionMenu = [
   { group: 'Menu' },
-  { label: 'Dashboard', key: 'dashboard', icon: '📊', badge: null },
-  { label: 'My Leads', key: 'leads', icon: '👥', badgeColor: 'blue' },
-  { label: 'Bookings', key: 'bookings', icon: '📋', badgeColor: 'green' },
+  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
+  { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { group: 'Management' },
-  { label: 'Payments', key: 'payments', icon: '💳', badge: null },
-  { label: 'Customer Profiles', key: 'customers', icon: '👤', badge: null },
+  { label: 'Payments', key: 'payments', icon: CreditCardIcon, badge: null },
+  { label: 'Customer Profiles', key: 'customers', icon: UserCircleIcon, badge: null },
 ];
 
 const roleConfigByCode = {

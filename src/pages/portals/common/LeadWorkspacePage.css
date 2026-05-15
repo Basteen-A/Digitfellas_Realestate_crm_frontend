@@ -5004,6 +5004,82 @@ textarea.crm-form-input {
   align-items: flex-start;
 }
 
+.create-lead-phone-input {
+  width: 100%;
+}
+
+.create-lead-phone-input .form-control {
+  width: 100% !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border-primary, #e2e8f0) !important;
+  font-size: 13px !important;
+  color: var(--text-primary) !important;
+  background: var(--bg-card, #fff) !important;
+  padding-left: 52px !important;
+  box-shadow: none !important;
+}
+
+.create-lead-phone-input .flag-dropdown {
+  border: 1px solid var(--border-primary, #e2e8f0) !important;
+  border-radius: 10px 0 0 10px !important;
+  background: var(--bg-card, #fff) !important;
+}
+
+.create-lead-phone-input .selected-flag {
+  padding: 0 0 0 11px !important;
+}
+
+.create-lead-phone-input .country-list {
+  width: 320px !important;
+  max-width: min(90vw, 320px) !important;
+}
+
+.create-lead-phone-input .country-list .search {
+  position: relative;
+  padding: 8px !important;
+}
+
+.create-lead-phone-input .country-list .search::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  background-color: #64748b;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M9 3.5a5.5 5.5 0 1 0 3.47 9.767l3.131 3.132a.75.75 0 1 0 1.06-1.06l-3.132-3.131A5.5 5.5 0 0 0 9 3.5Zm-4 5.5a4 4 0 1 1 8 0a4 4 0 0 1-8 0Z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M9 3.5a5.5 5.5 0 1 0 3.47 9.767l3.131 3.132a.75.75 0 1 0 1.06-1.06l-3.132-3.131A5.5 5.5 0 0 0 9 3.5Zm-4 5.5a4 4 0 1 1 8 0a4 4 0 0 1-8 0Z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.create-lead-phone-input .country-list .search .search-emoji {
+  display: none !important;
+}
+
+.create-lead-phone-input .country-list .search .search-box {
+  width: 100% !important;
+  margin: 0 !important;
+  border: 1px solid var(--border-primary, #e2e8f0) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px 8px 34px !important;
+  font-size: 12px !important;
+}
+
+.create-lead-phone-input--error .form-control,
+.create-lead-phone-input--error .flag-dropdown {
+  border-color: #fca5a5 !important;
+}
+
+.create-lead-phone-input--success .form-control,
+.create-lead-phone-input--success .flag-dropdown {
+  border-color: #86efac !important;
+}
+
 .country-code-select {
   width: 100px !important;
   flex-shrink: 0;
@@ -5016,6 +5092,9 @@ textarea.crm-form-input {
 @media (max-width: 640px) {
   .phone-input-group {
     flex-direction: row; /* Keep them side-by-side even on mobile */
+  }
+  .create-lead-phone-input .country-list {
+    width: 280px !important;
   }
   .country-code-select {
     width: 85px !important;

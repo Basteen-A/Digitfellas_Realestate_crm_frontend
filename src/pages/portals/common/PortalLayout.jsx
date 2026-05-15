@@ -22,7 +22,7 @@ const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'm
 
 const SCREEN_TITLES = {
   dashboard: 'Dashboard',
-  leads: 'Leads',
+  leads: '',
   'leads-addnew': '',
   handoffs: '',
   followups: "Today's Follow Ups",

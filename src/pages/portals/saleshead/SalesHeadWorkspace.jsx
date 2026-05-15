@@ -10,6 +10,7 @@ import SalesHeadSiteVisits from './SalesHeadSiteVisits';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
 import HandoffLeadsPage from '../common/HandoffLeadsPage';
 import { salesHeadMenu } from '../../../components/layout/Sidebar/menuConfig';
+import { BanknotesIcon } from '@heroicons/react/24/outline';
 
 const SalesHeadWorkspace = () => {
   const user = useSelector((state) => state.auth.user);
@@ -35,7 +36,7 @@ const SalesHeadWorkspace = () => {
           {activeScreen === 'team' && <SalesHeadTeamPerformance />}
           {activeScreen === 'revenue' && (
             <div><div className="page-header flex-col md:flex-row md:items-center gap-3"><div className="page-header-left"><h1>Revenue</h1><p className="hidden sm:block">Track collections and payments</p></div></div>
-            <div className="crm-card"><div className="empty-state"><div className="empty-icon">💰</div><div className="empty-title">Revenue tracking</div><div className="empty-desc">Monitor collections and payment schedules</div></div></div></div>
+            <div className="crm-card"><div className="empty-state"><div className="empty-icon"><BanknotesIcon style={{ width: 30, height: 30 }} /></div><div className="empty-title">Revenue tracking</div><div className="empty-desc">Monitor collections and payment schedules</div></div></div></div>
           )}
         </>
       )}

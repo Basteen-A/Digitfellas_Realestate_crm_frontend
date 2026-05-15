@@ -5,6 +5,7 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
+import { HomeModernIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
 
@@ -451,7 +452,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       ) : leadGroups.length === 0 ? (
         <div className="crm-card">
           <div className="empty-state">
-            <div className="empty-icon">🏠</div>
+            <div className="empty-icon"><HomeModernIcon style={{ width: 36, height: 36 }} /></div>
             <div className="empty-title">No site visits found</div>
             <div className="empty-desc">Site visit records will appear here when visits are recorded for your leads.</div>
           </div>
@@ -566,7 +567,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
               )}
               {selectedVisit.geo_lat && (
                 <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  📍 Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
+                  <MapPinIcon style={{ width: 13, height: 13, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} /> Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
                 </div>
               )}
             </div>

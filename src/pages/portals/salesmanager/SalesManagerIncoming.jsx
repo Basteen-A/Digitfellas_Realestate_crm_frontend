@@ -27,6 +27,7 @@ import {
   CheckIcon,
   SparklesIcon,
   BanknotesIcon,
+  BoltIcon,
 } from '@heroicons/react/24/outline';
 
 /* ── helpers ── */
@@ -338,7 +339,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
 
       {filteredHandoffs.length === 0 ? (
         <div className="crm-card" style={{ padding: '60px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>⚡</div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}><BoltIcon style={{ width: 30, height: 30 }} /></div>
           <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>No incoming leads</div>
           <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{dateFilter === 'today' ? "No leads handed off today." : "No leads match the selected filter."}</div>
         </div>

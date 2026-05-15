@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline';
 import './CalendarPicker.css';
 
 const CalendarPicker = ({ 
@@ -144,17 +149,17 @@ const CalendarPicker = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div className="cp-value">{displayValue || <span className="cp-placeholder">{placeholder}</span>}</div>
-        <div className="cp-icon">🗓️</div>
+        <div className="cp-icon"><CalendarDaysIcon style={{ width: 16, height: 16 }} /></div>
       </div>
 
       {isOpen && (
         <div className="cp-popup">
           <div className="cp-header">
-            <button type="button" className="cp-nav-btn" onClick={() => changeMonth(-1)}>❮</button>
+            <button type="button" className="cp-nav-btn" onClick={() => changeMonth(-1)}><ChevronLeftIcon style={{ width: 14, height: 14 }} /></button>
             <div className="cp-month-label">
               {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
             </div>
-            <button type="button" className="cp-nav-btn" onClick={() => changeMonth(1)}>❯</button>
+            <button type="button" className="cp-nav-btn" onClick={() => changeMonth(1)}><ChevronRightIcon style={{ width: 14, height: 14 }} /></button>
           </div>
 
           <div className="cp-weekdays">

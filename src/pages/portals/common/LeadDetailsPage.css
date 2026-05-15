@@ -717,6 +717,95 @@
   background: var(--bg-secondary);
 }
 
+.lead-sitevisits-table {
+  min-width: 1500px;
+}
+
+.lead-sitevisits-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.lead-sitevisits-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.lead-sitevisits-table-grid th {
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: 11px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-primary);
+  white-space: nowrap;
+  text-align: left;
+}
+
+.lead-sitevisits-table-grid td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  vertical-align: middle;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+.lead-sitevisits-table-grid th,
+.lead-sitevisits-table-grid td {
+  border-right: 1px solid var(--border-secondary);
+}
+
+.lead-sitevisits-table-grid th:last-child,
+.lead-sitevisits-table-grid td:last-child {
+  border-right: none;
+}
+
+.lead-sitevisits-table-grid th:nth-child(1),
+.lead-sitevisits-table-grid td:nth-child(1) {
+  min-width: 100px;
+}
+
+.lead-sitevisits-table-grid th:nth-child(4),
+.lead-sitevisits-table-grid td:nth-child(4),
+.lead-sitevisits-table-grid th:nth-child(5),
+.lead-sitevisits-table-grid td:nth-child(5) {
+  min-width: 190px;
+  white-space: normal;
+}
+
+.lead-sitevisits-table-grid th:nth-child(6),
+.lead-sitevisits-table-grid td:nth-child(6) {
+  min-width: 120px;
+}
+
+.lead-sitevisits-table-grid tr:last-child td {
+  border-bottom: none;
+}
+
+.lead-sitevisits-table-grid tr:nth-child(even) td {
+  background: #fcfdff;
+}
+
+.lead-sitevisits-table td:nth-child(2) {
+  white-space: nowrap;
+  min-width: 180px;
+  max-width: none;
+}
+
+.lead-sitevisits-table td:nth-child(11),
+.lead-sitevisits-table td:nth-child(12) {
+  white-space: normal;
+  min-width: 240px;
+  max-width: 360px;
+  line-height: 1.4;
+}
+
 .status-cell {
   display: flex;
   align-items: center;
@@ -1385,4 +1474,3 @@
     padding: 12px 14px;
   }
 }
-

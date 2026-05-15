@@ -283,6 +283,25 @@ const formatActivityDescription = (description, activity) => {
   return `${FOLLOW_UP_SCHEDULED_PREFIX} ${formatDateTimeInTimeZone(parsed.toISOString())} IST`;
 };
 
+const isWorkflowNoteActivity = (activity) => {
+  const title = String(activity?.title || '').trim().toLowerCase();
+  const type = String(activity?.type || '').trim().toUpperCase();
+
+  if (title.includes('workflow note')) return true;
+
+  if (type === 'NOTE_ADDED') {
+    const hasWorkflowMetadata = Boolean(
+      activity?.metadata?.statusRemarkText
+      || activity?.metadata?.actionCode
+      || activity?.metadata?.targetStatusCode
+      || activity?.metadata?.statusCode
+    );
+    if (hasWorkflowMetadata) return true;
+  }
+
+  return false;
+};
+
 
 
 const actionInitialState = {
@@ -476,6 +495,11 @@ const LeadDetailsPage = () => {
       .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
   }, [lead?.timeline, workflowConfig]);
 
+  const visibleTimelineActivities = useMemo(() => {
+    const timeline = Array.isArray(lead?.timeline) ? lead.timeline : [];
+    return timeline.filter((evt) => !isWorkflowNoteActivity(evt));
+  }, [lead?.timeline]);
+
   const isCurrentLeadMissedFollowup = useMemo(() => {
     if (!lead?.nextFollowUpAt || lead?.isClosed) return false;
     return isFollowUpMissedByDate(lead.nextFollowUpAt);
@@ -508,7 +532,8 @@ const LeadDetailsPage = () => {
       setProjectOptions(projResp.data || []);
       setLocationOptions(locResp.data || []);
       setWorkflowConfig(wfResp.data || null);
-      setSiteVisits(Array.isArray(svResp.data?.rows) ? svResp.data.rows : Array.isArray(svResp.data) ? svResp.data : []);
+      const siteVisitRows = svResp?.data?.rows || svResp?.data?.data || svResp?.data || [];
+      setSiteVisits(Array.isArray(siteVisitRows) ? siteVisitRows : []);
 
       if (MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) {
         const assignedLeads = Array.isArray(followUpAssignedResp?.data) ? followUpAssignedResp.data : [];
@@ -1625,10 +1650,10 @@ const LeadDetailsPage = () => {
 
             {activeTab === 'activity' && (
               <div className="lead-details-timeline">
-                {(lead.timeline || []).length === 0 ? (
+                {visibleTimelineActivities.length === 0 ? (
                   <p className="lead-details-empty">No activity yet</p>
                 ) : (
-                  lead.timeline.map((evt) => (
+                  visibleTimelineActivities.map((evt) => (
                     <div key={evt.id} className="lead-details-timeline-item">
                       <div className="lead-details-timeline-icon">
                         {(() => {
@@ -1738,30 +1763,63 @@ const LeadDetailsPage = () => {
 
             {roleCode !== 'TC' && activeTab === 'sitevisits' && (
               <div className="lead-details-sitevisits">
-                <div className="lead-details-info-grid">
-                  <div className="lead-details-info-item"><span className="lead-details-label">Total Site Visits</span><span className="lead-details-value">{lead.totalSiteVisits || 0}</span></div>
-                  <div className="lead-details-info-item"><span className="lead-details-label">Last SV Done Date</span><span className="lead-details-value">{lead.svDoneDate ? formatDateTime(lead.svDoneDate) : '-'}</span></div>
-                  <div className="lead-details-info-item"><span className="lead-details-label">Current Stage</span><span className="lead-details-value">{lead.stageLabel || '-'}</span></div>
-                </div>
                 <div className="lead-details-sitevisits-list">
-                  <h4>Site Visit Records</h4>
                   {siteVisits.length === 0 ? (
                     <p className="lead-details-empty">No site visit records found.</p>
                   ) : (
-                    siteVisits.map((sv) => (
-                      <div key={sv.id} className="lead-details-sitevisit-item">
-                        <div className="sitevisit-header">
-                          <strong>{sv.project?.project_name || 'Unknown Project'}</strong>
-                          <span className={`sitevisit-status ${sv.status?.toLowerCase()}`}>{sv.status}</span>
-                        </div>
-                        <div className="sitevisit-details">
-                          <span>Scheduled: {sv.scheduled_date ? formatDateTime(sv.scheduled_date) : '-'}</span>
-                          {sv.actual_visit_date && <span>Visited: {formatDateTime(sv.actual_visit_date)}</span>}
-                          {sv.attendedBy && <span>Attended by: {sv.attendedBy.first_name} {sv.attendedBy.last_name}</span>}
-                          {sv.feedback && <span className="sitevisit-feedback">Feedback: {sv.feedback}</span>}
-                        </div>
-                      </div>
-                    ))
+                    <div className="lead-sitevisits-table-wrap" style={{ marginTop: 10 }}>
+                      <table className="lead-sitevisits-table-grid lead-sitevisits-table">
+                        <thead>
+                          <tr>
+                            <th>Visit #</th>
+                            <th>Project</th>
+                            <th>Status</th>
+                            <th>Scheduled</th>
+                            <th>Visited</th>
+                            <th>Time Slot</th>
+                            <th>Time Spent (mins)</th>
+                            <th>Attended By</th>
+                            <th>Customer Type</th>
+                            <th>Motivation</th>
+                            <th>Requirement</th>
+                            <th>Remarks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {siteVisits.map((sv) => {
+                            const attendedBy = sv.attendedBy
+                              ? `${sv.attendedBy.first_name || ''} ${sv.attendedBy.last_name || ''}`.trim()
+                              : '-';
+                            const timeSpent = sv.time_spent ?? sv.timeSpent;
+                            const customerType = sv.customerType?.type_name || sv.customer_type_name || sv.customer_type || '-';
+                            const motivation = sv.motivationType?.motivation_name || sv.motivation_type || '-';
+                            const requirement = sv.requirement_details || sv.customer_requirement || sv.primary_requirement || '-';
+                            const remarks = sv.remarks || '-';
+
+                            return (
+                              <tr key={sv.id}>
+                                <td>{sv.visit_number || '-'}</td>
+                                <td>{sv.project?.project_name || 'Unknown Project'}</td>
+                                <td>
+                                  <span className="status-chip" style={{ backgroundColor: `${sv.statusColor || '#64748b'}22`, color: sv.statusColor || '#334155' }}>
+                                    {sv.status || '-'}
+                                  </span>
+                                </td>
+                                <td>{sv.scheduled_date ? formatDateTime(sv.scheduled_date) : '-'}</td>
+                                <td>{sv.actual_visit_date ? formatDateTime(sv.actual_visit_date) : '-'}</td>
+                                <td>{sv.scheduled_time_slot || '-'}</td>
+                                <td>{timeSpent ?? '-'}</td>
+                                <td>{attendedBy || '-'}</td>
+                                <td>{customerType}</td>
+                                <td>{motivation}</td>
+                                <td>{requirement}</td>
+                                <td>{remarks}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1902,7 +1960,9 @@ const LeadDetailsPage = () => {
                     return (
                       <div className="qa-drawer-ctx-block" style={{ border: '1px solid #fee2e2', background: '#fff1f1', margin: '0 20px 15px', padding: '15px', borderRadius: '12px' }}>
                         <div className="qa-drawer-section" style={{ color: '#991b1b', display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 10px', margin: 0, fontSize: 13, fontWeight: 700 }}>
-                          <ExclamationTriangleIcon style={{ width: 16, height: 16 }} /> Lead Details {hasLoc && hasProj ? '✓' : ''}
+                          <ExclamationTriangleIcon style={{ width: 16, height: 16 }} />
+                          Lead Details
+                          {hasLoc && hasProj ? <CheckIcon style={{ width: 13, height: 13 }} /> : null}
                         </div>
 
                         {/* Location Dropdown */}
@@ -2487,10 +2547,10 @@ const LeadDetailsPage = () => {
               {qaActiveTab === 'activity' && (
                 <>
               <div className="qa-drawer-history">
-                {quickActionActivities.length === 0 ? (
+                {quickActionActivities.filter((act) => !isWorkflowNoteActivity(act)).length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
                 ) : (
-                  quickActionActivities.slice(0, 5).map((act, i) => {
+                  quickActionActivities.filter((act) => !isWorkflowNoteActivity(act)).slice(0, 5).map((act, i) => {
                     const isStage = act.type === 'STAGE_CHANGE';
                     const isNote = act.type === 'NOTE_ADDED';
                     const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
@@ -2499,7 +2559,7 @@ const LeadDetailsPage = () => {
                       <div key={act.id} className="qa-drawer-hist-item">
                         <div className="qa-drawer-hist-col">
                           <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
-                          {i < Math.min(quickActionActivities.length, 5) - 1 && <div className="qa-drawer-hist-line" />}
+                          {i < Math.min(quickActionActivities.filter((item) => !isWorkflowNoteActivity(item)).length, 5) - 1 && <div className="qa-drawer-hist-line" />}
                         </div>
                         <div className="qa-drawer-hist-right">
                           <div className="qa-drawer-hist-header">
@@ -2525,29 +2585,39 @@ const LeadDetailsPage = () => {
                 <>
                   <div className="qa-drawer-divider" />
                   <div className="qa-drawer-section" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 16, height: 16 }} /> Recent site visits</div>
-                  <div style={{ padding: '0 20px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {siteVisits.slice(0, 4).map((sv) => (
-                      <div key={sv.id} style={{ padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <strong style={{ fontSize: 12 }}>{sv.project?.project_name || 'Unknown'}</strong>
-                          <span style={{ fontSize: 10, color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7' }}>{sv.status}</span>
-                        </div>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {sv.actual_visit_date
-                            ? <><CheckCircleIcon style={{ width: 12, height: 12 }} /> {formatDateTime(sv.actual_visit_date)}</>
-                            : <><CalendarDaysIcon style={{ width: 12, height: 12 }} /> {formatDateTime(sv.scheduled_date)}</>}
-                        </div>
-                        {sv.attendedBy && (
-                          <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 3 }}>
-                            By {sv.attendedBy.first_name} {sv.attendedBy.last_name}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="qa-remark-table-wrap" style={{ padding: '0 20px 10px' }}>
+                    <table className="qa-remark-table">
+                      <thead>
+                        <tr>
+                          <th>Project</th>
+                          <th>Status</th>
+                          <th>Scheduled / Visited</th>
+                          <th>Time Spent (mins)</th>
+                          <th>Attended By</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {siteVisits.slice(0, 6).map((sv) => (
+                          <tr key={sv.id}>
+                            <td>{sv.project?.project_name || 'Unknown'}</td>
+                            <td>
+                              <span className="qa-remark-call-badge" style={{ background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7', color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', borderColor: sv.status === 'Completed' ? '#8FD3BA' : '#F6D37A' }}>
+                                {sv.status || '-'}
+                              </span>
+                            </td>
+                            <td>
+                              {sv.actual_visit_date ? formatDateTime(sv.actual_visit_date) : formatDateTime(sv.scheduled_date)}
+                            </td>
+                            <td>{sv.time_spent ?? sv.timeSpent ?? '-'}</td>
+                            <td>{sv.attendedBy ? `${sv.attendedBy.first_name || ''} ${sv.attendedBy.last_name || ''}`.trim() : '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  {siteVisits.length > 4 && (
+                  {siteVisits.length > 6 && (
                     <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      +{siteVisits.length - 4} more
+                      +{siteVisits.length - 6} more
                     </div>
                   )}
                   </>

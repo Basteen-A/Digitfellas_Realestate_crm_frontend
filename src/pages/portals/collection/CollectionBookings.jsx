@@ -374,7 +374,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
                 <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
                   <button className="qa-drawer-save-btn" disabled={!newStatusId || statusSaving} onClick={handleStatusUpdate}>
-                    {statusSaving ? 'Updating...' : '✓ Update Booking Status'}
+                    {statusSaving ? 'Updating...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Booking Status</>}
                   </button>
                 </div>
               </div>
@@ -413,7 +413,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
                 <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
                   <button className="qa-drawer-save-btn" style={{ background: '#6366F1' }} disabled={!paymentStatus || payStatusSaving} onClick={handlePaymentStatusUpdate}>
-                    {payStatusSaving ? 'Updating...' : '💳 Update Payment Status'}
+                    {payStatusSaving ? 'Updating...' : <><CreditCardIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Payment Status</>}
                   </button>
                 </div>
               </div>
@@ -459,7 +459,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
                   <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount} onClick={handleAddPayment}>
-                    {paySaving ? 'Recording...' : '💰 Record Payment'}
+                    {paySaving ? 'Recording...' : <><BanknotesIcon style={{ width: 14, height: 14, marginRight: 4 }} />Record Payment</>}
                   </button>
                 </div>
               </div>
@@ -488,7 +488,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                         <option value="">— Select payment —</option>
                         {(drawerBooking.payments || []).filter(p => !p.is_verified).map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.payment_number || `#${p.id}`} — {formatCurrency(p.amount)} ({p.payment_mode}) {p.is_verified ? '✓' : ''}
+                            {p.payment_number || `#${p.id}`} — {formatCurrency(p.amount)} ({p.payment_mode}) {p.is_verified ? 'Verified' : ''}
                           </option>
                         ))}
                       </select>
@@ -507,7 +507,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                         </div>
                         <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
                           <button className="qa-drawer-save-btn" style={{ background: '#5B3FA6' }} disabled={verifySaving} onClick={handleVerifyPayment}>
-                            {verifySaving ? 'Verifying...' : '🛡️ Verify Payment'}
+                            {verifySaving ? 'Verifying...' : <><ShieldCheckIcon style={{ width: 14, height: 14, marginRight: 4 }} />Verify Payment</>}
                           </button>
                         </div>
                       </>
@@ -545,10 +545,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
                         fontSize: 12, fontWeight: 700,
                       }}>
-                        {act.activity_type === 'STATUS_CHANGE' ? '📋' :
-                         act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '💳' :
-                         act.activity_type === 'PAYMENT_RECORDED' ? '💰' :
-                         act.activity_type === 'PAYMENT_VERIFIED' ? '🛡️' : '📌'}
+                        {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
+                         act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
+                         act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
+                         act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>

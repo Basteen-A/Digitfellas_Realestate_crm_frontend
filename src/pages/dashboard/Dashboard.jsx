@@ -24,6 +24,7 @@ import {
   UserGroupIcon,
   BuildingStorefrontIcon,
   AdjustmentsHorizontalIcon,
+  HandRaisedIcon,
 } from '@heroicons/react/24/outline';
 import './Dashboard.css';
 
@@ -122,7 +123,7 @@ const Dashboard = () => {
       {/* Greeting Banner */}
       <div className="dash-greeting">
         <div className="dash-greeting__title">
-          {getGreeting()}, {user?.first_name || 'Admin'} 👋
+          {getGreeting()}, {user?.first_name || 'Admin'} <HandRaisedIcon style={{ width: 18, height: 18, marginLeft: 4, verticalAlign: 'text-bottom' }} />
         </div>
         <div className="dash-greeting__sub">
           Here's your organization overview for today. Stay on top of your metrics.

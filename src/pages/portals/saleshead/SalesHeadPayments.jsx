@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import { CreditCardIcon, ClockIcon } from '@heroicons/react/24/outline';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadPayments = ({ user }) => {
@@ -58,7 +59,7 @@ const SalesHeadPayments = ({ user }) => {
     <div>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>💳 Payments</h1>
+          <h1><CreditCardIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Payments</h1>
           <p className="hidden sm:block">Add payments and track collection progress for bookings</p>
         </div>
         <div className="page-header-actions">
@@ -70,7 +71,7 @@ const SalesHeadPayments = ({ user }) => {
         <div className="crm-card-body-flush">
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center' }}>
-              <div className="col-empty-icon">⏳</div>
+               <div className="col-empty-icon"><ClockIcon style={{ width: 28, height: 28 }} /></div>
               <p>Loading bookings...</p>
             </div>
           ) : bookings.length === 0 ? (
@@ -140,7 +141,7 @@ const SalesHeadPayments = ({ user }) => {
         <div className="col-modal-overlay" onClick={() => setPaymentModal(false)}>
           <div className="col-modal" onClick={e => e.stopPropagation()}>
             <div className="col-modal-header">
-              <h2>💳 Add Payment — {selectedBooking.booking_number}</h2>
+              <h2><CreditCardIcon style={{ width: 18, height: 18, marginRight: 6, verticalAlign: 'text-bottom' }} />Add Payment — {selectedBooking.booking_number}</h2>
               <button className="col-modal-close" onClick={() => setPaymentModal(false)}>×</button>
             </div>
             <form onSubmit={handleAddPayment}>
@@ -183,7 +184,7 @@ const SalesHeadPayments = ({ user }) => {
               </div>
               <div className="col-modal-footer">
                 <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setPaymentModal(false)}>Cancel</button>
-                <button type="submit" className="crm-btn crm-btn-success">💳 Record Payment</button>
+                <button type="submit" className="crm-btn crm-btn-success"><CreditCardIcon style={{ width: 14, height: 14, marginRight: 4 }} />Record Payment</button>
               </div>
             </form>
           </div>

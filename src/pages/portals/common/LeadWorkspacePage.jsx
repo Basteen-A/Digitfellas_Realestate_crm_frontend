@@ -53,7 +53,11 @@ import {
   FunnelIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  MagnifyingGlassIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import './LeadWorkspacePage.css';
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -374,6 +378,7 @@ const initialNewLead = {
   full_name: '',
   phone: '',
   phone_country_code: '+91',
+  alternate_phone_country_code: '+91',
   whatsappSameAsPhone: true,
   whatsapp_number: '',
   alternate_phone: '',
@@ -1376,7 +1381,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       errors,
       sanitized: {
         primaryPhone: `${newLeadForm.phone_country_code}${primaryPhone}`,
-        alternatePhone: alternatePhone ? `${newLeadForm.phone_country_code}${alternatePhone}` : '',
+        alternatePhone: alternatePhone ? `${newLeadForm.alternate_phone_country_code}${alternatePhone}` : '',
         whatsappPhone: newLeadForm.whatsappSameAsPhone
           ? `${newLeadForm.phone_country_code}${primaryPhone}`
           : (whatsappPhone ? `${newLeadForm.phone_country_code}${whatsappPhone}` : ''),
@@ -1406,7 +1411,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const newToday = leads.filter((l) => l.createdAt && new Date(l.createdAt) >= todayStart).length;
     const todayFollowUps = leads.filter((l) => l.nextFollowUpAt && toDayStart(l.nextFollowUpAt)?.getTime() === todayStart.getTime() && !l.isClosed).length;
     const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && isFollowUpMissedByDate(l.nextFollowUpAt, todayStart) && !l.isClosed).length;
-    
+
     const svScheduled = leads.filter((l) => {
       const sStage = String(l.stageCode || '').toUpperCase();
       const sStatus = String(l.statusCode || '').toUpperCase();
@@ -1723,6 +1728,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       full_name: fullName || prev.full_name,
       phone: sanitizePhoneNumberInput(phoneDigits) || prev.phone,
       phone_country_code: countryCode,
+      alternate_phone_country_code: countryCode,
       email: leadEmail || prev.email,
     }));
 
@@ -1749,10 +1755,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkDuplicatePhone(newLeadForm.alternate_phone, 'alt', newLeadForm.phone_country_code);
+      checkDuplicatePhone(newLeadForm.alternate_phone, 'alt', newLeadForm.alternate_phone_country_code);
     }, 600);
     return () => clearTimeout(timer);
-  }, [newLeadForm.alternate_phone, newLeadForm.phone_country_code]);
+  }, [newLeadForm.alternate_phone, newLeadForm.alternate_phone_country_code]);
 
   // ── Load lead detail ──
   const loadLeadDetail = useCallback(async (leadId) => {
@@ -2208,17 +2214,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const handlePincodeChange = async (e) => {
     const val = e.target.value.replace(/\D/g, '');
     setCustomerProfileForm(p => ({ ...p, current_pincode: val }));
-    
+
     if (val.length === 6) {
       try {
         const resp = await fetch(`https://api.postalpincode.in/pincode/${val}`);
         const data = await resp.json();
         if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
           const po = data[0].PostOffice[0];
-          setCustomerProfileForm(p => ({ 
-            ...p, 
-            current_city: po.District, 
-            current_state: po.State 
+          setCustomerProfileForm(p => ({
+            ...p,
+            current_city: po.District,
+            current_state: po.State
           }));
         }
       } catch (err) {
@@ -2921,7 +2927,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <article className="workspace-stat-card">
             <div className="stat-card__header">
               <div className="stat-card__label">Total Leads</div>
-              <div className="stat-card__icon" style={{ background: '#dbeafe', color: '#2563eb' }}>👥</div>
+              <div className="stat-card__icon" style={{ background: '#dbeafe', color: '#2563eb' }}><UserGroupIcon style={{ width: 16, height: 16 }} /></div>
             </div>
             <div className="stat-card__value">{computedStats.totalLeads}</div>
             <div className="stat-card__change change-up">↑ {computedStats.newToday} new today</div>
@@ -2929,7 +2935,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <article className="workspace-stat-card">
             <div className="stat-card__header">
               <div className="stat-card__label">Today's Follow Ups</div>
-              <div className="stat-card__icon" style={{ background: '#fef3c7', color: '#d97706' }}>📞</div>
+              <div className="stat-card__icon" style={{ background: '#fef3c7', color: '#d97706' }}><PhoneIcon style={{ width: 16, height: 16 }} /></div>
             </div>
             <div className="stat-card__value" style={{ color: '#d97706' }}>{computedStats.todayFollowUps}</div>
             <div className={`stat-card__change ${computedStats.overdueFollowUps > 0 ? 'change-down' : 'change-neutral'}`}>{computedStats.overdueFollowUps} overdue</div>
@@ -2937,7 +2943,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <article className="workspace-stat-card">
             <div className="stat-card__header">
               <div className="stat-card__label">SV Scheduled</div>
-              <div className="stat-card__icon" style={{ background: '#cffafe', color: '#0891b2' }}>🏠</div>
+              <div className="stat-card__icon" style={{ background: '#cffafe', color: '#0891b2' }}><HomeModernIcon style={{ width: 16, height: 16 }} /></div>
             </div>
             <div className="stat-card__value" style={{ color: '#0891b2' }}>{computedStats.svScheduled}</div>
             <div className="stat-card__change change-neutral">Active</div>
@@ -2945,7 +2951,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <article className="workspace-stat-card">
             <div className="stat-card__header">
               <div className="stat-card__label">SV Completed</div>
-              <div className="stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}>✅</div>
+              <div className="stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}><CheckCircleIcon style={{ width: 16, height: 16 }} /></div>
             </div>
             <div className="stat-card__value" style={{ color: '#16a34a' }}>{computedStats.svCompleted}</div>
             <div className="stat-card__change change-neutral">This month</div>
@@ -2953,7 +2959,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <article className="workspace-stat-card">
             <div className="stat-card__header">
               <div className="stat-card__label">Missed Followups</div>
-              <div className="stat-card__icon" style={{ background: '#fee2e2', color: '#dc2626' }}>📵</div>
+              <div className="stat-card__icon" style={{ background: '#fee2e2', color: '#dc2626' }}><NoSymbolIcon style={{ width: 16, height: 16 }} /></div>
             </div>
             <div className="stat-card__value" style={{ color: '#dc2626' }}>{computedStats.missedFollowups}</div>
             <div className="stat-card__change change-neutral">Retry needed</div>
@@ -3006,11 +3012,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         </div>
 
         <div className="lead-workspace__toolbar-search">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
           <input
             value={filters.search}
             onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
-            placeholder="Search leads by name, phone, email..."
+            placeholder="Search leads by phone or name"
           />
           <details className="lead-mobile-filters show-mobile" open={openFilterKey === 'mobile_filters'}>
             <summary
@@ -3165,9 +3171,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </button>
               )}
               <small className="filter-tabs__records">
-               {filteredLeads.length}
-               {meta.total !== filteredLeads.length ? ` / ${meta.total}` : ''} records
-             </small>
+                {filteredLeads.length}
+                {meta.total !== filteredLeads.length ? ` / ${meta.total}` : ''} records
+              </small>
             </div>
           )}
 
@@ -3205,12 +3211,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         .filter(Boolean)
                     )).join(' | ')
                     : '-';
-                  
+
                   return (
                     <React.Fragment key={lead.id}>
                       <tr className={selectedLeadId === lead.id ? 'is-selected' : ''}>
-                    <td className="show-mobile lead-col-toggle" style={{ padding: '10px 0', textAlign: 'center' }}>
-                          <button 
+                        <td className="show-mobile lead-col-toggle" style={{ padding: '10px 0', textAlign: 'center' }}>
+                          <button
                             onClick={(e) => { e.stopPropagation(); toggleExpandLead(lead.id); }}
                             style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
                           >
@@ -3218,17 +3224,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           </button>
                         </td>
                         <td className="lead-col-lead">
-                      <p className="lead-title">{lead.fullName}</p>
-                      <small>
-                        <a
-                          href={`/portal/lead/${lead.id}`}
-                          onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
-                          style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
-                        >
-                          {lead.leadNumber}
-                        </a>
-                      </small>
-                    </td>
+                          <p className="lead-title">{lead.fullName}</p>
+                          <small>
+                            <a
+                              href={`/portal/lead/${lead.id}`}
+                              onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
+                              style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
+                            >
+                              {lead.leadNumber}
+                            </a>
+                          </small>
+                        </td>
                         {workspaceRole !== 'SH' && (
                           <td className="hide-mobile">
                             <p>{lead.phone}</p>
@@ -3274,120 +3280,120 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <td className="hide-mobile">
                           <small style={{ color: 'var(--text-secondary)' }}>{latestNote}</small>
                         </td>
-                    <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div className="lead-workspace__actions-cell">
-                      {activeTab !== 'new' && activeTab !== 'unassigned' && (
-                        <button
-                          className="crm-btn crm-btn-sm lead-action-view-btn"
-                          style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
-                        >
-                          <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> View
-                        </button>
-                      )}
-                      {!lead.assignedToUserId && activeTab === 'new' && (
-                        <button
-                          className="crm-btn crm-btn-sm"
-                          style={{ marginRight: 4, background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              await leadWorkflowApi.assignLead(lead.id, user.id, 'Self-assigned from pool');
-                              toast.success(`Lead claimed: ${lead.fullName}`);
-                              setSelectedLeadId(null);
-                              setActiveTab('today');
-                            } catch (err) {
-                              toast.error(getErrorMessage(err, 'Failed to claim lead'));
-                            }
-                          }}
-                        >
-                          🙋 Claim
-                        </button>
-                      )}
-                      {(lead.assignedToUserId || activeTab !== 'new') && (
-                        <button
-                          className="crm-btn crm-btn-primary crm-btn-sm"
-                          disabled={
-                            isLeadReadOnly(lead)
-                            || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe)
-                          }
-                          title={
-                            FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe
-                              ? 'Complete missed follow-ups first to enable today actions'
-                              : undefined
-                          }
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            resetQuickWorkflowForm();
-                            setQuickActionLead(lead);
-                            setQaActiveTab('history');
-                            // Load site visits and activities for this lead
-                            let activities = [];
-                            try {
-                              const [svResp, actResp] = await Promise.all([
-                                siteVisitApi.getAll({ lead_id: lead.id }),
-                                leadWorkflowApi.getLeadActivities(lead.id)
-                              ]);
-                              setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
-                              activities = actResp.data || [];
-                              setQuickActionActivities(activities);
-                            } catch {
-                              setQuickActionSiteVisits([]);
-                              setQuickActionActivities([]);
-                            }
-
-                            // Auto-select last action based on the lead's current status
-                            if (!lead.isClosed) {
-                              const leadStatus = lead.statusCode || '';
-                              if (leadStatus) {
-                                const matchingAction = roleActions.find(
-                                  (a) => a.targetStatusCode === leadStatus && a.tone !== 'danger'
-                                );
-                                if (matchingAction) {
-                                  setTimeout(() => handleQuickWorkflowActionSelect(matchingAction), 100);
-                                }
-                              }
-                            }
-                          }}
-                        >
-                          <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr className="lead-workspace__expanded-row show-mobile">
-                      <td colSpan={4}>
-                        <div className="lead-workspace__expanded-card">
-                          <div className="expanded-info-grid">
-                            {workspaceRole !== 'SH' && (
-                              <div className="expanded-info-item">
-                                <label>Contact</label>
-                                <p>{lead.phone} {lead.email ? `| ${lead.email}` : ''}</p>
-                              </div>
+                        <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div className="lead-workspace__actions-cell">
+                            {activeTab !== 'new' && activeTab !== 'unassigned' && (
+                              <button
+                                className="crm-btn crm-btn-sm lead-action-view-btn"
+                                style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
+                              >
+                                <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> View
+                              </button>
                             )}
-                            <div className="expanded-info-item">
-                              <label>Source</label>
-                              <p>{lead.source || '-'} {lead.subSource ? ` (${lead.subSource})` : ''}</p>
-                            </div>
-                            <div className="expanded-info-item">
-                              <label>Project/Location</label>
-                              <p>{lead.project} {lead.location ? `/ ${lead.location}` : ''}</p>
-                            </div>
-                            <div className="expanded-info-item">
-                              <label>Assigned To</label>
-                              <p>{lead.assignedToUserName || 'Unassigned'} ({lead.assignedRoleLabel || lead.ownerRoleLabel || 'Pool'})</p>
-                            </div>
-                            <div className="expanded-info-item full-width">
-                              <label>Latest Remarks</label>
-                              <p>{latestNote}</p>
-                            </div>
+                            {!lead.assignedToUserId && activeTab === 'new' && (
+                              <button
+                                className="crm-btn crm-btn-sm"
+                                style={{ marginRight: 4, background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    await leadWorkflowApi.assignLead(lead.id, user.id, 'Self-assigned from pool');
+                                    toast.success(`Lead claimed: ${lead.fullName}`);
+                                    setSelectedLeadId(null);
+                                    setActiveTab('today');
+                                  } catch (err) {
+                                    toast.error(getErrorMessage(err, 'Failed to claim lead'));
+                                  }
+                                }}
+                              >
+                                <><HandRaisedIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Claim</>
+                              </button>
+                            )}
+                            {(lead.assignedToUserId || activeTab !== 'new') && (
+                              <button
+                                className="crm-btn crm-btn-primary crm-btn-sm"
+                                disabled={
+                                  isLeadReadOnly(lead)
+                                  || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe)
+                                }
+                                title={
+                                  FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe
+                                    ? 'Complete missed follow-ups first to enable today actions'
+                                    : undefined
+                                }
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  resetQuickWorkflowForm();
+                                  setQuickActionLead(lead);
+                                  setQaActiveTab('history');
+                                  // Load site visits and activities for this lead
+                                  let activities = [];
+                                  try {
+                                    const [svResp, actResp] = await Promise.all([
+                                      siteVisitApi.getAll({ lead_id: lead.id }),
+                                      leadWorkflowApi.getLeadActivities(lead.id)
+                                    ]);
+                                    setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
+                                    activities = actResp.data || [];
+                                    setQuickActionActivities(activities);
+                                  } catch {
+                                    setQuickActionSiteVisits([]);
+                                    setQuickActionActivities([]);
+                                  }
+
+                                  // Auto-select last action based on the lead's current status
+                                  if (!lead.isClosed) {
+                                    const leadStatus = lead.statusCode || '';
+                                    if (leadStatus) {
+                                      const matchingAction = roleActions.find(
+                                        (a) => a.targetStatusCode === leadStatus && a.tone !== 'danger'
+                                      );
+                                      if (matchingAction) {
+                                        setTimeout(() => handleQuickWorkflowActionSelect(matchingAction), 100);
+                                      }
+                                    }
+                                  }
+                                }}
+                              >
+                                <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="lead-workspace__expanded-row show-mobile">
+                          <td colSpan={4}>
+                            <div className="lead-workspace__expanded-card">
+                              <div className="expanded-info-grid">
+                                {workspaceRole !== 'SH' && (
+                                  <div className="expanded-info-item">
+                                    <label>Contact</label>
+                                    <p>{lead.phone} {lead.email ? `| ${lead.email}` : ''}</p>
+                                  </div>
+                                )}
+                                <div className="expanded-info-item">
+                                  <label>Source</label>
+                                  <p>{lead.source || '-'} {lead.subSource ? ` (${lead.subSource})` : ''}</p>
+                                </div>
+                                <div className="expanded-info-item">
+                                  <label>Project/Location</label>
+                                  <p>{lead.project} {lead.location ? `/ ${lead.location}` : ''}</p>
+                                </div>
+                                <div className="expanded-info-item">
+                                  <label>Assigned To</label>
+                                  <p>{lead.assignedToUserName || 'Unassigned'} ({lead.assignedRoleLabel || lead.ownerRoleLabel || 'Pool'})</p>
+                                </div>
+                                <div className="expanded-info-item full-width">
+                                  <label>Latest Remarks</label>
+                                  <p>{latestNote}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </React.Fragment>
                   );
                 })}
@@ -3424,7 +3430,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <span className="crm-badge" style={{ backgroundColor: selectedLead.statusColor + '22', color: selectedLead.statusColor, border: `1px solid ${selectedLead.statusColor}33` }}>
                     {selectedLead.statusIcon || ''} {selectedLead.statusLabel}
                   </span>
-                  <button type="button" onClick={() => setSelectedLeadId(null)}>✕</button>
+                  <button type="button" onClick={() => setSelectedLeadId(null)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
                 </div>
               </div>
               <div className="lead-workspace__modal-body">
@@ -3533,7 +3539,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     {/* Behavioral Analysis (New) */}
                     {(selectedLead.motivationType || selectedLead.primaryRequirement || selectedLead.geoLat) && (
                       <>
-                        <h3 className="lead-detail__section-title" style={{ marginTop: 24 }}>🧠 Behavioral Analysis</h3>
+                        <h3 className="lead-detail__section-title" style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 6 }}><SparklesIcon style={{ width: 16, height: 16 }} /> Behavioral Analysis</h3>
                         <div className="lead-detail__info-grid">
                           {selectedLead.motivationType && (
                             <div className="lead-detail__info-item">
@@ -3573,7 +3579,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                   rel="noopener noreferrer"
                                   style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
                                 >
-                                  📍 View Location on Map
+                                  <><MapPinIcon style={{ width: 14, height: 14 }} /> View Location on Map</>
                                 </a>
                               </div>
                             </div>
@@ -3590,11 +3596,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <p style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)' }}>This lead is currently view-only for you after handoff to Sales Head.</p>
                         )}
                         <div className="lead-detail__quick-actions">
-                          <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote} disabled={selectedLeadReadOnly}>📞 Log Call</button>
+                          <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleAddNote} disabled={selectedLeadReadOnly}><PhoneIcon style={{ width: 13, height: 13, marginRight: 4 }} />Log Call</button>
                           {/* SV Recording moved to roleActions in drawer */}
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={selectedLeadReadOnly}>💬 WhatsApp</button>
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={selectedLeadReadOnly}>📧 Email</button>
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()} disabled={selectedLeadReadOnly}>📝 Add Note</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={selectedLeadReadOnly}><ChatBubbleLeftIcon style={{ width: 13, height: 13, marginRight: 4 }} />WhatsApp</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={selectedLeadReadOnly}><IdentificationIcon style={{ width: 13, height: 13, marginRight: 4 }} />Email</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => document.getElementById('note-input')?.focus()} disabled={selectedLeadReadOnly}><ClipboardDocumentListIcon style={{ width: 13, height: 13, marginRight: 4 }} />Add Note</button>
                           <button
                             className="crm-btn crm-btn-warning crm-btn-sm"
                             disabled={selectedLeadReadOnly}
@@ -3603,7 +3609,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               ['TC', 'SM', 'SH', 'COL'].forEach((r) => loadAssignableUsers(r));
                             }}
                           >
-                            🔄 Reassign
+                            <><ArrowPathIcon style={{ width: 13, height: 13, marginRight: 4 }} /> Reassign</>
                           </button>
                         </div>
                       </>
@@ -3685,7 +3691,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpValue(1, 11, 0))}>Tomorrow</button>
                         <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(6, 11, 0))}>This Sat</button>
                         <button type="button" className="calendar-shortcut-btn" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt(getQuickFollowUpForWeekday(0, 11, 0))}>This Sun</button>
-                        <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt('')}>✕ Clear</button>
+                        <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" disabled={selectedLeadReadOnly} onClick={() => setManualNextFollowUpAt('')}><XMarkIcon style={{ width: 12, height: 12 }} /> Clear</button>
                       </div>
                     </div>
                     <div style={{ marginTop: 16 }}>
@@ -3694,7 +3700,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                     </div>
                     <div className="lead-detail__save-bar">
                       {noteDraft.trim() && (
-                        <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote} disabled={selectedLeadReadOnly}>📝 Save Note</button>
+                        <button type="button" className="workspace-btn workspace-btn--ghost" onClick={handleAddNote} disabled={selectedLeadReadOnly}><ClipboardDocumentListIcon style={{ width: 14, height: 14, marginRight: 4 }} />Save Note</button>
                       )}
                       <button
                         type="button"
@@ -3707,7 +3713,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           || (Boolean(manualNextFollowUpAt) && !isFollowUpAtLeastMinutesAhead(manualNextFollowUpAt))
                         }
                       >
-                        {manualUpdateSaving ? 'Saving...' : '💾 Save Changes'}
+                        {manualUpdateSaving ? 'Saving...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Save Changes</>}
                       </button>
                     </div>
                   </div>
@@ -3731,21 +3737,21 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                     : evt.type === 'CLOSED_LOST' ? 'tl-note'
                                       : 'tl-system';
 
-                        const typeIcon = evt.type === 'NOTE_ADDED' ? '📝'
-                          : evt.type === 'STAGE_CHANGE' ? '🔄'
-                            : evt.type === 'STATUS_CHANGE' ? '🏷️'
-                              : evt.type === 'REASSIGNMENT' ? '🔀'
-                                : evt.type === 'CREATED' ? '➕'
-                                  : evt.type === 'CLOSED_WON' ? '🎉'
-                                    : evt.type === 'CLOSED_LOST' ? '❌'
-                                      : '📌';
+                        const TypeIcon = evt.type === 'NOTE_ADDED' ? ClipboardDocumentListIcon
+                          : evt.type === 'STAGE_CHANGE' ? ArrowPathIcon
+                            : evt.type === 'STATUS_CHANGE' ? TagIcon
+                              : evt.type === 'REASSIGNMENT' ? ArrowPathIcon
+                                : evt.type === 'CREATED' ? PlusCircleIcon
+                                  : evt.type === 'CLOSED_WON' ? CheckCircleIcon
+                                    : evt.type === 'CLOSED_LOST' ? XMarkIcon
+                                      : SparklesIcon;
 
                         const typeLabel = evt.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
                         return (
                           <div key={evt.id} className={`tl-item ${typeClass}`}>
                             <div className="tl-header">
-                              <span className="tl-type">{typeIcon} {evt.title || typeLabel}</span>
+                              <span className="tl-type"><TypeIcon style={{ width: 13, height: 13, marginRight: 4, verticalAlign: 'text-bottom' }} />{evt.title || typeLabel}</span>
                               <span className="tl-date">{formatDateTime(evt.at)}</span>
                             </div>
                             {evt.description && <div className="tl-text">{formatActivityDescription(evt.description, evt)}</div>}
@@ -3772,18 +3778,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm" style={{ marginTop: '10vh' }}>
             <div className="lead-workspace__modal-header" style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)' }}>
               <div>
-                <h2 style={{ fontSize: 16 }}>🔄 Change Stage</h2>
+                <h2 style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><ArrowPathIcon style={{ width: 16, height: 16 }} />Change Stage</h2>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                   {selectedLead?.stageLabel} → <strong style={{ color: '#4f46e5' }}>{stagePopupData.stageLabel}</strong>
                 </div>
               </div>
-              <button type="button" onClick={() => setStagePopupOpen(false)}>✕</button>
+              <button type="button" onClick={() => setStagePopupOpen(false)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
             </div>
             <div style={{ padding: '20px 24px' }}>
               {/* Follow-up Date & Time */}
               <div style={{ marginBottom: 18 }}>
                 <div className="crm-form-label" style={{ marginBottom: 6 }}>
-                  📅 Follow-up Date & Time {stagePopupData.needsFollowUp && <span style={{ color: '#dc2626' }}>*</span>}
+                  <CalendarDaysIcon style={{ width: 14, height: 14, marginRight: 4 }} />Follow-up Date & Time {stagePopupData.needsFollowUp && <span style={{ color: '#dc2626' }}>*</span>}
                 </div>
                 <CalendarPicker
                   type="datetime"
@@ -3798,9 +3804,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(1, 11, 0) }))}>Tomorrow</button>
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
-                  <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: '' }))}>✕ Clear</button>
+                  <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: '' }))}><XMarkIcon style={{ width: 12, height: 12 }} /> Clear</button>
                 </div>
-                <div className="followup-warning">⚠️ Follow-up date & time is required for this stage.</div>
+                <div className="followup-warning"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Follow-up date & time is required for this stage.</div>
               </div>
 
               {/* Assignee selection in Modal */}
@@ -3865,7 +3871,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               {/* Reason / Notes */}
               <div style={{ marginBottom: 18 }}>
-                <div className="crm-form-label" style={{ marginBottom: 6 }}>📝 Reason / Notes (Optional)</div>
+                <div className="crm-form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}><ClipboardDocumentListIcon style={{ width: 14, height: 14 }} /> Reason / Notes (Optional)</div>
                 <textarea
                   className="crm-form-input"
                   rows={3}
@@ -3936,7 +3942,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   }
                   onClick={handleStagePopupConfirm}
                 >
-                  {manualUpdateSaving ? 'Saving...' : '✅ Confirm Stage Change'}
+                  {manualUpdateSaving ? 'Saving...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Confirm Stage Change</>}
                 </button>
               </div>
             </div>
@@ -3990,7 +3996,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         value={newLeadForm.full_name}
                         onChange={(e) => setNewLeadForm((p) => ({ ...p, full_name: e.target.value }))}
                         required
-                        placeholder="Enter buyer full name"
+                        placeholder="Enter contact full name"
                       />
                     </div>
 
@@ -3999,25 +4005,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <label className="create-lead-field__label">
                         Phone <span className="create-lead-field__required">*</span>
                       </label>
-                      <div className="phone-input-group">
-                        <select
-                          className="create-lead-select country-code-select"
-                          value={newLeadForm.phone_country_code}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, phone_country_code: e.target.value }))}
-                        >
-                          {COUNTRY_CODES.map((c) => (
-                            <option key={c.value} value={c.value}>{c.label}</option>
-                          ))}
-                        </select>
-                        <input
-                          className={`create-lead-input ${phoneCheck.status === 'exists' ? 'create-lead-input--error' : phoneCheck.status === 'valid' ? 'create-lead-input--success' : ''}`}
-                          value={newLeadForm.phone}
-                          onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: sanitizePhoneNumberInput(e.target.value) }))}
-                          maxLength={12}
-                          required
-                          placeholder="Phone number"
-                        />
-                      </div>
+                      <PhoneInput
+                        country="in"
+                        enableSearch
+                        countryCodeEditable={false}
+                        value={`${sanitizeCountryCodeDigits(newLeadForm.phone_country_code)}${newLeadForm.phone}`}
+                        onChange={(value, data) => {
+                          const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
+                          const raw = String(value || '');
+                          const localPart = data?.dialCode && raw.startsWith(data.dialCode)
+                            ? raw.slice(data.dialCode.length)
+                            : raw;
+                          setNewLeadForm((p) => ({
+                            ...p,
+                            phone_country_code: dialCode,
+                            phone: sanitizePhoneNumberInput(localPart),
+                          }));
+                        }}
+                        inputProps={{ required: true, name: 'phone', placeholder: 'Phone number' }}
+                        containerClass={`create-lead-phone-input ${phoneCheck.status === 'exists' ? 'create-lead-phone-input--error' : phoneCheck.status === 'valid' ? 'create-lead-phone-input--success' : ''}`}
+                        inputClass="create-lead-phone-input__control"
+                        buttonClass="create-lead-phone-input__button"
+                        dropdownClass="create-lead-phone-input__dropdown"
+                      />
                       <div className="create-lead-phone-status">
                         <div>
                           {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {phoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>}
@@ -4075,12 +4085,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <label className="create-lead-field__label">
                         Alternate Phone <span className="create-lead-field__optional">(Optional)</span>
                       </label>
-                      <input
-                        className={`create-lead-input ${altPhoneCheck.status === 'exists' ? 'create-lead-input--error' : altPhoneCheck.status === 'valid' ? 'create-lead-input--success' : ''}`}
-                        value={newLeadForm.alternate_phone}
-                        onChange={(e) => setNewLeadForm((p) => ({ ...p, alternate_phone: sanitizePhoneNumberInput(e.target.value) }))}
-                        maxLength={12}
-                        placeholder="Secondary contact"
+                      <PhoneInput
+                        country="in"
+                        enableSearch
+                        countryCodeEditable={false}
+                        value={`${sanitizeCountryCodeDigits(newLeadForm.alternate_phone_country_code)}${newLeadForm.alternate_phone}`}
+                        onChange={(value, data) => {
+                          const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
+                          const raw = String(value || '');
+                          const localPart = data?.dialCode && raw.startsWith(data.dialCode)
+                            ? raw.slice(data.dialCode.length)
+                            : raw;
+                          setNewLeadForm((p) => ({
+                            ...p,
+                            alternate_phone_country_code: dialCode,
+                            alternate_phone: sanitizePhoneNumberInput(localPart),
+                          }));
+                        }}
+                        inputProps={{ name: 'alternate_phone', placeholder: 'Secondary phone number' }}
+                        containerClass={`create-lead-phone-input ${altPhoneCheck.status === 'exists' ? 'create-lead-phone-input--error' : altPhoneCheck.status === 'valid' ? 'create-lead-phone-input--success' : ''}`}
+                        inputClass="create-lead-phone-input__control"
+                        buttonClass="create-lead-phone-input__button"
+                        dropdownClass="create-lead-phone-input__dropdown"
                       />
                       <div className="create-lead-phone-status">
                         <div>
@@ -4518,8 +4544,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         <div className="lead-workspace__modal" role="dialog" aria-modal="true">
           <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm">
             <div className="lead-workspace__modal-header" style={{ background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' }}>
-              <h2 style={{ color: '#fff' }}>🏠 Record Site Visit</h2>
-              <button type="button" style={{ color: '#fff' }} onClick={() => setRecordSvModalOpen(false)}>✕</button>
+              <h2 style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 18, height: 18 }} />Record Site Visit</h2>
+              <button type="button" style={{ color: '#fff' }} onClick={() => setRecordSvModalOpen(false)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
             </div>
 
             <div className="assign-modal__body" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
@@ -4627,7 +4653,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   onClick={handleRecordSvSubmit}
                   disabled={!recordSvForm.assignToUserId || !recordSvForm.svProjectId || !recordSvForm.motivationType || recordSvForm.budgetMin === '' || recordSvForm.budgetMax === ''}
                 >
-                  ✓ Record Visit
+                  <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Record Visit</>
                 </button>
               </div>
             </div>
@@ -4641,7 +4667,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm">
             <div className="lead-workspace__modal-header">
               <h2>Reassign Lead</h2>
-              <button type="button" onClick={() => setAssignModalOpen(false)}>✕</button>
+              <button type="button" onClick={() => setAssignModalOpen(false)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
             </div>
 
             <div className="assign-modal__body">
@@ -4702,7 +4728,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm">
             <div className="lead-workspace__modal-header">
               <h2>Mark Site Visit Done</h2>
-              <button type="button" onClick={() => setSvDoneModalOpen(false)}>✕</button>
+              <button type="button" onClick={() => setSvDoneModalOpen(false)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
             </div>
 
             <div className="assign-modal__body">
@@ -4793,7 +4819,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   onClick={handleSvDoneSubmit}
                   disabled={!svDoneForm.assignToUserId || !svDoneForm.svProjectId || svDoneForm.budgetMin === '' || svDoneForm.budgetMax === ''}
                 >
-                  ✓ Confirm SV Done & Handoff
+                  <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Confirm SV Done & Handoff</>
                 </button>
               </div>
             </div>
@@ -4807,7 +4833,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <div className="lead-workspace__modal-panel lead-workspace__modal-panel--sm">
             <div className="lead-workspace__modal-header">
               <h2>{closureModalAction.label}</h2>
-              <button type="button" onClick={() => { setClosureModalOpen(false); setClosureModalAction(null); }}>✕</button>
+              <button type="button" onClick={() => { setClosureModalOpen(false); setClosureModalAction(null); }}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
             </div>
 
             <div className="assign-modal__body">
@@ -4817,7 +4843,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
               {closureModalAction.code?.includes('JUNK') || closureModalAction.code?.includes('WRONG_NUMBER') ? (
                 <div style={{ background: 'var(--accent-red-bg)', border: '1px solid var(--accent-red)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--accent-red)' }}>
-                  ⚠️ Warning: Marking as {closureModalAction.label.replace('Mark ', '')} will increment the strike counter.
+                  <ExclamationTriangleIcon style={{ width: 14, height: 14, marginRight: 4, verticalAlign: 'text-bottom' }} /> Warning: Marking as {closureModalAction.label.replace('Mark ', '')} will increment the strike counter.
                   After 3 strikes, the lead will be permanently deactivated.
                   {selectedLead && <span> (Current strikes: {selectedLead.junkStrikeCount || 0}/3)</span>}
                 </div>
@@ -4868,7 +4894,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <div className="lead-workspace__modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '18px 24px', borderRadius: '12px 12px 0 0', color: '#fff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 16 }}>🏆 Close Won — Customer Profile</h3>
+                <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircleIcon style={{ width: 16, height: 16 }} />Close Won — Customer Profile</h3>
                 <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.85 }}>Fill customer details before creating booking</p>
               </div>
               <button
@@ -4887,13 +4913,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   lineHeight: 1,
                 }}
               >
-                ✕
+                <XMarkIcon style={{ width: 14, height: 14 }} />
               </button>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Personal Details */}
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>👤 Personal Details</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14 }} />Personal Details</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   Date of Birth *
@@ -4933,7 +4959,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </div>
 
               {/* Identity */}
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>🪪 Identity Documents</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}><IdentificationIcon style={{ width: 14, height: 14 }} />Identity Documents</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   PAN Number
@@ -4946,12 +4972,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </div>
 
               {/* Current Address */}
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>📍 Current Address *</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon style={{ width: 14, height: 14 }} />Current Address *</div>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Address
                 <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address, locality..." style={{ width: '100%', marginTop: 4 }} />
               </label>
-               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Pincode
                 <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} style={{ width: '100%', marginTop: 4 }} />
               </label>
@@ -4968,7 +4994,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
 
               {/* Collection Manager Assignment */}
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>👤 Assign Collection Manager *</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14 }} />Assign Collection Manager *</div>
               <select value={customerProfileForm.assignToUserId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, assignToUserId: e.target.value }))} style={{ width: '100%' }}>
                 <option value="">Select Collection Manager...</option>
                 {(assignableUsers['COL'] || []).map((u) => (
@@ -4985,7 +5011,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <div className="assign-modal__footer" style={{ marginTop: 8 }}>
                 <button type="button" className="workspace-btn workspace-btn--ghost" onClick={() => setCustomerProfileOpen(false)}>Cancel</button>
                 <button type="button" className="workspace-btn workspace-btn--success" onClick={handleCustomerProfileSubmit} disabled={manualUpdateSaving}>
-                  {manualUpdateSaving ? 'Processing...' : '🏆 Approve Booking & Create Customer'}
+                  {manualUpdateSaving ? 'Processing...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Approve Booking & Create Customer</>}
                 </button>
               </div>
             </div>
@@ -5238,7 +5264,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
                   {quickWorkflowNeedsMissingLocationProject && (
                     <div className="qa-drawer-ctx-block">
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Lead details {quickLeadHasLocation && quickLeadHasProject ? '✓' : ''}</div>
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Lead details
+                        {quickLeadHasLocation && quickLeadHasProject ? <CheckIcon style={{ width: 13, height: 13 }} /> : null}
+                      </div>
 
                       <div style={{ display: 'flex', gap: 12 }}>
                         {/* Location Dropdown */}
@@ -5599,7 +5628,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <label className="qa-drawer-field-label">Address</label>
                         <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
                       </div>
-                       <div>
+                      <div>
                         <label className="qa-drawer-field-label">Pincode</label>
                         <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} />
                       </div>

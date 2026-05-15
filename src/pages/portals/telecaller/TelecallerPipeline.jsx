@@ -21,10 +21,37 @@ const DATE_FILTER_OPTIONS = [
 ];
 
 const PIPELINE_COLUMNS = [
-  { key: 'RNR', title: 'RNR', statusCode: 'RNR', icon: <NoSymbolIcon />, gradient: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', color: '#d97706' },
-  { key: 'FOLLOW_UP', title: 'Follow Up', statusCode: 'FOLLOW_UP', icon: <PhoneIcon />, gradient: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)', color: '#2563eb' },
-  { key: 'SV_SCHEDULED', title: 'Scheduled', statusCode: 'SV_SCHEDULED', icon: <CalendarDaysIcon />, gradient: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', color: '#7c3aed' },
-  { key: 'DISQUALIFIED', title: 'Unqualified', icon: <NoSymbolIcon />, gradient: 'linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%)', color: '#dc2626' },
+  {
+    key: 'RNR',
+    title: 'RNR',
+    statusCode: 'RNR',
+    icon: <NoSymbolIcon />,
+    cardGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    shadow: 'rgba(217, 119, 6, 0.28)',
+  },
+  {
+    key: 'FOLLOW_UP',
+    title: 'Follow Up',
+    statusCode: 'FOLLOW_UP',
+    icon: <PhoneIcon />,
+    cardGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    shadow: 'rgba(59, 130, 246, 0.28)',
+  },
+  {
+    key: 'SV_SCHEDULED',
+    title: 'Scheduled',
+    statusCode: 'SV_SCHEDULED',
+    icon: <CalendarDaysIcon />,
+    cardGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+    shadow: 'rgba(109, 40, 217, 0.28)',
+  },
+  {
+    key: 'DISQUALIFIED',
+    title: 'Unqualified',
+    icon: <NoSymbolIcon />,
+    cardGradient: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+    shadow: 'rgba(185, 28, 28, 0.28)',
+  },
 ];
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -171,6 +198,38 @@ const TelecallerPipeline = ({ onNavigate }) => {
     });
   }, [filteredLeads]);
 
+  const statCards = useMemo(() => {
+    const baseCards = [
+      {
+        key: 'TOTAL',
+        label: 'Total Leads',
+        value: totalLeads,
+        icon: <UsersIcon />,
+        cardGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+        shadow: 'rgba(59, 130, 246, 0.30)',
+      },
+      {
+        key: 'QUALIFIED',
+        label: 'Qualified Leads',
+        value: qualifiedLeads,
+        icon: <CheckCircleIcon />,
+        cardGradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+        shadow: 'rgba(16, 185, 129, 0.30)',
+      },
+    ];
+
+    const statusCards = PIPELINE_COLUMNS.map((column) => ({
+      key: column.key,
+      label: column.title,
+      value: getLeadsByColumn(column).length,
+      icon: column.icon,
+      cardGradient: column.cardGradient,
+      shadow: column.shadow,
+    }));
+
+    return [...baseCards, ...statusCards];
+  }, [getLeadsByColumn, qualifiedLeads, totalLeads]);
+
   return (
     <div className="telecaller-pipeline">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -224,37 +283,34 @@ const TelecallerPipeline = ({ onNavigate }) => {
       ) : (
         <>
           <div className="pipeline-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-            <div className="pipeline-stat-card" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', borderRadius: 16, padding: '20px 24px', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)' }}>
-              <UsersIcon style={{ position: 'absolute', right: -10, top: -10, width: 80, height: 80, opacity: 0.15 }} />
-              <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.9, marginBottom: 4 }}>Total Leads</div>
-              <div style={{ fontSize: 32, fontWeight: 800 }}>{totalLeads}</div>
-            </div>
-
-            <div className="pipeline-stat-card" style={{ background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', borderRadius: 16, padding: '20px 24px', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}>
-              <CheckCircleIcon style={{ position: 'absolute', right: -10, top: -10, width: 80, height: 80, opacity: 0.15 }} />
-              <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.9, marginBottom: 4 }}>Qualified Leads</div>
-              <div style={{ fontSize: 32, fontWeight: 800 }}>{qualifiedLeads}</div>
-            </div>
-
-            {PIPELINE_COLUMNS.map(col => {
-              const count = getLeadsByColumn(col).length;
-              return (
-                <div key={col.key} className="pipeline-stat-card" style={{ background: '#fff', border: '1px solid var(--border-primary)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>{col.title}</div>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>{count}</div>
-                    </div>
-                    <div style={{ background: col.gradient || '#f8fafc', color: col.color || 'var(--text-secondary)', width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {React.cloneElement(col.icon, { style: { width: 22, height: 22 } })}
-                    </div>
-                  </div>
-                  <div style={{ height: 4, width: '100%', background: '#f1f5f9', borderRadius: 2, marginTop: 12, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: totalLeads > 0 ? `${(count / totalLeads) * 100}%` : '0%', background: col.color || 'var(--accent-blue)', borderRadius: 2 }}></div>
-                  </div>
-                </div>
-              );
-            })}
+            {statCards.map((card) => (
+              <div
+                key={card.key}
+                className="pipeline-stat-card"
+                style={{
+                  background: card.cardGradient,
+                  borderRadius: 16,
+                  padding: '20px 24px',
+                  color: '#fff',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: `0 10px 15px -3px ${card.shadow}`,
+                }}
+              >
+                {React.cloneElement(card.icon, {
+                  style: {
+                    position: 'absolute',
+                    right: -10,
+                    top: -10,
+                    width: 80,
+                    height: 80,
+                    opacity: 0.15,
+                  },
+                })}
+                <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.9, marginBottom: 4 }}>{card.label}</div>
+                <div style={{ fontSize: 32, fontWeight: 800 }}>{card.value}</div>
+              </div>
+            ))}
           </div>
         </>
       )}

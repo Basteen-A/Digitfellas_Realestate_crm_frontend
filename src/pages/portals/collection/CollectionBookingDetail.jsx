@@ -7,7 +7,7 @@ import { getErrorMessage } from '../../../utils/helpers';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
   BanknotesIcon, Cog6ToothIcon,
-  UserIcon, BuildingStorefrontIcon, DocumentTextIcon, ClockIcon,
+  UserIcon, BuildingStorefrontIcon, DocumentTextIcon, ClockIcon, CheckIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
@@ -289,12 +289,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <td>{formatDate(p.payment_date)}</td>
                       <td>
                         <span className="col-badge" style={{ background: p.is_verified ? '#10b98122' : '#f59e0b22', color: p.is_verified ? '#10b981' : '#f59e0b' }}>
-                          {p.is_verified ? '✓ Verified' : 'Pending'}
+                          {p.is_verified ? <><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Verified</> : 'Pending'}
                         </span>
                       </td>
                       <td>
                         <span className="col-badge" style={{ background: p.accounts_approved ? '#10b98122' : '#6b728022', color: p.accounts_approved ? '#10b981' : '#6b7280' }}>
-                          {p.accounts_approved ? '✓ Approved' : 'Pending'}
+                          {p.accounts_approved ? <><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Approved</> : 'Pending'}
                         </span>
                       </td>
                       <td style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -304,10 +304,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           </button>
                         )}
                         {!p.accounts_approved && (
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 11 }} onClick={() => handleApproveAccounts(p.id)}>Acc ✓</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 11 }} onClick={() => handleApproveAccounts(p.id)}><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Acc</button>
                         )}
                         {p.accounts_approved && !p.management_approved && (
-                          <button className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: 11 }} onClick={() => handleApproveManagement(p.id)}>Mgmt ✓</button>
+                          <button className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: 11 }} onClick={() => handleApproveManagement(p.id)}><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Mgmt</button>
                         )}
                       </td>
                     </tr>

@@ -6,7 +6,7 @@ import { getErrorMessage } from '../../../utils/helpers';
 import {
   UserIcon, ArrowPathIcon,
   PencilSquareIcon, DocumentCheckIcon, ClipboardDocumentListIcon,
-  BoltIcon, CreditCardIcon,
+  BoltIcon, CreditCardIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
@@ -316,12 +316,12 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
           <div className="col-modal col-modal-lg" onClick={e => e.stopPropagation()}>
             <div className="col-modal-header" style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)' }}>
               <div>
-                <h2 style={{ fontSize: 16 }}>⚡ Quick Actions</h2>
+                <h2 style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><BoltIcon style={{ width: 16, height: 16 }} /> Quick Actions</h2>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                   Customer: <strong style={{ color: '#4f46e5' }}>{quickActionCustomer.first_name} {quickActionCustomer.last_name || ''}</strong> - {quickActionCustomer.phone}
                 </div>
               </div>
-              <button className="col-modal-close" onClick={() => { setQuickActionOpen(false); setQuickActionCustomer(null); setQuickActionType(null); }}>✕</button>
+              <button className="col-modal-close" onClick={() => { setQuickActionOpen(false); setQuickActionCustomer(null); setQuickActionType(null); }}><XMarkIcon style={{ width: 14, height: 14 }} /></button>
             </div>
             <div className="col-modal-body">
               {/* Action Type Selector */}

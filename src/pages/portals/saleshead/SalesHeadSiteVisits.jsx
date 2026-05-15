@@ -3,6 +3,14 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  HomeModernIcon,
+  ArrowPathIcon,
+  HandRaisedIcon,
+  MapPinIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline';
 
 const SalesHeadSiteVisits = () => {
   const [team, setTeam] = useState([]);
@@ -78,7 +86,7 @@ const SalesHeadSiteVisits = () => {
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>🏠 Team Site Visits</h1>
+          <h1><HomeModernIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Team Site Visits</h1>
           <p className="hidden sm:block">Monitor site visits across your Sales Manager team</p>
         </div>
         <div className="page-header-actions flex-wrap" style={{ display: 'flex', gap: 12 }}>
@@ -105,13 +113,13 @@ const SalesHeadSiteVisits = () => {
               </button>
             ))}
           </div>
-          <button className="crm-btn crm-btn-ghost" onClick={() => selectedSM && loadVisits(selectedSM)} disabled={!selectedSM}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={() => selectedSM && loadVisits(selectedSM)} disabled={!selectedSM}><ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4 }} />Refresh</button>
         </div>
       </div>
 
       {!selectedSM ? (
         <div className="crm-card" style={{ padding: 80, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>👆</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}><HandRaisedIcon style={{ width: 38, height: 38 }} /></div>
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Select a Sales Manager</div>
           <div style={{ fontSize: 13 }}>Please select a Sales Manager from the dropdown above to view their leads' site visits.</div>
         </div>
@@ -123,7 +131,7 @@ const SalesHeadSiteVisits = () => {
       ) : filteredVisits.length === 0 ? (
         <div className="crm-card">
           <div className="empty-state">
-            <div className="empty-icon">🏠</div>
+            <div className="empty-icon"><HomeModernIcon style={{ width: 32, height: 32 }} /></div>
             <div className="empty-title">No site visits found</div>
             <div className="empty-desc">No site visit records match the current filters for this Sales Manager.</div>
           </div>
@@ -159,7 +167,7 @@ const SalesHeadSiteVisits = () => {
                       <td>
                         {v.rating ? (
                           <span style={{ fontWeight: 700, fontSize: 13, color: v.rating >= 4 ? '#16a34a' : v.rating >= 3 ? '#d97706' : '#dc2626' }}>
-                            {'★'.repeat(v.rating)}{'☆'.repeat(5 - v.rating)}
+                            {v.rating}/5
                           </span>
                         ) : '—'}
                       </td>
@@ -195,9 +203,9 @@ const SalesHeadSiteVisits = () => {
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || formatTime(selectedVisit.scheduled_date) || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
-                {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{'★'.repeat(selectedVisit.rating)}{'☆'.repeat(5 - selectedVisit.rating)}</span></div>}
+                {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{selectedVisit.rating}/5</span></div>}
                 {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
-                {selectedVisit.interested_after_visit !== null && selectedVisit.interested_after_visit !== undefined && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Interested After Visit</div>{selectedVisit.interested_after_visit ? '✅ Yes' : '❌ No'}</div>}
+                {selectedVisit.interested_after_visit !== null && selectedVisit.interested_after_visit !== undefined && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Interested After Visit</div>{selectedVisit.interested_after_visit ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircleIcon style={{ width: 13, height: 13 }} />Yes</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><XCircleIcon style={{ width: 13, height: 13 }} />No</span>}</div>}
               </div>
               {selectedVisit.feedback && (
                 <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
@@ -219,7 +227,7 @@ const SalesHeadSiteVisits = () => {
               )}
               {selectedVisit.geo_lat && (
                 <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  📍 Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
+                  <MapPinIcon style={{ width: 13, height: 13, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} /> Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
                 </div>
               )}
             </div>

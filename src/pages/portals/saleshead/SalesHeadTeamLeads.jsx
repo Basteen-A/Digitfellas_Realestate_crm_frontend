@@ -3,6 +3,14 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  UserIcon,
+  ClipboardDocumentListIcon,
+  HomeModernIcon,
+  ArrowPathIcon,
+  HandRaisedIcon,
+  MapPinIcon,
+} from '@heroicons/react/24/outline';
 
 const SalesHeadTeamLeads = () => {
   const [smTeam, setSMTeam] = useState([]);
@@ -119,7 +127,7 @@ const SalesHeadTeamLeads = () => {
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Loading team...</div>
           ) : smTeam.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>👤</div>
+              <div style={{ fontSize: 28, marginBottom: 8 }}><UserIcon style={{ width: 28, height: 28 }} /></div>
               <div>No Sales Managers report to you</div>
             </div>
           ) : (
@@ -202,8 +210,8 @@ const SalesHeadTeamLeads = () => {
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-              <button className={`crm-btn ${activeTab === 'leads' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setActiveTab('leads')}>📋 Leads ({smLeads.length})</button>
-              <button className={`crm-btn ${activeTab === 'visits' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setActiveTab('visits')}>🏠 Site Visits ({smVisits.length})</button>
+              <button className={`crm-btn ${activeTab === 'leads' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setActiveTab('leads')}><ClipboardDocumentListIcon style={{ width: 14, height: 14, marginRight: 4 }} />Leads ({smLeads.length})</button>
+              <button className={`crm-btn ${activeTab === 'visits' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setActiveTab('visits')}><HomeModernIcon style={{ width: 14, height: 14, marginRight: 4 }} />Site Visits ({smVisits.length})</button>
             </div>
 
             {/* Leads Tab */}
@@ -213,7 +221,7 @@ const SalesHeadTeamLeads = () => {
                   <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>Loading leads...</div>
                 ) : smLeads.length === 0 ? (
                   <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}><ClipboardDocumentListIcon style={{ width: 28, height: 28 }} /></div>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>No leads assigned</div>
                     <div style={{ fontSize: 13 }}>This SM has no active leads in their pipeline.</div>
                   </div>
@@ -251,7 +259,7 @@ const SalesHeadTeamLeads = () => {
                               <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDateTime(lead.lastContactedAt)}</td>
                               <td style={{ textAlign: 'right' }}>
                                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => handleReassignOpen(lead)} title="Reassign to another SM">
-                                  🔄 Reassign
+                                  <><ArrowPathIcon style={{ width: 13, height: 13, marginRight: 4 }} />Reassign</>
                                 </button>
                               </td>
                             </tr>
@@ -271,7 +279,7 @@ const SalesHeadTeamLeads = () => {
                   <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>Loading visits...</div>
                 ) : smVisits.length === 0 ? (
                   <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>🏠</div>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}><HomeModernIcon style={{ width: 28, height: 28 }} /></div>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>No site visits recorded</div>
                     <div style={{ fontSize: 13 }}>Site visits for this SM's leads will appear here.</div>
                   </div>
@@ -302,7 +310,7 @@ const SalesHeadTeamLeads = () => {
                               <td>
                                 {v.rating ? (
                                   <span style={{ fontWeight: 700, fontSize: 12, color: v.rating >= 4 ? '#16a34a' : v.rating >= 3 ? '#d97706' : '#dc2626' }}>
-                                    {'★'.repeat(v.rating)}{'☆'.repeat(5 - v.rating)}
+                                    {v.rating}/5
                                   </span>
                                 ) : '—'}
                               </td>
@@ -324,7 +332,7 @@ const SalesHeadTeamLeads = () => {
         {/* Empty state when no SM selected */}
         {!selectedSM && !loading && smTeam.length > 0 && (
           <div className="crm-card" style={{ padding: 80, textAlign: 'center', color: 'var(--text-secondary)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>👈</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}><HandRaisedIcon style={{ width: 38, height: 38 }} /></div>
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Select a Sales Manager</div>
             <div style={{ fontSize: 13 }}>Click on a Sales Manager from the left panel to view their leads and site visits.</div>
           </div>
@@ -362,7 +370,7 @@ const SalesHeadTeamLeads = () => {
             <div className="col-modal-footer">
               <button className="crm-btn crm-btn-ghost" onClick={() => setReassignModalOpen(false)}>Cancel</button>
               <button className="crm-btn crm-btn-primary" onClick={handleReassignSubmit} disabled={reassigning}>
-                {reassigning ? 'Reassigning...' : '🔄 Reassign Lead'}
+                {reassigning ? 'Reassigning...' : <><ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4 }} />Reassign Lead</>}
               </button>
             </div>
           </div>
@@ -385,7 +393,7 @@ const SalesHeadTeamLeads = () => {
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
-                {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{'★'.repeat(selectedVisit.rating)}{'☆'.repeat(5 - selectedVisit.rating)}</span></div>}
+                {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{selectedVisit.rating}/5</span></div>}
                 {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
               </div>
               {selectedVisit.feedback && (
@@ -407,7 +415,7 @@ const SalesHeadTeamLeads = () => {
                 </div>
               )}
               {selectedVisit.geo_lat && (
-                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>📍 Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}</div>
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}><MapPinIcon style={{ width: 13, height: 13, marginRight: 4, verticalAlign: 'text-bottom' }} />Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}</div>
               )}
             </div>
             <div className="col-modal-footer">

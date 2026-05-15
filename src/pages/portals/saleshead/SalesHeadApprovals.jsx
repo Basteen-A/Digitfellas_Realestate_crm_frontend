@@ -1,4 +1,10 @@
 import React from 'react';
+import {
+  FireIcon,
+  XCircleIcon,
+  CheckCircleIcon,
+  ClipboardDocumentCheckIcon,
+} from '@heroicons/react/24/outline';
 
 const SalesHeadApprovals = ({ user }) => {
   return (
@@ -16,7 +22,7 @@ const SalesHeadApprovals = ({ user }) => {
             <div className="approval-title">Discount Request — Sample Lead</div>
             <div className="approval-sub">Submitted by Sales Manager · Pending for review</div>
           </div>
-          <span className="crm-badge badge-hot">🔥 Urgent</span>
+          <span className="crm-badge badge-hot"><FireIcon style={{ width: 12, height: 12, marginRight: 4 }} />Urgent</span>
         </div>
         <div className="approval-grid">
           <div><div className="approval-field-label">Project</div><div className="approval-field-value">—</div></div>
@@ -28,14 +34,14 @@ const SalesHeadApprovals = ({ user }) => {
         </div>
         <div className="approval-actions">
           <button className="crm-btn crm-btn-ghost crm-btn-sm">Add Conditions</button>
-          <button className="crm-btn crm-btn-danger crm-btn-sm">✗ Reject</button>
-          <button className="crm-btn crm-btn-success crm-btn-sm">✓ Approve</button>
+          <button className="crm-btn crm-btn-danger crm-btn-sm"><XCircleIcon style={{ width: 13, height: 13, marginRight: 4 }} />Reject</button>
+          <button className="crm-btn crm-btn-success crm-btn-sm"><CheckCircleIcon style={{ width: 13, height: 13, marginRight: 4 }} />Approve</button>
         </div>
       </div>
 
       <div className="crm-card">
         <div className="empty-state">
-          <div className="empty-icon">✅</div>
+          <div className="empty-icon"><ClipboardDocumentCheckIcon style={{ width: 30, height: 30 }} /></div>
           <div className="empty-title">Approval requests will appear here</div>
           <div className="empty-desc">When team members submit discount requests or escalations, they'll show up for your review.</div>
         </div>
