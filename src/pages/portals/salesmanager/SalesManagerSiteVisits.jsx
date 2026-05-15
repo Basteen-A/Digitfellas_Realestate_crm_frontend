@@ -189,7 +189,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     const colors = {
       Scheduled: { bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' },
       Confirmed: { bg: 'var(--accent-purple-bg)', color: 'var(--accent-purple)' },
-      Completed: { bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+      Completed: { bg: 'var(--accent-green-bg)', color: '#15803d' },
       Cancelled: { bg: 'var(--accent-red-bg)', color: 'var(--accent-red)' },
       'No Show': { bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },
       Rescheduled: { bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },

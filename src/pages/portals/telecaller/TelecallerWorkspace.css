@@ -356,7 +356,7 @@
 }
 
 .tc-mode-badge--call { background: var(--accent-blue-bg); color: var(--accent-blue); }
-.tc-mode-badge--whatsapp { background: var(--accent-green-bg); color: var(--accent-green); }
+.tc-mode-badge--whatsapp { background: var(--accent-green-bg); color: #15803d; }
 .tc-mode-badge--email { background: var(--accent-purple-bg); color: var(--accent-purple); }
 .tc-mode-badge--sms { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
 
@@ -371,8 +371,8 @@
 }
 
 .tc-status-badge--scheduled { background: var(--accent-blue-bg); color: var(--accent-blue); }
-.tc-status-badge--confirmed { background: var(--accent-green-bg); color: var(--accent-green); }
-.tc-status-badge--completed { background: var(--accent-green-bg); color: var(--accent-green); }
+.tc-status-badge--confirmed { background: var(--accent-green-bg); color: #15803d; }
+.tc-status-badge--completed { background: var(--accent-green-bg); color: #15803d; }
 .tc-status-badge--cancelled { background: var(--accent-red-bg); color: var(--accent-red); }
 
 /* ── Follow-ups Page ── */
@@ -529,7 +529,7 @@
 
 .tc-outcome {
   background: var(--accent-green-bg);
-  color: var(--accent-green);
+  color: #15803d;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.725rem;
@@ -616,7 +616,7 @@
 }
 
 .sh-revenue-cell {
-  color: var(--accent-green);
+  color: #15803d;
   font-weight: 600;
 }
 

@@ -1125,14 +1125,27 @@ const LeadDetailsPage = () => {
               ? 'Unassigned lead: assign first to enable actions'
               : (isMissedFirstBlocked ? 'Complete missed follow-ups first to enable today actions' : 'Quick actions')}
           >
-            +
+            <BoltIcon style={{ width: 16, height: 16, marginRight: 6 }} />
+            Quick update
           </button>
           {roleCode !== 'TC' && (
-            <span className="lead-details-stage" style={{ backgroundColor: `${lead.stageColor}22`, color: lead.stageColor }}>
+            <span 
+              className="lead-details-stage" 
+              style={{ 
+                backgroundColor: (lead.stageLabel?.toLowerCase().includes('site visit') ? '#15803d22' : `${lead.stageColor}22`), 
+                color: (lead.stageLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.stageColor) 
+              }}
+            >
               {lead.stageLabel}
             </span>
           )}
-          <span className="lead-details-status" style={{ backgroundColor: `${lead.statusColor}22`, color: lead.statusColor }}>
+          <span 
+            className="lead-details-status" 
+            style={{ 
+              backgroundColor: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d22' : `${lead.statusColor}22`), 
+              color: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.statusColor) 
+            }}
+          >
             {lead.statusIcon || ''} {lead.statusLabel}
           </span>
           {lead.leadScore != null && (
@@ -1304,7 +1317,7 @@ const LeadDetailsPage = () => {
                   <div className="lead-details-info-item">
                     <span className="lead-details-label">Customer Type</span>
                     <span className="lead-details-value">
-                      <span className="crm-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontSize: 11 }}>
+                      <span className="crm-badge" style={{ background: 'var(--accent-green-bg)', color: '#15803d', fontSize: 11 }}>
                         {lead.customerType}
                       </span>
                     </span>

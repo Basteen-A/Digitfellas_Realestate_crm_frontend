@@ -99,7 +99,7 @@ const SalesHeadTeamLeads = () => {
   const getStatusBadge = (status) => {
     const colors = {
       Scheduled: { bg: '#dbeafe', color: '#2563eb' }, Confirmed: { bg: '#ede9fe', color: '#7c3aed' },
-      Completed: { bg: '#dcfce7', color: '#16a34a' }, Cancelled: { bg: '#fee2e2', color: '#dc2626' },
+      Completed: { bg: '#dcfce7', color: '#15803d' }, Cancelled: { bg: '#fee2e2', color: '#dc2626' },
     };
     const c = colors[status] || { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)' };
     return (<span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: c.bg, color: c.color }}>{status}</span>);
@@ -169,7 +169,7 @@ const SalesHeadTeamLeads = () => {
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontWeight: 600 }}>
                         {sm.activeLeads} active
                       </span>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontWeight: 600 }}>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'var(--accent-green-bg)', color: '#15803d', fontWeight: 600 }}>
                         {sm.completedVisits} visits
                       </span>
                     </div>
@@ -203,7 +203,7 @@ const SalesHeadTeamLeads = () => {
               </div>
               <div style={{ display: 'flex', gap: 20 }}>
                 <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-blue)' }}>{selectedSM.activeLeads}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Active</div></div>
-                <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-green)' }}>{selectedSM.completedVisits}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Visits Done</div></div>
+                <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: '#15803d' }}>{selectedSM.completedVisits}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Visits Done</div></div>
                 <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{selectedSM.totalLeads}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Total</div></div>
               </div>
             </div>
@@ -253,7 +253,7 @@ const SalesHeadTeamLeads = () => {
                                 </span>
                               </td>
                               <td style={{ fontSize: 12 }}>{lead.svDoneProject || lead.project || '—'}</td>
-                              <td style={{ fontSize: 12, color: lead.svDoneDate ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                              <td style={{ fontSize: 12, color: lead.svDoneDate ? '#15803d' : 'var(--text-secondary)' }}>
                                 {lead.svDoneDate ? formatDate(lead.svDoneDate) : '—'}
                               </td>
                               <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDateTime(lead.lastContactedAt)}</td>
@@ -309,7 +309,7 @@ const SalesHeadTeamLeads = () => {
                               <td>{getStatusBadge(v.status)}</td>
                               <td>
                                 {v.rating ? (
-                                  <span style={{ fontWeight: 700, fontSize: 12, color: v.rating >= 4 ? '#16a34a' : v.rating >= 3 ? '#d97706' : '#dc2626' }}>
+                                  <span style={{ fontWeight: 700, fontSize: 12, color: v.rating >= 4 ? '#15803d' : v.rating >= 3 ? '#d97706' : '#dc2626' }}>
                                     {v.rating}/5
                                   </span>
                                 ) : '—'}

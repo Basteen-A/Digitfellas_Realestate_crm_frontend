@@ -114,7 +114,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
     { label: 'Under Negotiations', value: stats?.negotiations ?? 0, icon: <ChartBarIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In negotiation stage', changeType: 'neutral' },
     { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, icon: <ArrowPathIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Pending revisit', changeType: 'neutral' },
     { label: 'Under Follow Up', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, icon: <MapPinIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: `${todayFollowUps.length} today`, changeType: 'neutral' },
-    { label: "Today's Follow Up", value: todayFollowUps.length, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: 'Scheduled today', changeType: 'neutral' },
+    { label: "Today's Follow Up", value: todayFollowUps.length, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: '#15803d', valueColor: '#15803d', change: 'Scheduled today', changeType: 'neutral' },
     { label: 'Missed Follow Up', value: missedFollowUps.length, icon: <XCircleIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'Overdue', changeType: 'down' },
   ];
 
@@ -152,8 +152,9 @@ const SalesManagerDashboard = ({ onNavigate }) => {
           {/* Today's Follow Up List */}
           {todayFollowUps.length > 0 && (
             <div className="crm-card">
-              <div className="crm-card-header">
-                <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-green)' }}><UsersIcon style={ICON_SM} /> Today's Follow Up ({todayFollowUps.length})</div>
+              <div className="crm-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><UsersIcon style={ICON_SM} /> Today's Follow Up ({todayFollowUps.length})</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', cursor: 'pointer', opacity: 0.8 }} onClick={() => onNavigate?.('leads')}>View All →</span>
               </div>
               <div className="crm-card-body-flush">
                 {todayFollowUps.slice(0, 5).map((lead) => (
@@ -176,8 +177,9 @@ const SalesManagerDashboard = ({ onNavigate }) => {
           {/* Missed Follow Up List */}
           {missedFollowUps.length > 0 && (
             <div className="crm-card">
-              <div className="crm-card-header">
-                <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-red)' }}><XCircleIcon style={ICON_SM} /> Missed Follow Up ({missedFollowUps.length})</div>
+              <div className="crm-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><XCircleIcon style={ICON_SM} /> Missed Follow Up ({missedFollowUps.length})</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', cursor: 'pointer', opacity: 0.8 }} onClick={() => onNavigate?.('leads')}>View All →</span>
               </div>
               <div className="crm-card-body-flush">
                 {missedFollowUps.slice(0, 5).map((lead) => (

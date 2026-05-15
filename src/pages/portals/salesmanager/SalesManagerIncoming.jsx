@@ -32,9 +32,9 @@ import {
 
 /* ── helpers ── */
 const DATE_FILTERS = [
+  { value: 'all', label: 'All' },
   { value: 'today', label: 'Today' },
   { value: 'tomorrow', label: 'Tomorrow' },
-  { value: 'all', label: 'All' },
   { value: 'custom', label: 'Custom Date' },
 ];
 
@@ -75,6 +75,49 @@ const getAssigneeRoleForAction = (action) => {
   return 'SH';
 };
 
+const cleanSystemRemarks = (text) => {
+  if (!text) return '';
+  const SYSTEM_PREFIXES = [
+    'Status updated to',
+    'Stage changed to',
+    'Assigned to',
+    'Reassigned to',
+    'Lead created with status:',
+    'Action:',
+    'Response:',
+    'Quick action:',
+    'Follow-up call scheduled for',
+    'Site visit',
+  ];
+
+  const parts = text.split('|').map((p) => p.trim()).filter(Boolean);
+
+  // If we find an explicit remark: or note: part, prioritize its content
+  const explicitPart = parts.find((p) => /^(remark|note|note added)\s*:/i.test(p));
+  if (explicitPart) {
+    return explicitPart.replace(/^(remark|note|note added)\s*:/i, '').trim();
+  }
+
+  const seen = new Set();
+  const cleanParts = parts.filter((p) => {
+    const low = p.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Filter out system prefixes
+    if (SYSTEM_PREFIXES.some((prefix) => low.startsWith(prefix.toLowerCase()))) {
+      return false;
+    }
+    
+    // Deduplicate by normalized content
+    if (seen.has(low)) {
+      return false;
+    }
+    seen.add(low);
+    return true;
+  });
+
+  return cleanParts.join(' | ');
+};
+
 const SalesManagerIncoming = ({ onNavigate }) => {
   const authUser = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(authUser);
@@ -84,7 +127,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
   const [error, setError] = useState(null);
   const [processingId, setProcessingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
-  const [dateFilter, setDateFilter] = useState('today');
+  const [dateFilter, setDateFilter] = useState('all');
   const [customDate, setCustomDate] = useState('');
   const [searchText, setSearchText] = useState('');
 
@@ -319,27 +362,52 @@ const SalesManagerIncoming = ({ onNavigate }) => {
   return (
     <div className="incoming-leads-page">
       {/* Header */}
-      <div className="page-header" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <div><h1 style={{ margin: 0 }}>Incoming Leads</h1></div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="page-header" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+         
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Incoming Leads</h1>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>Accept and manage site visits handed over by Telecallers</p>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', paddingTop: 4 }}>
           <input
             className="crm-form-input"
-            style={{ height: 32, fontSize: 12, minWidth: 240 }}
+            style={{ height: 38, fontSize: 13, minWidth: 280, borderRadius: 10 }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            placeholder="Search lead/phone/number (includes other SM incoming)"
+            placeholder="Search lead/phone/number..."
           />
-          {DATE_FILTERS.map((f) => (
-            <button key={f.value} className={`crm-btn crm-btn-sm ${dateFilter === f.value ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setDateFilter(f.value)}>{f.label}</button>
-          ))}
-          {dateFilter === 'custom' && <input type="date" className="crm-form-input" value={customDate} onChange={(e) => setCustomDate(e.target.value)} style={{ height: 32, fontSize: 12 }} />}
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={fetchHandoffs}>Refresh</button>
+          <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-primary)' }}>
+            {DATE_FILTERS.map((f) => (
+              <button 
+                key={f.value} 
+                className={`crm-btn crm-btn-sm ${dateFilter === f.value ? 'crm-btn-primary' : 'crm-btn-ghost'}`} 
+                style={{ 
+                  height: 30, 
+                  padding: '0 16px', 
+                  fontSize: 12, 
+                  fontWeight: 600, 
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: dateFilter === f.value ? '#4F46E5' : 'transparent',
+                  color: dateFilter === f.value ? '#fff' : 'var(--text-secondary)'
+                }} 
+                onClick={() => setDateFilter(f.value)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {dateFilter === 'custom' && <input type="date" className="crm-form-input" value={customDate} onChange={(e) => setCustomDate(e.target.value)} style={{ height: 38, fontSize: 13, borderRadius: 10 }} />}
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ height: 38, borderRadius: 10, padding: '0 16px' }} onClick={fetchHandoffs}>Refresh</button>
         </div>
       </div>
 
       {filteredHandoffs.length === 0 ? (
         <div className="crm-card" style={{ padding: '60px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}><BoltIcon style={{ width: 30, height: 30 }} /></div>
+          <div style={{ fontSize: 36, marginBottom: 12, color: '#4F46E5' }}><BoltIcon style={{ width: 40, height: 40 }} /></div>
           <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>No incoming leads</div>
           <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{dateFilter === 'today' ? "No leads handed off today." : "No leads match the selected filter."}</div>
         </div>
@@ -357,11 +425,12 @@ const SalesManagerIncoming = ({ onNavigate }) => {
 
             let expandedPanel = null;
             if (isExpanded) {
+              const cleanedRemarks = cleanSystemRemarks(handoff.remarks);
               expandedPanel = (
                 <div style={{ background: 'var(--bg-card, #fff)', borderTop: '1px dashed var(--border-primary)' }}>
-                  {handoff.remarks && (
+                  {cleanedRemarks && (
                     <div style={{ padding: '10px 20px', fontSize: 12, fontStyle: 'italic', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-primary)' }}>
-                      <strong>TC Remarks:</strong> "{handoff.remarks}"
+                      <strong>{handoff.fromUserRole === 'TC' ? 'TC Remarks' : 'Previous Remarks'}:</strong> "{cleanedRemarks}"
                     </div>
                   )}
 

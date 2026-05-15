@@ -3244,7 +3244,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <td className="lead-col-status">
                           <span
                             className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
-                            style={{ backgroundColor: lead.statusColor + '22', color: lead.statusColor, borderColor: lead.statusColor }}
+                            style={{ 
+                              backgroundColor: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d22' : lead.statusColor + '22'), 
+                              color: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.statusColor), 
+                              borderColor: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.statusColor) 
+                            }}
                           >
                             {lead.statusLabel}
                           </span>

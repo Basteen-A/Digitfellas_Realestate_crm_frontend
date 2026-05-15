@@ -151,7 +151,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const statCardsData = [
     { label: 'New Leads Today', value: stats?.newLeadsToday ?? 0, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
     { label: 'All Active Leads', value: stats?.activeLeads ?? 0, icon: <UserIcon style={ICON_SIZE} />, color: 'var(--accent-blue)' },
-    { label: "Today's Pending FU", value: stats?.todaysPendingFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: 'var(--accent-green)' },
+    { label: "Today's Pending FU", value: stats?.todaysPendingFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: '#15803d' },
     { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
     { label: 'SV Scheduled Count', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
     { label: 'SV Done Count', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
@@ -264,7 +264,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                   <div className="td-item-info">
                     <div className="td-item-name">{fu.lead?.fullName || fu.fullName || (fu.lead?.first_name ? `${fu.lead.first_name} ${fu.lead.last_name || ''}`.trim() : 'Unknown Lead')}</div>
                     <div className="td-item-meta">
-                      <span className="td-item-date" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>
+                      <span className="td-item-date" style={{ background: 'var(--accent-green-bg)', color: '#15803d' }}>
                         {fu.scheduled_at ? new Date(fu.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Time'}
                       </span>
                       <span>{fu.lead?.phone || fu.phone || 'N/A'}</span>
