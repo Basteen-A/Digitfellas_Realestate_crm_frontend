@@ -45,12 +45,12 @@ import {
   HandRaisedIcon,
   SparklesIcon,
   BanknotesIcon,
-  HomeIcon,
   HomeModernIcon,
   IdentificationIcon,
   TableCellsIcon,
   BoltIcon,
   EyeIcon,
+  FunnelIcon,
   ChevronRightIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
@@ -66,11 +66,276 @@ const NEW_LEAD_FOLLOW_UP_SHORTCUTS = [
   { label: 'This Sun', kind: 'weekday', weekday: 0, hour: 11, minute: 0 },
 ];
 
+const COUNTRY_CODES = [
+  { label: 'Afghanistan (+93)', value: '+93' },
+  { label: 'Albania (+355)', value: '+355' },
+  { label: 'Algeria (+213)', value: '+213' },
+  { label: 'American Samoa (+1)', value: '+1' },
+  { label: 'Andorra (+376)', value: '+376' },
+  { label: 'Angola (+244)', value: '+244' },
+  { label: 'Anguilla (+1)', value: '+1' },
+  { label: 'Antigua and Barbuda (+1)', value: '+1' },
+  { label: 'Argentina (+54)', value: '+54' },
+  { label: 'Armenia (+374)', value: '+374' },
+  { label: 'Aruba (+297)', value: '+297' },
+  { label: 'Australia (+61)', value: '+61' },
+  { label: 'Austria (+43)', value: '+43' },
+  { label: 'Azerbaijan (+994)', value: '+994' },
+  { label: 'Bahamas (+1)', value: '+1' },
+  { label: 'Bahrain (+973)', value: '+973' },
+  { label: 'Bangladesh (+880)', value: '+880' },
+  { label: 'Barbados (+1)', value: '+1' },
+  { label: 'Belarus (+375)', value: '+375' },
+  { label: 'Belgium (+32)', value: '+32' },
+  { label: 'Belize (+501)', value: '+501' },
+  { label: 'Benin (+229)', value: '+229' },
+  { label: 'Bermuda (+1)', value: '+1' },
+  { label: 'Bhutan (+975)', value: '+975' },
+  { label: 'Bolivia (+591)', value: '+591' },
+  { label: 'Bosnia and Herzegovina (+387)', value: '+387' },
+  { label: 'Botswana (+267)', value: '+267' },
+  { label: 'Brazil (+55)', value: '+55' },
+  { label: 'British Indian Ocean Territory (+246)', value: '+246' },
+  { label: 'British Virgin Islands (+1)', value: '+1' },
+  { label: 'Brunei (+673)', value: '+673' },
+  { label: 'Bulgaria (+359)', value: '+359' },
+  { label: 'Burkina Faso (+226)', value: '+226' },
+  { label: 'Burundi (+257)', value: '+257' },
+  { label: 'Cambodia (+855)', value: '+855' },
+  { label: 'Cameroon (+237)', value: '+237' },
+  { label: 'Canada (+1)', value: '+1' },
+  { label: 'Cape Verde (+238)', value: '+238' },
+  { label: 'Cayman Islands (+1)', value: '+1' },
+  { label: 'Central African Republic (+236)', value: '+236' },
+  { label: 'Chad (+235)', value: '+235' },
+  { label: 'Chile (+56)', value: '+56' },
+  { label: 'China (+86)', value: '+86' },
+  { label: 'Christmas Island (+61)', value: '+61' },
+  { label: 'Cocos Islands (+61)', value: '+61' },
+  { label: 'Colombia (+57)', value: '+57' },
+  { label: 'Comoros (+269)', value: '+269' },
+  { label: 'Cook Islands (+682)', value: '+682' },
+  { label: 'Costa Rica (+506)', value: '+506' },
+  { label: 'Croatia (+385)', value: '+385' },
+  { label: 'Cuba (+53)', value: '+53' },
+  { label: 'Cyprus (+357)', value: '+357' },
+  { label: 'Czech Republic (+420)', value: '+420' },
+  { label: 'Democratic Republic of the Congo (+243)', value: '+243' },
+  { label: 'Denmark (+45)', value: '+45' },
+  { label: 'Djibouti (+253)', value: '+253' },
+  { label: 'Dominica (+1)', value: '+1' },
+  { label: 'Dominican Republic (+1)', value: '+1' },
+  { label: 'East Timor (+670)', value: '+670' },
+  { label: 'Ecuador (+593)', value: '+593' },
+  { label: 'Egypt (+20)', value: '+20' },
+  { label: 'El Salvador (+503)', value: '+503' },
+  { label: 'Equatorial Guinea (+240)', value: '+240' },
+  { label: 'Eritrea (+291)', value: '+291' },
+  { label: 'Estonia (+372)', value: '+372' },
+  { label: 'Ethiopia (+251)', value: '+251' },
+  { label: 'Falkland Islands (+500)', value: '+500' },
+  { label: 'Faroe Islands (+298)', value: '+298' },
+  { label: 'Fiji (+679)', value: '+679' },
+  { label: 'Finland (+358)', value: '+358' },
+  { label: 'France (+33)', value: '+33' },
+  { label: 'French Guiana (+594)', value: '+594' },
+  { label: 'French Polynesia (+689)', value: '+689' },
+  { label: 'Gabon (+241)', value: '+241' },
+  { label: 'Gambia (+220)', value: '+220' },
+  { label: 'Georgia (+995)', value: '+995' },
+  { label: 'Germany (+49)', value: '+49' },
+  { label: 'Ghana (+233)', value: '+233' },
+  { label: 'Gibraltar (+350)', value: '+350' },
+  { label: 'Greece (+30)', value: '+30' },
+  { label: 'Greenland (+299)', value: '+299' },
+  { label: 'Grenada (+1)', value: '+1' },
+  { label: 'Guadeloupe (+590)', value: '+590' },
+  { label: 'Guam (+1)', value: '+1' },
+  { label: 'Guatemala (+502)', value: '+502' },
+  { label: 'Guernsey (+44)', value: '+44' },
+  { label: 'Guinea (+224)', value: '+224' },
+  { label: 'Guinea-Bissau (+245)', value: '+245' },
+  { label: 'Guyana (+592)', value: '+592' },
+  { label: 'Haiti (+509)', value: '+509' },
+  { label: 'Honduras (+504)', value: '+504' },
+  { label: 'Hong Kong (+852)', value: '+852' },
+  { label: 'Hungary (+36)', value: '+36' },
+  { label: 'Iceland (+354)', value: '+354' },
+  { label: 'India (+91)', value: '+91' },
+  { label: 'Indonesia (+62)', value: '+62' },
+  { label: 'Iran (+98)', value: '+98' },
+  { label: 'Iraq (+964)', value: '+964' },
+  { label: 'Ireland (+353)', value: '+353' },
+  { label: 'Isle of Man (+44)', value: '+44' },
+  { label: 'Israel (+972)', value: '+972' },
+  { label: 'Italy (+39)', value: '+39' },
+  { label: 'Ivory Coast (+225)', value: '+225' },
+  { label: 'Jamaica (+1)', value: '+1' },
+  { label: 'Japan (+81)', value: '+81' },
+  { label: 'Jersey (+44)', value: '+44' },
+  { label: 'Jordan (+962)', value: '+962' },
+  { label: 'Kazakhstan (+7)', value: '+7' },
+  { label: 'Kenya (+254)', value: '+254' },
+  { label: 'Kiribati (+686)', value: '+686' },
+  { label: 'Kosovo (+383)', value: '+383' },
+  { label: 'Kuwait (+965)', value: '+965' },
+  { label: 'Kyrgyzstan (+996)', value: '+996' },
+  { label: 'Laos (+856)', value: '+856' },
+  { label: 'Latvia (+371)', value: '+371' },
+  { label: 'Lebanon (+961)', value: '+961' },
+  { label: 'Lesotho (+266)', value: '+266' },
+  { label: 'Liberia (+231)', value: '+231' },
+  { label: 'Libya (+218)', value: '+218' },
+  { label: 'Liechtenstein (+423)', value: '+423' },
+  { label: 'Lithuania (+370)', value: '+370' },
+  { label: 'Luxembourg (+352)', value: '+352' },
+  { label: 'Macau (+853)', value: '+853' },
+  { label: 'Macedonia (+389)', value: '+389' },
+  { label: 'Madagascar (+261)', value: '+261' },
+  { label: 'Malawi (+265)', value: '+265' },
+  { label: 'Malaysia (+60)', value: '+60' },
+  { label: 'Maldives (+960)', value: '+960' },
+  { label: 'Mali (+223)', value: '+223' },
+  { label: 'Malta (+356)', value: '+356' },
+  { label: 'Marshall Islands (+692)', value: '+692' },
+  { label: 'Martinique (+596)', value: '+596' },
+  { label: 'Mauritania (+222)', value: '+222' },
+  { label: 'Mauritius (+230)', value: '+230' },
+  { label: 'Mayotte (+262)', value: '+262' },
+  { label: 'Mexico (+52)', value: '+52' },
+  { label: 'Micronesia (+691)', value: '+691' },
+  { label: 'Moldova (+373)', value: '+373' },
+  { label: 'Monaco (+377)', value: '+377' },
+  { label: 'Mongolia (+976)', value: '+976' },
+  { label: 'Montenegro (+382)', value: '+382' },
+  { label: 'Montserrat (+1)', value: '+1' },
+  { label: 'Morocco (+212)', value: '+212' },
+  { label: 'Mozambique (+258)', value: '+258' },
+  { label: 'Myanmar (+95)', value: '+95' },
+  { label: 'Namibia (+264)', value: '+264' },
+  { label: 'Nauru (+674)', value: '+674' },
+  { label: 'Nepal (+977)', value: '+977' },
+  { label: 'Netherlands (+31)', value: '+31' },
+  { label: 'Netherlands Antilles (+599)', value: '+599' },
+  { label: 'New Caledonia (+687)', value: '+687' },
+  { label: 'New Zealand (+64)', value: '+64' },
+  { label: 'Nicaragua (+505)', value: '+505' },
+  { label: 'Niger (+227)', value: '+227' },
+  { label: 'Nigeria (+234)', value: '+234' },
+  { label: 'Niue (+683)', value: '+683' },
+  { label: 'North Korea (+850)', value: '+850' },
+  { label: 'Northern Mariana Islands (+1)', value: '+1' },
+  { label: 'Norway (+47)', value: '+47' },
+  { label: 'Oman (+968)', value: '+968' },
+  { label: 'Pakistan (+92)', value: '+92' },
+  { label: 'Palau (+680)', value: '+680' },
+  { label: 'Palestine (+970)', value: '+970' },
+  { label: 'Panama (+507)', value: '+507' },
+  { label: 'Papua New Guinea (+675)', value: '+675' },
+  { label: 'Paraguay (+595)', value: '+595' },
+  { label: 'Peru (+51)', value: '+51' },
+  { label: 'Philippines (+63)', value: '+63' },
+  { label: 'Pitcairn (+64)', value: '+64' },
+  { label: 'Poland (+48)', value: '+48' },
+  { label: 'Portugal (+351)', value: '+351' },
+  { label: 'Puerto Rico (+1)', value: '+1' },
+  { label: 'Qatar (+974)', value: '+974' },
+  { label: 'Republic of the Congo (+242)', value: '+242' },
+  { label: 'Reunion (+262)', value: '+262' },
+  { label: 'Romania (+40)', value: '+40' },
+  { label: 'Russia (+7)', value: '+7' },
+  { label: 'Rwanda (+250)', value: '+250' },
+  { label: 'Saint Barthelemy (+590)', value: '+590' },
+  { label: 'Saint Helena (+290)', value: '+290' },
+  { label: 'Saint Kitts and Nevis (+1)', value: '+1' },
+  { label: 'Saint Lucia (+1)', value: '+1' },
+  { label: 'Saint Martin (+590)', value: '+590' },
+  { label: 'Saint Pierre and Miquelon (+508)', value: '+508' },
+  { label: 'Saint Vincent and the Grenadines (+1)', value: '+1' },
+  { label: 'Samoa (+685)', value: '+685' },
+  { label: 'San Marino (+378)', value: '+378' },
+  { label: 'Sao Tome and Principe (+239)', value: '+239' },
+  { label: 'Saudi Arabia (+966)', value: '+966' },
+  { label: 'Senegal (+221)', value: '+221' },
+  { label: 'Serbia (+381)', value: '+381' },
+  { label: 'Seychelles (+248)', value: '+248' },
+  { label: 'Sierra Leone (+232)', value: '+232' },
+  { label: 'Singapore (+65)', value: '+65' },
+  { label: 'Slovakia (+421)', value: '+421' },
+  { label: 'Slovenia (+386)', value: '+386' },
+  { label: 'Solomon Islands (+677)', value: '+677' },
+  { label: 'Somalia (+252)', value: '+252' },
+  { label: 'South Africa (+27)', value: '+27' },
+  { label: 'South Korea (+82)', value: '+82' },
+  { label: 'South Sudan (+211)', value: '+211' },
+  { label: 'Spain (+34)', value: '+34' },
+  { label: 'Sri Lanka (+94)', value: '+94' },
+  { label: 'Sudan (+249)', value: '+249' },
+  { label: 'Suriname (+597)', value: '+597' },
+  { label: 'Svalbard and Jan Mayen (+47)', value: '+47' },
+  { label: 'Swaziland (+268)', value: '+268' },
+  { label: 'Sweden (+46)', value: '+46' },
+  { label: 'Switzerland (+41)', value: '+41' },
+  { label: 'Syria (+963)', value: '+963' },
+  { label: 'Taiwan (+886)', value: '+886' },
+  { label: 'Tajikistan (+992)', value: '+992' },
+  { label: 'Tanzania (+255)', value: '+255' },
+  { label: 'Thailand (+66)', value: '+66' },
+  { label: 'Togo (+228)', value: '+228' },
+  { label: 'Tokelau (+690)', value: '+690' },
+  { label: 'Tonga (+676)', value: '+676' },
+  { label: 'Trinidad and Tobago (+1)', value: '+1' },
+  { label: 'Tunisia (+216)', value: '+216' },
+  { label: 'Turkey (+90)', value: '+90' },
+  { label: 'Turkmenistan (+993)', value: '+993' },
+  { label: 'Turks and Caicos Islands (+1)', value: '+1' },
+  { label: 'Tuvalu (+688)', value: '+688' },
+  { label: 'U.S. Virgin Islands (+1)', value: '+1' },
+  { label: 'Uganda (+256)', value: '+256' },
+  { label: 'Ukraine (+380)', value: '+380' },
+  { label: 'United Arab Emirates (+971)', value: '+971' },
+  { label: 'United Kingdom (+44)', value: '+44' },
+  { label: 'United States (+1)', value: '+1' },
+  { label: 'Uruguay (+598)', value: '+598' },
+  { label: 'Uzbekistan (+998)', value: '+998' },
+  { label: 'Vanuatu (+678)', value: '+678' },
+  { label: 'Vatican (+379)', value: '+379' },
+  { label: 'Venezuela (+58)', value: '+58' },
+  { label: 'Vietnam (+84)', value: '+84' },
+  { label: 'Wallis and Futuna (+681)', value: '+681' },
+  { label: 'Western Sahara (+212)', value: '+212' },
+  { label: 'Yemen (+967)', value: '+967' },
+  { label: 'Zambia (+260)', value: '+260' },
+  { label: 'Zimbabwe (+263)', value: '+263' },
+];
+
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
+
+const sanitizeCountryCodeDigits = (value) => String(value || '').replace(/\D/g, '').slice(0, 4);
+
+const phoneMatchesAcrossCountryCode = (candidatePhone, inputPhone, countryCode = '+91') => {
+  const candidateDigits = sanitizePhoneNumberInput(candidatePhone);
+  const inputDigits = sanitizePhoneNumberInput(inputPhone);
+
+  if (!candidateDigits || !inputDigits) return false;
+  if (candidateDigits === inputDigits) return true;
+
+  const countryCodeDigits = sanitizeCountryCodeDigits(countryCode);
+  if (countryCodeDigits) {
+    if (candidateDigits === `${countryCodeDigits}${inputDigits}`) return true;
+    if (inputDigits.startsWith(countryCodeDigits) && candidateDigits === inputDigits.slice(countryCodeDigits.length)) return true;
+    if (candidateDigits.startsWith(countryCodeDigits) && inputDigits === candidateDigits.slice(countryCodeDigits.length)) return true;
+  }
+
+  const lengthDiff = Math.abs(candidateDigits.length - inputDigits.length);
+  if (lengthDiff > 4) return false;
+
+  return candidateDigits.endsWith(inputDigits) || inputDigits.endsWith(candidateDigits);
+};
 
 const hasValidPhoneLength = (value) => {
   const len = sanitizePhoneNumberInput(value).length;
-  return len >= 10 && len <= 12;
+  return len >= 9 && len <= 12;
 };
 
 const isClosedLostLead = (lead) => {
@@ -86,6 +351,17 @@ const getLeadOwnerName = (lead) => {
   return ownerFromNested || 'Unassigned';
 };
 
+const buildDuplicateLeadInfo = (lead) => {
+  const statusName = lead?.status?.status_name || lead?.statusLabel || 'No Status';
+  const ownerName = getLeadOwnerName(lead);
+
+  if (isClosedLostLead(lead)) {
+    return `This contact already has a previous lead.\nStatus: ${statusName} · Owner: ${ownerName}. Use this lead to re-engage.`;
+  }
+
+  return `This contact already has an active lead.\nStatus: ${statusName} · Owner: ${ownerName}`;
+};
+
 const FOLLOW_UP_WORKSPACE_ROLES = ['TC', 'SM', 'SH'];
 
 const getProjectDisplayName = (project) => {
@@ -97,6 +373,7 @@ const getProjectDisplayName = (project) => {
 const initialNewLead = {
   full_name: '',
   phone: '',
+  phone_country_code: '+91',
   whatsappSameAsPhone: true,
   whatsapp_number: '',
   alternate_phone: '',
@@ -346,7 +623,16 @@ const getUserRemarkText = (activity) => {
   ));
 
   if (!nonSystemParts.length) return '';
-  return nonSystemParts.join(' | ');
+
+  const seen = new Set();
+  const uniqueParts = nonSystemParts.filter((part) => {
+    const normalized = part.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+
+  return uniqueParts.join(' | ');
 };
 
 const getScheduledFollowUpIso = (activity) => {
@@ -631,8 +917,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     date_of_birth: '', pan_number: '', aadhar_number: '',
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
     current_address: '', current_city: '', current_state: '', current_pincode: '',
-    permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-    sameAsCurrent: false, assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
+    assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
     bookingProjectId: '', bookingLocationId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
@@ -810,6 +1095,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
     return stageOptions.filter((o) => ['LEAD', 'CONTACTED', 'QUALIFIED'].includes(o.value));
   }, [workspaceRole, stageOptions]);
+
+  const toolbarStatusOptions = useMemo(() => (
+    workspaceRole === 'TC'
+      ? statusOptions.filter((opt) => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(opt.value))
+      : statusOptions
+  ), [workspaceRole, statusOptions]);
 
   const sourceFilterOptions = useMemo(() => {
     const sourceSet = new Set();
@@ -1001,14 +1292,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const whatsappPhone = sanitizePhoneNumberInput(newLeadForm.whatsapp_number);
 
     if (!newLeadForm.full_name?.trim()) errors.push('Full name is required');
-    if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 10 to 12 digits');
+    if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 9 to 12 digits');
 
     if (alternatePhone && !hasValidPhoneLength(alternatePhone)) {
-      errors.push('Alternate phone number must be 10 to 12 digits');
+      errors.push('Alternate phone number must be 9 to 12 digits');
     }
 
     if (!newLeadForm.whatsappSameAsPhone && whatsappPhone && !hasValidPhoneLength(whatsappPhone)) {
-      errors.push('WhatsApp number must be 10 to 12 digits');
+      errors.push('WhatsApp number must be 9 to 12 digits');
     }
 
     if (newLeadForm.email?.trim() && !EMAIL_REGEX.test(newLeadForm.email.trim())) {
@@ -1084,9 +1375,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       isValid: errors.length === 0,
       errors,
       sanitized: {
-        primaryPhone,
-        alternatePhone,
-        whatsappPhone,
+        primaryPhone: `${newLeadForm.phone_country_code}${primaryPhone}`,
+        alternatePhone: alternatePhone ? `${newLeadForm.phone_country_code}${alternatePhone}` : '',
+        whatsappPhone: newLeadForm.whatsappSameAsPhone
+          ? `${newLeadForm.phone_country_code}${primaryPhone}`
+          : (whatsappPhone ? `${newLeadForm.phone_country_code}${whatsappPhone}` : ''),
       },
     };
   }, [
@@ -1113,8 +1406,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const newToday = leads.filter((l) => l.createdAt && new Date(l.createdAt) >= todayStart).length;
     const todayFollowUps = leads.filter((l) => l.nextFollowUpAt && toDayStart(l.nextFollowUpAt)?.getTime() === todayStart.getTime() && !l.isClosed).length;
     const overdueFollowUps = leads.filter((l) => l.nextFollowUpAt && isFollowUpMissedByDate(l.nextFollowUpAt, todayStart) && !l.isClosed).length;
-    const svScheduled = leads.filter((l) => l.stageCode && l.stageCode.includes('SV_SCHED')).length;
-    const svCompleted = leads.filter((l) => l.stageCode && (l.stageCode.includes('SV_DONE') || l.stageCode.includes('SV_COMPLET'))).length;
+    
+    const svScheduled = leads.filter((l) => {
+      const sStage = String(l.stageCode || '').toUpperCase();
+      const sStatus = String(l.statusCode || '').toUpperCase();
+      return sStage.includes('SV_SCHED') || sStatus.includes('SV_SCHED') || sStatus === 'SV_SCHEDULED';
+    }).length;
+
+    const svCompleted = leads.filter((l) => {
+      const sStage = String(l.stageCode || '').toUpperCase();
+      const sStatus = String(l.statusCode || '').toUpperCase();
+      return sStage.includes('SV_DONE') || sStage.includes('SV_COMPLET') || sStatus.includes('SV_DONE') || sStatus.includes('SV_COMPLET');
+    }).length;
+
     const missedFollowups = overdueFollowUps;
     return { totalLeads, newToday, todayFollowUps, overdueFollowUps, svScheduled, svCompleted, missedFollowups };
   }, [leads]);
@@ -1330,10 +1634,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   }, [newLeadOpen, newLeadForm.lead_status_id, statusOptions]);
 
   // ── Duplicate Phone Check ──
-  const checkDuplicatePhone = async (phone, type) => {
-    const normalizedPhone = sanitizePhoneNumberInput(phone);
+  const checkDuplicatePhone = async (phone, type, countryCode = '+91') => {
+    const digits = sanitizePhoneNumberInput(phone);
 
-    if (!normalizedPhone || normalizedPhone.length < 10) {
+    if (!digits || digits.length < 9) {
       if (type === 'primary') setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
       else setAltPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
       return;
@@ -1343,7 +1647,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     else setAltPhoneCheck({ status: 'checking', leadInfo: null, duplicateLead: null });
 
     try {
-      const resp = await leadWorkflowApi.searchLeadByPhone(normalizedPhone);
+      const resp = await leadWorkflowApi.searchLeadByPhone(digits);
       const results = resp.data || [];
       const exactMatch = results.find((l) => {
         const candidatePhones = [
@@ -1359,32 +1663,22 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           l.secondary_phone_3,
           l.secondaryPhone3,
         ];
-        return candidatePhones.some((num) => sanitizePhoneNumberInput(num) === normalizedPhone);
+        return candidatePhones.some((num) => phoneMatchesAcrossCountryCode(num, digits, countryCode));
       });
 
-      const matchedLead = exactMatch || results[0] || null;
+      const matchedLead = exactMatch || null;
 
       if (matchedLead) {
         // Fetch complete lead details
         try {
           const detailResp = await leadWorkflowApi.getLeadById(matchedLead.id);
           const fullLead = detailResp?.data || matchedLead;
-          const statusName = fullLead.status?.status_name || fullLead.statusLabel || 'No Status';
-          const ownerName = getLeadOwnerName(fullLead);
-          const blockedNote = isClosedLostLead(fullLead)
-            ? 'Use this lead to re-engage.'
-            : 'New lead cannot be created for this contact.';
-          const phoneNum = fullLead.phone || '';
-          const info = `Lead ${fullLead.leadNumber || fullLead.lead_number || ''} - Phone: ${phoneNum} - Status: ${statusName} - Owner: ${ownerName} | ${blockedNote}`;
+          const info = buildDuplicateLeadInfo(fullLead);
           if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: fullLead });
         } catch {
           // Fallback: use search result only
-          const blockedNote = isClosedLostLead(matchedLead)
-            ? 'Use this lead to re-engage.'
-            : 'New lead cannot be created for this contact.';
-          const phoneNum = matchedLead.phone || '';
-          const info = `Lead ${matchedLead.leadNumber || ''} - Phone: ${phoneNum} - Status: ${matchedLead.statusLabel || 'No Status'} - Owner: ${getLeadOwnerName(matchedLead)} | ${blockedNote}`;
+          const info = buildDuplicateLeadInfo(matchedLead);
           if (type === 'primary') setPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
           else setAltPhoneCheck({ status: 'exists', leadInfo: info, duplicateLead: matchedLead });
         }
@@ -1414,10 +1708,21 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const leadPhone = lead.phone || lead.phone_number || lead.mobile || '';
     const leadEmail = lead.email || '';
 
+    let countryCode = '+91';
+    let phoneDigits = leadPhone;
+
+    // Check if phone starts with any of our country codes
+    const foundCode = COUNTRY_CODES.find((c) => leadPhone.startsWith(c.value));
+    if (foundCode) {
+      countryCode = foundCode.value;
+      phoneDigits = leadPhone.slice(foundCode.value.length);
+    }
+
     setNewLeadForm((prev) => ({
       ...prev,
       full_name: fullName || prev.full_name,
-      phone: leadPhone || prev.phone,
+      phone: sanitizePhoneNumberInput(phoneDigits) || prev.phone,
+      phone_country_code: countryCode,
       email: leadEmail || prev.email,
     }));
 
@@ -1437,17 +1742,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkDuplicatePhone(newLeadForm.phone, 'primary');
+      checkDuplicatePhone(newLeadForm.phone, 'primary', newLeadForm.phone_country_code);
     }, 600);
     return () => clearTimeout(timer);
-  }, [newLeadForm.phone]);
+  }, [newLeadForm.phone, newLeadForm.phone_country_code]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkDuplicatePhone(newLeadForm.alternate_phone, 'alt');
+      checkDuplicatePhone(newLeadForm.alternate_phone, 'alt', newLeadForm.phone_country_code);
     }, 600);
     return () => clearTimeout(timer);
-  }, [newLeadForm.alternate_phone]);
+  }, [newLeadForm.alternate_phone, newLeadForm.phone_country_code]);
 
   // ── Load lead detail ──
   const loadLeadDetail = useCallback(async (leadId) => {
@@ -1899,12 +2204,34 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     }
   };
 
+  // ── Pincode Autofill ──
+  const handlePincodeChange = async (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setCustomerProfileForm(p => ({ ...p, current_pincode: val }));
+    
+    if (val.length === 6) {
+      try {
+        const resp = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+        const data = await resp.json();
+        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+          const po = data[0].PostOffice[0];
+          setCustomerProfileForm(p => ({ 
+            ...p, 
+            current_city: po.District, 
+            current_state: po.State 
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch pincode details', err);
+      }
+    }
+  };
+
   // ── Customer Profile Submit (SH Close Won) ──
   const handleCustomerProfileSubmit = async () => {
     if (!selectedLead) return;
     const f = customerProfileForm;
     if (!f.date_of_birth) { toast.error('Date of Birth is required'); return; }
-    if (!f.pan_number) { toast.error('PAN Number is required'); return; }
     if (!f.aadhar_number) { toast.error('Aadhar Number is required'); return; }
     if (!f.current_address) { toast.error('Current Address is required'); return; }
     if (!f.occupation) { toast.error('Occupation is required'); return; }
@@ -1912,17 +2239,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
     setManualUpdateSaving(true);
     try {
-      const permAddr = f.sameAsCurrent ? {
-        permanent_address: f.current_address,
-        permanent_city: f.current_city,
-        permanent_state: f.current_state,
-        permanent_pincode: f.current_pincode,
-      } : {
-        permanent_address: f.permanent_address,
-        permanent_city: f.permanent_city,
-        permanent_state: f.permanent_state,
-        permanent_pincode: f.permanent_pincode,
-      };
 
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING', {
         assignToUserId: f.assignToUserId,
@@ -1941,7 +2257,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           current_city: f.current_city,
           current_state: f.current_state,
           current_pincode: f.current_pincode,
-          ...permAddr,
         },
       });
       toast.success('Booking approved! Customer profile saved. Lead transferred to Collection Manager.');
@@ -2006,8 +2321,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
         current_address: '', current_city: '', current_state: '', current_pincode: '',
-        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-        sameAsCurrent: false, assignToUserId: '', note: stagePopupData.reason || actionState.note || '', inventoryUnitId: '',
+        assignToUserId: '', note: stagePopupData.reason || actionState.note || '', inventoryUnitId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
@@ -2406,8 +2720,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         // Validation: Customer Profile for specific actions
         if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
           const cpF = customerProfileForm;
-          if (!cpF.date_of_birth || !cpF.pan_number || !cpF.aadhar_number || !cpF.current_address || !cpF.occupation) {
-            toast.error('Please fill all mandatory (*) customer profile fields (DOB, PAN, Aadhar, Address, Occupation).');
+          if (!cpF.date_of_birth || !cpF.aadhar_number || !cpF.current_address || !cpF.occupation) {
+            toast.error('Please fill all mandatory (*) customer profile fields (DOB, Aadhar, Address, Occupation).');
             setQuickActionLoading(false);
             return;
           }
@@ -2511,17 +2825,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         // Enrich payload with customer profile if needed
         if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
           const pF = customerProfileForm;
-          const permAddr = pF.sameAsCurrent ? {
-            permanent_address: pF.current_address,
-            permanent_city: pF.current_city,
-            permanent_state: pF.current_state,
-            permanent_pincode: pF.current_pincode,
-          } : {
-            permanent_address: pF.permanent_address,
-            permanent_city: pF.permanent_city,
-            permanent_state: pF.permanent_state,
-            permanent_pincode: pF.permanent_pincode,
-          };
           payload.customerProfile = {
             date_of_birth: pF.date_of_birth ? new Date(pF.date_of_birth).toISOString() : undefined,
             pan_number: pF.pan_number,
@@ -2534,7 +2837,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             current_city: pF.current_city,
             current_state: pF.current_state,
             current_pincode: pF.current_pincode,
-            ...permAddr,
             assignToUserId: pF.assignToUserId,
             note: pF.note,
           };
@@ -2660,8 +2962,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       )}
 
       {/* ── Toolbar ── */}
-      <div className="lead-workspace__toolbar">
-        <div className="lead-workspace__toolbar-filters" ref={toolbarFiltersRef}>
+      <div className="lead-workspace__toolbar" ref={toolbarFiltersRef}>
+        <div className="lead-workspace__toolbar-filters">
           {workspaceRole !== 'TC' && (
             <FilterDropdown
               label="Stages"
@@ -2678,7 +2980,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           <FilterDropdown
             label="Statuses"
             mobileLabel="Status"
-            options={workspaceRole === 'TC' ? statusOptions.filter(opt => ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'].includes(opt.value)) : statusOptions}
+            options={toolbarStatusOptions}
             selectedValues={multiFilters.statusCodes}
             onToggle={(value) => toggleMultiFilter('statusCodes', value)}
             onClear={() => setMultiFilters((prev) => ({ ...prev, statusCodes: [] }))}
@@ -2710,6 +3012,114 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
             placeholder="Search leads by name, phone, email..."
           />
+          <details className="lead-mobile-filters show-mobile" open={openFilterKey === 'mobile_filters'}>
+            <summary
+              className="lead-mobile-filters__summary"
+              aria-expanded={openFilterKey === 'mobile_filters'}
+              onClick={(e) => {
+                e.preventDefault();
+                setOpenFilterKey((prev) => (prev === 'mobile_filters' ? null : 'mobile_filters'));
+              }}
+            >
+              <FunnelIcon style={{ width: 14, height: 14 }} />
+              <span>Filters</span>
+              <span className="lead-mobile-filters__count">
+                {multiFilters.stageCodes.length + multiFilters.statusCodes.length + multiFilters.sources.length || 'All'}
+              </span>
+            </summary>
+            <div className="lead-mobile-filters__menu">
+              {workspaceRole !== 'TC' && (
+                <div className="lead-mobile-filters__section">
+                  <div className="lead-mobile-filters__head">
+                    <strong>Stages</strong>
+                    <button
+                      type="button"
+                      onClick={() => setMultiFilters((prev) => ({ ...prev, stageCodes: [] }))}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  {!toolbarStageOptions.length ? (
+                    <p className="lead-mobile-filters__empty">No options</p>
+                  ) : (
+                    toolbarStageOptions.map((opt) => (
+                      <label key={`mobile-stage-${opt.value}`} className="lead-mobile-filters__item">
+                        <input
+                          type="checkbox"
+                          checked={multiFilters.stageCodes.includes(opt.value)}
+                          onChange={() => toggleMultiFilter('stageCodes', opt.value)}
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+
+              <div className="lead-mobile-filters__section">
+                <div className="lead-mobile-filters__head">
+                  <strong>Statuses</strong>
+                  <button
+                    type="button"
+                    onClick={() => setMultiFilters((prev) => ({ ...prev, statusCodes: [] }))}
+                  >
+                    Clear
+                  </button>
+                </div>
+                {!toolbarStatusOptions.length ? (
+                  <p className="lead-mobile-filters__empty">No options</p>
+                ) : (
+                  toolbarStatusOptions.map((opt) => (
+                    <label key={`mobile-status-${opt.value}`} className="lead-mobile-filters__item">
+                      <input
+                        type="checkbox"
+                        checked={multiFilters.statusCodes.includes(opt.value)}
+                        onChange={() => toggleMultiFilter('statusCodes', opt.value)}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+
+              <div className="lead-mobile-filters__section">
+                <div className="lead-mobile-filters__head">
+                  <strong>Sources</strong>
+                  <button
+                    type="button"
+                    onClick={() => setMultiFilters((prev) => ({ ...prev, sources: [] }))}
+                  >
+                    Clear
+                  </button>
+                </div>
+                {!sourceFilterOptions.length ? (
+                  <p className="lead-mobile-filters__empty">No options</p>
+                ) : (
+                  sourceFilterOptions.map((opt) => (
+                    <label key={`mobile-source-${opt.value}`} className="lead-mobile-filters__item">
+                      <input
+                        type="checkbox"
+                        checked={multiFilters.sources.includes(opt.value)}
+                        onChange={() => toggleMultiFilter('sources', opt.value)}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="lead-mobile-filters__clear-all"
+                onClick={() => {
+                  clearMultiFilters();
+                  setOpenFilterKey(null);
+                }}
+              >
+                Clear All
+              </button>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -2717,14 +3127,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       <div className="lead-workspace__grid">
         {/* Lead List */}
         <div className="lead-workspace__list-card">
-          <div className="lead-workspace__list-header">
-            <h2>Leads</h2>
-            <small>
-              {filteredLeads.length}
-              {meta.total !== filteredLeads.length ? ` / ${meta.total}` : ''} records
-            </small>
-          </div>
-
           {/* Tabs for follow-up roles */}
           {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
             <div className="filter-tabs mobile-compact-tabs">
@@ -2762,6 +3164,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <span className="show-mobile">SM Leads</span>
                 </button>
               )}
+              <small className="filter-tabs__records">
+               {filteredLeads.length}
+               {meta.total !== filteredLeads.length ? ` / ${meta.total}` : ''} records
+             </small>
             </div>
           )}
 
@@ -2775,7 +3181,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <th className="lead-col-status">Status</th>
                   {workspaceRole !== 'SH' && <th className="hide-mobile" style={{ width: 120 }}>Source/Medium</th>}
                   <th className="hide-mobile" style={{ width: 150 }}>Project/Location</th>
-                  <th className="hide-tablet" style={{ width: 120 }}>Assign TO</th>
+                  <th className="hide-tablet" style={{ width: 120 }}>Assigned</th>
                   <th className="hide-tablet" style={{ width: 150 }}>Remarks</th>
                   <th className="lead-col-followup" style={{ textAlign: 'right' }}>Follow up</th>
                 </tr>
@@ -3593,17 +3999,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <label className="create-lead-field__label">
                         Phone <span className="create-lead-field__required">*</span>
                       </label>
-                      <input
-                        className={`create-lead-input ${phoneCheck.status === 'exists' ? 'create-lead-input--error' : phoneCheck.status === 'valid' ? 'create-lead-input--success' : ''}`}
-                        value={newLeadForm.phone}
-                        onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: sanitizePhoneNumberInput(e.target.value) }))}
-                        maxLength={12}
-                        required
-                        placeholder="Primary contact number"
-                      />
+                      <div className="phone-input-group">
+                        <select
+                          className="create-lead-select country-code-select"
+                          value={newLeadForm.phone_country_code}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, phone_country_code: e.target.value }))}
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                        <input
+                          className={`create-lead-input ${phoneCheck.status === 'exists' ? 'create-lead-input--error' : phoneCheck.status === 'valid' ? 'create-lead-input--success' : ''}`}
+                          value={newLeadForm.phone}
+                          onChange={(e) => setNewLeadForm((p) => ({ ...p, phone: sanitizePhoneNumberInput(e.target.value) }))}
+                          maxLength={12}
+                          required
+                          placeholder="Phone number"
+                        />
+                      </div>
                       <div className="create-lead-phone-status">
                         <div>
-                          {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Exists: {phoneCheck.leadInfo}</span>}
+                          {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {phoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>}
                           {phoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid</span>}
                         </div>
                         {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && isClosedLostLead(phoneCheck.duplicateLead) && (
@@ -3631,7 +4048,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           }))
                         }
                       />
-                      WhatsApp same
+                      WhatsApp
                     </label>
                   </div>
 
@@ -3667,7 +4084,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       />
                       <div className="create-lead-phone-status">
                         <div>
-                          {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Already exists: {altPhoneCheck.leadInfo}</span>}
+                          {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {altPhoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>}
                           {altPhoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid Number</span>}
                         </div>
                         {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && isClosedLostLead(altPhoneCheck.duplicateLead) && (
@@ -4051,12 +4468,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         className={`call-result-btn ${newLeadForm.assignment_mode === 'POOL' ? 'active' : ''}`}
                         onClick={() => setNewLeadForm((p) => ({ ...p, assignment_mode: 'POOL', assigned_to: '', assignment_mode_manual: true }))}
                       >
-                        Unassigned pool
+                        Unassigned
                       </button>
                     </div>
                     {!tcCanSelfAssignSelectedLocation && selectedCreateLocationIds.length > 0 && (
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        Selected location is outside your mapped locations. Lead will go to unassigned pool.
+                        Selected location is outside your mapped locations. Lead will go to unassigned.
                       </div>
                     )}
                   </div>
@@ -4519,7 +4936,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>🪪 Identity Documents</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  PAN Number *
+                  PAN Number
                   <input type="text" maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" style={{ width: '100%', marginTop: 4, textTransform: 'uppercase' }} />
                 </label>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -4534,6 +4951,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 Address
                 <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address, locality..." style={{ width: '100%', marginTop: 4 }} />
               </label>
+               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Pincode
+                <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} style={{ width: '100%', marginTop: 4 }} />
+              </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   City
@@ -4544,41 +4965,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   <input type="text" value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
                 </label>
               </div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Pincode
-                <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4 }} />
-              </label>
 
-              {/* Permanent Address */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, flex: 1 }}>🏠 Permanent Address</div>
-                <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 12 }}>
-                  <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} />
-                  Same as Current
-                </label>
-              </div>
-              {!customerProfileForm.sameAsCurrent && (
-                <>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    Address
-                    <textarea rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      City
-                      <input type="text" value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
-                    </label>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      State
-                      <input type="text" value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
-                    </label>
-                  </div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    Pincode
-                    <input type="text" maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} style={{ width: '100%', marginTop: 4 }} />
-                  </label>
-                </>
-              )}
 
               {/* Collection Manager Assignment */}
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4 }}>👤 Assign Collection Manager *</div>
@@ -5116,7 +5503,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <div>
                             <label className="qa-drawer-field-label">Available Unit</label>
                             <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))}>
-                              <option value="">— Select Unit (Optional) —</option>
+                              <option value="">— Select Unit / Plot —</option>
                               {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
                                 <option key={unit.id} value={unit.id}>
                                   {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
@@ -5198,7 +5585,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                       <div className="qa-drawer-profile-section"><IdentificationIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Identity Documents</div>
                       <div className="qa-drawer-profile-grid">
                         <div>
-                          <label className="qa-drawer-field-label">PAN Number *</label>
+                          <label className="qa-drawer-field-label">PAN Number</label>
                           <input type="text" className="qa-drawer-field-input" style={{ width: '100%', textTransform: 'uppercase' }} maxLength={10} value={customerProfileForm.pan_number} onChange={(e) => setCustomerProfileForm(p => ({ ...p, pan_number: e.target.value.toUpperCase() }))} placeholder="ABCDE1234F" />
                         </div>
                         <div>
@@ -5212,6 +5599,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                         <label className="qa-drawer-field-label">Address</label>
                         <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
                       </div>
+                       <div>
+                        <label className="qa-drawer-field-label">Pincode</label>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} />
+                      </div>
                       <div className="qa-drawer-profile-grid-3">
                         <div>
                           <label className="qa-drawer-field-label">City</label>
@@ -5221,40 +5612,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <label className="qa-drawer-field-label">State</label>
                           <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} />
                         </div>
-                        <div>
-                          <label className="qa-drawer-field-label">Pincode</label>
-                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} />
-                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div className="qa-drawer-profile-section" style={{ flex: 1, marginBottom: 0 }}><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
-                        <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                          <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
-                        </label>
-                      </div>
-                      {!customerProfileForm.sameAsCurrent && (
-                        <>
-                          <div>
-                            <label className="qa-drawer-field-label">Address</label>
-                            <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
-                          </div>
-                          <div className="qa-drawer-profile-grid-3">
-                            <div>
-                              <label className="qa-drawer-field-label">City</label>
-                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
-                            </div>
-                            <div>
-                              <label className="qa-drawer-field-label">State</label>
-                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} />
-                            </div>
-                            <div>
-                              <label className="qa-drawer-field-label">Pincode</label>
-                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} />
-                            </div>
-                          </div>
-                        </>
-                      )}
                     </div>
                   )}
 
@@ -5538,6 +5897,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                   || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)
                   || (Boolean(quickWorkflowForm.nextFollowUpAt) && !isFollowUpAtLeastMinutesAhead(quickWorkflowForm.nextFollowUpAt))
                   || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
+                  || ((quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && !customerProfileForm.inventoryUnitId)
                 }
                 onClick={handleQuickWorkflowSubmit} style={{ backgroundColor: '#625afa' }}
               >

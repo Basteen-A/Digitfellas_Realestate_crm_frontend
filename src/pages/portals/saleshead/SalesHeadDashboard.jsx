@@ -45,7 +45,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
     { label: 'Under Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In negotiation stage', changeType: 'neutral' },
     { label: 'Hot Negotiations', value: stats?.hotNegotiations ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'High priority leads', changeType: 'up' },
     { label: 'Warm Negotiations', value: stats?.warmNegotiations ?? 0, icon: <ArrowPathIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Medium priority leads', changeType: 'neutral' },
-    { label: 'Follow Up', value: stats?.followUpCount ?? 0, icon: <DocumentTextIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: 'Pending follow-ups', changeType: 'neutral' },
+    { label: 'Follow Up', value: stats?.followUpCount ?? 0, icon: <DocumentTextIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: 'Today follow-ups', changeType: 'neutral' },
   ];
 
   return (

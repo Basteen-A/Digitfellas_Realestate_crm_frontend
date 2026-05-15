@@ -106,7 +106,7 @@ const isFollowUpMissedByDate = (value, referenceDate = new Date()) => {
   if (!followUpDate) return false;
   const referenceStart = new Date(referenceDate);
   referenceStart.setHours(0, 0, 0, 0);
-  return followUpDate.getTime() <= referenceStart.getTime();
+  return followUpDate.getTime() < referenceStart.getTime();
 };
 
 const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
@@ -128,6 +128,7 @@ const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
 };
 
 const FOLLOW_UP_MINUTES_AHEAD = 5;
+const MISSED_FOLLOW_UP_BLOCK_ROLES = ['TC', 'SM', 'SH'];
 
 const getFollowUpMinimumTime = (minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => new Date(Date.now() + (minutesAhead * 60 * 1000));
 
@@ -480,8 +481,8 @@ const LeadDetailsPage = () => {
     return isFollowUpMissedByDate(lead.nextFollowUpAt);
   }, [lead?.nextFollowUpAt, lead?.isClosed]);
 
-  const isTcMissedFirstBlocked = useMemo(() => {
-    if (roleCode !== 'TC') return false;
+  const isMissedFirstBlocked = useMemo(() => {
+    if (!MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) return false;
     if (!hasPendingMissedFollowupsForMe) return false;
     return !isCurrentLeadMissedFollowup;
   }, [roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
@@ -491,14 +492,14 @@ const LeadDetailsPage = () => {
     setLoading(true);
 
     try {
-      const [leadResp, projResp, locResp, wfResp, svResp, tcAssignedResp] = await Promise.all([
+      const [leadResp, projResp, locResp, wfResp, svResp, followUpAssignedResp] = await Promise.all([
         leadWorkflowApi.getLeadById(id),
         projectApi.getDropdown(),
         locationApi.getDropdown(),
         leadWorkflowApi.getWorkflowConfig().catch(() => ({ data: null })),
         siteVisitApi.getAll({ lead_id: id }).catch(() => ({ data: { rows: [] } })),
-        roleCode === 'TC'
-          ? leadWorkflowApi.getLeads({ roleCode: 'TC', assignedToMe: true, page: 1, limit: 200 }).catch(() => ({ data: [] }))
+        MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)
+          ? leadWorkflowApi.getLeads({ roleCode, assignedToMe: true, page: 1, limit: 200 }).catch(() => ({ data: [] }))
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -509,8 +510,8 @@ const LeadDetailsPage = () => {
       setWorkflowConfig(wfResp.data || null);
       setSiteVisits(Array.isArray(svResp.data?.rows) ? svResp.data.rows : Array.isArray(svResp.data) ? svResp.data : []);
 
-      if (roleCode === 'TC') {
-        const assignedLeads = Array.isArray(tcAssignedResp?.data) ? tcAssignedResp.data : [];
+      if (MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) {
+        const assignedLeads = Array.isArray(followUpAssignedResp?.data) ? followUpAssignedResp.data : [];
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const hasMissed = assignedLeads.some((item) => {
@@ -816,7 +817,7 @@ const LeadDetailsPage = () => {
       toast.error('Actions are disabled for unassigned leads. Assign the lead first.');
       return;
     }
-    if (isTcMissedFirstBlocked) {
+    if (isMissedFirstBlocked) {
       toast.error('Complete missed follow-ups first to enable this action.');
       return;
     }
@@ -1068,9 +1069,9 @@ const LeadDetailsPage = () => {
           <button
             type="button"
             className="lead-details-quick-btn"
-            disabled={isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked}
+            disabled={isSmHandoffReadOnly || isSmShUnassignedReadOnly || isMissedFirstBlocked}
             onClick={async () => {
-              if (isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked) {
+              if (isSmHandoffReadOnly || isSmShUnassignedReadOnly || isMissedFirstBlocked) {
                 return;
               }
 
@@ -1097,7 +1098,7 @@ const LeadDetailsPage = () => {
             }}
             title={isSmShUnassignedReadOnly
               ? 'Unassigned lead: assign first to enable actions'
-              : (isTcMissedFirstBlocked ? 'Complete missed follow-ups first to enable today actions' : 'Quick actions')}
+              : (isMissedFirstBlocked ? 'Complete missed follow-ups first to enable today actions' : 'Quick actions')}
           >
             +
           </button>
@@ -1844,7 +1845,7 @@ const LeadDetailsPage = () => {
                           key={action.code}
                           type="button"
                           className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? selClass : ''}`}
-                          disabled={quickActionSaving || isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked}
+                          disabled={quickActionSaving || isSmHandoffReadOnly || isSmShUnassignedReadOnly || isMissedFirstBlocked}
                           onClick={() => handleQuickActionPick(action.code)}
                         >
                           <div className="qa-drawer-st-icon">{icon}</div>
@@ -1858,7 +1859,7 @@ const LeadDetailsPage = () => {
                         key={action.code}
                         type="button"
                         className={`qa-drawer-st-btn ${quickSelectedAction?.code === action.code ? 'sel-junk' : ''}`}
-                        disabled={quickActionSaving || isSmHandoffReadOnly || isSmShUnassignedReadOnly || isTcMissedFirstBlocked}
+                        disabled={quickActionSaving || isSmHandoffReadOnly || isSmShUnassignedReadOnly || isMissedFirstBlocked}
                         onClick={() => handleQuickActionPick(action.code)}
                       >
                         <div className="qa-drawer-st-icon">{action.code.includes('JUNK') ? <NoSymbolIcon style={{ width: 18, height: 18 }} /> : action.code.includes('SPAM') ? <TrashIcon style={{ width: 18, height: 18 }} /> : <ExclamationTriangleIcon style={{ width: 18, height: 18 }} />}</div>
@@ -2645,7 +2646,7 @@ const LeadDetailsPage = () => {
                   quickActionSaving
                   || isSmHandoffReadOnly
                   || isSmShUnassignedReadOnly
-                  || isTcMissedFirstBlocked
+                  || isMissedFirstBlocked
                   || !quickSelectedAction
                   || (isRemarkMandatoryForAction(quickSelectedAction)
                     && !(quickActionForm.statusRemarkText || '').trim()

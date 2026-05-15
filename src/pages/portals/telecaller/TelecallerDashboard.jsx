@@ -168,7 +168,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{greeting}, {user?.first_name || 'Telecaller'}</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{greeting}, {user?.first_name || user?.firstName}</h1>
           <p style={{ color: 'var(--text-secondary)', marginTop: 4 }}>Let's close some deals today!</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>

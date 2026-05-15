@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import siteVisitApi from '../../../api/siteVisitApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
@@ -7,6 +7,43 @@ import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
+
+const FOLLOW_UP_SHORTCUTS = [
+  { label: 'Today', kind: 'dayOffset', dayOffset: 0, hour: 18, minute: 0 },
+  { label: 'Tmrw', kind: 'dayOffset', dayOffset: 1, hour: 11, minute: 0 },
+  { label: 'This Sat', kind: 'weekday', weekday: 6, hour: 11, minute: 0 },
+  { label: 'This Sun', kind: 'weekday', weekday: 0, hour: 11, minute: 0 },
+];
+
+const toDateTimeLocalValue = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const buildFollowUpShortcutValue = (shortcut) => {
+  const now = new Date();
+  const target = new Date(now);
+
+  if (shortcut.kind === 'dayOffset') {
+    target.setDate(target.getDate() + shortcut.dayOffset);
+  } else if (shortcut.kind === 'weekday') {
+    const currentDay = target.getDay();
+    let daysUntil = (shortcut.weekday - currentDay + 7) % 7;
+    if (daysUntil === 0 && now.getHours() >= shortcut.hour) {
+      daysUntil = 7;
+    }
+    target.setDate(target.getDate() + daysUntil);
+  }
+
+  target.setHours(shortcut.hour, shortcut.minute, 0, 0);
+
+  if (target <= now) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  return toDateTimeLocalValue(target);
+};
 
 const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
@@ -22,9 +59,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     scheduled_time_slot: '',
     attended_by: '',
     remarks: '',
-    feedback: '',
-    rating: '',
-    interested_after_visit: null,
     // New fields matching incoming leads SV capture
     customer_requirement: '',
     customer_type_id: '',
@@ -62,6 +96,28 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const isSiteVisitAction = selectedAction?.code === 'SM_SITE_VISIT';
   // Site visit fields shown always, but required only for SM_SITE_VISIT
   const svFieldsRequired = isSiteVisitAction;
+  const canCreateSiteVisit = useMemo(() => {
+    if (creating) return false;
+    if (!createForm.lead_id) return false;
+    if (!createForm.action_code) return false;
+    if (!createForm.customer_type_id) return false;
+    if (!createForm.motivation_type) return false;
+    if (!createForm.customer_requirement?.trim()) return false;
+    if (!createForm.time_spent) return false;
+
+    if (svFieldsRequired) {
+      if (!createForm.project_id) return false;
+      if (!createForm.scheduled_date) return false;
+    }
+
+    if (selectedAction?.needsAssignee && !createForm.sales_head_id) return false;
+    if (selectedAction?.needsFollowUp && !createForm.next_follow_up_at) return false;
+    if (selectedAction?.needsReason && !createForm.closure_reason_id) return false;
+    if (selectedAction?.needsRemark && !createForm.remarks?.trim()) return false;
+    if (selectedAction?.needsCallStatus && !createForm.call_status) return false;
+
+    return true;
+  }, [createForm, creating, selectedAction, svFieldsRequired]);
 
   useEffect(() => {
     const loadActionReasons = async () => {
@@ -287,6 +343,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     e.preventDefault();
     if (!createForm.lead_id) { toast.error('Please search and select a lead by phone number'); return; }
     if (!createForm.action_code) { toast.error('Please select an action'); return; }
+    if (!createForm.customer_type_id) { toast.error('Customer Type is required'); return; }
+    if (!createForm.motivation_type) { toast.error('Motivation is required'); return; }
 
     const selectedAction = siteVisitActionOptions.find((action) => action.code === createForm.action_code);
     if (!selectedAction) { toast.error('Selected action is invalid'); return; }
@@ -298,11 +356,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     if (svFieldsRequired) {
       if (!createForm.project_id) { toast.error('Project is required'); return; }
       if (!createForm.scheduled_date) { toast.error('Visit date is required'); return; }
-      if (!createForm.customer_type_id) { toast.error('Customer Type is required'); return; }
-      if (!createForm.motivation_type) { toast.error('Motivation is required'); return; }
-      if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
-      if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
     }
+
+    if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
+    if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
 
     if (selectedAction.needsAssignee && !createForm.sales_head_id) {
       toast.error('Assignee is required for selected action');
@@ -328,7 +385,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     setCreating(true);
     try {
       await leadWorkflowApi.transitionLead(createForm.lead_id, createForm.action_code, {
-        note: createForm.remarks || createForm.feedback || `Action updated via ${selectedAction.label}`,
+        note: createForm.remarks || `Action updated via ${selectedAction.label}`,
         assignToUserId: selectedAction.needsAssignee ? (createForm.sales_head_id || undefined) : undefined,
         // Always send site-visit data if filled, regardless of action
         svDate: createForm.scheduled_date ? new Date(createForm.scheduled_date).toISOString() : undefined,
@@ -348,8 +405,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       setCreateForm({
         lead_id: '', project_id: '',
         scheduled_date: new Date().toISOString().split('T')[0],
-        scheduled_time_slot: '', attended_by: '', remarks: '', feedback: '',
-        rating: '', interested_after_visit: null,
+        scheduled_time_slot: '', attended_by: '', remarks: '',
         customer_requirement: '', customer_type_id: '', motivation_type: '', time_spent: '', sales_head_id: '',
         action_code: '',
         next_follow_up_at: '', closure_reason_id: '', reason_note: '', call_status: '',
@@ -376,7 +432,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         </div>
         <div className="page-header-actions flex-wrap">
           <div className="crm-btn-group">
-            {['all', 'upcoming', 'completed', 'cancelled'].map(f => (
+            {['all', 'completed', 'cancelled'].map(f => (
               <button key={f} className={`crm-btn ${filter === f ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter(f)}>
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
@@ -405,7 +461,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
           {leadGroups.map(({ lead, visits: leadVisits }) => {
             const leadId = lead?.id || 'unknown';
             const isExpanded = expandedLead === leadId;
-            const completedCount = leadVisits.filter(v => v.status === 'Completed').length;
 
             return (
               <div key={leadId} className="crm-card" style={{ overflow: 'hidden' }}>
@@ -425,7 +480,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      {leadVisits.length} visit{leadVisits.length !== 1 ? 's' : ''} · {completedCount} done
+                      {leadVisits.length} visit{leadVisits.length !== 1 ? 's' : ''}
                     </span>
                     <span style={{ fontSize: 18, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>▾</span>
                   </div>
@@ -495,16 +550,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
-                {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{'★'.repeat(selectedVisit.rating)}{'☆'.repeat(5 - selectedVisit.rating)}</span></div>}
                 {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
-                {selectedVisit.interested_after_visit !== null && selectedVisit.interested_after_visit !== undefined && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Interested After Visit</div>{selectedVisit.interested_after_visit ? '✅ Yes' : '❌ No'}</div>}
               </div>
-              {selectedVisit.feedback && (
-                <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Feedback</div>
-                  <div style={{ fontSize: 13 }}>{selectedVisit.feedback}</div>
-                </div>
-              )}
               {selectedVisit.remarks && (
                 <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Remarks</div>
@@ -598,12 +645,44 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 16 }}>
                   <div>
                     <label style={fieldLabelStyle}>Action *</label>
-                    <select value={createForm.action_code} onChange={(e) => setCreateForm(p => ({ ...p, action_code: e.target.value, next_follow_up_at: '', closure_reason_id: '', reason_note: '' }))} style={fieldInputStyle} required>
-                      <option value="">Select action...</option>
-                      {siteVisitActionOptions.map((action) => (
-                        <option key={action.code} value={action.code}>{action.label}</option>
-                      ))}
-                    </select>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                      {siteVisitActionOptions.map((action) => {
+                        const isActive = createForm.action_code === action.code;
+                        return (
+                          <button
+                            key={action.code}
+                            type="button"
+                            onClick={() => setCreateForm((p) => ({
+                              ...p,
+                              action_code: action.code,
+                              next_follow_up_at: '',
+                              closure_reason_id: '',
+                              reason_note: '',
+                              call_status: '',
+                              sales_head_id: '',
+                            }))}
+                            style={{
+                              border: isActive ? '1px solid var(--accent-blue)' : '1px solid var(--border-primary)',
+                              background: isActive ? 'var(--accent-blue-bg)' : 'var(--bg-card, #fff)',
+                              color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                              borderRadius: 8,
+                              padding: '10px 12px',
+                              textAlign: 'left',
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {action.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!createForm.action_code && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+                        Select one action to continue.
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -641,6 +720,21 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         style={fieldInputStyle}
                         required
                       />
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                        {FOLLOW_UP_SHORTCUTS.map((shortcut) => {
+                          const value = buildFollowUpShortcutValue(shortcut);
+                          return (
+                            <button
+                              key={shortcut.label}
+                              type="button"
+                              className="crm-btn crm-btn-ghost crm-btn-sm"
+                              onClick={() => setCreateForm((p) => ({ ...p, next_follow_up_at: value }))}
+                            >
+                              {shortcut.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -679,26 +773,26 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                     <div>
-                      <label style={fieldLabelStyle}>Customer Type {svFieldsRequired ? '*' : ''}</label>
-                      <select value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                      <label style={fieldLabelStyle}>Customer Type *</label>
+                      <select value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required>
                         <option value="">Select...</option>
                         {customerTypeOptions.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>Motivation {svFieldsRequired ? '*' : ''}</label>
-                      <select value={createForm.motivation_type || ''} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
+                      <label style={fieldLabelStyle}>Motivation *</label>
+                      <select value={createForm.motivation_type || ''} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required>
                         <option value="">Select...</option>
                         {motivationOptions.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>Customer Requirement {svFieldsRequired ? '*' : ''}</label>
-                      <input value={createForm.customer_requirement} onChange={(e) => setCreateForm(p => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required={svFieldsRequired} />
+                      <label style={fieldLabelStyle}>Customer Requirement *</label>
+                      <input value={createForm.customer_requirement} onChange={(e) => setCreateForm(p => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required />
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>Time Spent (mins) {svFieldsRequired ? '*' : ''}</label>
-                      <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required={svFieldsRequired} />
+                      <label style={fieldLabelStyle}>Time Spent (mins) *</label>
+                      <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required />
                     </div>
                     {selectedAction?.needsAssignee && (
                       <div>
@@ -712,28 +806,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={fieldLabelStyle}>Rating (1-5)</label>
-                      <select value={createForm.rating} onChange={(e) => setCreateForm(p => ({ ...p, rating: e.target.value }))} style={fieldInputStyle}>
-                        <option value="">Select rating...</option>
-                        {[1,2,3,4,5].map(r => <option key={r} value={r}>{'★'.repeat(r)}{'☆'.repeat(5-r)}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={fieldLabelStyle}>Interested After Visit</label>
-                      <select value={createForm.interested_after_visit === null ? '' : createForm.interested_after_visit} onChange={(e) => setCreateForm(p => ({ ...p, interested_after_visit: e.target.value === '' ? null : e.target.value === 'true' }))} style={fieldInputStyle}>
-                        <option value="">Select...</option>
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={fieldLabelStyle}>Feedback</label>
-                      <textarea value={createForm.feedback} onChange={(e) => setCreateForm(p => ({ ...p, feedback: e.target.value }))} rows={2} placeholder="Enter feedback..." style={fieldInputStyle} />
-                    </div>
                     <div>
                       <label style={fieldLabelStyle}>Remarks {selectedAction?.needsRemark ? '*' : ''}</label>
                       <textarea value={createForm.remarks} onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))} rows={2} placeholder="Additional remarks..." style={fieldInputStyle} required={selectedAction?.needsRemark} />
@@ -759,7 +831,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
               </div>
               <div className="col-modal-footer">
                 <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                <button type="submit" className="crm-btn crm-btn-primary" disabled={creating}>
+                <button type="submit" className="crm-btn crm-btn-primary" disabled={!canCreateSiteVisit}>
                   {creating ? 'Creating...' : 'Create Site Visit'}
                 </button>
               </div>

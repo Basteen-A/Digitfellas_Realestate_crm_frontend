@@ -13,10 +13,10 @@ export const ROLE_LABELS = {
 };
 
 export const WORKSPACE_TITLES = {
-  TC: { title: 'Telecaller Workspace', subtitle: 'Contact calling, follow-ups, and site-visit scheduling' },
-  SM: { title: 'Sales Manager Workspace', subtitle: 'Site visits, team lead management, and negotiation handoff' },
-  SH: { title: 'Sales Head Workspace', subtitle: 'Negotiation governance, deal approvals, and booking control' },
-  COL: { title: 'Collection Workspace', subtitle: 'Payment milestones, booking status, and post-booking closure' },
+  TC: { title: '', subtitle: 'Contact calling, follow-ups, and site-visit scheduling' },
+  SM: { title: '', subtitle: 'Site visits, team lead management, and negotiation handoff' },
+  SH: { title: '', subtitle: 'Negotiation governance, deal approvals, and booking control' },
+  COL: { title: '', subtitle: 'Payment milestones, booking status, and post-booking closure' },
 };
 
 export const getWorkspaceTitle = (roleCode) => WORKSPACE_TITLES[roleCode] || WORKSPACE_TITLES.TC;

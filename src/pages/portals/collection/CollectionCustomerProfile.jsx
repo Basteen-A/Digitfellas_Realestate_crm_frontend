@@ -121,13 +121,15 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
           <div className="col-section">
             <div className="col-section-body-flush" style={{ overflowX: 'auto' }}>
               <table className="col-table">
-                <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Bookings</th><th>Total Value</th><th>Paid</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Project</th><th>Location</th><th>Bookings</th><th>Total Value</th><th>Paid</th><th>Actions</th></tr></thead>
                 <tbody>
                   {filtered.map(c => (
                     <tr key={c.id} className="is-clickable" onClick={() => setSelectedId(c.id)}>
                       <td style={{ fontWeight: 600 }}>{c.first_name} {c.last_name || ''}</td>
                       <td>{c.phone}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{c.email || '-'}</td>
+                      <td>{c.project_name || '-'}</td>
+                      <td>{c.location_name || '-'}</td>
                       <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{c.bookings_count || 0}</span></td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(c.total_booking_value)}</td>
                       <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(c.total_paid)}</td>
@@ -376,6 +378,8 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                         <div><div style={{ fontSize: 12, color: '#6b7280' }}>Name</div><div style={{ fontWeight: 600 }}>{quickActionCustomer.first_name} {quickActionCustomer.last_name || ''}</div></div>
                         <div><div style={{ fontSize: 12, color: '#6b7280' }}>Phone</div><div style={{ fontWeight: 600 }}>{quickActionCustomer.phone}</div></div>
                         <div><div style={{ fontSize: 12, color: '#6b7280' }}>Email</div><div style={{ fontWeight: 600 }}>{quickActionCustomer.email || '-'}</div></div>
+                        <div><div style={{ fontSize: 12, color: '#6b7280' }}>Project</div><div style={{ fontWeight: 600 }}>{quickActionCustomer.project_name || '-'}</div></div>
+                        <div><div style={{ fontSize: 12, color: '#6b7280' }}>Location</div><div style={{ fontWeight: 600 }}>{quickActionCustomer.location_name || '-'}</div></div>
                         <div><div style={{ fontSize: 12, color: '#6b7280' }}>Bookings</div><div style={{ fontWeight: 600 }}>{quickActionCustomer.bookings_count || 0}</div></div>
                         <div><div style={{ fontSize: 12, color: '#6b7280' }}>Total Value</div><div style={{ fontWeight: 600 }}>{formatCurrency(quickActionCustomer.total_booking_value)}</div></div>
                         <div><div style={{ fontSize: 12, color: '#6b7280' }}>Total Paid</div><div style={{ fontWeight: 600, color: '#16a34a' }}>{formatCurrency(quickActionCustomer.total_paid)}</div></div>

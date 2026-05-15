@@ -8,6 +8,31 @@ import { formatDateTime } from '../../../utils/formatters';
 import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
 import './HandoffLeadsPage.css';
 
+const dedupePipeText = (value) => {
+  if (typeof value !== 'string') return '';
+  const raw = value.trim();
+  if (!raw) return '';
+
+  const parts = raw.split('|').map((part) => part.trim()).filter(Boolean);
+  if (!parts.length) return raw;
+
+  const seen = new Set();
+  const unique = parts.filter((part) => {
+    const normalized = part.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+
+  return unique.join(' | ');
+};
+
+const isLostHandoffRow = (row) => {
+  const statusCode = String(row?.statusCode || row?.status_code || '').trim().toUpperCase();
+  const statusName = String(row?.statusName || row?.status_name || '').trim().toUpperCase();
+  return statusCode === 'LOST' || statusCode === 'COLD_LOST' || statusName === 'LOST' || statusName === 'COLD LOST';
+};
+
 const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -29,6 +54,8 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
       current,
     };
   }, [meta, rows, workspaceRole]);
+
+  const visibleRows = useMemo(() => rows.filter((row) => !isLostHandoffRow(row)), [rows]);
 
   const loadHandoffs = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
@@ -90,23 +117,6 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
           onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
           placeholder="Search by lead number, name, phone, email"
         />
-        {defaultType === 'all' ? (
-          <select
-            value={filters.type}
-            onChange={(event) => setFilters((prev) => ({ ...prev, type: event.target.value }))}
-          >
-            <option value="all">All Handoffs</option>
-            <option value="incoming">Incoming to Me</option>
-            <option value="outgoing">Outgoing from Me</option>
-          </select>
-        ) : (
-          <select
-            value={defaultType}
-            disabled
-          >
-            <option value={defaultType}>{defaultType === 'outgoing' ? 'Outgoing from Me' : 'Incoming to Me'}</option>
-          </select>
-        )}
       </div>
 
       <div className="crm-card handoff-leads__table-wrap">
@@ -119,8 +129,8 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               <th>To</th>
               {showStage && <th>Stage</th>}
               <th>Status</th>
-              <th className="hide-tablet">Reason / Remarks</th>
-              <th className="hide-tablet">Current Owner</th>
+              <th className="hide-tablet">Remarks</th>
+              <th className="hide-tablet">Assigned</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -130,12 +140,12 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">Loading handoff leads...</td>
               </tr>
             )}
-            {!loading && rows.length === 0 && (
+            {!loading && visibleRows.length === 0 && (
               <tr>
                 <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">No handoff leads found</td>
               </tr>
             )}
-            {!loading && rows.map((row) => (
+            {!loading && visibleRows.map((row) => (
               <tr key={row.id}>
                 <td>{formatDateTime(row.handedOffAt)}</td>
                 <td>
@@ -163,7 +173,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                   </span>
                 </td>
                 <td className="hide-tablet">
-                  <small>{row.remarks || '-'}</small>
+                  <small>{dedupePipeText(row.remarks) || '-'}</small>
                 </td>
                 <td className="hide-tablet">
                   <div>{row.currentAssigneeName || '-'}</div>
