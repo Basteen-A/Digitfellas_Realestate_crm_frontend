@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
 import SalesHeadDashboard from './SalesHeadDashboard';
 import SalesHeadBookings from './SalesHeadBookings';
+import SalesHeadBookingSummary from './SalesHeadBookingSummary';
 import SalesHeadApprovals from './SalesHeadApprovals';
 import SalesHeadTeamLeads from './SalesHeadTeamLeads';
 import SalesHeadTeamPerformance from './SalesHeadTeamPerformance';
@@ -28,6 +29,7 @@ const SalesHeadWorkspace = () => {
           {activeScreen === 'dashboard' && <SalesHeadDashboard user={user} onNavigate={setActiveScreen} />}
           {activeScreen === 'negotiations' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
           {activeScreen === 'bookings' && <SalesHeadBookings user={user} />}
+          {activeScreen === 'bookingsummary' && <SalesHeadBookingSummary />}
           {activeScreen === 'approvals' && <SalesHeadApprovals user={user} />}
           {activeScreen === 'sitevisits' && <SalesHeadSiteVisits user={user} />}
           {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SH" defaultType="outgoing" />}

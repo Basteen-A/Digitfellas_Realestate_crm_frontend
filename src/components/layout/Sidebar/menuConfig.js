@@ -170,7 +170,7 @@ export const salesHeadMenu = [
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'Negotiation Leads', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
-  // { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'Bookings Summary', key: 'bookingsummary', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
   // { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
