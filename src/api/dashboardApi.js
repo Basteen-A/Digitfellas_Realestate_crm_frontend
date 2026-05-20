@@ -36,6 +36,7 @@ const dashboardApi = {
     if (params.dateFilter) query.set('dateFilter', params.dateFilter);
     if (params.startDate) query.set('startDate', params.startDate);
     if (params.endDate) query.set('endDate', params.endDate);
+    if (params.projectId) query.set('projectId', params.projectId);
     const qs = query.toString();
     const { data } = await api.get(`/dashboard/sales-head/booking-summary${qs ? `?${qs}` : ''}`);
     return data;

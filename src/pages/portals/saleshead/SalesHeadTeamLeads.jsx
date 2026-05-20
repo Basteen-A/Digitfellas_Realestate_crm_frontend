@@ -204,7 +204,7 @@ const SalesHeadTeamLeads = () => {
               <div style={{ display: 'flex', gap: 20 }}>
                 <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-blue)' }}>{selectedSM.activeLeads}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Active</div></div>
                 <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: '#15803d' }}>{selectedSM.completedVisits}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Visits Done</div></div>
-                <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{selectedSM.totalLeads}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Total</div></div>
+                
               </div>
             </div>
 
