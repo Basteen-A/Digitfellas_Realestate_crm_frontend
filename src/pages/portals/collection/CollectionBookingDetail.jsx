@@ -2,64 +2,105 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
-import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
-  BanknotesIcon, Cog6ToothIcon,
-  UserIcon, BuildingStorefrontIcon, DocumentTextIcon, ClockIcon, CheckIcon,
+  BanknotesIcon, UserIcon, ClockIcon,
+  ExclamationTriangleIcon, PrinterIcon, PlusIcon,
+  CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon
 } from '@heroicons/react/24/outline';
+import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
+
+/* ── tiny helpers ── */
+const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const InfoRow = ({label,value,mono,color}) => (
+  <div className="bkd-info-item">
+    <div className="bkd-info-label">{label}</div>
+    <div className={`bkd-info-value${mono?' mono':''}`} style={color?{color}:undefined}>{value || '—'}</div>
+  </div>
+);
 
 const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
   const [statusOptions, setStatusOptions] = useState([]);
-  // Payment form
-  const [showPayForm, setShowPayForm] = useState(false);
-  const [payForm, setPayForm] = useState({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+  const [actionMode, setActionMode] = useState(null); // 'pay' | 'status' | 'payStatus' | 'devCost'
+  const [payForm, setPayForm] = useState({ payment_type:'Installment', payment_mode:'Online', amount:'', payment_date:'', transaction_ref:'', bank_name:'', remarks:'' });
   const [paySaving, setPaySaving] = useState(false);
-  // Dev cost form
-  const [showDevForm, setShowDevForm] = useState(false);
-  const [devForm, setDevForm] = useState({ guideline_value: '', plot_area: '', development_cost_per_sqft: '' });
-  const [devSaving, setDevSaving] = useState(false);
-  // Status edit
-  const [editStatus, setEditStatus] = useState(false);
   const [newStatusId, setNewStatusId] = useState('');
-  // Verify form
-  const [verifyPaymentId, setVerifyPaymentId] = useState(null);
-  const [verifyForm, setVerifyForm] = useState({ transaction_id: '', verification_note: '' });
-  // Activity history
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [cancelReasonId, setCancelReasonId] = useState('');
+  const [cancelReasons, setCancelReasons] = useState([]);
+  const [cancelRemarks, setCancelRemarks] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [payStatusSaving, setPayStatusSaving] = useState(false);
+  const [devCostForm, setDevCostForm] = useState({ guideline_value: '', plot_area: '', development_cost_per_sqft: '' });
+  const [devCostSaving, setDevCostSaving] = useState(false);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+
+  const PAYMENT_STATUSES = ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Full Payment Received', 'Follow Up'];
+
+  const loadActivities = useCallback(async () => {
+    if (!bookingId) return;
+    setActivitiesLoading(true);
+    try {
+      const r = await bookingApi.getActivities(bookingId);
+      setActivities(r.data?.data || r.data || []);
+    } catch (e) {
+    } finally {
+      setActivitiesLoading(false);
+    }
+  }, [bookingId]);
 
   const loadBooking = useCallback(async () => {
     setLoading(true);
     try {
       const resp = await bookingApi.getById(bookingId);
-      const data = resp.data?.data || resp.data;
-      setBooking(data);
-      setDevForm({
-        guideline_value: data.guideline_value || '',
-        plot_area: data.plot_area || '',
-        development_cost_per_sqft: data.development_cost_per_sqft || '',
-      });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to load booking'));
-    } finally { setLoading(false); }
+      setBooking(resp.data?.data || resp.data);
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load booking')); }
+    finally { setLoading(false); }
   }, [bookingId]);
 
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => {
-    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
+    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
+    bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
   }, []);
   useEffect(() => {
-    if (bookingId) {
-      setActivitiesLoading(true);
-      bookingApi.getActivities(bookingId).then(r => setActivities(r.data?.data || r.data || [])).catch(() => {}).finally(() => setActivitiesLoading(false));
+    loadActivities();
+  }, [loadActivities]);
+
+  const openActionModal = (mode) => {
+    setActionMode(mode);
+    if (mode === 'status') {
+      setNewStatusId('');
+      setCancelReasonId('');
+      setCancelRemarks('');
+      return;
     }
-  }, [bookingId]);
+    if (mode === 'payStatus') {
+      setPaymentStatus(booking?.payment_status || '');
+      setFollowUpDate('');
+      return;
+    }
+    if (mode === 'pay') {
+      setPayForm({ payment_type:'Installment', payment_mode:'Online', amount:'', payment_date:'', transaction_ref:'', bank_name:'', remarks:'' });
+      return;
+    }
+    if (mode === 'devCost') {
+      setDevCostForm({
+        guideline_value: booking?.guideline_value ?? '',
+        plot_area: booking?.plot_area ?? '',
+        development_cost_per_sqft: booking?.development_cost_per_sqft ?? '',
+      });
+    }
+  };
+
+  const closeActionModal = () => setActionMode(null);
 
   const handleAddPayment = async () => {
     if (!payForm.amount || parseFloat(payForm.amount) <= 0) { toast.error('Enter valid amount'); return; }
@@ -67,451 +108,513 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     try {
       await bookingApi.addPayment(bookingId, { ...payForm, amount: parseFloat(payForm.amount) });
       toast.success('Payment recorded');
-      setShowPayForm(false);
-      setPayForm({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+      closeActionModal();
+      setPayForm({ payment_type:'Installment', payment_mode:'Online', amount:'', payment_date:'', transaction_ref:'', bank_name:'', remarks:'' });
       loadBooking();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to record payment')); }
+      loadActivities();
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
     finally { setPaySaving(false); }
-  };
-
-  const handleDevCostSave = async () => {
-    setDevSaving(true);
-    try {
-      await bookingApi.updateDevelopmentCost(bookingId, {
-        guideline_value: parseFloat(devForm.guideline_value) || 0,
-        plot_area: parseFloat(devForm.plot_area) || 0,
-        development_cost_per_sqft: parseFloat(devForm.development_cost_per_sqft) || 0,
-      });
-      toast.success('Development costs updated');
-      setShowDevForm(false);
-      loadBooking();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to update')); }
-    finally { setDevSaving(false); }
   };
 
   const handleStatusUpdate = async () => {
     if (!newStatusId) return;
+    const selectedStatus = statusOptions.find(s => String(s.id) === newStatusId);
+    const isCancelled = selectedStatus?.status_code === 'CANCEL' || selectedStatus?.status_code === 'CANCELLED';
+    if (isCancelled && !cancelReasonId) {
+      toast.error('Select a cancellation reason');
+      return;
+    }
+    setStatusSaving(true);
     try {
-      await bookingApi.update(bookingId, { booking_status_id: newStatusId });
-      toast.success('Booking status updated');
-      setEditStatus(false);
+      const payload = { booking_status_id: newStatusId };
+      if (isCancelled) {
+        payload.cancel_reason_id = cancelReasonId;
+        payload.cancel_remarks = cancelRemarks;
+      }
+      await bookingApi.update(bookingId, payload);
+      toast.success('Status updated');
+      closeActionModal();
       loadBooking();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed to update status')); }
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update status'));
+    } finally {
+      setStatusSaving(false);
+    }
   };
 
-  const handleApproveAccounts = async (paymentId) => {
+  const handlePaymentStatusUpdate = async () => {
+    if (!paymentStatus) return;
+    if (paymentStatus === 'Follow Up' && !followUpDate) {
+      toast.error('Select a follow-up date');
+      return;
+    }
+    setPayStatusSaving(true);
     try {
-      await bookingApi.approvePaymentAccounts(bookingId, paymentId);
-      toast.success('Payment approved (Accounts)');
+      await bookingApi.updatePaymentStatus(bookingId, {
+        payment_status: paymentStatus,
+        next_follow_up_at: paymentStatus === 'Follow Up' ? followUpDate : null,
+      });
+      toast.success('Payment status updated');
+      closeActionModal();
+      setFollowUpDate('');
       loadBooking();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
+      loadActivities();
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to update payment status')); }
+    finally { setPayStatusSaving(false); }
   };
 
-  const handleApproveManagement = async (paymentId) => {
+  const handleDevelopmentCostUpdate = async () => {
+    const guideline = parseFloat(devCostForm.guideline_value || 0);
+    const area = parseFloat(devCostForm.plot_area || 0);
+    const perSqft = parseFloat(devCostForm.development_cost_per_sqft || 0);
+    if (guideline <= 0 || area <= 0 || perSqft <= 0) {
+      toast.error('Enter valid guideline value, plot area, and development cost/sqft');
+      return;
+    }
+    setDevCostSaving(true);
     try {
-      await bookingApi.approvePaymentManagement(bookingId, paymentId);
-      toast.success('Payment approved (Management)');
+      await bookingApi.updateDevelopmentCost(bookingId, {
+        guideline_value: guideline,
+        plot_area: area,
+        development_cost_per_sqft: perSqft,
+      });
+      toast.success('Development cost updated');
+      closeActionModal();
       loadBooking();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update development cost'));
+    } finally {
+      setDevCostSaving(false);
+    }
   };
 
-  const handleVerifyPayment = async () => {
-    if (!verifyPaymentId) return;
-    try {
-      await bookingApi.verifyPayment(bookingId, verifyPaymentId, verifyForm);
-      toast.success('Payment verified');
-      setVerifyPaymentId(null);
-      setVerifyForm({ transaction_id: '', verification_note: '' });
-      loadBooking();
-    } catch (err) { toast.error(getErrorMessage(err, 'Verification failed')); }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ padding: 60, textAlign: 'center' }}>
-        <ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
-        <p style={{ color: 'var(--text-muted)', marginTop: 10 }}>Loading booking details...</p>
-      </div>
-    );
-  }
-
-  if (!booking) {
-    return (
-      <div className="col-empty">
-        <div className="col-empty-title">Booking not found</div>
-        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={onBack}>← Go Back</button>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{padding:60,textAlign:'center'}}>
+      <ArrowPathIcon style={{width:32,height:32,color:'var(--text-muted)',margin:'0 auto',animation:'spin 1s linear infinite'}}/>
+      <p style={{color:'var(--text-muted)',marginTop:10}}>Loading booking details...</p>
+    </div>
+  );
+  if (!booking) return (
+    <div className="col-empty"><div className="col-empty-title">Booking not found</div>
+      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={onBack}>Go Back</button>
+    </div>
+  );
 
   const payments = booking.payments || [];
   const customer = booking.customer || {};
-  const tabs = [
-    { key: 'overview', label: 'Overview', icon: DocumentTextIcon },
-    { key: 'payments', label: `Payments (${payments.length})`, icon: CreditCardIcon },
-    { key: 'devcost', label: 'Dev Costs', icon: Cog6ToothIcon },
-    { key: 'activities', label: 'Activity History', icon: ClockIcon },
-  ];
+  const toAmount = (v) => {
+    const n = parseFloat(v || 0);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const totalPaid = toAmount(booking.total_paid);
+  const plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
+  const stampValue = toAmount(booking.stamp_value || booking.stamp_duty);
+  const registrationValue = toAmount(booking.registration_exp || booking.registration_charges);
+  const developmentValue = toAmount(booking.development_charges);
+  const computedTotalValue = plotValue + stampValue + registrationValue + developmentValue;
+  const totalValue = computedTotalValue > 0 ? computedTotalValue : toAmount(booking.net_amount || booking.total_amount);
+  const balanceDue = totalValue - totalPaid;
+  const pctCollected = totalValue > 0 ? Math.round((totalPaid / totalValue) * 100) : 0;
+  const unverifiedAmt = payments.filter(p => !p.is_verified && !p.is_bounced).reduce((s,p) => s + parseFloat(p.amount||0), 0);
+  const verifiedCount = payments.filter(p => p.is_verified).length;
+  const pendingCount = payments.filter(p => !p.is_verified && !p.is_bounced).length;
+
+  // Check overdue
+  const isOverdue = booking.next_follow_up_at && new Date(booking.next_follow_up_at) < new Date();
+  const overdueDays = isOverdue ? Math.floor((Date.now() - new Date(booking.next_follow_up_at).getTime()) / 86400000) : 0;
+
+  const renderActivityHistory = () => {
+    return (
+      <div style={{ marginTop: 24 }}>
+        <div className="qa-drawer-divider" style={{ margin: '0 0 16px' }} />
+        <div className="qa-drawer-section" style={{ padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <ClockIcon style={{ width: 14, height: 14 }} /> Activity History
+        </div>
+        {activitiesLoading ? (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>Loading...</div>
+        ) : activities.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>No activity yet</div>
+        ) : (
+          <div style={{ paddingRight: 4 }}>
+            {activities.slice(0, 20).map((act, i) => (
+              <div key={act.id || i} style={{
+                display: 'flex', gap: 10, paddingBottom: 10, marginBottom: 10,
+                borderBottom: i < activities.length - 1 ? '1px solid var(--border-primary)' : 'none',
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
+                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
+                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
+                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
+                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
+                  fontSize: 12, fontWeight: 700,
+                }}>
+                  {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
+                  {act.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{act.description}</div>}
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                    {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : ''} · {new Date(act.performed_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div>
-      {/* Back + Header */}
-      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="page-header-left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={onBack} style={{ padding: '6px 10px' }}>
-            <ArrowLeftIcon style={{ width: 16, height: 16 }} />
-          </button>
+    <div className="bkd-page">
+      {/* Page Header */}
+      <div className="bkd-header">
+        <div className="bkd-header-left">
+          <button className="bkd-back-btn" onClick={onBack}><ArrowLeftIcon style={{width:16,height:16}}/></button>
           <div>
-            <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {booking.booking_number}
-              <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color, fontSize: 12 }}>
-                <span className="col-badge-dot" style={{ background: booking.status_color }} />
-                {booking.status_label}
-              </span>
-            </h1>
-            <p className="hidden sm:block">{booking.customer_name} · {booking.project_name}</p>
+            <h1 className="bkd-title">Booking Details — {booking.booking_number}</h1>
+            <p className="bkd-subtitle">{booking.project_name} · {booking.unit_display || booking.unit_number || 'N/A'} · Booked {fmtD(booking.booking_date)}</p>
           </div>
         </div>
-        <div className="page-header-actions" style={{ gap: 8 }}>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => setShowPayForm(true)}>
-            <BanknotesIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Record Payment
-          </button>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setEditStatus(true)}>
-            <PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Update Status
-          </button>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadBooking}>
-            <ArrowPathIcon style={{ width: 14, height: 14 }} />
-          </button>
+        <div className="bkd-header-actions">
+          <button className="bkd-btn bkd-btn-ghost" onClick={() => window.print()}><PrinterIcon style={{width:14,height:14}}/> Print</button>
+          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Update Status</button>
+          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Update Payment Status</button>
+          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('devCost')}><BanknotesIcon style={{width:14,height:14}}/> Development Cost</button>
+          <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
+          <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
         </div>
       </div>
 
-      {/* Amount Cards */}
-      <div className="col-booking-amounts" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-        <div className="col-amount-card"><div className="col-amount-label">Total Amount</div><div className="col-amount-value">{formatCurrency(booking.total_amount)}</div></div>
-        <div className="col-amount-card"><div className="col-amount-label">Net Amount</div><div className="col-amount-value blue">{formatCurrency(booking.net_amount)}</div></div>
-        <div className="col-amount-card"><div className="col-amount-label">Total Paid</div><div className="col-amount-value green">{formatCurrency(booking.total_paid)}</div></div>
-        <div className="col-amount-card"><div className="col-amount-label">Balance Due</div><div className="col-amount-value red">{formatCurrency(booking.total_due)}</div></div>
+      {/* Overdue Alert Banner */}
+      {isOverdue && balanceDue > 0 && (
+        <div className="bkd-alert-banner">
+          <ExclamationTriangleIcon style={{width:18,height:18,flexShrink:0}}/>
+          <div>
+            <span className="bkd-alert-title">Payment Overdue</span>
+            <span className="bkd-alert-text">Balance of {formatCurrency(balanceDue)} — {overdueDays} days overdue (due {fmtD(booking.next_follow_up_at)})</span>
+          </div>
+        </div>
+      )}
+
+      {/* Status Badge */}
+      <div style={{marginBottom:16}}>
+        <span className="bkd-status-badge" style={{background:`${booking.status_color}18`,color:booking.status_color,border:`1px solid ${booking.status_color}40`}}>
+          <span style={{width:6,height:6,borderRadius:'50%',background:booking.status_color,display:'inline-block'}}/> {booking.status_label}
+        </span>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="filter-tabs" style={{ marginBottom: 20 }}>
-        {tabs.map(t => (
-          <button key={t.key} className={`filter-tab ${activeTab === t.key ? 'active' : ''}`} onClick={() => setActiveTab(t.key)}>
-            <t.icon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />{t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* OVERVIEW TAB */}
-      {activeTab === 'overview' && (
-        <div className="col-two-col">
-          {/* Customer Info */}
-          <div className="col-section">
-            <div className="col-section-header">
-              <div className="col-section-title"><UserIcon style={{ width: 16, height: 16 }} /> Customer Information</div>
+      {/* Customer Info + Payment Summary — 2 col */}
+      <div className="bkd-two-col">
+        {/* Customer Information Card */}
+        <div className="bkd-card">
+          <div className="bkd-card-header">
+            <div className="bkd-card-title"><UserIcon style={{width:15,height:15}}/> Customer Information</div>
+          </div>
+          <div className="bkd-card-body">
+            <div className="bkd-info-grid">
+              <InfoRow label="Customer Name" value={`${customer.first_name||''} ${customer.last_name||''}`.trim() || booking.customer_name}/>
+              <InfoRow label="Phone" value={customer.phone} mono/>
+              <InfoRow label="PAN" value={customer.pan_number} mono/>
+              <InfoRow label="Aadhaar" value={customer.aadhar_number} mono/>
+              <InfoRow label="Email" value={customer.email} mono/>
+              <InfoRow label="Booking Date" value={fmtD(booking.booking_date)}/>
             </div>
-            <div className="col-section-body">
-              <div className="col-profile-info-grid">
-                {[
-                  ['Name', `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || '-'],
-                  ['Buyer Name', booking.buyer_name || '-'],
-                  ['Phone', customer.phone || '-'],
-                  ['Email', customer.email || '-'],
-                  ['PAN', customer.pan_number || '-'],
-                  ['Aadhar', customer.aadhar_number || '-'],
-                ].map(([l, v]) => (
-                  <div className="col-profile-field" key={l}>
-                    <div className="col-profile-field-label">{l}</div>
-                    <div className="col-profile-field-value">{v}</div>
-                  </div>
-                ))}
-              </div>
+            <hr className="bkd-divider"/>
+            <div className="bkd-info-grid">
+              <InfoRow label="Project" value={booking.project_name}/>
+              <InfoRow label="Unit" value={booking.unit_display || booking.unit_number}/>
+              <InfoRow label="Area" value={booking.carpet_area ? `${booking.carpet_area} sq.ft` : '—'}/>
+              <InfoRow label="Config" value={booking.configuration}/>
+              <InfoRow label="Sales Person" value={booking.sales_person_name || booking.buyer_name}/>
+              <InfoRow label="Payment Plan" value={booking.paymentPlan?.plan_name}/>
             </div>
           </div>
+        </div>
 
-          {/* Booking Info */}
-          <div className="col-section">
-            <div className="col-section-header">
-              <div className="col-section-title"><BuildingStorefrontIcon style={{ width: 16, height: 16 }} /> Booking Details</div>
+        {/* Payment Summary Card */}
+        <div className="bkd-card">
+          <div className="bkd-card-header">
+            <div className="bkd-card-title"><BanknotesIcon style={{width:15,height:15}}/> Payment Summary</div>
+          </div>
+          <div className="bkd-card-body">
+            <div className="bkd-amount-grid">
+              <div className="bkd-amount-box"><div className="bkd-amount-label">Total Value</div><div className="bkd-amount-val">{formatCurrency(totalValue)}</div></div>
+              <div className="bkd-amount-box bkd-amount-success"><div className="bkd-amount-label">Total Collected</div><div className="bkd-amount-val">{formatCurrency(totalPaid)}</div></div>
+              <div className="bkd-amount-box bkd-amount-danger"><div className="bkd-amount-label">Balance Due</div><div className="bkd-amount-val">{formatCurrency(balanceDue)}</div></div>
+              <div className="bkd-amount-box bkd-amount-warning"><div className="bkd-amount-label">Unverified</div><div className="bkd-amount-val">{formatCurrency(unverifiedAmt)}</div></div>
             </div>
-            <div className="col-section-body">
-              <div className="col-profile-info-grid">
-                {[
-                  ['Project', booking.project_name],
-                  ['Unit', booking.unit_display || booking.unit_number || '-'],
-                  ['Config', booking.configuration || '-'],
-                  ['Area', booking.carpet_area ? `${booking.carpet_area} sq.ft.` : '-'],
-                  ['Booking Date', formatDate(booking.booking_date)],
-                  ['Payment Plan', booking.paymentPlan?.plan_name || '-'],
-                  ['Stamp Duty', formatCurrency(booking.stamp_duty || 0)],
-                  ['Registration', formatCurrency(booking.registration_charges || 0)],
-                  ['GST', formatCurrency(booking.gst_amount || 0)],
-                  ['Payment Status', booking.payment_status || '-'],
-                  ['Loan Required', booking.is_loan_required ? `Yes - ${booking.loan_bank_name || ''}` : 'No'],
-                  ['Next Follow-Up', booking.next_follow_up_at ? formatDate(booking.next_follow_up_at) : '-'],
-                ].map(([l, v]) => (
-                  <div className="col-profile-field" key={l}>
-                    <div className="col-profile-field-label">{l}</div>
-                    <div className="col-profile-field-value">{v}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+              Plot {formatCurrency(plotValue)} + Stamp {formatCurrency(stampValue)} + Registration {formatCurrency(registrationValue)} + Development {formatCurrency(developmentValue)}
+            </div>
+            {/* Progress bar */}
+            <div className="bkd-progress-section">
+              <div className="bkd-progress-label">Collection Progress</div>
+              <div className="bkd-progress-row"><span>{formatCurrency(totalPaid)} of {formatCurrency(totalValue)}</span><span className="bkd-progress-pct">{pctCollected}%</span></div>
+              <div className="bkd-progress-bar"><div className="bkd-progress-fill" style={{width:`${pctCollected}%`,background:pctCollected>=75?'#10b981':pctCollected>=40?'#f59e0b':'#ef4444'}}/></div>
+            </div>
+            <hr className="bkd-divider"/>
+            <div className="bkd-stats-row">
+              <div className="bkd-mini-stat"><div className="bkd-mini-label">Payments</div><div className="bkd-mini-val">{payments.length} entries</div></div>
+              <div className="bkd-mini-stat"><div className="bkd-mini-label">Verified</div><div className="bkd-mini-val" style={{color:'#10b981'}}>{verifiedCount} payment{verifiedCount!==1?'s':''}</div></div>
+              <div className="bkd-mini-stat"><div className="bkd-mini-label">Pending</div><div className="bkd-mini-val" style={{color:'#f59e0b'}}>{pendingCount} payment{pendingCount!==1?'s':''}</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment History Table */}
+      <div className="bkd-card">
+        <div className="bkd-card-header">
+          <div><div className="bkd-card-title"><CreditCardIcon style={{width:15,height:15}}/> Payment History</div>
+            <div className="bkd-card-subtitle">All payments recorded for this booking</div></div>
+          <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
+        </div>
+        <div>{payments.length === 0 ? (
+          <div style={{padding:30,textAlign:'center',color:'var(--text-muted,#9ca3af)',fontSize:13}}>No payments recorded yet</div>
+        ) : (
+          <table className="bkd-table"><thead><tr>
+            <th>Date</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Type</th><th>Status</th><th>Actions</th>
+          </tr></thead><tbody>
+            {payments.map(p => (
+              <tr key={p.id} className={p.is_bounced?'bkd-row-bounced':p.is_verified?'bkd-row-verified':''}>
+                <td>{fmtD(p.payment_date)}</td>
+                <td style={{fontWeight:700}}>{formatCurrency(p.amount)}</td>
+                <td>{p.payment_mode}</td>
+                <td className="bkd-mono">{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
+                <td style={{fontSize:12}}>{p.bank_name || '—'}</td>
+                <td style={{fontSize:12}}>{p.payment_type}</td>
+                <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
+                  : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
+                  : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
+                <td>—</td>
+              </tr>
+            ))}
+          </tbody></table>
+        )}</div>
+      </div>
+
+      {/* Activity Log */}
+      <div className="bkd-card">
+        <div className="bkd-card-header">
+          <div className="bkd-card-title"><ClockIcon style={{width:15,height:15}}/> Activity Log</div>
+          <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => {
+            setActivitiesLoading(true);
+            bookingApi.getActivities(bookingId).then(r=>setActivities(r.data?.data||r.data||[])).catch(()=>{}).finally(()=>setActivitiesLoading(false));
+          }}><ArrowPathIcon style={{width:14,height:14}}/></button>
+        </div>
+        <div className="bkd-card-body">
+          {activitiesLoading ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)'}}>Loading...</div>
+          : activities.length === 0 ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)',fontSize:13}}>No activity recorded yet</div>
+          : (
+            <div className="bkd-timeline">
+              {activities.map((act,i) => {
+                const color = act.activity_type==='PAYMENT_RECORDED'?'#10b981':act.activity_type==='STATUS_CHANGE'?'#3b82f6':act.activity_type==='CANCELLED'?'#ef4444':'#6b7280';
+                return (
+                  <div className="bkd-timeline-item" key={act.id||i}>
+                    <div className="bkd-timeline-dot" style={{borderColor:color}}/>
+                    <div className="bkd-timeline-time">{new Date(act.performed_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+                    <div className="bkd-timeline-text">{act.title}</div>
+                    {act.description && <div className="bkd-timeline-sub">{act.description}</div>}
+                    <div className="bkd-timeline-sub">By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'}</div>
                   </div>
-                ))}
-              </div>
-              {booking.remarks && (
-                <div style={{ marginTop: 14, padding: 10, background: 'var(--bg-tertiary)', borderRadius: 8, fontSize: 13, color: 'var(--text-muted)' }}>
-                  <strong>Remarks:</strong> {booking.remarks}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── QUICK ACTION MODAL (same as bookings list style) ── */}
+      {actionMode && (
+        <div className="col-modal-overlay" onClick={closeActionModal}>
+          <div className="qa-modal-panel" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
+            <div className="qa-drawer-handle" />
+            <div className="qa-drawer-header">
+              <div className="qa-drawer-header-left">
+                <div className="qa-drawer-avatar" style={{ background: `${booking.status_color}22`, color: booking.status_color, border: `2px solid ${booking.status_color}` }}>
+                  {(booking.customer_name || 'B')[0]?.toUpperCase()}
                 </div>
-              )}
+                <div>
+                  <div className="qa-drawer-name">{booking.customer_name || booking.buyer_name || 'Customer'}</div>
+                  <div className="qa-drawer-meta">{booking.booking_number} · {booking.project_name}</div>
+                  <div className="qa-drawer-budget" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                    Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalValue)}</strong> · Paid: <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(totalPaid)}</span> · Balance: <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>{formatCurrency(totalValue - totalPaid)}</span>
+                  </div>
+                </div>
+              </div>
+              <button className="qa-drawer-close" onClick={closeActionModal}>×</button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* PAYMENTS TAB */}
-      {activeTab === 'payments' && (
-        <div className="col-section">
-          <div className="col-section-header">
-            <div className="col-section-title"><CreditCardIcon style={{ width: 16, height: 16 }} /> Payment History</div>
-            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => setShowPayForm(true)}>+ Add Payment</button>
-          </div>
-          <div className="col-section-body-flush">
-            {payments.length === 0 ? (
-              <div className="col-empty" style={{ padding: 30 }}><div className="col-empty-title">No payments recorded</div></div>
-            ) : (
-              <table className="col-table">
-                <thead><tr><th>Ref #</th><th>Type</th><th>Mode</th><th>Amount</th><th>Date</th><th>Verified</th><th>Accounts</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {payments.map(p => (
-                    <tr key={p.id} className={p.is_bounced ? 'col-payment-bounced' : p.management_approved ? 'col-payment-verified' : ''}>
-                      <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
-                      <td>{p.payment_type}</td>
-                      <td>{p.payment_mode}</td>
-                      <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
-                      <td>{formatDate(p.payment_date)}</td>
-                      <td>
-                        <span className="col-badge" style={{ background: p.is_verified ? '#10b98122' : '#f59e0b22', color: p.is_verified ? '#10b981' : '#f59e0b' }}>
-                          {p.is_verified ? <><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Verified</> : 'Pending'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="col-badge" style={{ background: p.accounts_approved ? '#10b98122' : '#6b728022', color: p.accounts_approved ? '#10b981' : '#6b7280' }}>
-                          {p.accounts_approved ? <><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Approved</> : 'Pending'}
-                        </span>
-                      </td>
-                      <td style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {!p.is_verified && (
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 11 }} onClick={() => { setVerifyPaymentId(p.id); setVerifyForm({ transaction_id: p.transaction_ref || '', verification_note: '' }); }}>
-                            Verify
-                          </button>
-                        )}
-                        {!p.accounts_approved && (
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ fontSize: 11 }} onClick={() => handleApproveAccounts(p.id)}><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Acc</button>
-                        )}
-                        {p.accounts_approved && !p.management_approved && (
-                          <button className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: 11 }} onClick={() => handleApproveManagement(p.id)}><CheckIcon style={{ width: 12, height: 12, marginRight: 4 }} />Mgmt</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="qa-drawer-divider" />
+
+            {actionMode === 'pay' && (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  {/* Inline budget summary for Record Payment */}
+                  <div style={{
+                    display: 'flex', gap: 16, background: 'var(--bg-secondary)', 
+                    padding: '8px 12px', borderRadius: 6, marginBottom: 16, fontSize: 12
+                  }}>
+                    <div>Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalValue)}</strong></div>
+                    <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaid)}</strong></div>
+                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(totalValue - totalPaid)}</strong></div>
+                  </div>
+
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group"><label className="bkd-form-label">Payment Date *</label><input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={e => setPayForm(p => ({...p, payment_date:e.target.value}))}/></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Amount (₹) *</label><input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={e => setPayForm(p => ({...p, amount:e.target.value}))}/></div>
+                  </div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group"><label className="bkd-form-label">Payment Mode *</label>
+                      <select className="bkd-form-control" value={payForm.payment_mode} onChange={e => setPayForm(p => ({...p, payment_mode:e.target.value}))}>
+                        {['Online','NEFT/RTGS','Cheque','Demand Draft','Cash','UPI'].map(m => <option key={m}>{m}</option>)}
+                      </select></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. *</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/></div>
+                  </div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group"><label className="bkd-form-label">Bank / Drawn On</label><input type="text" className="bkd-form-control" placeholder="e.g. HDFC Bank" value={payForm.bank_name} onChange={e => setPayForm(p => ({...p, bank_name:e.target.value}))}/></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Payment Type</label>
+                      <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({...p, payment_type:e.target.value}))}>
+                        {['Token','Down Payment','Installment','EMI','Final Payment','Other'].map(t => <option key={t}>{t}</option>)}
+                      </select></div>
+                  </div>
+                  <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({...p, remarks:e.target.value}))}/></div>
+                  <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
+                  {renderActivityHistory()}
+                </div>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount} onClick={handleAddPayment}>
+                    {paySaving ? 'Saving...' : 'Submit Payment'}
+                  </button>
+                </div>
+              </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* DEV COST TAB */}
-      {activeTab === 'devcost' && (
-        <div className="col-section">
-          <div className="col-section-header">
-            <div className="col-section-title"><Cog6ToothIcon style={{ width: 16, height: 16 }} /> Development Costs & Valuation</div>
-            {!showDevForm && <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowDevForm(true)}>Edit</button>}
-          </div>
-          <div className="col-section-body">
-            {showDevForm ? (
-              <div>
-                <div className="col-form-grid-3">
-                  {[['guideline_value', 'Guideline Value (₹/sq.ft.)'], ['plot_area', 'Plot Area (sq.ft.)'], ['development_cost_per_sqft', 'Dev Cost (₹/sq.ft.)']].map(([f, l]) => (
-                    <div className="col-form-group" key={f}>
-                      <label className="col-form-label">{l}</label>
-                      <input className="col-form-input" type="number" value={devForm[f]} onChange={e => setDevForm(p => ({ ...p, [f]: e.target.value }))} />
+            {actionMode === 'status' && (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
+                  <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    {statusOptions.map(s => (
+                      <button key={s.id} className={`qa-drawer-st-btn ${newStatusId === String(s.id) ? 'sel-default' : ''}`}
+                        onClick={() => setNewStatusId(String(s.id))}>
+                        <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                          {s.status_code === 'CANCEL' || s.status_code === 'CANCELLED' ? (
+                            <ExclamationTriangleIcon style={{ width: 18, height: 18, color: s.color_code || '#EF4444' }} />
+                          ) : (
+                            <CheckCircleIcon style={{ width: 18, height: 18, color: s.color_code || 'var(--accent-blue)' }} />
+                          )}
+                        </div>
+                        <div className="qa-drawer-st-label">{s.status_name}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const sel = statusOptions.find(s => String(s.id) === newStatusId);
+                    if (sel?.status_code === 'CANCEL' || sel?.status_code === 'CANCELLED') {
+                      return (
+                        <div style={{ marginTop: 14 }}>
+                          <label className="qa-drawer-field-label">Cancel Reason *</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
+                            onChange={e => setCancelReasonId(e.target.value)}>
+                            <option value="">— Select reason —</option>
+                            {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name}</option>)}
+                          </select>
+                          <div style={{ marginTop: 8 }}>
+                            <label className="qa-drawer-field-label">Cancel Remarks</label>
+                            <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Additional remarks..."
+                              value={cancelRemarks} onChange={e => setCancelRemarks(e.target.value)} />
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {renderActivityHistory()}
+                </div>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
+                  <button className="qa-drawer-save-btn" disabled={!newStatusId || statusSaving} onClick={handleStatusUpdate}>
+                    {statusSaving ? 'Updating...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Booking Status</>}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {actionMode === 'payStatus' && (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
+                  <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    {PAYMENT_STATUSES.map(ps => (
+                      <button key={ps} className={`qa-drawer-st-btn ${paymentStatus === ps ? 'sel-follow-up' : ''}`}
+                        onClick={() => setPaymentStatus(ps)}>
+                        <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                          {ps === 'Follow Up' ? (
+                            <CalendarDaysIcon style={{ width: 18, height: 18, color: '#F59E0B' }} />
+                          ) : ps === 'Full Payment Received' ? (
+                            <CheckCircleIcon style={{ width: 18, height: 18, color: '#10B981' }} />
+                          ) : (
+                            <CreditCardIcon style={{ width: 18, height: 18, color: '#3B82F6' }} />
+                          )}
+                        </div>
+                        <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {paymentStatus === 'Follow Up' && (
+                    <div style={{ marginTop: 14 }}>
+                      <label className="qa-drawer-field-label">Follow-Up Date *</label>
+                      <input className="qa-drawer-field-input" style={{ width: '100%' }} type="date" value={followUpDate}
+                        onChange={e => setFollowUpDate(e.target.value)} />
                     </div>
-                  ))}
+                  )}
+                  {renderActivityHistory()}
                 </div>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-                  <button className="crm-btn crm-btn-ghost" onClick={() => setShowDevForm(false)}>Cancel</button>
-                  <button className="crm-btn crm-btn-primary" onClick={handleDevCostSave} disabled={devSaving}>{devSaving ? 'Saving...' : 'Save & Calculate'}</button>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
+                  <button className="qa-drawer-save-btn" style={{ background: '#6366F1' }} onClick={handlePaymentStatusUpdate} disabled={!paymentStatus || payStatusSaving}>
+                    {payStatusSaving ? 'Updating...' : <><CreditCardIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Payment Status</>}
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="col-profile-info-grid">
-                {[
-                  ['Guideline Value', booking.guideline_value ? `₹${parseFloat(booking.guideline_value).toLocaleString('en-IN')}/sq.ft.` : '-'],
-                  ['Plot Area', booking.plot_area ? `${parseFloat(booking.plot_area).toLocaleString('en-IN')} sq.ft.` : '-'],
-                  ['Plot Value', formatCurrency(booking.plot_value || 0)],
-                  ['Stamp Value (7%)', formatCurrency(booking.stamp_value || 0)],
-                  ['Registration Exp (2%)', formatCurrency(booking.registration_exp || 0)],
-                  ['Dev Cost/sq.ft.', booking.development_cost_per_sqft ? `₹${parseFloat(booking.development_cost_per_sqft).toLocaleString('en-IN')}` : '-'],
-                  ['Dev Charges (incl. GST)', formatCurrency(booking.development_charges || 0)],
-                ].map(([l, v]) => (
-                  <div className="col-profile-field" key={l}>
-                    <div className="col-profile-field-label">{l}</div>
-                    <div className="col-profile-field-value">{v}</div>
-                  </div>
-                ))}
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* ACTIVITIES TAB */}
-      {activeTab === 'activities' && (
-        <div className="col-section">
-          <div className="col-section-header">
-            <div className="col-section-title"><ClockIcon style={{ width: 16, height: 16 }} /> Activity History</div>
-            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => {
-              setActivitiesLoading(true);
-              bookingApi.getActivities(bookingId).then(r => setActivities(r.data?.data || r.data || [])).catch(() => {}).finally(() => setActivitiesLoading(false));
-            }}><ArrowPathIcon style={{ width: 14, height: 14 }} /></button>
-          </div>
-          <div className="col-section-body">
-            {activitiesLoading ? (
-              <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)' }}>
-                <ArrowPathIcon style={{ width: 24, height: 24, margin: '0 auto', animation: 'spin 1s linear infinite' }} />
-                <p style={{ marginTop: 8, fontSize: 13 }}>Loading activities...</p>
-              </div>
-            ) : activities.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)', fontSize: 13 }}>No activity recorded yet</div>
-            ) : (
-              <div style={{ position: 'relative', paddingLeft: 24 }}>
-                {/* Timeline line */}
-                <div style={{ position: 'absolute', left: 11, top: 0, bottom: 0, width: 2, background: 'var(--border-primary)' }} />
-                {activities.map((act, i) => (
-                  <div key={act.id || i} style={{ position: 'relative', paddingBottom: 20, marginBottom: 0 }}>
-                    {/* Dot */}
-                    <div style={{
-                      position: 'absolute', left: -17, top: 3, width: 14, height: 14, borderRadius: '50%',
-                      border: '2px solid',
-                      borderColor: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
-                        act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
-                        act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' :
-                        act.activity_type === 'PAYMENT_VERIFIED' ? '#8B5CF6' :
-                        act.activity_type === 'CANCELLED' ? '#EF4444' : '#6B7280',
-                      background: 'var(--bg-card)',
-                    }} />
-                    <div style={{ marginLeft: 8 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{act.title}</div>
-                      {act.description && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{act.description}</div>}
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <span>{act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'}</span>
-                        <span>·</span>
-                        <span>{new Date(act.performed_at).toLocaleString()}</span>
-                      </div>
+            {actionMode === 'devCost' && (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Development Cost</div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group"><label className="bkd-form-label">Guideline Value *</label>
+                      <input type="number" className="bkd-form-control" value={devCostForm.guideline_value} onChange={e => setDevCostForm(p => ({ ...p, guideline_value: e.target.value }))} />
+                    </div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Plot Area *</label>
+                      <input type="number" className="bkd-form-control" value={devCostForm.plot_area} onChange={e => setDevCostForm(p => ({ ...p, plot_area: e.target.value }))} />
                     </div>
                   </div>
-                ))}
+                  <div className="bkd-form-group"><label className="bkd-form-label">Development Cost / Sqft *</label>
+                    <input type="number" className="bkd-form-control" value={devCostForm.development_cost_per_sqft} onChange={e => setDevCostForm(p => ({ ...p, development_cost_per_sqft: e.target.value }))} />
+                  </div>
+                  {renderActivityHistory()}
+                </div>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
+                  <button className="qa-drawer-save-btn" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving}>
+                    {devCostSaving ? 'Updating...' : 'Update Development Cost'}
+                  </button>
+                </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* MODALS */}
-      {/* Record Payment Modal */}
-      {showPayForm && (
-        <div className="col-modal-overlay" onClick={() => setShowPayForm(false)}>
-          <div className="col-modal" onClick={e => e.stopPropagation()}>
-            <div className="col-modal-header">
-              <h2>Record Payment</h2>
-              <button className="col-modal-close" onClick={() => setShowPayForm(false)}>×</button>
-            </div>
-            <div className="col-modal-body">
-              <div className="col-form-grid">
-                <div className="col-form-group">
-                  <label className="col-form-label">Payment Type</label>
-                  <select className="col-form-select" value={payForm.payment_type} onChange={e => setPayForm(p => ({ ...p, payment_type: e.target.value }))}>
-                    {['Token', 'Down Payment', 'Installment', 'EMI', 'Final Payment', 'Other'].map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Payment Mode</label>
-                  <select className="col-form-select" value={payForm.payment_mode} onChange={e => setPayForm(p => ({ ...p, payment_mode: e.target.value }))}>
-                    {['Cash', 'Cheque', 'Online', 'NEFT/RTGS', 'UPI', 'DD'].map(m => <option key={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Amount (₹) *</label>
-                  <input className="col-form-input" type="number" placeholder="0.00" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} />
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Payment Date</label>
-                  <input className="col-form-input" type="date" value={payForm.payment_date} onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} />
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Transaction Ref</label>
-                  <input className="col-form-input" type="text" placeholder="UTR / Cheque #" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({ ...p, transaction_ref: e.target.value }))} />
-                </div>
-                <div className="col-form-group">
-                  <label className="col-form-label">Remarks</label>
-                  <input className="col-form-input" type="text" value={payForm.remarks} onChange={e => setPayForm(p => ({ ...p, remarks: e.target.value }))} />
-                </div>
-              </div>
-            </div>
-            <div className="col-modal-footer">
-              <button className="crm-btn crm-btn-ghost" onClick={() => setShowPayForm(false)}>Cancel</button>
-              <button className="crm-btn crm-btn-primary" onClick={handleAddPayment} disabled={paySaving}>{paySaving ? 'Saving...' : 'Record Payment'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Update Status Modal */}
-      {editStatus && (
-        <div className="col-modal-overlay" onClick={() => setEditStatus(false)}>
-          <div className="col-modal" style={{ maxWidth: 450 }} onClick={e => e.stopPropagation()}>
-            <div className="col-modal-header">
-              <h2>Update Booking Status</h2>
-              <button className="col-modal-close" onClick={() => setEditStatus(false)}>×</button>
-            </div>
-            <div className="col-modal-body">
-              <div className="col-form-group">
-                <label className="col-form-label">New Status</label>
-                <select className="col-form-select" value={newStatusId} onChange={e => setNewStatusId(e.target.value)}>
-                  <option value="">Select status...</option>
-                  {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="col-modal-footer">
-              <button className="crm-btn crm-btn-ghost" onClick={() => setEditStatus(false)}>Cancel</button>
-              <button className="crm-btn crm-btn-primary" onClick={handleStatusUpdate} disabled={!newStatusId}>Update Status</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Verify Payment Modal */}
-      {verifyPaymentId && (
-        <div className="col-modal-overlay" onClick={() => setVerifyPaymentId(null)}>
-          <div className="col-modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-            <div className="col-modal-header">
-              <h2>Verify Payment</h2>
-              <button className="col-modal-close" onClick={() => setVerifyPaymentId(null)}>×</button>
-            </div>
-            <div className="col-modal-body">
-              <div className="col-form-group" style={{ marginBottom: 14 }}>
-                <label className="col-form-label">Transaction ID *</label>
-                <input className="col-form-input" type="text" placeholder="Enter transaction ID" value={verifyForm.transaction_id} onChange={e => setVerifyForm(p => ({ ...p, transaction_id: e.target.value }))} />
-              </div>
-              <div className="col-form-group">
-                <label className="col-form-label">Verification Note</label>
-                <textarea className="col-form-textarea" rows={2} placeholder="Optional note..." value={verifyForm.verification_note} onChange={e => setVerifyForm(p => ({ ...p, verification_note: e.target.value }))} />
-              </div>
-            </div>
-            <div className="col-modal-footer">
-              <button className="crm-btn crm-btn-ghost" onClick={() => setVerifyPaymentId(null)}>Cancel</button>
-              <button className="crm-btn crm-btn-primary" onClick={handleVerifyPayment}>Verify Payment</button>
-            </div>
           </div>
         </div>
       )}

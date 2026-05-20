@@ -2832,6 +2832,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         if (quickWorkflowAction.needsCustomerProfile || quickWorkflowAction.code === 'SH_BOOKING') {
           const pF = customerProfileForm;
           payload.customerProfile = {
+            buyer_name: pF.buyer_name || undefined,
             date_of_birth: pF.date_of_birth ? new Date(pF.date_of_birth).toISOString() : undefined,
             pan_number: pF.pan_number,
             aadhar_number: pF.aadhar_number,
@@ -2851,6 +2852,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           payload.bookingLocationId = pF.bookingLocationId || undefined;
           payload.bookingProjectId = pF.bookingProjectId || undefined;
           payload.location_id = pF.bookingLocationId || undefined;
+          payload.project_id = pF.bookingProjectId || undefined;
         }
 
         if (quickWorkflowAction.code === 'TC_REASSIGN') {

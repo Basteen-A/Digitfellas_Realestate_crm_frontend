@@ -18,6 +18,11 @@ import {
   UserGroupIcon,
   AdjustmentsHorizontalIcon,
   Squares2X2Icon,
+  BanknotesIcon,
+  DocumentCheckIcon,
+  XCircleIcon,
+  LinkIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
 /**
@@ -41,6 +46,8 @@ export const getSidebarMenuForRole = (roleCode) => {
       return salesHeadSidebar;
     case 'COL':
       return collectionSidebar;
+    case 'ACCT':
+      return accountsSidebar;
     default:
       return telecallerSidebar;
   }
@@ -141,6 +148,15 @@ const collectionSidebar = [
   { label: 'Payments', path: '/collection/payments', icon: CreditCardIcon },
 ];
 
+// ── Accounts Executive ──
+const accountsSidebar = [
+  { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
+  { label: 'Verify Payments', path: '/accounts/verify', icon: MagnifyingGlassIcon },
+  { label: 'Verified', path: '/accounts/verified', icon: DocumentCheckIcon },
+  { label: 'Rejected', path: '/accounts/rejected', icon: XCircleIcon },
+  { label: 'Reconciliation', path: '/accounts/reconciliation', icon: LinkIcon },
+];
+
 // Legacy export for backward compatibility
 export const sidebarMenu = adminSidebar;
 
@@ -169,21 +185,37 @@ export const salesHeadMenu = [
   { group: 'Sales' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'Negotiation Leads', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
-  { label: 'Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
-  { label: 'Bookings Summary', key: 'bookingsummary', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'My Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
+  { label: 'Bookings Analytics', key: 'bookingsummary', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
   // { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
-  { label: 'Team Metrics', key: 'team', icon: BriefcaseIcon, badge: null },
+  // { label: 'Team Metrics', key: 'team', icon: BriefcaseIcon, badge: null },
 ];
 
 export const collectionMenu = [
+  { group: 'Overview' },
+  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'My Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { group: 'Collections' },
+  { label: 'Demand Schedule', key: 'demands', icon: CreditCardIcon, badge: null },
+  { label: 'Payment Log', key: 'payments', icon: BanknotesIcon, badge: null },
+  { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },
+  { group: 'Reports' },
+  { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
+];
+
+export const accountsMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
-  { group: 'Bookings & Payments' },
-  { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
-  { label: 'Customers', key: 'customers', icon: UserGroupIcon, badge: null },
-  { label: 'Payments', key: 'payments', icon: CreditCardIcon, badge: null },
+  { group: 'Verification' },
+  { label: 'Verify Payments', key: 'verify', icon: MagnifyingGlassIcon, badgeColor: 'orange' },
+  { label: 'Verified Payments', key: 'verified', icon: DocumentCheckIcon, badge: null },
+  { label: 'Rejected Payments', key: 'rejected', icon: XCircleIcon, badge: null },
+  { group: 'Ledger' },
+  { label: 'Reconciliation', key: 'reconciliation', icon: LinkIcon, badge: null },
+  { group: 'Reports' },
+  { label: 'Accounts Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 
 export const ROLE_LABELS = {
@@ -193,5 +225,6 @@ export const ROLE_LABELS = {
   SM: 'Sales Manager',
   TC: 'Telecaller',
   COL: 'Collection Manager',
+  ACCT: 'Accounts Executive',
   CRM: 'CRM Executive',
 };

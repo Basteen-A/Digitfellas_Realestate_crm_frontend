@@ -20,6 +20,7 @@ export const ROLE_CODES = {
   SALES_MANAGER: 'SM',
   TELECALLER: 'TC',
   COLLECTION: 'COL',
+  ACCOUNTS_EXEC: 'ACCT',
   CRM: 'CRM',
 };
 
@@ -34,6 +35,7 @@ export const ROLE_GROUPS = {
     ROLE_CODES.TELECALLER,
     ROLE_CODES.CRM,
     ROLE_CODES.COLLECTION,
+    ROLE_CODES.ACCOUNTS_EXEC,
   ],
 };
 

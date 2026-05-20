@@ -51,7 +51,9 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
           <p className="hidden sm:block">Track all payment transactions across your bookings</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={load}>↻ Refresh</button>
+          <button className="crm-btn crm-btn-ghost" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ArrowPathIcon style={{ width: 14, height: 14 }} /> Refresh
+          </button>
         </div>
       </div>
 

@@ -50,6 +50,11 @@ const dashboardApi = {
     const { data } = await api.get('/dashboard/collection');
     return data;
   },
+
+  getAccountsStats: async () => {
+    const { data } = await api.get('/dashboard/accounts');
+    return data;
+  },
 };
 
 export default dashboardApi;

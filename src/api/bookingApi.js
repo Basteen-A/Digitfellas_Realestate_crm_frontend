@@ -34,6 +34,12 @@ const bookingApi = {
 
   // Cancel reasons dropdown
   getCancelReasons: () => api.get('/bookings/cancel-reasons'),
+
+  // Accounts — reject payment
+  rejectPayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/reject`, data),
+
+  // Accounts — all payments queue (filterable)
+  getAllPayments: (params = {}) => api.get('/bookings/payments/all', { params }),
 };
 
 export default bookingApi;

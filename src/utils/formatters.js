@@ -43,6 +43,19 @@ export const formatDateTimeInTimeZone = (value, locale = 'en-IN', timeZone = 'As
 export const formatCurrency = (value, currency = 'INR', locale = 'en-IN') => {
   const num = Number(value);
   if (!Number.isFinite(num)) return '-';
+
+  const absNum = Math.abs(num);
+  const prefix = num < 0 ? '-' : '';
+  const symbol = currency === 'INR' ? '₹' : '';
+
+  if (absNum >= 10000000) { // 1 Crore = 10,000,000
+    const crValue = absNum / 10000000;
+    return `${symbol}${prefix}${crValue.toFixed(2)} Cr`;
+  } else if (absNum >= 10000) { // More than 4 digits (>= 10,000)
+    const lValue = absNum / 100000; // 1 Lakh = 100,000
+    return `${symbol}${prefix}${lValue.toFixed(2)} L`;
+  }
+
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

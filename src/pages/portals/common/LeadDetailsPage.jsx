@@ -938,6 +938,7 @@ const LeadDetailsPage = () => {
         permanent_pincode: pF.permanent_pincode,
       };
       payload.customerProfile = {
+        buyer_name: pF.buyer_name || undefined,
         date_of_birth: pF.date_of_birth ? new Date(pF.date_of_birth).toISOString() : undefined,
         pan_number: pF.pan_number,
         aadhar_number: pF.aadhar_number,
@@ -953,6 +954,10 @@ const LeadDetailsPage = () => {
       };
       payload.inventoryUnitId = pF.inventoryUnitId || undefined;
       payload.payment_plan_id = pF.paymentPlanId || undefined;
+      payload.bookingLocationId = pF.bookingLocationId || undefined;
+      payload.bookingProjectId = pF.bookingProjectId || undefined;
+      payload.location_id = pF.bookingLocationId || undefined;
+      payload.project_id = pF.bookingProjectId || undefined;
     }
 
     if (quickSelectedAction.needsFollowUp) {
@@ -1357,7 +1362,7 @@ const LeadDetailsPage = () => {
                 <div className="lead-details-info-item"><span className="lead-details-label">Assigned To</span><span className="lead-details-value lead-details-value--primary">{lead.assignedToUserName || 'Unassigned'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Assigned By</span><span className="lead-details-value">{lead.assignedByUserName || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Assigned At</span><span className="lead-details-value">{lead.assignedAt ? formatDateTime(lead.assignedAt) : '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">Current Assigned User</span><span className="lead-details-value">{lead.ownerRoleLabel || lead.ownerRole || '-'}</span></div>
+                {/* <div className="lead-details-info-item"><span className="lead-details-label">Current Assigned User</span><span className="lead-details-value">{lead.ownerRoleLabel || lead.ownerRole || '-'}</span></div> */}
                 {lead.handoff?.fromUserName && (
                   <div className="lead-details-info-item">
                     <span className="lead-details-label">Last Handoff</span>
@@ -2280,6 +2285,11 @@ const LeadDetailsPage = () => {
                   {/* ── Contextual: Customer Profile ── */}
                   {(quickSelectedAction?.needsCustomerProfile || quickSelectedAction?.code === 'SH_BOOKING') && (
                     <div className="qa-drawer-profile-block">
+                      {/* ── Buyer Name ── */}
+                      <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Buyer Name</div>
+                      <div style={{ marginBottom: 12 }}>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter buyer name (if different from lead)" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} />
+                      </div>
                       {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>
                       <div className="qa-drawer-profile-grid">

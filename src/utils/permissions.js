@@ -11,6 +11,9 @@ export const getRoleCode = (user) =>
     if (['TC', 'TELE_CALLER', 'TELECALLER'].includes(normalized)) return ROLE_CODES.TELECALLER;
     if (['SM', 'SALES_MANAGER', 'SALESMANAGER'].includes(normalized)) return ROLE_CODES.SALES_MANAGER;
     if (['SH', 'SALES_HEAD', 'SALESHEAD'].includes(normalized)) return ROLE_CODES.SALES_HEAD;
+    if (['ACCT', 'ACCOUNTS', 'ACCOUNTS_EXEC', 'ACCOUNTS_EXECUTIVE'].includes(normalized)) {
+      return ROLE_CODES.ACCOUNTS_EXEC;
+    }
     return normalized;
   })();
 
@@ -34,6 +37,7 @@ export const routePermissions = {
   '/sales-manager/leads': [ROLE_CODES.SALES_MANAGER, ROLE_CODES.SALES_HEAD, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN],
   '/sales-head/leads': [ROLE_CODES.SALES_HEAD, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN],
   '/collection/leads': [ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN],
+  '/accounts/dashboard': [ROLE_CODES.ACCOUNTS_EXEC, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN],
   '/super-admin': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/locations': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/projects': ROLE_GROUPS.ADMIN_LEVEL,

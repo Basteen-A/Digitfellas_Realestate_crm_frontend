@@ -13,6 +13,20 @@ import {
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
+const getComputedTotalValue = (booking) => {
+  if (!booking) return 0;
+  const toAmount = (v) => {
+    const n = parseFloat(v || 0);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
+  const stampValue = toAmount(booking.stamp_value || booking.stamp_duty);
+  const registrationValue = toAmount(booking.registration_exp || booking.registration_charges);
+  const developmentValue = toAmount(booking.development_charges);
+  const computedTotalValue = plotValue + stampValue + registrationValue + developmentValue;
+  return computedTotalValue > 0 ? computedTotalValue : toAmount(booking.net_amount || booking.total_amount);
+};
+
 export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +36,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   // Quick Action Drawer state
   const [drawerBooking, setDrawerBooking] = useState(null);
-  const [drawerMode, setDrawerMode] = useState(null); // 'status' | 'pay' | 'verify' | 'payStatus'
+  const [drawerMode, setDrawerMode] = useState(null); // 'status' | 'pay' | 'payStatus'
   // Status form
   const [newStatusId, setNewStatusId] = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
@@ -30,12 +44,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [cancelReasons, setCancelReasons] = useState([]);
   const [cancelRemarks, setCancelRemarks] = useState('');
   // Payment form
-  const [payForm, setPayForm] = useState({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+  const [payForm, setPayForm] = useState({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', bank_name: '', remarks: '' });
   const [paySaving, setPaySaving] = useState(false);
-  // Verify form
-  const [verifyPaymentId, setVerifyPaymentId] = useState('');
-  const [verifyForm, setVerifyForm] = useState({ transaction_id: '', verification_note: '' });
-  const [verifySaving, setVerifySaving] = useState(false);
   // Payment status form
   const [paymentStatus, setPaymentStatus] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
@@ -86,9 +96,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setDrawerMode(mode);
     setNewStatusId('');
     setCancelReasonId(''); setCancelRemarks('');
-    setPayForm({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
-    setVerifyPaymentId('');
-    setVerifyForm({ transaction_id: '', verification_note: '' });
+    setPayForm({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', bank_name: '', remarks: '' });
     setPaymentStatus(booking.payment_status || '');
     setFollowUpDate('');
     // Load activities
@@ -101,7 +109,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     if (!newStatusId || !drawerBooking) return;
     // Find selected status to check if it's Cancelled
     const selectedStatus = statusOptions.find(s => String(s.id) === newStatusId);
-    const isCancelled = selectedStatus?.status_code === 'CANCELLED';
+    const isCancelled = selectedStatus?.status_code === 'CANCEL' || selectedStatus?.status_code === 'CANCELLED';
     if (isCancelled && !cancelReasonId) { toast.error('Select a cancellation reason'); return; }
     setStatusSaving(true);
     try {
@@ -143,22 +151,59 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     finally { setPaySaving(false); }
   };
 
-  const handleVerifyPayment = async () => {
-    if (!verifyPaymentId || !drawerBooking) return;
-    setVerifySaving(true);
-    try {
-      await bookingApi.verifyPayment(drawerBooking.id, verifyPaymentId, verifyForm);
-      toast.success('Payment verified');
-      closeDrawer();
-      loadBookings();
-    } catch (err) { toast.error(getErrorMessage(err, 'Verification failed')); }
-    finally { setVerifySaving(false); }
-  };
-
   const getProgressClass = (pct) => {
     if (pct >= 100) return 'success';
     if (pct >= 50) return '';
     return 'warning';
+  };
+
+  const renderActivityHistory = () => {
+    return (
+      <div style={{ marginTop: 24 }}>
+        <div className="qa-drawer-divider" style={{ margin: '0 0 16px' }} />
+        <div className="qa-drawer-section" style={{ padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <ClockIcon style={{ width: 14, height: 14 }} /> Activity History
+        </div>
+        {activitiesLoading ? (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>Loading...</div>
+        ) : activities.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>No activity yet</div>
+        ) : (
+          <div style={{ paddingRight: 4 }}>
+            {activities.slice(0, 20).map((act, i) => (
+              <div key={act.id || i} style={{
+                display: 'flex', gap: 10, paddingBottom: 10, marginBottom: 10,
+                borderBottom: i < activities.length - 1 ? '1px solid var(--border-primary)' : 'none',
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
+                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
+                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
+                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
+                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
+                  fontSize: 12, fontWeight: 700,
+                }}>
+                  {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
+                  {act.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{act.description}</div>}
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                    {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : ''} · {new Date(act.performed_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -229,7 +274,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           <div style={{ fontWeight: 500 }}>{booking.project_name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</div>
                         </td>
-                        <td style={{ fontWeight: 600 }}>{formatCurrency(booking.net_amount)}</td>
+                        <td style={{ fontWeight: 600 }}>{formatCurrency(getComputedTotalValue(booking))}</td>
                         <td style={{ minWidth: 90 }}>
                           <div className="col-progress" style={{ height: 6, width: '100%' }}>
                             <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
@@ -254,8 +299,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             <button className="col-qa-btn col-qa-status" title="Update Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'status'); }}>
                               <PencilSquareIcon style={{ width: 15, height: 15 }} />
                             </button>
-                            <button className="col-qa-btn col-qa-verify" title="Verify Payment" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'verify'); }}>
-                              <ShieldCheckIcon style={{ width: 15, height: 15 }} />
+                            <button className="col-qa-btn col-qa-status" title="Update Payment Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'payStatus'); }}>
+                              <CreditCardIcon style={{ width: 15, height: 15 }} />
                             </button>
                           </div>
                         </td>
@@ -273,7 +318,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       {!loading && filteredBookings.length > 0 && (
         <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <span><strong>{filteredBookings.length}</strong> bookings</span>
-          <span>Value: <strong style={{ color: 'var(--accent-blue)' }}>{formatCurrency(filteredBookings.reduce((s, b) => s + parseFloat(b.net_amount || 0), 0))}</strong></span>
+          <span>Value: <strong style={{ color: 'var(--accent-blue)' }}>{formatCurrency(filteredBookings.reduce((s, b) => s + getComputedTotalValue(b), 0))}</strong></span>
           <span>Collected: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(filteredBookings.reduce((s, b) => s + parseFloat(b.total_paid || 0), 0))}</strong></span>
         </div>
       )}
@@ -281,7 +326,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       {/* ══════════ QUICK ACTION DRAWER ══════════ */}
       {drawerBooking && (
         <div className="col-modal-overlay" onClick={closeDrawer}>
-          <div className="qa-modal-panel" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+          <div className="qa-modal-panel" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
             {/* Handle */}
             <div className="qa-drawer-handle" />
 
@@ -294,85 +339,63 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                 <div>
                   <div className="qa-drawer-name">{drawerBooking.customer_name || drawerBooking.buyer_name || 'Customer'}</div>
                   <div className="qa-drawer-meta">{drawerBooking.booking_number} · {drawerBooking.project_name}</div>
-                  <div className="qa-drawer-budget">
-                    Net: {formatCurrency(drawerBooking.net_amount)} · Paid: <span style={{ color: 'var(--accent-green)' }}>{formatCurrency(drawerBooking.total_paid || 0)}</span>
+                  <div className="qa-drawer-budget" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                    Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(getComputedTotalValue(drawerBooking))}</strong> · Paid: <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(drawerBooking.total_paid || 0)}</span> · Balance: <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>{formatCurrency(getComputedTotalValue(drawerBooking) - (drawerBooking.total_paid || 0))}</span>
                   </div>
                 </div>
               </div>
               <button className="qa-drawer-close" onClick={closeDrawer}>×</button>
             </div>
 
-            {/* Mode Tabs */}
-            <div className="qa-drawer-section" style={{ paddingBottom: 0 }}>Quick Actions</div>
-            <div className="qa-drawer-status-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', padding: '8px 20px 16px' }}>
-              <button className={`qa-drawer-st-btn ${drawerMode === 'status' ? 'sel-default' : ''}`} onClick={() => setDrawerMode('status')}>
-                <div className="qa-drawer-st-icon"><PencilSquareIcon style={{ width: 22, height: 22 }} /></div>
-                <div className="qa-drawer-st-label">Booking Status</div>
-              </button>
-              <button className={`qa-drawer-st-btn ${drawerMode === 'payStatus' ? 'sel-follow-up' : ''}`} onClick={() => setDrawerMode('payStatus')}>
-                <div className="qa-drawer-st-icon"><CreditCardIcon style={{ width: 22, height: 22 }} /></div>
-                <div className="qa-drawer-st-label">Pay Status</div>
-              </button>
-              <button className={`qa-drawer-st-btn ${drawerMode === 'pay' ? 'sel-sv-done' : ''}`} onClick={() => setDrawerMode('pay')}>
-                <div className="qa-drawer-st-icon"><BanknotesIcon style={{ width: 22, height: 22 }} /></div>
-                <div className="qa-drawer-st-label">Record Pay</div>
-              </button>
-              <button className={`qa-drawer-st-btn ${drawerMode === 'verify' ? 'sel-default' : ''}`} onClick={() => setDrawerMode('verify')}>
-                <div className="qa-drawer-st-icon"><ShieldCheckIcon style={{ width: 22, height: 22 }} /></div>
-                <div className="qa-drawer-st-label">Verify Pay</div>
-              </button>
-              <button className={`qa-drawer-st-btn`} onClick={() => { closeDrawer(); onSelectBooking(drawerBooking.id); }}>
-                <div className="qa-drawer-st-icon"><EyeIcon style={{ width: 22, height: 22 }} /></div>
-                <div className="qa-drawer-st-label">View Detail</div>
-              </button>
-            </div>
-
             <div className="qa-drawer-divider" />
 
             {/* ── BOOKING STATUS UPDATE MODE ── */}
             {drawerMode === 'status' && (
-              <div style={{ padding: '16px 20px' }}>
-                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
-                <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  {statusOptions.map(s => (
-                    <button key={s.id} className={`qa-drawer-st-btn ${newStatusId === String(s.id) ? 'sel-default' : ''}`}
-                      onClick={() => setNewStatusId(String(s.id))}>
-                      <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
-                        {s.status_code === 'CANCELLED' ? (
-                          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: s.color_code || '#EF4444' }} />
-                        ) : (
-                          <CheckCircleIcon style={{ width: 18, height: 18, color: s.color_code || 'var(--accent-blue)' }} />
-                        )}
-                      </div>
-                      <div className="qa-drawer-st-label">{s.status_name}</div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Cancel reason dropdown — shown when Cancelled is selected */}
-                {(() => {
-                  const sel = statusOptions.find(s => String(s.id) === newStatusId);
-                  if (sel?.status_code === 'CANCELLED') {
-                    return (
-                      <div style={{ marginTop: 14 }}>
-                        <label className="qa-drawer-field-label">Cancel Reason *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
-                          onChange={e => setCancelReasonId(e.target.value)}>
-                          <option value="">— Select reason —</option>
-                          {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name}</option>)}
-                        </select>
-                        <div style={{ marginTop: 8 }}>
-                          <label className="qa-drawer-field-label">Cancel Remarks</label>
-                          <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Additional remarks..."
-                            value={cancelRemarks} onChange={e => setCancelRemarks(e.target.value)} />
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
+                  <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    {statusOptions.map(s => (
+                      <button key={s.id} className={`qa-drawer-st-btn ${newStatusId === String(s.id) ? 'sel-default' : ''}`}
+                        onClick={() => setNewStatusId(String(s.id))}>
+                        <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                          {s.status_code === 'CANCEL' || s.status_code === 'CANCELLED' ? (
+                            <ExclamationTriangleIcon style={{ width: 18, height: 18, color: s.color_code || '#EF4444' }} />
+                          ) : (
+                            <CheckCircleIcon style={{ width: 18, height: 18, color: s.color_code || 'var(--accent-blue)' }} />
+                          )}
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                        <div className="qa-drawer-st-label">{s.status_name}</div>
+                      </button>
+                    ))}
+                  </div>
 
-                <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                  {/* Cancel reason dropdown — shown when Cancelled is selected */}
+                  {(() => {
+                    const sel = statusOptions.find(s => String(s.id) === newStatusId);
+                    if (sel?.status_code === 'CANCEL' || sel?.status_code === 'CANCELLED') {
+                      return (
+                        <div style={{ marginTop: 14 }}>
+                          <label className="qa-drawer-field-label">Cancel Reason *</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
+                            onChange={e => setCancelReasonId(e.target.value)}>
+                            <option value="">— Select reason —</option>
+                            {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name}</option>)}
+                          </select>
+                          <div style={{ marginTop: 8 }}>
+                            <label className="qa-drawer-field-label">Cancel Remarks</label>
+                            <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Additional remarks..."
+                              value={cancelRemarks} onChange={e => setCancelRemarks(e.target.value)} />
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {renderActivityHistory()}
+                </div>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
                   <button className="qa-drawer-save-btn" disabled={!newStatusId || statusSaving} onClick={handleStatusUpdate}>
                     {statusSaving ? 'Updating...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Booking Status</>}
                   </button>
@@ -382,36 +405,39 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
             {/* ── PAYMENT STATUS UPDATE MODE ── */}
             {drawerMode === 'payStatus' && (
-              <div style={{ padding: '16px 20px' }}>
-                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
-                <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  {PAYMENT_STATUSES.map(ps => (
-                    <button key={ps} className={`qa-drawer-st-btn ${paymentStatus === ps ? 'sel-follow-up' : ''}`}
-                      onClick={() => setPaymentStatus(ps)}>
-                      <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
-                        {ps === 'Follow Up' ? (
-                          <CalendarDaysIcon style={{ width: 18, height: 18, color: '#F59E0B' }} />
-                        ) : ps === 'Full Payment Received' ? (
-                          <CheckCircleIcon style={{ width: 18, height: 18, color: '#10B981' }} />
-                        ) : (
-                          <CreditCardIcon style={{ width: 18, height: 18, color: '#3B82F6' }} />
-                        )}
-                      </div>
-                      <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps}</div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Follow Up date — shown when Follow Up is selected */}
-                {paymentStatus === 'Follow Up' && (
-                  <div style={{ marginTop: 14 }}>
-                    <label className="qa-drawer-field-label">Follow-Up Date *</label>
-                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="date" value={followUpDate}
-                      onChange={e => setFollowUpDate(e.target.value)} />
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
+                  <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    {PAYMENT_STATUSES.map(ps => (
+                      <button key={ps} className={`qa-drawer-st-btn ${paymentStatus === ps ? 'sel-follow-up' : ''}`}
+                        onClick={() => setPaymentStatus(ps)}>
+                        <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                          {ps === 'Follow Up' ? (
+                            <CalendarDaysIcon style={{ width: 18, height: 18, color: '#F59E0B' }} />
+                          ) : ps === 'Full Payment Received' ? (
+                            <CheckCircleIcon style={{ width: 18, height: 18, color: '#10B981' }} />
+                          ) : (
+                            <CreditCardIcon style={{ width: 18, height: 18, color: '#3B82F6' }} />
+                          )}
+                        </div>
+                        <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps}</div>
+                      </button>
+                    ))}
                   </div>
-                )}
 
-                <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                  {/* Follow Up date — shown when Follow Up is selected */}
+                  {paymentStatus === 'Follow Up' && (
+                    <div style={{ marginTop: 14 }}>
+                      <label className="qa-drawer-field-label">Follow-Up Date *</label>
+                      <input className="qa-drawer-field-input" style={{ width: '100%' }} type="date" value={followUpDate}
+                        onChange={e => setFollowUpDate(e.target.value)} />
+                    </div>
+                  )}
+
+                  {renderActivityHistory()}
+                </div>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
                   <button className="qa-drawer-save-btn" style={{ background: '#6366F1' }} disabled={!paymentStatus || payStatusSaving} onClick={handlePaymentStatusUpdate}>
                     {payStatusSaving ? 'Updating...' : <><CreditCardIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Payment Status</>}
                   </button>
@@ -421,147 +447,63 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
             {/* ── RECORD PAYMENT MODE ── */}
             {drawerMode === 'pay' && (
-              <div style={{ padding: '16px 20px' }}>
-                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <label className="qa-drawer-field-label">Payment Type</label>
-                    <select className="qa-drawer-field-select" style={{ width: '100%' }} value={payForm.payment_type} onChange={e => setPayForm(p => ({ ...p, payment_type: e.target.value }))}>
-                      {['Token', 'Down Payment', 'Installment', 'EMI', 'Final Payment', 'Other'].map(t => <option key={t}>{t}</option>)}
-                    </select>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
+                    <div>Net: <strong>{formatCurrency(getComputedTotalValue(drawerBooking))}</strong></div>
+                    <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(drawerBooking.total_paid || 0)}</strong></div>
+                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(getComputedTotalValue(drawerBooking) - (drawerBooking.total_paid || 0))}</strong></div>
                   </div>
-                  <div>
-                    <label className="qa-drawer-field-label">Payment Mode</label>
-                    <select className="qa-drawer-field-select" style={{ width: '100%' }} value={payForm.payment_mode} onChange={e => setPayForm(p => ({ ...p, payment_mode: e.target.value }))}>
-                      {['Cash', 'Cheque', 'Online', 'NEFT/RTGS', 'UPI', 'DD'].map(m => <option key={m}>{m}</option>)}
-                    </select>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Payment Date *</label>
+                      <input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={e => setPayForm(p => ({...p, payment_date:e.target.value}))}/>
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Amount (₹) *</label>
+                      <input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={e => setPayForm(p => ({...p, amount:e.target.value}))}/>
+                    </div>
                   </div>
-                  <div>
-                    <label className="qa-drawer-field-label">Amount (₹) *</label>
-                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="number" placeholder="0.00" value={payForm.amount}
-                      onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} />
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Payment Mode *</label>
+                      <select className="bkd-form-control" value={payForm.payment_mode} onChange={e => setPayForm(p => ({...p, payment_mode:e.target.value}))}>
+                        {['Online','NEFT/RTGS','Cheque','Demand Draft','Cash','UPI'].map(m => <option key={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Reference / UTR / Cheque No. *</label>
+                      <input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/>
+                    </div>
                   </div>
-                  <div>
-                    <label className="qa-drawer-field-label">Payment Date</label>
-                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="date" value={payForm.payment_date}
-                      onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} />
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Bank / Drawn On</label>
+                      <input type="text" className="bkd-form-control" placeholder="e.g. HDFC Bank" value={payForm.bank_name || ''} onChange={e => setPayForm(p => ({...p, bank_name:e.target.value}))}/>
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Payment Type</label>
+                      <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({...p, payment_type:e.target.value}))}>
+                        {['Token','Down Payment','Installment','EMI','Final Payment','Other'].map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="qa-drawer-field-label">Transaction Ref</label>
-                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" placeholder="UTR / Cheque #" value={payForm.transaction_ref}
-                      onChange={e => setPayForm(p => ({ ...p, transaction_ref: e.target.value }))} />
+                  <div className="bkd-form-group">
+                    <label className="bkd-form-label">Remarks</label>
+                    <textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({...p, remarks:e.target.value}))}/>
                   </div>
-                  <div>
-                    <label className="qa-drawer-field-label">Remarks</label>
-                    <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" placeholder="Optional" value={payForm.remarks}
-                      onChange={e => setPayForm(p => ({ ...p, remarks: e.target.value }))} />
-                  </div>
+                  <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
+
+                  {renderActivityHistory()}
                 </div>
-                <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
+                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
                   <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount} onClick={handleAddPayment}>
                     {paySaving ? 'Recording...' : <><BanknotesIcon style={{ width: 14, height: 14, marginRight: 4 }} />Record Payment</>}
                   </button>
                 </div>
               </div>
             )}
-
-            {/* ── VERIFY PAYMENT MODE ── */}
-            {drawerMode === 'verify' && (
-              <div style={{ padding: '16px 20px' }}>
-                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Verify a Payment</div>
-                {/* Payment list for this booking */}
-                {(drawerBooking.payments || []).length === 0 ? (
-                  <div className="col-empty" style={{ padding: 20 }}>
-                    <div className="col-empty-title">No payments to verify</div>
-                    <div className="col-empty-desc">Record a payment first</div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ marginBottom: 12 }}>
-                      <label className="qa-drawer-field-label">Select Payment to Verify</label>
-                      <select className="qa-drawer-field-select" style={{ width: '100%' }} value={verifyPaymentId}
-                        onChange={e => {
-                          setVerifyPaymentId(e.target.value);
-                          const p = (drawerBooking.payments || []).find(pm => String(pm.id) === e.target.value);
-                          if (p) setVerifyForm({ transaction_id: p.transaction_ref || '', verification_note: '' });
-                        }}>
-                        <option value="">— Select payment —</option>
-                        {(drawerBooking.payments || []).filter(p => !p.is_verified).map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.payment_number || `#${p.id}`} — {formatCurrency(p.amount)} ({p.payment_mode}) {p.is_verified ? 'Verified' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {verifyPaymentId && (
-                      <>
-                        <div style={{ marginBottom: 12 }}>
-                          <label className="qa-drawer-field-label">Transaction ID *</label>
-                          <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" placeholder="Enter transaction ID"
-                            value={verifyForm.transaction_id} onChange={e => setVerifyForm(p => ({ ...p, transaction_id: e.target.value }))} />
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                          <label className="qa-drawer-field-label">Verification Note</label>
-                          <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Optional note..."
-                            value={verifyForm.verification_note} onChange={e => setVerifyForm(p => ({ ...p, verification_note: e.target.value }))} />
-                        </div>
-                        <div className="qa-drawer-save-row" style={{ padding: '16px 0 0', position: 'relative', borderTop: 'none' }}>
-                          <button className="qa-drawer-save-btn" style={{ background: '#5B3FA6' }} disabled={verifySaving} onClick={handleVerifyPayment}>
-                            {verifySaving ? 'Verifying...' : <><ShieldCheckIcon style={{ width: 14, height: 14, marginRight: 4 }} />Verify Payment</>}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* ── ACTIVITY HISTORY ── */}
-            <div className="qa-drawer-divider" />
-            <div style={{ padding: '12px 20px 20px' }}>
-              <div className="qa-drawer-section" style={{ padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ClockIcon style={{ width: 14, height: 14 }} /> Activity History
-              </div>
-              {activitiesLoading ? (
-                <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>Loading...</div>
-              ) : activities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>No activity yet</div>
-              ) : (
-                <div style={{ maxHeight: 220, overflowY: 'auto', paddingRight: 4 }}>
-                  {activities.slice(0, 20).map((act, i) => (
-                    <div key={act.id || i} style={{
-                      display: 'flex', gap: 10, paddingBottom: 10, marginBottom: 10,
-                      borderBottom: i < activities.length - 1 ? '1px solid var(--border-primary)' : 'none',
-                    }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
-                          act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
-                          act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
-                          act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
-                          act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
-                        fontSize: 12, fontWeight: 700,
-                      }}>
-                        {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
-                         act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
-                         act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
-                         act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
-                        {act.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{act.description}</div>}
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
-                          {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : ''} · {new Date(act.performed_at).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

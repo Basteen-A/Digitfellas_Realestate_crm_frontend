@@ -46,6 +46,7 @@ import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
 import CollectionWorkspace from '../pages/portals/collection';
+import AccountsWorkspace from '../pages/portals/accounts';
 
 const RoleHomeRedirect = () => {
   const user = useSelector((state) => state.auth.user);
@@ -55,6 +56,7 @@ const RoleHomeRedirect = () => {
   if (roleCode === 'SM') return <Navigate to="/sales-manager/leads" replace />;
   if (roleCode === 'SH') return <Navigate to="/sales-head/leads" replace />;
   if (roleCode === 'COL') return <Navigate to="/collection/leads" replace />;
+  if (roleCode === 'ACCT') return <Navigate to="/accounts/dashboard" replace />;
 
   return <Navigate to="/dashboard" replace />;
 };
@@ -89,7 +91,11 @@ const AppRoutes = () => {
             <Route path="/collection/leads" element={<CollectionWorkspace />} />
           </Route>
 
-          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'SA', 'ADM']} />}>
+          <Route element={<RoleRoute allowedRoles={['ACCT', 'SA', 'ADM']} />}>
+            <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
+          </Route>
+
+          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'SA', 'ADM']} />}>
             <Route
               path="/portal/lead/:id"
               element={(
