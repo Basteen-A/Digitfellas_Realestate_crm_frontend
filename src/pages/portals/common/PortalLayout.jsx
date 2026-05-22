@@ -34,7 +34,7 @@ const SCREEN_TITLES = {
   incoming: '',
   push: 'Push to Sales Head',
   negotiations: '',
-  bookings: 'Bookings',
+  bookings: '',
   bookingsummary: '',
   approvals: 'Pending Approvals',
   allleads: 'All Leads',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
 import TelecallerDashboard from './TelecallerDashboard';
@@ -12,6 +12,8 @@ import { telecallerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const TelecallerWorkspace = () => {
   const user = useSelector((state) => state.auth.user);
+  const [leadWorkspaceOptions, setLeadWorkspaceOptions] = useState(null);
+  const lastScreenRef = useRef('dashboard');
 
   return (
     <PortalLayout
@@ -21,34 +23,55 @@ const TelecallerWorkspace = () => {
       defaultScreen="dashboard"
       searchPlaceholder="Search leads by name, phone, email..."
     >
-      {({ activeScreen, setActiveScreen }) => (
-        <>
-          {activeScreen === 'dashboard' && (
-            <TelecallerDashboard user={user} onNavigate={setActiveScreen} />
-          )}
-          {activeScreen === 'leads' && (
-            <LeadWorkspacePage user={user} workspaceRole="TC" />
-          )}
-          {activeScreen === 'leads-addnew' && (
-            <LeadWorkspacePage user={user} workspaceRole="TC" autoOpenCreate />
-          )}
-          {activeScreen === 'pipeline' && (
-            <TelecallerPipeline user={user} onNavigate={setActiveScreen} />
-          )}
-          {activeScreen === 'addlead' && (
-            <TelecallerAddLead user={user} onNavigate={setActiveScreen} />
-          )}
-          {activeScreen === 'calllog' && (
-            <TelecallerCallLog user={user} />
-          )}
-          {activeScreen === 'pullrequests' && (
-            <TelecallerPullRequests user={user} />
-          )}
-          {activeScreen === 'handoffs' && (
-            <HandoffLeadsPage workspaceRole="TC" defaultType="outgoing" showStage={false} />
-          )}
-        </>
-      )}
+      {({ activeScreen, setActiveScreen }) => {
+        // Reset lead workspace options when navigating away from the leads screen
+        if (lastScreenRef.current !== activeScreen) {
+          lastScreenRef.current = activeScreen;
+          if (activeScreen !== 'leads') {
+            setTimeout(() => setLeadWorkspaceOptions(null), 0);
+          }
+        }
+
+        const handleNavigate = (screen, options) => {
+          if (screen === 'leads') {
+            setLeadWorkspaceOptions(options || null);
+          }
+          setActiveScreen(screen);
+        };
+
+        return (
+          <>
+            {activeScreen === 'dashboard' && (
+              <TelecallerDashboard user={user} onNavigate={handleNavigate} />
+            )}
+            {activeScreen === 'leads' && (
+              <LeadWorkspacePage 
+                user={user} 
+                workspaceRole="TC" 
+                initialTab={leadWorkspaceOptions?.tab} 
+              />
+            )}
+            {activeScreen === 'leads-addnew' && (
+              <LeadWorkspacePage user={user} workspaceRole="TC" autoOpenCreate />
+            )}
+            {activeScreen === 'pipeline' && (
+              <TelecallerPipeline user={user} onNavigate={handleNavigate} />
+            )}
+            {activeScreen === 'addlead' && (
+              <TelecallerAddLead user={user} onNavigate={handleNavigate} />
+            )}
+            {activeScreen === 'calllog' && (
+              <TelecallerCallLog user={user} />
+            )}
+            {activeScreen === 'pullrequests' && (
+              <TelecallerPullRequests user={user} />
+            )}
+            {activeScreen === 'handoffs' && (
+              <HandoffLeadsPage workspaceRole="TC" defaultType="outgoing" showStage={false} />
+            )}
+          </>
+        );
+      }}
     </PortalLayout>
   );
 };

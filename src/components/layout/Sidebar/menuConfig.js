@@ -19,9 +19,7 @@ import {
   AdjustmentsHorizontalIcon,
   Squares2X2Icon,
   BanknotesIcon,
-  DocumentCheckIcon,
   XCircleIcon,
-  LinkIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
@@ -112,6 +110,8 @@ const adminSidebar = [
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
       { label: 'Payment Types', path: '/super-admin/payment-types' },
       { label: 'Payment Plans', path: '/super-admin/payment-plans' },
+      { label: 'Payment Modes', path: '/super-admin/payment-modes' },
+      { label: 'Banks', path: '/super-admin/banks' },
     ],
   },
 ];
@@ -152,9 +152,6 @@ const collectionSidebar = [
 const accountsSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
   { label: 'Verify Payments', path: '/accounts/verify', icon: MagnifyingGlassIcon },
-  { label: 'Verified', path: '/accounts/verified', icon: DocumentCheckIcon },
-  { label: 'Rejected', path: '/accounts/rejected', icon: XCircleIcon },
-  { label: 'Reconciliation', path: '/accounts/reconciliation', icon: LinkIcon },
 ];
 
 // Legacy export for backward compatibility
@@ -197,24 +194,15 @@ export const collectionMenu = [
   { group: 'Overview' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
   { label: 'My Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
-  { group: 'Collections' },
-  { label: 'Demand Schedule', key: 'demands', icon: CreditCardIcon, badge: null },
   { label: 'Payment Log', key: 'payments', icon: BanknotesIcon, badge: null },
   { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },
-  { group: 'Reports' },
   { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 
 export const accountsMenu = [
   { group: 'Menu' },
   { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
-  { group: 'Verification' },
   { label: 'Verify Payments', key: 'verify', icon: MagnifyingGlassIcon, badgeColor: 'orange' },
-  { label: 'Verified Payments', key: 'verified', icon: DocumentCheckIcon, badge: null },
-  { label: 'Rejected Payments', key: 'rejected', icon: XCircleIcon, badge: null },
-  { group: 'Ledger' },
-  { label: 'Reconciliation', key: 'reconciliation', icon: LinkIcon, badge: null },
-  { group: 'Reports' },
   { label: 'Accounts Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 

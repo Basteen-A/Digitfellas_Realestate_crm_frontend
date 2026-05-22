@@ -355,7 +355,7 @@ const SalesHeadBookingSummary = () => {
 
   const activeLabel = DATE_PRESETS.find(p => p.key === dateFilter)?.label || 'All Time';
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, color: 'var(--text-secondary)' }}>
         <div style={{ width: 32, height: 32, border: '3px solid var(--accent-blue-bg)', borderTopColor: 'var(--accent-blue)', borderRadius: '50%', animation: 'tc-spin 0.8s linear infinite', marginBottom: 12 }} />
@@ -395,8 +395,9 @@ const SalesHeadBookingSummary = () => {
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={expandAll}>Expand All</button>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={collapseAll}>Collapse All</button>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => load()}>
-            <ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4, verticalAlign: 'text-bottom' }} />Refresh
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => load()} disabled={loading}>
+            <ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4, verticalAlign: 'text-bottom', animation: loading ? 'tc-spin 1s linear infinite' : 'none' }} />
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>

@@ -6,8 +6,11 @@
 /* ── Layout ── */
 .lead-workspace {
   padding: 24px;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--bg-primary, #f1f5f9);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .lead-workspace__loading {
@@ -682,8 +685,11 @@
 
 /* ── Layout ── */
 .lead-workspace__grid {
-  display: block;
-  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-top: 5px;
 }
 
 /* ── List Card ── */
@@ -693,6 +699,10 @@
   border: 1px solid var(--border-primary, #e2e8f0);
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .lead-workspace__list-header {
@@ -725,8 +735,9 @@
 
 .lead-workspace__table-wrap {
   overflow-x: auto;
-  max-height: 70vh;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -734,7 +745,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 700px;
+  min-width: 500px;
 }
 
 .lead-workspace__table th {

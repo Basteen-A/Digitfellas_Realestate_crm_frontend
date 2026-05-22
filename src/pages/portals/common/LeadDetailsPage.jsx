@@ -502,7 +502,9 @@ const LeadDetailsPage = () => {
 
   const isCurrentLeadMissedFollowup = useMemo(() => {
     if (!lead?.nextFollowUpAt || lead?.isClosed) return false;
-    return isFollowUpMissedByDate(lead.nextFollowUpAt);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return isFollowUpMissedByDate(lead.nextFollowUpAt, todayStart);
   }, [lead?.nextFollowUpAt, lead?.isClosed]);
 
   const isMissedFirstBlocked = useMemo(() => {
@@ -523,7 +525,7 @@ const LeadDetailsPage = () => {
         leadWorkflowApi.getWorkflowConfig().catch(() => ({ data: null })),
         siteVisitApi.getAll({ lead_id: id }).catch(() => ({ data: { rows: [] } })),
         MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)
-          ? leadWorkflowApi.getLeads({ roleCode, assignedToMe: true, page: 1, limit: 200 }).catch(() => ({ data: [] }))
+          ? leadWorkflowApi.getLeads({ roleCode, assignedToMe: true, followUpFilter: 'missed', page: 1, limit: 1 }).catch(() => ({ data: [] }))
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -536,13 +538,9 @@ const LeadDetailsPage = () => {
       setSiteVisits(Array.isArray(siteVisitRows) ? siteVisitRows : []);
 
       if (MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) {
-        const assignedLeads = Array.isArray(followUpAssignedResp?.data) ? followUpAssignedResp.data : [];
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        const hasMissed = assignedLeads.some((item) => {
-          if (!item?.nextFollowUpAt || item?.isClosed) return false;
-          return isFollowUpMissedByDate(item.nextFollowUpAt, todayStart);
-        });
+        const totalMissed = followUpAssignedResp?.data?.total || 0;
+        const assignedLeadRows = followUpAssignedResp?.data?.rows || followUpAssignedResp?.data?.data || followUpAssignedResp?.data || followUpAssignedResp?.rows || [];
+        const hasMissed = totalMissed > 0 || assignedLeadRows.length > 0;
         setHasPendingMissedFollowupsForMe(hasMissed);
       } else {
         setHasPendingMissedFollowupsForMe(false);
@@ -691,6 +689,10 @@ const LeadDetailsPage = () => {
 
   const handleRunAction = async () => {
     if (!lead?.id || !selectedAction) return;
+    if (isMissedFirstBlocked) {
+      toast.error('Complete missed follow-ups first to enable this action.');
+      return;
+    }
     if (isSmHandoffReadOnly) {
       toast.error('This lead is view-only after handoff to Sales Head.');
       return;
@@ -812,6 +814,23 @@ const LeadDetailsPage = () => {
 
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
+
+    if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
+      setCustomerProfileForm({
+        buyer_name: `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim(),
+        date_of_birth: '', pan_number: '', aadhar_number: '',
+        occupation: '', current_post: '', purchase_type: '', marital_status: '',
+        current_address: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        sameAsCurrent: false,
+        assignToUserId: '',
+        note: '',
+        inventoryUnitId: '',
+        paymentPlanId: '',
+        bookingProjectId: lead?.projectId || '',
+        bookingLocationId: lead?.locationId || '',
+      });
+    }
 
     // Pre-fill missing location/project selectors from current lead data
     setQuickMissingLocationId(lead?.interestedLocations?.[0] ? String(lead.interestedLocations[0]) : '');
@@ -952,6 +971,7 @@ const LeadDetailsPage = () => {
         current_pincode: pF.current_pincode,
         ...permAddr,
       };
+      payload.buyer_name = pF.buyer_name || undefined;
       payload.inventoryUnitId = pF.inventoryUnitId || undefined;
       payload.payment_plan_id = pF.paymentPlanId || undefined;
       payload.bookingLocationId = pF.bookingLocationId || undefined;
@@ -1626,9 +1646,11 @@ const LeadDetailsPage = () => {
                             onClick={handleRunAction}
                             disabled={
                               actionSaving 
+                              || isMissedFirstBlocked
                               || isSmHandoffReadOnly 
                               || (selectedAction?.needsFollowUp && !actionForm.nextFollowUpAt)
                             }
+                            title={isMissedFirstBlocked ? 'Complete missed follow-ups first to enable actions' : ''}
                           >
                             {actionSaving ? 'Processing...' : 'Run Action'}
                           </button>
@@ -2355,7 +2377,7 @@ const LeadDetailsPage = () => {
                           <option value="">— Select Payment Plan —</option>
                           {paymentPlans.map(plan => (
                             <option key={plan.id} value={plan.id}>
-                              {plan.plan_name}{plan.plan_type ? ` (${plan.plan_type})` : ''}{plan.emi_months ? ` — ${plan.emi_months} months` : ''}{plan.down_payment_percentage ? ` — ${plan.down_payment_percentage}% down` : ''}
+                              {plan.plan_name}
                             </option>
                           ))}
                         </select>

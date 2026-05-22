@@ -15,6 +15,14 @@ const fmtDate = (d) => {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const isVerifiedPayment = (p) => !!p?.is_verified || p?.approval_status === 'APPROVED' || !!p?.management_approved || !!p?.accounts_approved;
+const extractRows = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.rows)) return data.rows;
+  if (Array.isArray(data?.payments)) return data.payments;
+  return [];
+};
+
 const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,9 +44,9 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   const normalizedFilter = filter === 'pending' ? 'unverified' : filter;
 
   const matchesFilter = useCallback((p) => {
-    if (normalizedFilter === 'verified') return !!p.is_verified && !p.is_bounced;
+    if (normalizedFilter === 'verified') return isVerifiedPayment(p) && !p.is_bounced;
     if (normalizedFilter === 'rejected') return !!p.is_bounced;
-    if (normalizedFilter === 'unverified') return !p.is_verified && !p.is_bounced;
+    if (normalizedFilter === 'unverified') return !isVerifiedPayment(p) && !p.is_bounced;
     return true;
   }, [normalizedFilter]);
 
@@ -48,18 +56,41 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
       const apiStatus = ['unverified', 'verified', 'rejected'].includes(normalizedFilter) ? normalizedFilter : undefined;
       const res = await bookingApi.getAllPayments({ status: apiStatus, page, limit: 20 });
       const data = res.data?.data || res.data;
-      const rows = Array.isArray(data?.rows) ? data.rows : [];
-      const filteredRows = rows.filter(matchesFilter);
+      let rows = extractRows(data);
+      let filteredRows = rows.filter(matchesFilter);
+
+      if (apiStatus && normalizedFilter !== 'unverified' && filteredRows.length === 0) {
+        const fallbackRes = await bookingApi.getAllPayments({ page, limit: 20 });
+        const fallbackData = fallbackRes.data?.data || fallbackRes.data;
+        const fallbackRows = extractRows(fallbackData);
+        const fallbackFilteredRows = fallbackRows.filter(matchesFilter);
+        if (fallbackFilteredRows.length > 0) {
+          rows = fallbackRows;
+          filteredRows = fallbackFilteredRows;
+        }
+      }
+
+      if (normalizedFilter === 'verified' && filteredRows.length === 0) {
+        const statsResp = await dashboardApi.getAccountsStats();
+        const stats = statsResp.data?.data || statsResp.data || {};
+        const fallbackRows = (stats.recentPayments || []).filter((p) => isVerifiedPayment(p) && !p.is_bounced);
+        if (fallbackRows.length > 0) {
+          setPayments(fallbackRows);
+          setTotal(fallbackRows.length);
+          return;
+        }
+      }
 
       if (normalizedFilter === 'unverified' && filteredRows.length === 0) {
         const statsResp = await dashboardApi.getAccountsStats();
         const stats = statsResp.data?.data || statsResp.data || {};
-        const fallbackRows = (stats.recentPayments || []).filter((p) => !p.is_verified && !p.is_bounced);
+        const fallbackRows = (stats.recentPayments || []).filter((p) => !isVerifiedPayment(p) && !p.is_bounced);
         setPayments(fallbackRows);
         setTotal(fallbackRows.length);
       } else {
         setPayments(filteredRows);
-        setTotal(data?.pagination?.totalItems || data?.count || filteredRows.length || 0);
+        const reportedTotal = data?.pagination?.totalItems || data?.count || rows.length || 0;
+        setTotal(Math.max(reportedTotal, filteredRows.length));
       }
     } catch (err) {
       console.error('Failed to fetch payments:', err);
@@ -118,9 +149,9 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   };
 
   const getStatusBadge = (p) => {
-    if (p.is_bounced) return <span className="col-badge-new col-badge-danger">Rejected</span>;
-    if (p.is_verified) return <span className="col-badge-new col-badge-success">Verified</span>;
-    return <span className="col-badge-new col-badge-warning">Unverified</span>;
+    if (p.is_bounced) return <span className="col-badge-new col-badge-rejected">Rejected</span>;
+    if (isVerifiedPayment(p)) return <span className="col-badge-new col-badge-verified">Verified</span>;
+    return <span className="col-badge-new col-badge-unverified">Unverified</span>;
   };
 
   const getAge = (d) => {
@@ -335,7 +366,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
             </div>
 
             {/* Action Buttons — only for unverified */}
-            {normalizedFilter === 'unverified' && !selected.is_verified && !selected.is_bounced && (
+            {normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && (
               <div className="acct-verify-action-panel">
                 <div style={{ marginBottom: 10 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--col-text-secondary)', display: 'block', marginBottom: 4 }}>

@@ -17,6 +17,8 @@ import statusRemarkApi from '../../../api/statusRemarkApi';
 import motivationApi from '../../../api/motivationApi';
 import paymentTypeApi from '../../../api/paymentTypeApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
+import paymentModeApi from '../../../api/paymentModeApi';
+import bankApi from '../../../api/bankApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -733,6 +735,46 @@ export const masterConfigs = {
       { name: 'color_code', label: 'Color', type: 'color' },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  paymentModes: {
+    title: 'Payment Modes',
+    api: paymentModeApi,
+    columns: [
+      { header: 'Mode', path: 'mode_name' },
+      { header: 'Code', path: 'mode_code' },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'mode_name', label: 'Mode Name', required: true },
+      { name: 'mode_code', label: 'Mode Code', required: true },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  banks: {
+    title: 'Banks',
+    api: bankApi,
+    columns: [
+      { header: 'Bank Name', path: 'bank_name' },
+      { header: 'Account Number', path: 'account_number' },
+      { header: 'Branch', path: 'branch_name' },
+      { header: 'IFSC', path: 'ifsc_code' },
+      { header: 'SWIFT', path: 'swift_code' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'bank_name', label: 'Bank Name', required: true },
+      { name: 'account_number', label: 'Account Number', required: true },
+      { name: 'branch_name', label: 'Branch Name' },
+      { name: 'ifsc_code', label: 'IFSC Code' },
+      { name: 'swift_code', label: 'SWIFT Code' },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },

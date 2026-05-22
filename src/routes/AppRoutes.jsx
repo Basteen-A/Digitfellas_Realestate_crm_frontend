@@ -40,6 +40,8 @@ import WorkflowActions from '../pages/superadmin/WorkflowActions/WorkflowActionL
 import Motivations from '../pages/superadmin/Motivations';
 import PaymentTypes from '../pages/superadmin/PaymentTypes';
 import PaymentPlans from '../pages/superadmin/PaymentPlans';
+import PaymentModes from '../pages/superadmin/PaymentModes';
+import Banks from '../pages/superadmin/Banks';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import TelecallerWorkspace from '../pages/portals/telecaller';
@@ -160,6 +162,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
             <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
             <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
+            <Route path="/super-admin/payment-modes" element={<PaymentModes />} />
+            <Route path="/super-admin/banks" element={<Banks />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

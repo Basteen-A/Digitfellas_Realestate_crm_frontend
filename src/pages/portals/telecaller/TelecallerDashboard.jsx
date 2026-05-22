@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
-import followUpApi from '../../../api/followUpApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
 import {
@@ -31,62 +30,15 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const isLeadAssignedToCurrentUser = useCallback((item) => {
-    const currentUserId = String(user?.id ?? user?.user_id ?? user?.userId ?? '');
-    const currentUserEmail = String((user?.email || user?.user_email || user?.emailAddress || '')).toLowerCase();
-    if (!currentUserId) return false;
-
-    const candidates = [
-      item?.assignedToUserId,
-      item?.assigned_to,
-      item?.assigned_to_user_id,
-      item?.assigned_to_id,
-      item?.assignedTo?.id,
-      item?.assignedTo?.user_id,
-      item?.assignedTo?.userId,
-      item?.scheduled_by,
-      item?.scheduledBy,
-      item?.lead?.assignedToUserId,
-      item?.lead?.assigned_to,
-      item?.lead?.assigned_to_user_id,
-      item?.lead?.assigned_to_id,
-      item?.lead?.assignedTo?.id,
-      item?.lead?.assignedTo?.user_id,
-      item?.lead?.assignedTo?.userId,
-      item?.lead?.ownerId,
-      item?.lead?.owner?.id,
-      item?.lead?.owner_user_id,
-      item?.lead?.scheduled_by,
-    ];
-
-    // Check id-based candidates first
-    const idMatch = candidates.some((c) => String(c ?? '') === currentUserId);
-    if (idMatch) return true;
-
-    // Also check email matches for APIs that return assigned emails instead of ids
-    if (currentUserEmail) {
-      const emailCandidates = [
-        item?.assignedToEmail,
-        item?.assigned_to_email,
-        item?.assignedTo?.email,
-        item?.lead?.assignedTo?.email,
-        item?.lead?.email,
-        item?.lead?.owner_email,
-        item?.ownerEmail,
-      ];
-      if (emailCandidates.some((e) => String(e || '').toLowerCase() === currentUserEmail)) return true;
-    }
-
-    return false;
-  }, [user?.id, user?.user_id, user?.userId, user?.email, user?.emailAddress, user?.user_email]);
-
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resp, overdueResp] = await Promise.all([
-        dashboardApi.getTelecallerDetailed(),
-        followUpApi.getOverdue(),
-      ]);
+      // Single source of truth: the detailed dashboard endpoint already scopes every
+      // list to the logged-in telecaller (assigned_to = req.user.id), so no client-side
+      // re-filtering is needed. missedFollowUps shares the exact lead-date definition as
+      // the overdueFollowUps stat, so the card count and this list always agree.
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const resp = await dashboardApi.getTelecallerDetailed({ timezoneOffset });
 
       const ensureArray = (value) => {
         if (Array.isArray(value)) return value;
@@ -97,28 +49,9 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
 
       const dashboardData = resp?.data?.data || resp?.data || resp || {};
 
-      // Normalize overdue response: try multiple possible shapes returned by the API
-      const tryExtract = (val) => {
-        if (!val) return undefined;
-        if (Array.isArray(val)) return val;
-        if (Array.isArray(val.data)) return val.data;
-        if (Array.isArray(val.rows)) return val.rows;
-        if (Array.isArray(val.result)) return val.result;
-        if (Array.isArray(val.payload)) return val.payload;
-        return undefined;
-      };
-
-      let missedArray = tryExtract(overdueResp) || tryExtract(overdueResp?.data) || tryExtract(overdueResp?.data?.data) || [];
-      // Fallback: some endpoints may return missed followups inside dashboard payload
-      if ((!missedArray || missedArray.length === 0) && dashboardData) {
-        missedArray = tryExtract(dashboardData.overdueFollowUps) || tryExtract(dashboardData.overdue) || missedArray || [];
-      }
-
       setStats(dashboardData.stats || null);
       setUnassignedLeads(ensureArray(dashboardData.unassignedLeads));
-      const normalizedMissed = missedArray || [];
-      const filteredMissed = normalizedMissed.filter((item) => isLeadAssignedToCurrentUser(item));
-      setMissedFollowUps(filteredMissed);
+      setMissedFollowUps(ensureArray(dashboardData.missedFollowUps));
       setTodayFollowUps(ensureArray(dashboardData.todaysFollowUps));
       setUpcomingVisits(ensureArray(dashboardData.upcomingVisits));
     } catch (err) {
@@ -131,7 +64,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
     } finally {
       setLoading(false);
     }
-  }, [isLeadAssignedToCurrentUser]);
+  }, []);
 
   useEffect(() => {
     loadDashboardData();
@@ -149,13 +82,14 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const statCardsData = [
-    { label: 'New Leads Today', value: stats?.newLeadsToday ?? 0, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
+    { label: 'New Leads', value: stats?.newLeadsToday ?? 0, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
     { label: 'All Active Leads', value: stats?.activeLeads ?? 0, icon: <UserIcon style={ICON_SIZE} />, color: 'var(--accent-blue)' },
-    { label: "Today's Pending FU", value: stats?.todaysPendingFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: '#15803d' },
-    { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
-    { label: 'SV Scheduled Count', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
-    { label: 'SV Done Count', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
+    { label: "Today's Follow Ups", value: stats?.todaysPendingFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: '#15803d' },
     { label: 'Missed Follow Ups', value: stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
+    { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
+    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
+    { label: 'SV Done', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
+    
   ];
 
   const handleLeadClick = (leadId) => {
@@ -222,24 +156,24 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         <div className="td-card">
           <div className="td-card-header">
             <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExclamationTriangleIcon style={ICON_SM} /> Missed Follow-ups</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('leads')}>View My Leads →</span>
+            <span className="view-all-link" onClick={() => onNavigate?.('leads', { tab: 'missed' })}>View My Leads →</span>
           </div>
           <div className="td-card-body">
             {missedFollowUps.length === 0 ? (
               <div className="empty-msg">No missed follow-ups. Great work!</div>
             ) : (
               missedFollowUps.map((fu) => (
-                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.lead_id || fu.lead?.id)}>
+                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.id)}>
                   <div className="td-item-info">
                     <div className="td-item-name">
-                      {fu.lead?.fullName || fu.fullName || (fu.lead?.first_name ? `${fu.lead.first_name} ${fu.lead.last_name || ''}`.trim() : 'Unknown Lead')}
+                      {fu.fullName || fu.lead?.fullName || (fu.first_name ? `${fu.first_name} ${fu.last_name || ''}`.trim() : 'Unknown Lead')}
                     </div>
                     <div className="td-item-meta">
                       <span className="td-badge" style={{ background: '#fee2e2', color: '#b91c1c' }}>Overdue</span>
-                      <span>{fu.lead?.phone || fu.phone || 'N/A'}</span>
+                      <span>{fu.phone || fu.lead?.phone || 'N/A'}</span>
                     </div>
                   </div>
-                  <span className="td-item-date">{formatDateTime(fu.scheduled_at || fu.updated_at)}</span>
+                  <span className="td-item-date">{formatDateTime(fu.next_follow_up_date || fu.scheduled_at || fu.updated_at)}</span>
                 </div>
               ))
             )}
@@ -253,24 +187,24 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         <div className="td-card">
           <div className="td-card-header">
             <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PhoneIcon style={ICON_SM} /> Today's Follow-ups</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('leads')}>Open My Leads →</span>
+            <span className="view-all-link" onClick={() => onNavigate?.('leads', { tab: 'today' })}>Open My Leads →</span>
           </div>
           <div className="td-card-body">
             {todayFollowUps.length === 0 ? (
               <div className="empty-msg">No follow-ups scheduled for today.</div>
             ) : (
               todayFollowUps.map(fu => (
-                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.lead_id)}>
+                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.id)}>
                   <div className="td-item-info">
-                    <div className="td-item-name">{fu.lead?.fullName || fu.fullName || (fu.lead?.first_name ? `${fu.lead.first_name} ${fu.lead.last_name || ''}`.trim() : 'Unknown Lead')}</div>
+                    <div className="td-item-name">{fu.fullName || fu.lead?.fullName || (fu.first_name ? `${fu.first_name} ${fu.last_name || ''}`.trim() : 'Unknown Lead')}</div>
                     <div className="td-item-meta">
                       <span className="td-item-date" style={{ background: 'var(--accent-green-bg)', color: '#15803d' }}>
-                        {fu.scheduled_at ? new Date(fu.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Time'}
+                        {(fu.next_follow_up_date || fu.scheduled_at) ? new Date(fu.next_follow_up_date || fu.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Time'}
                       </span>
-                      <span>{fu.lead?.phone || fu.phone || 'N/A'}</span>
+                      <span>{fu.phone || fu.lead?.phone || 'N/A'}</span>
                     </div>
                   </div>
-                  <button className="crm-btn crm-btn-sm crm-btn-success" onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.lead_id); }}>Call</button>
+                  <button className="crm-btn crm-btn-sm crm-btn-success" onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}>Call</button>
                 </div>
               ))
             )}
@@ -281,7 +215,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         <div className="td-card">
           <div className="td-card-header">
             <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={ICON_SM} /> SV Scheduled</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('sitevisits')}>Track →</span>
+            <span className="view-all-link" onClick={() => onNavigate?.('handoffs')}>Track →</span>
           </div>
           <div className="td-card-body">
             {upcomingVisits.length === 0 ? (
@@ -292,7 +226,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                   <div className="td-item-info">
                     <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
                     <div className="td-item-meta">
-                      <span className="td-item-date">{formatDateTime(lead.nextFollowUpAt || lead.updatedAt)}</span>
+                      <span className="td-item-date">{formatDateTime(lead.scheduled_at || lead.next_follow_up_date || lead.updated_at)}</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><MapPinIcon style={{ width: 12, height: 12 }} /> {lead.project || 'Project'}</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><PhoneIcon style={{ width: 12, height: 12 }} /> {lead.phone}</span>
                     </div>

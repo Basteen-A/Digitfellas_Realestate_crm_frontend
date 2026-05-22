@@ -43,8 +43,11 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [cancelReasonId, setCancelReasonId] = useState('');
   const [cancelReasons, setCancelReasons] = useState([]);
   const [cancelRemarks, setCancelRemarks] = useState('');
+  const [paymentModeOptions, setPaymentModeOptions] = useState([]);
+  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
+  const [bankOptions, setBankOptions] = useState([]);
   // Payment form
-  const [payForm, setPayForm] = useState({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', bank_name: '', remarks: '' });
+  const [payForm, setPayForm] = useState({ payment_type: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
   const [paySaving, setPaySaving] = useState(false);
   // Payment status form
   const [paymentStatus, setPaymentStatus] = useState('');
@@ -76,6 +79,16 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
     bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
+    bookingApi.getPaymentFormMasters().then((r) => {
+      const payload = r.data?.data || r.data || {};
+      setPaymentModeOptions(payload.payment_modes || []);
+      setPaymentTypeOptions(payload.payment_types || []);
+      setBankOptions(payload.banks || []);
+    }).catch(() => {
+      setPaymentModeOptions([]);
+      setPaymentTypeOptions([]);
+      setBankOptions([]);
+    });
   }, []);
 
   const filteredBookings = useMemo(() => {
@@ -96,7 +109,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setDrawerMode(mode);
     setNewStatusId('');
     setCancelReasonId(''); setCancelRemarks('');
-    setPayForm({ payment_type: 'Installment', payment_mode: 'Online', amount: '', payment_date: '', transaction_ref: '', bank_name: '', remarks: '' });
+    setPayForm({ payment_type: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
     setPaymentStatus(booking.payment_status || '');
     setFollowUpDate('');
     // Load activities
@@ -141,9 +154,27 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   const handleAddPayment = async () => {
     if (!payForm.amount || parseFloat(payForm.amount) <= 0 || !drawerBooking) { toast.error('Enter valid amount'); return; }
+    if (!payForm.payment_type) {
+      toast.error('Please select a payment type');
+      return;
+    }
+    const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(payForm.payment_mode_id));
+    const selectedModeName = selectedMode?.mode_name || payForm.payment_mode;
+    if (!payForm.payment_mode_id || !selectedModeName) {
+      toast.error('Please select a payment mode');
+      return;
+    }
+    if (selectedModeName !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim())) {
+      toast.error(`Reference / UTR / Cheque No. is required for ${selectedModeName}`);
+      return;
+    }
     setPaySaving(true);
     try {
-      await bookingApi.addPayment(drawerBooking.id, { ...payForm, amount: parseFloat(payForm.amount) });
+      await bookingApi.addPayment(drawerBooking.id, {
+        ...payForm,
+        payment_mode: selectedModeName,
+        amount: parseFloat(payForm.amount),
+      });
       toast.success('Payment recorded successfully');
       closeDrawer();
       loadBookings();
@@ -468,24 +499,37 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   <div className="bkd-form-row">
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Payment Mode *</label>
-                      <select className="bkd-form-control" value={payForm.payment_mode} onChange={e => setPayForm(p => ({...p, payment_mode:e.target.value}))}>
-                        {['Online','NEFT/RTGS','Cheque','Demand Draft','Cash','UPI'].map(m => <option key={m}>{m}</option>)}
+                      <select className="bkd-form-control" value={payForm.payment_mode_id} onChange={e => {
+                        const selectedId = e.target.value;
+                        const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(selectedId));
+                        setPayForm(p => ({ ...p, payment_mode_id: selectedId, payment_mode: selectedMode?.mode_name || '' }));
+                      }}>
+                        <option value="">Select payment mode</option>
+                        {paymentModeOptions.map((mode) => <option key={mode.id} value={mode.id}>{mode.mode_name}</option>)}
                       </select>
                     </div>
                     <div className="bkd-form-group">
-                      <label className="bkd-form-label">Reference / UTR / Cheque No. *</label>
+                      <label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label>
                       <input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/>
                     </div>
                   </div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group">
-                      <label className="bkd-form-label">Bank / Drawn On</label>
-                      <input type="text" className="bkd-form-control" placeholder="e.g. HDFC Bank" value={payForm.bank_name || ''} onChange={e => setPayForm(p => ({...p, bank_name:e.target.value}))}/>
+                      <label className="bkd-form-label">Company Bank</label>
+                      <select className="bkd-form-control" value={payForm.bank_id || ''} onChange={e => setPayForm(p => ({ ...p, bank_id: e.target.value }))}>
+                        <option value="">Select bank</option>
+                        {bankOptions.map((bank) => (
+                          <option key={bank.id} value={bank.id}>
+                            {bank.bank_name} - {bank.account_number}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Payment Type</label>
                       <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({...p, payment_type:e.target.value}))}>
-                        {['Token','Down Payment','Installment','EMI','Final Payment','Other'].map(t => <option key={t}>{t}</option>)}
+                        <option value="">Select payment type</option>
+                        {paymentTypeOptions.map((type) => <option key={type.id} value={type.type_name}>{type.type_name}</option>)}
                       </select>
                     </div>
                   </div>
@@ -498,8 +542,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   {renderActivityHistory()}
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount} onClick={handleAddPayment}>
-                    {paySaving ? 'Recording...' : <><BanknotesIcon style={{ width: 14, height: 14, marginRight: 4 }} />Record Payment</>}
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
+                    {paySaving ? 'Saving...' : 'Submit Payment'}
                   </button>
                 </div>
               </div>

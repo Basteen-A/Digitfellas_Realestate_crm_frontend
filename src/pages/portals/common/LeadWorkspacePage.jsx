@@ -766,7 +766,7 @@ const FilterDropdown = ({
   </details>
 );
 
-const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
+const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initialTab }) => {
   const CALL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
 
   const shouldShowCallStatus = (statusCode) => CALL_STATUS_CODES.includes(toCanonicalStatusCode(statusCode));
@@ -789,6 +789,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [selectedLeadId, setSelectedLeadId] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
+  // eslint-disable-next-line no-unused-vars
+  const [loadingMore, setLoadingMore] = useState(false);
+  const pageRef = useRef(1); // last loaded page
+  const [pendingMissedCount, setPendingMissedCount] = useState(0); // authoritative overdue count for the Today-tab gate
 
   // ── Quick Action Popup ──
   const [quickActionLead, setQuickActionLead] = useState(null);
@@ -823,7 +827,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   const [quickLocationDropdownOpen, setQuickLocationDropdownOpen] = useState(false);
   const [quickProjectDropdownOpen, setQuickProjectDropdownOpen] = useState(false);
   const [closureReasons, setClosureReasons] = useState([]);
-  const [activeTab, setActiveTab] = useState('today'); // 'all' | 'new' | 'today' | 'missed' | 'sh_leads' | 'sm_leads'
+  const [activeTab, setActiveTab] = useState(initialTab || 'today'); // 'all' | 'new' | 'today' | 'missed' | 'sh_leads' | 'sm_leads'
   const [qaActiveTab, setQaActiveTab] = useState('history'); // 'activity' | 'history'
 
   // ── Create lead ──
@@ -866,6 +870,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     const timer = setInterval(() => setTimeTick(Date.now()), 60000);
     return () => clearInterval(timer);
   }, [workspaceRole, user?.id]);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     const handleOutsideFilterClick = (event) => {
@@ -1127,11 +1137,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
 
   const filteredLeads = useMemo(() => {
     const searchText = (filters.search || '').trim().toLowerCase();
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const useFollowUpTabs = FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole);
 
     return leads.filter((lead) => {
+      // Cross-role read-only tab filtering (client-side only — these tabs don't use server-side followUpFilter)
       if (useFollowUpTabs) {
         const isSmReadOnlyLead = workspaceRole === 'SM' && isSmHandoffReadOnlyLead(lead);
         const isShReadOnlyLead = workspaceRole === 'SH' && isShTaggedReadOnlyLead(lead);
@@ -1142,38 +1151,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         } else if (workspaceRole === 'SH' && activeTab === 'sm_leads') {
           if (!isShReadOnlyLead) return false;
         } else {
-          // Today/Missed tabs must never mix in cross-role read-only leads.
+          // Today/Missed/New tabs must never mix in cross-role read-only leads.
           if (isCrossRoleReadOnlyLead) return false;
-
-          if (lead.isClosed) return false;
-
-          const followUpAt = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null;
-          const followUpDay = followUpAt ? toDayStart(followUpAt) : null;
-          if (!followUpDay) return false;
-
-          const isTodayFollowUp = followUpDay.getTime() === todayStart.getTime();
-          const isMissedFollowUp = isFollowUpMissedByDate(followUpDay, todayStart);
-
-          // If searching, bypass the date-based tab filters for follow-up roles
-          if (filters.search) {
-            // For Today/Missed tabs, we already have assignedToMe leads from the API.
-            // For the New tab, we have unassigned leads from the API.
-            // Just let the standard filter proceed.
-          } else {
-            if (activeTab === 'today' && !isTodayFollowUp) return false;
-            if (activeTab === 'missed' && !isMissedFollowUp) return false;
-          }
-
-          if (
-            activeTab !== 'today'
-            && activeTab !== 'missed'
-            && activeTab !== 'new'
-            && !isTodayFollowUp
-            && !isMissedFollowUp
-          ) return false;
         }
       }
 
+      // Client-side text search for instant feedback (server also filters, but this is snappier)
       if (searchText) {
         const haystack = [
           lead.fullName,
@@ -1192,17 +1175,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         if (!haystack.includes(searchText)) return false;
       }
 
-      if (multiFilters.stageCodes.length && !multiFilters.stageCodes.includes(lead.stageCode)) return false;
-      if (multiFilters.statusCodes.length && !multiFilters.statusCodes.includes(lead.statusCode)) return false;
-
-      if (multiFilters.sources.length) {
-        const sourceKey = (lead.source || '').toLowerCase();
-        if (!multiFilters.sources.includes(sourceKey)) return false;
-      }
-
       return true;
     });
-  }, [leads, filters.search, multiFilters, activeTab, workspaceRole, isSmHandoffReadOnlyLead, isShTaggedReadOnlyLead]);
+  }, [leads, filters.search, activeTab, workspaceRole, isSmHandoffReadOnlyLead, isShTaggedReadOnlyLead]);
 
   const selectedSourceSubSources = useMemo(
     () => subSourceMap[newLeadForm.lead_source_id] || [],
@@ -1428,21 +1403,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     return { totalLeads, newToday, todayFollowUps, overdueFollowUps, svScheduled, svCompleted, missedFollowups };
   }, [leads]);
 
-  const hasPendingMissedFollowupsForMe = useMemo(() => {
-    if (!FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) return false;
-
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return leads.some((lead) => {
-      if (lead.isClosed) return false;
-      if (!lead.nextFollowUpAt) return false;
-
-      const assignedToMe = lead.assignedToUserId && String(lead.assignedToUserId) === String(user?.id);
-      if (!assignedToMe) return false;
-
-      return isFollowUpMissedByDate(lead.nextFollowUpAt, todayStart);
-    });
-  }, [leads, workspaceRole, user?.id]);
+  // Whether the current user still has overdue follow-ups. Driven by an authoritative server
+  // count (refreshed in loadLeads) rather than the loaded page, so the Today-tab gate stays
+  // correct even when the overdue leads sit beyond the first page.
+  const hasPendingMissedFollowupsForMe =
+    FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && pendingMissedCount > 0;
 
   // ── Load workflow config on mount ──
   const loadWorkflowConfig = useCallback(async () => {
@@ -1534,18 +1499,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   }, [workspaceRole, loadAssignableUsers]);
 
   // ── Load leads ──
-  const loadLeads = useCallback(async ({ silent = false } = {}) => {
+  const loadLeads = useCallback(async ({ silent = false, page: requestedPage } = {}) => {
     if (silent) setRefreshing(true);
     else setLoading(true);
 
+    // Use requested page or default to 1 for fresh loads
+    const targetPage = requestedPage || 1;
+
     try {
-      // Build query params based on active tab for TC
+      // Build query params based on active tab
       const queryParams = {
         roleCode: workspaceRole,
-        page: 1,
+        page: targetPage,
         limit: 100,
+        timezoneOffset: new Date().getTimezoneOffset(),
         ...filters,
       };
+
+      // Send multi-filters server-side (comma-separated)
+      if (multiFilters.stageCodes.length) {
+        queryParams.stageCodes = multiFilters.stageCodes.join(',');
+      }
+      if (multiFilters.statusCodes.length) {
+        queryParams.statusCodes = multiFilters.statusCodes.join(',');
+      }
+      if (multiFilters.sources.length) {
+        queryParams.sources = multiFilters.sources.join(',');
+      }
 
       // Add tab-specific filters for follow-up roles
       if (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) {
@@ -1556,15 +1536,26 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         } else {
           // Assigned lead tabs (today / missed) — only show leads assigned to this user
           queryParams.assignedToMe = true;
+          // Date-only server-side follow-up filter — no time component, no off-by-one
+          if (!filters.search) {
+            if (activeTab === 'today') {
+              queryParams.followUpFilter = 'today';
+            } else if (activeTab === 'missed') {
+              queryParams.followUpFilter = 'missed';
+            }
+          }
         }
       }
 
       const resp = await leadWorkflowApi.getLeads(queryParams);
 
       const data = resp.data || [];
-      setLeads(data);
-      setMeta(resp.meta || { total: data.length, page: 1, totalPages: 1 });
+      pageRef.current = targetPage;
 
+      setLeads(data);
+      setMeta(resp.meta || { total: data.length, page: targetPage, totalPages: 1 });
+
+      // Selection housekeeping
       const selectedExists = data.some((l) => l.id === selectedLeadId);
       if (selectedLeadId && !selectedExists) {
         setSelectedLeadId(null);
@@ -1572,13 +1563,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
       if (!data.length) {
         setSelectedLeadId(null);
       }
+
+      // Refresh the authoritative count of MY overdue follow-ups using date-only filter.
+      // The Today-tab action button stays disabled until this reaches zero.
+      if (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole)) {
+        leadWorkflowApi.getLeads({
+          roleCode: workspaceRole,
+          assignedToMe: true,
+          followUpFilter: 'missed',
+          timezoneOffset: new Date().getTimezoneOffset(),
+          page: 1,
+          limit: 1,
+        })
+          .then((r) => setPendingMissedCount(r.meta?.total ?? 0))
+          .catch(() => { /* keep last known count on error */ });
+      }
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load leads'));
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
-  }, [filters, workspaceRole, selectedLeadId, activeTab]);
+  }, [filters, multiFilters, workspaceRole, selectedLeadId, activeTab]);
 
   // Load closure reasons for new lead form when a terminal status is selected
   useEffect(() => {
@@ -1775,8 +1782,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadLeads(); }, [filters, workspaceRole, activeTab]);
+  useEffect(() => { loadLeads(); }, [filters, multiFilters, workspaceRole, activeTab]);
   useEffect(() => { loadLeadDetail(selectedLeadId); }, [selectedLeadId, loadLeadDetail]);
+
 
   const toggleMultiFilter = (key, value) => {
     setMultiFilters((prev) => {
@@ -2062,11 +2070,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
       setStagePopupOpen(false);
       setCustomerProfileForm({
+        buyer_name: `${selectedLead.first_name || ''} ${selectedLead.last_name || ''}`.trim(),
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
         current_address: '', current_city: '', current_state: '', current_pincode: '',
         permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
-        sameAsCurrent: false, assignToUserId: '', note: actionState.note || '', inventoryUnitId: '',
+        sameAsCurrent: false,
+        assignToUserId: '',
+        note: actionState.note || '',
+        inventoryUnitId: '',
+        paymentPlanId: '',
+        bookingProjectId: selectedLead.projectId || '',
+        bookingLocationId: selectedLead.locationId || '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
@@ -2213,7 +2228,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
   // ── Pincode Autofill ──
   const handlePincodeChange = async (e) => {
     const val = e.target.value.replace(/\D/g, '');
-    setCustomerProfileForm(p => ({ ...p, current_pincode: val }));
+    setCustomerProfileForm(p => ({
+      ...p,
+      current_pincode: val,
+      ...(val.length < 6 ? { current_city: '', current_state: '' } : {}),
+    }));
 
     if (val.length === 6) {
       try {
@@ -2221,14 +2240,35 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         const data = await resp.json();
         if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
           const po = data[0].PostOffice[0];
+          const apiCity = po.District || po.Block || po.Name || '';
+          const apiState = po.State || '';
           setCustomerProfileForm(p => ({
             ...p,
             current_city: po.District,
             current_state: po.State
           }));
+          if (apiCity || apiState) {
+            setCustomerProfileForm(p => ({
+              ...p,
+              current_pincode: val,
+              current_city: apiCity,
+              current_state: apiState,
+            }));
+            return;
+          }
         }
       } catch (err) {
         console.error('Failed to fetch pincode details', err);
+      }
+
+      const matchedLocation = locationOptions.find((location) => String(location.pincode || '').trim() === val);
+      if (matchedLocation) {
+        setCustomerProfileForm(p => ({
+          ...p,
+          current_pincode: val,
+          current_city: matchedLocation.city || '',
+          current_state: matchedLocation.state || '',
+        }));
       }
     }
   };
@@ -2242,6 +2282,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (!f.current_address) { toast.error('Current Address is required'); return; }
     if (!f.occupation) { toast.error('Occupation is required'); return; }
     if (!f.assignToUserId) { toast.error('Please select a Collection Manager'); return; }
+    if (!f.paymentPlanId) { toast.error('Please select a Payment Plan'); return; }
 
     setManualUpdateSaving(true);
     try {
@@ -2251,7 +2292,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
         note: f.note?.trim() || 'Booking approved by Sales Head',
         inventoryUnitId: f.inventoryUnitId || undefined,
         payment_plan_id: f.paymentPlanId || undefined,
+        bookingLocationId: f.bookingLocationId || undefined,
+        bookingProjectId: f.bookingProjectId || undefined,
+        location_id: f.bookingLocationId || undefined,
+        project_id: f.bookingProjectId || undefined,
+        buyer_name: f.buyer_name || undefined,
         customerProfile: {
+          buyer_name: f.buyer_name || undefined,
           date_of_birth: f.date_of_birth ? new Date(f.date_of_birth).toISOString() : undefined,
           pan_number: f.pan_number,
           aadhar_number: f.aadhar_number,
@@ -2324,10 +2371,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
     if (popupAction?.needsCustomerProfile || popupAction?.code === 'SH_BOOKING') {
       setStagePopupOpen(false);
       setCustomerProfileForm({
+        buyer_name: `${selectedLead.first_name || ''} ${selectedLead.last_name || ''}`.trim(),
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
         current_address: '', current_city: '', current_state: '', current_pincode: '',
-        assignToUserId: '', note: stagePopupData.reason || actionState.note || '', inventoryUnitId: '',
+        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        sameAsCurrent: false,
+        assignToUserId: '',
+        note: stagePopupData.reason || actionState.note || '',
+        inventoryUnitId: '',
+        paymentPlanId: '',
+        bookingProjectId: selectedLead.projectId || '',
+        bookingLocationId: selectedLead.locationId || '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
@@ -2337,6 +2392,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
           setAvailableUnits(resp.data || []);
         }).catch(() => setAvailableUnits([]));
       }
+      // Load payment plans
+      paymentPlanApi.getDropdown().then(resp => {
+        setPaymentPlans(resp.data || []);
+      }).catch(() => setPaymentPlans([]));
       return;
     }
 
@@ -2847,6 +2906,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             assignToUserId: pF.assignToUserId,
             note: pF.note,
           };
+          payload.buyer_name = pF.buyer_name || undefined;
           payload.inventoryUnitId = pF.inventoryUnitId || undefined;
           payload.payment_plan_id = pF.paymentPlanId || undefined;
           payload.bookingLocationId = pF.bookingLocationId || undefined;
@@ -3173,8 +3233,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                 </button>
               )}
               <small className="filter-tabs__records">
-                {filteredLeads.length}
-                {meta.total !== filteredLeads.length ? ` / ${meta.total}` : ''} records
+                {meta.total} records{meta.totalPages > 1 ? ` · Page ${meta.page} of ${meta.totalPages}` : ''}
               </small>
             </div>
           )}
@@ -3236,6 +3295,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                               {lead.leadNumber}
                             </a>
                           </small>
+                          {lead.nextFollowUpAt && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#475569', fontSize: '11px', fontWeight: '500' }}>
+                              <CalendarDaysIcon style={{ width: 12, height: 12, color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#64748b' }} />
+                              <span>{formatDateTime(lead.nextFollowUpAt)}</span>
+                            </div>
+                          )}
                         </td>
                         {workspaceRole !== 'SH' && (
                           <td className="hide-mobile">
@@ -3391,6 +3456,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                                   <label>Assigned To</label>
                                   <p>{lead.assignedToUserName || 'Unassigned'} ({lead.assignedRoleLabel || lead.ownerRoleLabel || 'Pool'})</p>
                                 </div>
+                                {lead.nextFollowUpAt && (
+                                  <div className="expanded-info-item">
+                                    <label>Next Follow-Up</label>
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: '4px', color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#1e293b', fontWeight: '500' }}>
+                                      <CalendarDaysIcon style={{ width: 14, height: 14, color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#64748b' }} />
+                                      <span>{formatDateTime(lead.nextFollowUpAt)}</span>
+                                    </p>
+                                  </div>
+                                )}
                                 <div className="expanded-info-item full-width">
                                   <label>Latest Remarks</label>
                                   <p>{latestNote}</p>
@@ -3406,6 +3480,62 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
               </tbody>
             </table>
           </div>
+          {/* ── Pagination ── */}
+          {!loading && meta.totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '14px 0', borderTop: '1px solid var(--border-primary, #e2e8f0)' }}>
+              <button
+                type="button"
+                className="workspace-btn workspace-btn--ghost"
+                onClick={() => loadLeads({ page: meta.page - 1 })}
+                disabled={meta.page <= 1}
+                style={{ minWidth: 36, padding: '6px 10px', fontSize: 13 }}
+              >
+                ← Prev
+              </button>
+              {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === meta.totalPages || Math.abs(p - meta.page) <= 2)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === '...' ? (
+                    <span key={`ellipsis-${idx}`} style={{ padding: '4px 2px', color: 'var(--text-secondary, #94a3b8)' }}>…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      className="workspace-btn workspace-btn--ghost"
+                      onClick={() => loadLeads({ page: item })}
+                      style={{
+                        minWidth: 34,
+                        padding: '6px 8px',
+                        fontSize: 13,
+                        fontWeight: item === meta.page ? 700 : 400,
+                        background: item === meta.page ? 'var(--accent-blue-bg, #dbeafe)' : 'transparent',
+                        color: item === meta.page ? 'var(--accent-blue, #2563eb)' : undefined,
+                        borderRadius: 8,
+                      }}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+              <button
+                type="button"
+                className="workspace-btn workspace-btn--ghost"
+                onClick={() => loadLeads({ page: meta.page + 1 })}
+                disabled={meta.page >= meta.totalPages}
+                style={{ minWidth: 36, padding: '6px 10px', fontSize: 13 }}
+              >
+                Next →
+              </button>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginLeft: 8 }}>
+                {meta.total} total
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ── Detail Panel — Corporate Standard Modal ── */}
@@ -4924,6 +5054,63 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+              {/* Booking Details */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14 }} />Booking Details</div>
+              
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Buyer Name
+                <input type="text" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} placeholder="Enter buyer name (if different from lead)" style={{ width: '100%', marginTop: 4 }} />
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Location
+                  <select value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="">— Select Location —</option>
+                    {locationOptions.filter(l => l.is_active !== false).map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Project
+                  <select value={customerProfileForm.bookingProjectId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingProjectId: e.target.value, inventoryUnitId: '' })); if (e.target.value) { inventoryUnitApi.getDropdown({ project_id: e.target.value }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } else { setAvailableUnits([]); } }} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="">— Select Project —</option>
+                    {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
+                      <option key={proj.id} value={proj.id}>{proj.project_name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {availableUnits.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Available Unit / Plot
+                    <select value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
+                      <option value="">— Select Unit / Plot —</option>
+                      {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
+                        <option key={unit.id} value={unit.id}>
+                          {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Payment Plan *
+                <select value={customerProfileForm.paymentPlanId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, paymentPlanId: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
+                  <option value="">— Select Payment Plan —</option>
+                  {paymentPlans.map(plan => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.plan_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               {/* Personal Details */}
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14 }} />Personal Details</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -5573,7 +5760,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false }) => {
                           <option value="">— Select Payment Plan —</option>
                           {paymentPlans.map(plan => (
                             <option key={plan.id} value={plan.id}>
-                              {plan.plan_name}{plan.plan_type ? ` (${plan.plan_type})` : ''}{plan.emi_months ? ` — ${plan.emi_months} months` : ''}{plan.down_payment_percentage ? ` — ${plan.down_payment_percentage}% down` : ''}
+                              {plan.plan_name}
                             </option>
                           ))}
                         </select>

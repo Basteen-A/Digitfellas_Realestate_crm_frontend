@@ -32,6 +32,12 @@ const bookingApi = {
   // Activities
   getActivities: (bookingId) => api.get(`/bookings/${bookingId}/activities`),
 
+  // Documents
+  getDocuments: (bookingId) => api.get(`/bookings/${bookingId}/documents`),
+  uploadDocuments: (bookingId, formData) => api.post(`/bookings/${bookingId}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+
   // Cancel reasons dropdown
   getCancelReasons: () => api.get('/bookings/cancel-reasons'),
 
@@ -40,6 +46,9 @@ const bookingApi = {
 
   // Accounts — all payments queue (filterable)
   getAllPayments: (params = {}) => api.get('/bookings/payments/all', { params }),
+
+  // Payment form master data
+  getPaymentFormMasters: () => api.get('/bookings/payments/form-masters'),
 };
 
 export default bookingApi;

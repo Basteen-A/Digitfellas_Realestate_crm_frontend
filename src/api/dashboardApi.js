@@ -12,12 +12,16 @@ const dashboardApi = {
   },
 
   // Role-specific dashboards
-  getTelecallerStats: async () => {
-    const { data } = await api.get('/dashboard/telecaller');
+  getTelecallerStats: async (params = {}) => {
+    const query = new URLSearchParams(params);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/telecaller${qs ? `?${qs}` : ''}`);
     return data;
   },
-  getTelecallerDetailed: async () => {
-    const { data } = await api.get('/dashboard/telecaller-detailed');
+  getTelecallerDetailed: async (params = {}) => {
+    const query = new URLSearchParams(params);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/telecaller-detailed${qs ? `?${qs}` : ''}`);
     return data;
   },
 
@@ -47,8 +51,13 @@ const dashboardApi = {
     return data;
   },
 
-  getCollectionStats: async () => {
-    const { data } = await api.get('/dashboard/collection');
+  getCollectionStats: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.dateFilter) query.set('dateFilter', params.dateFilter);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/collection${qs ? `?${qs}` : ''}`);
     return data;
   },
 

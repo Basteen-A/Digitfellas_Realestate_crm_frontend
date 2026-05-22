@@ -54,19 +54,58 @@ const PIPELINE_COLUMNS = [
   },
 ];
 
-const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+/** Compute date-only boundaries for a date filter value */
+const getDateRange = (filterValue, customFrom, customTo) => {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-const endOfDay = (date) => {
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
-  return end;
-};
-
-const toValidDate = (value) => {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
+  switch (filterValue) {
+    case 'today': {
+      const todayEnd = new Date(todayStart);
+      todayEnd.setHours(23, 59, 59, 999);
+      return { from: todayStart.toISOString(), to: todayEnd.toISOString() };
+    }
+    case 'tomorrow': {
+      const tomorrowStart = new Date(todayStart);
+      tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+      const tomorrowEnd = new Date(tomorrowStart);
+      tomorrowEnd.setHours(23, 59, 59, 999);
+      return { from: tomorrowStart.toISOString(), to: tomorrowEnd.toISOString() };
+    }
+    case 'yesterday': {
+      const yesterdayStart = new Date(todayStart);
+      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+      const yesterdayEnd = new Date(yesterdayStart);
+      yesterdayEnd.setHours(23, 59, 59, 999);
+      return { from: yesterdayStart.toISOString(), to: yesterdayEnd.toISOString() };
+    }
+    case 'this_week': {
+      const weekStart = new Date(todayStart);
+      const day = weekStart.getDay();
+      const diffFromMonday = day === 0 ? 6 : day - 1;
+      weekStart.setDate(weekStart.getDate() - diffFromMonday);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      return { from: weekStart.toISOString(), to: weekEnd.toISOString() };
+    }
+    case 'custom': {
+      const result = {};
+      if (customFrom) {
+        const fromDate = new Date(customFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (!Number.isNaN(fromDate.getTime())) result.from = fromDate.toISOString();
+      }
+      if (customTo) {
+        const toDate = new Date(customTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (!Number.isNaN(toDate.getTime())) result.to = toDate.toISOString();
+      }
+      return result;
+    }
+    default:
+      return {};
+  }
 };
 
 const isDisqualifiedLead = (lead) => {
@@ -80,8 +119,6 @@ const isDisqualifiedLead = (lead) => {
   );
 };
 
-const getLeadDateForFilter = (lead) => toValidDate(lead?.nextFollowUpAt || lead?.updatedAt || lead?.createdAt);
-
 const extractLeadRows = (response) => {
   const payload = response?.data;
   if (Array.isArray(payload)) return payload;
@@ -94,109 +131,50 @@ const extractLeadRows = (response) => {
 const TelecallerPipeline = ({ onNavigate }) => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [dateFilter, setDateFilter] = useState('all');
   const [customFromDate, setCustomFromDate] = useState('');
   const [customToDate, setCustomToDate] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const leadParams = { roleCode: 'TC', assignedToMe: true, includeClosed: true, limit: 100, page: 1 };
-      const firstLeadsResp = await leadWorkflowApi.getLeads(leadParams);
+      const leadParams = { roleCode: 'TC', assignedToMe: true, includeClosed: true, limit: 100, page };
 
-      // Handle leads data
-      let leadRows = extractLeadRows(firstLeadsResp);
-      const totalPages = Math.max(1, Number(firstLeadsResp?.meta?.totalPages) || 1);
+      // Apply date filter server-side
+      const dateRange = getDateRange(dateFilter, customFromDate, customToDate);
+      if (dateRange.from) leadParams.nextFollowUpFrom = dateRange.from;
+      if (dateRange.to) leadParams.nextFollowUpTo = dateRange.to;
 
-      if (totalPages > 1) {
-        const pagedResponses = await Promise.all(
-          Array.from({ length: totalPages - 1 }, (_, index) =>
-            leadWorkflowApi.getLeads({ ...leadParams, page: index + 2 })
-          )
-        );
-        pagedResponses.forEach((resp) => {
-          leadRows = leadRows.concat(extractLeadRows(resp));
-        });
-      }
+      const resp = await leadWorkflowApi.getLeads(leadParams);
+      const leadRows = extractLeadRows(resp);
 
+      // Deduplicate by id
       const uniqueRows = Array.from(new Map(leadRows.map((lead) => [lead.id, lead])).values());
       setLeads(uniqueRows);
-
+      setMeta(resp.meta || { total: uniqueRows.length, page, totalPages: 1 });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load pipeline'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateFilter, customFromDate, customToDate]);
 
   useEffect(() => { load(); }, [load]);
 
-  const matchesDateFilter = useCallback((lead) => {
-    if (dateFilter === 'all') return true;
-
-    const leadDate = getLeadDateForFilter(lead);
-    if (!leadDate) return false;
-
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(todayStart);
-
-    if (dateFilter === 'today') {
-      return leadDate >= todayStart && leadDate <= todayEnd;
-    }
-
-    if (dateFilter === 'tomorrow') {
-      const tomorrowStart = new Date(todayStart);
-      tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-      const tomorrowEnd = endOfDay(tomorrowStart);
-      return leadDate >= tomorrowStart && leadDate <= tomorrowEnd;
-    }
-
-    if (dateFilter === 'yesterday') {
-      const yesterdayStart = new Date(todayStart);
-      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-      const yesterdayEnd = endOfDay(yesterdayStart);
-      return leadDate >= yesterdayStart && leadDate <= yesterdayEnd;
-    }
-
-    if (dateFilter === 'this_week') {
-      const weekStart = new Date(todayStart);
-      const day = weekStart.getDay();
-      const diffFromMonday = day === 0 ? 6 : day - 1;
-      weekStart.setDate(weekStart.getDate() - diffFromMonday);
-      const nextWeekStart = new Date(weekStart);
-      nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-      return leadDate >= weekStart && leadDate < nextWeekStart;
-    }
-
-    if (dateFilter === 'custom') {
-      const fromDate = customFromDate ? startOfDay(new Date(customFromDate)) : null;
-      const toDate = customToDate ? endOfDay(new Date(customToDate)) : null;
-      if (fromDate && Number.isNaN(fromDate.getTime())) return false;
-      if (toDate && Number.isNaN(toDate.getTime())) return false;
-      if (fromDate && leadDate < fromDate) return false;
-      if (toDate && leadDate > toDate) return false;
-      return true;
-    }
-
-    return true;
-  }, [dateFilter, customFromDate, customToDate]);
-
-  const filteredLeads = useMemo(() => leads.filter(matchesDateFilter), [leads, matchesDateFilter]);
-
   // Calculate totals
-  const totalLeads = filteredLeads.length;
-  const qualifiedLeads = filteredLeads.filter((lead) => !isDisqualifiedLead(lead)).length;
+  const totalLeads = meta.total || leads.length;
+  const qualifiedLeads = leads.filter((lead) => !isDisqualifiedLead(lead)).length;
 
   const getLeadsByColumn = useCallback((column) => {
     if (column.key === 'DISQUALIFIED') {
-      return filteredLeads.filter(isDisqualifiedLead);
+      return leads.filter(isDisqualifiedLead);
     }
-    return filteredLeads.filter((lead) => {
+    return leads.filter((lead) => {
       const leadStatus = (lead.statusCode || '').toUpperCase();
       return leadStatus === column.statusCode;
     });
-  }, [filteredLeads]);
+  }, [leads]);
 
   const statCards = useMemo(() => {
     const baseCards = [
@@ -268,7 +246,7 @@ const TelecallerPipeline = ({ onNavigate }) => {
           <button
             className="crm-btn crm-btn-ghost"
             style={{ height: 38, borderRadius: 10, border: '1.5px solid var(--border-primary)', background: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-            onClick={load}
+            onClick={() => load()}
           >
             <ArrowPathRoundedSquareIcon style={{ width: 18, height: 18 }} /> Refresh
           </button>
@@ -312,6 +290,33 @@ const TelecallerPipeline = ({ onNavigate }) => {
               </div>
             ))}
           </div>
+
+          {/* ── Pagination ── */}
+          {meta.totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '14px 0', marginBottom: 16 }}>
+              <button
+                type="button"
+                className="crm-btn crm-btn-ghost"
+                onClick={() => load(meta.page - 1)}
+                disabled={meta.page <= 1}
+                style={{ minWidth: 36, padding: '6px 10px', fontSize: 13, height: 34, borderRadius: 8 }}
+              >
+                ← Prev
+              </button>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                Page {meta.page} of {meta.totalPages} · {meta.total} total
+              </span>
+              <button
+                type="button"
+                className="crm-btn crm-btn-ghost"
+                onClick={() => load(meta.page + 1)}
+                disabled={meta.page >= meta.totalPages}
+                style={{ minWidth: 36, padding: '6px 10px', fontSize: 13, height: 34, borderRadius: 8 }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </>
       )}
 

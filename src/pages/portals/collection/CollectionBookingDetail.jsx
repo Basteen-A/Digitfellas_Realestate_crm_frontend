@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
+import paymentPlanApi from '../../../api/paymentPlanApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
   BanknotesIcon, UserIcon, ClockIcon,
-  ExclamationTriangleIcon, PrinterIcon, PlusIcon,
-  CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon
+  ExclamationTriangleIcon, PlusIcon,
+  CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
+  DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon
 } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
@@ -25,15 +27,20 @@ const InfoRow = ({label,value,mono,color}) => (
 const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [paymentPlans, setPaymentPlans] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
   const [actionMode, setActionMode] = useState(null); // 'pay' | 'status' | 'payStatus' | 'devCost'
-  const [payForm, setPayForm] = useState({ payment_type:'Installment', payment_mode:'Online', amount:'', payment_date:'', transaction_ref:'', bank_name:'', remarks:'' });
+  const [activeTab, setActiveTab] = useState('payment-history');
+  const [payForm, setPayForm] = useState({ payment_type:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
   const [paySaving, setPaySaving] = useState(false);
   const [newStatusId, setNewStatusId] = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
   const [cancelReasonId, setCancelReasonId] = useState('');
   const [cancelReasons, setCancelReasons] = useState([]);
   const [cancelRemarks, setCancelRemarks] = useState('');
+  const [paymentModeOptions, setPaymentModeOptions] = useState([]);
+  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
+  const [bankOptions, setBankOptions] = useState([]);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [payStatusSaving, setPayStatusSaving] = useState(false);
@@ -41,6 +48,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [devCostSaving, setDevCostSaving] = useState(false);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsSaving, setDocumentsSaving] = useState(false);
+  const [documentForm, setDocumentForm] = useState({ document_name: '', document_type: '', description: '' });
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   const PAYMENT_STATUSES = ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Full Payment Received', 'Follow Up'];
 
@@ -65,14 +77,62 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     finally { setLoading(false); }
   }, [bookingId]);
 
+  const loadPaymentPlans = useCallback(async () => {
+    try {
+      const resp = await paymentPlanApi.getDropdown();
+      setPaymentPlans(resp.data?.data || resp.data || []);
+    } catch (err) {
+      setPaymentPlans([]);
+    }
+  }, []);
+
+  const loadDocuments = useCallback(async () => {
+    if (!bookingId) return;
+    setDocumentsLoading(true);
+    try {
+      const resp = await bookingApi.getDocuments(bookingId);
+      setDocuments(resp.data?.data || resp.data || []);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to load documents'));
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [bookingId]);
+
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
     bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
-  }, []);
+    bookingApi.getPaymentFormMasters().then((r) => {
+      const payload = r.data?.data || r.data || {};
+      setPaymentModeOptions(payload.payment_modes || []);
+      setPaymentTypeOptions(payload.payment_types || []);
+      setBankOptions(payload.banks || []);
+    }).catch(() => {
+      setPaymentModeOptions([]);
+      setPaymentTypeOptions([]);
+      setBankOptions([]);
+    });
+    loadPaymentPlans();
+  }, [loadPaymentPlans]);
   useEffect(() => {
     loadActivities();
   }, [loadActivities]);
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
+
+  const getUserLabel = (person) => {
+    if (!person) return '';
+    const name = `${person.first_name || ''} ${person.last_name || ''}`.trim();
+    const roleCode = person.userType?.short_code || person.user_type?.short_code;
+    return roleCode ? `${name} (${roleCode})` : name;
+  };
+
+  const leadAssignee = booking?.lead?.assignedTo || null;
+  const previousLeadAssignee = booking?.lead?.previousAssignedToUser || null;
+  const paymentPlanLabel = booking?.paymentPlan?.plan_name || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_name || '—';
+  const paymentPlanType = booking?.paymentPlan?.plan_type || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_type || '';
 
   const openActionModal = (mode) => {
     setActionMode(mode);
@@ -88,7 +148,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       return;
     }
     if (mode === 'pay') {
-      setPayForm({ payment_type:'Installment', payment_mode:'Online', amount:'', payment_date:'', transaction_ref:'', bank_name:'', remarks:'' });
+      setPayForm({ payment_type:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
       return;
     }
     if (mode === 'devCost') {
@@ -104,12 +164,30 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const handleAddPayment = async () => {
     if (!payForm.amount || parseFloat(payForm.amount) <= 0) { toast.error('Enter valid amount'); return; }
+    if (!payForm.payment_type) {
+      toast.error('Please select a payment type');
+      return;
+    }
+    const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(payForm.payment_mode_id));
+    const selectedModeName = selectedMode?.mode_name || payForm.payment_mode;
+    if (!payForm.payment_mode_id || !selectedModeName) {
+      toast.error('Please select a payment mode');
+      return;
+    }
+    if (selectedModeName !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim())) {
+      toast.error(`Reference / UTR / Cheque No. is required for ${selectedModeName}`);
+      return;
+    }
     setPaySaving(true);
     try {
-      await bookingApi.addPayment(bookingId, { ...payForm, amount: parseFloat(payForm.amount) });
+      await bookingApi.addPayment(bookingId, {
+        ...payForm,
+        payment_mode: selectedModeName,
+        amount: parseFloat(payForm.amount),
+      });
       toast.success('Payment recorded');
       closeActionModal();
-      setPayForm({ payment_type:'Installment', payment_mode:'Online', amount:'', payment_date:'', transaction_ref:'', bank_name:'', remarks:'' });
+      setPayForm({ payment_type:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
       loadBooking();
       loadActivities();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
@@ -190,6 +268,31 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
   };
 
+  const handleUploadDocuments = async () => {
+    if (!selectedFiles.length) {
+      toast.error('Select at least one file to upload');
+      return;
+    }
+    setDocumentsSaving(true);
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach((file) => formData.append('documents', file));
+      formData.append('document_name', documentForm.document_name || 'Booking Document');
+      formData.append('document_type', documentForm.document_type || 'General');
+      formData.append('description', documentForm.description || '');
+      await bookingApi.uploadDocuments(bookingId, formData);
+      toast.success('Documents uploaded');
+      setSelectedFiles([]);
+      setDocumentForm({ document_name: '', document_type: '', description: '' });
+      loadDocuments();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to upload documents'));
+    } finally {
+      setDocumentsSaving(false);
+    }
+  };
+
   if (loading) return (
     <div style={{padding:60,textAlign:'center'}}>
       <ArrowPathIcon style={{width:32,height:32,color:'var(--text-muted)',margin:'0 auto',animation:'spin 1s linear infinite'}}/>
@@ -204,6 +307,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const payments = booking.payments || [];
   const customer = booking.customer || {};
+  const buyerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || booking.customer_name || booking.buyer_name || '—';
+  const customerPhoneRaw = customer.phone || customer.phone_number || customer.mobile || booking.customer_phone || '';
+  const customerPhone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(customerPhoneRaw || '')) ? '—' : (customerPhoneRaw || '—');
   const toAmount = (v) => {
     const n = parseFloat(v || 0);
     return Number.isFinite(n) ? n : 0;
@@ -217,9 +323,25 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const totalValue = computedTotalValue > 0 ? computedTotalValue : toAmount(booking.net_amount || booking.total_amount);
   const balanceDue = totalValue - totalPaid;
   const pctCollected = totalValue > 0 ? Math.round((totalPaid / totalValue) * 100) : 0;
+
+  const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
+  const devCostPlotAreaValue = toAmount(devCostForm.plot_area || booking.plot_area);
+  const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
+  const previewPlotValue = devCostGuidelineValue * devCostPlotAreaValue;
+  const previewStampValue = Math.ceil((previewPlotValue * 0.07) / 100) * 100;
+  const previewRegistrationValue = Math.ceil((previewPlotValue * 0.02) / 100) * 100;
+  const previewDevelopmentValue = Math.round((devCostPlotAreaValue * devCostPerSqftValue) * 1.18 * 100) / 100;
+  const previewGrandTotal = previewPlotValue + previewStampValue + previewRegistrationValue + previewDevelopmentValue;
+  const liveTotalValue = actionMode === 'devCost' ? previewGrandTotal : totalValue;
+
   const unverifiedAmt = payments.filter(p => !p.is_verified && !p.is_bounced).reduce((s,p) => s + parseFloat(p.amount||0), 0);
   const verifiedCount = payments.filter(p => p.is_verified).length;
   const pendingCount = payments.filter(p => !p.is_verified && !p.is_bounced).length;
+  const tabs = [
+    { key: 'payment-history', label: 'Payment History', icon: CreditCardIcon },
+    { key: 'activity-log', label: 'Activity Log', icon: ClockIcon },
+    { key: 'uploads', label: 'Uploads', icon: CloudArrowUpIcon },
+  ];
 
   // Check overdue
   const isOverdue = booking.next_follow_up_at && new Date(booking.next_follow_up_at) < new Date();
@@ -281,15 +403,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         <div className="bkd-header-left">
           <button className="bkd-back-btn" onClick={onBack}><ArrowLeftIcon style={{width:16,height:16}}/></button>
           <div>
-            <h1 className="bkd-title">Booking Details — {booking.booking_number}</h1>
-            <p className="bkd-subtitle">{booking.project_name} · {booking.unit_display || booking.unit_number || 'N/A'} · Booked {fmtD(booking.booking_date)}</p>
+            <h1 className="bkd-title">
+              Booking Details — {booking.booking_number}{' '}
+                
+        <span className="bkd-status-badge" style={{background:`${booking.status_color}18`,color:booking.status_color,border:`1px solid ${booking.status_color}40`}}>
+          <span style={{width:6,height:6,borderRadius:'50%',background:booking.status_color,display:'inline-block'}}/> {booking.status_label}
+        </span>
+     
+            </h1>
+            <p className="bkd-subtitle">{booking.project_name} · {booking.unit_display || booking.unit_number || 'N/A'} · {fmtD(booking.booking_date)}</p>
           </div>
         </div>
         <div className="bkd-header-actions">
-          <button className="bkd-btn bkd-btn-ghost" onClick={() => window.print()}><PrinterIcon style={{width:14,height:14}}/> Print</button>
-          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Update Status</button>
-          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Update Payment Status</button>
-          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('devCost')}><BanknotesIcon style={{width:14,height:14}}/> Development Cost</button>
+          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Boooking Status</button>
+          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
+          {/* <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('devCost')}><BanknotesIcon style={{width:14,height:14}}/> Development Cost</button> */}
           <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
           <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
         </div>
@@ -306,133 +434,345 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
       )}
 
-      {/* Status Badge */}
-      <div style={{marginBottom:16}}>
-        <span className="bkd-status-badge" style={{background:`${booking.status_color}18`,color:booking.status_color,border:`1px solid ${booking.status_color}40`}}>
-          <span style={{width:6,height:6,borderRadius:'50%',background:booking.status_color,display:'inline-block'}}/> {booking.status_label}
-        </span>
-      </div>
-
-      {/* Customer Info + Payment Summary — 2 col */}
       <div className="bkd-two-col">
-        {/* Customer Information Card */}
-        <div className="bkd-card">
-          <div className="bkd-card-header">
-            <div className="bkd-card-title"><UserIcon style={{width:15,height:15}}/> Customer Information</div>
-          </div>
-          <div className="bkd-card-body">
-            <div className="bkd-info-grid">
-              <InfoRow label="Customer Name" value={`${customer.first_name||''} ${customer.last_name||''}`.trim() || booking.customer_name}/>
-              <InfoRow label="Phone" value={customer.phone} mono/>
-              <InfoRow label="PAN" value={customer.pan_number} mono/>
-              <InfoRow label="Aadhaar" value={customer.aadhar_number} mono/>
-              <InfoRow label="Email" value={customer.email} mono/>
-              <InfoRow label="Booking Date" value={fmtD(booking.booking_date)}/>
+            <div className="bkd-card">
+              <div className="bkd-card-header">
+                <div className="bkd-card-title"><UserIcon style={{width:15,height:15}}/> Customer Information</div>
+              </div>
+              <div className="bkd-card-body">
+                <div className="bkd-info-grid">
+                  <InfoRow label="Buyer Name" value={buyerName}/>
+                  <InfoRow label="Customer Phone" value={customerPhone} mono/>
+                  <InfoRow label="PAN" value={customer.pan_number} mono/>
+                  <InfoRow label="Aadhaar" value={customer.aadhar_number} mono/>
+                  <InfoRow label="Email" value={customer.email} mono/>
+                  <InfoRow label="Booking Date" value={fmtD(booking.booking_date)}/>
+                </div>
+                <hr className="bkd-divider"/>
+                <div className="bkd-info-grid">
+                  <InfoRow label="Project" value={booking.project_name}/>
+                  <InfoRow label="Unit" value={booking.unit_display || booking.unit_number}/>
+                  <InfoRow label="Area" value={booking.carpet_area ? `${booking.carpet_area} sq.ft` : '—'}/>
+                  
+                  <InfoRow label="Current Handler" value={leadAssignee ? getUserLabel(leadAssignee) : '—'} />
+                  <InfoRow label="Previous Handler" value={previousLeadAssignee ? getUserLabel(previousLeadAssignee) : '—'} />
+                  <InfoRow label="Payment Plan" value={paymentPlanLabel} />
+                  <InfoRow label="Plan Type" value={paymentPlanType || '—'} />
+                  <InfoRow label="Sales Head / Manager" value={previousLeadAssignee ? getUserLabel(previousLeadAssignee) : '—'} />
+                  <InfoRow label="Collection Owner" value={leadAssignee ? getUserLabel(leadAssignee) : '—'} />
+                  <InfoRow label="Booking Status" value={booking.status_label} />
+                  <InfoRow label="Payment Status" value={booking.payment_status || '—'} />
+                </div>
+              </div>
             </div>
-            <hr className="bkd-divider"/>
-            <div className="bkd-info-grid">
-              <InfoRow label="Project" value={booking.project_name}/>
-              <InfoRow label="Unit" value={booking.unit_display || booking.unit_number}/>
-              <InfoRow label="Area" value={booking.carpet_area ? `${booking.carpet_area} sq.ft` : '—'}/>
-              <InfoRow label="Config" value={booking.configuration}/>
-              <InfoRow label="Sales Person" value={booking.sales_person_name || booking.buyer_name}/>
-              <InfoRow label="Payment Plan" value={booking.paymentPlan?.plan_name}/>
-            </div>
-          </div>
-        </div>
 
-        {/* Payment Summary Card */}
-        <div className="bkd-card">
-          <div className="bkd-card-header">
-            <div className="bkd-card-title"><BanknotesIcon style={{width:15,height:15}}/> Payment Summary</div>
-          </div>
-          <div className="bkd-card-body">
-            <div className="bkd-amount-grid">
-              <div className="bkd-amount-box"><div className="bkd-amount-label">Total Value</div><div className="bkd-amount-val">{formatCurrency(totalValue)}</div></div>
-              <div className="bkd-amount-box bkd-amount-success"><div className="bkd-amount-label">Total Collected</div><div className="bkd-amount-val">{formatCurrency(totalPaid)}</div></div>
-              <div className="bkd-amount-box bkd-amount-danger"><div className="bkd-amount-label">Balance Due</div><div className="bkd-amount-val">{formatCurrency(balanceDue)}</div></div>
-              <div className="bkd-amount-box bkd-amount-warning"><div className="bkd-amount-label">Unverified</div><div className="bkd-amount-val">{formatCurrency(unverifiedAmt)}</div></div>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-              Plot {formatCurrency(plotValue)} + Stamp {formatCurrency(stampValue)} + Registration {formatCurrency(registrationValue)} + Development {formatCurrency(developmentValue)}
-            </div>
-            {/* Progress bar */}
-            <div className="bkd-progress-section">
-              <div className="bkd-progress-label">Collection Progress</div>
-              <div className="bkd-progress-row"><span>{formatCurrency(totalPaid)} of {formatCurrency(totalValue)}</span><span className="bkd-progress-pct">{pctCollected}%</span></div>
-              <div className="bkd-progress-bar"><div className="bkd-progress-fill" style={{width:`${pctCollected}%`,background:pctCollected>=75?'#10b981':pctCollected>=40?'#f59e0b':'#ef4444'}}/></div>
-            </div>
-            <hr className="bkd-divider"/>
-            <div className="bkd-stats-row">
-              <div className="bkd-mini-stat"><div className="bkd-mini-label">Payments</div><div className="bkd-mini-val">{payments.length} entries</div></div>
-              <div className="bkd-mini-stat"><div className="bkd-mini-label">Verified</div><div className="bkd-mini-val" style={{color:'#10b981'}}>{verifiedCount} payment{verifiedCount!==1?'s':''}</div></div>
-              <div className="bkd-mini-stat"><div className="bkd-mini-label">Pending</div><div className="bkd-mini-val" style={{color:'#f59e0b'}}>{pendingCount} payment{pendingCount!==1?'s':''}</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment History Table */}
-      <div className="bkd-card">
-        <div className="bkd-card-header">
-          <div><div className="bkd-card-title"><CreditCardIcon style={{width:15,height:15}}/> Payment History</div>
-            <div className="bkd-card-subtitle">All payments recorded for this booking</div></div>
-          <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
-        </div>
-        <div>{payments.length === 0 ? (
-          <div style={{padding:30,textAlign:'center',color:'var(--text-muted,#9ca3af)',fontSize:13}}>No payments recorded yet</div>
-        ) : (
-          <table className="bkd-table"><thead><tr>
-            <th>Date</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Type</th><th>Status</th><th>Actions</th>
-          </tr></thead><tbody>
-            {payments.map(p => (
-              <tr key={p.id} className={p.is_bounced?'bkd-row-bounced':p.is_verified?'bkd-row-verified':''}>
-                <td>{fmtD(p.payment_date)}</td>
-                <td style={{fontWeight:700}}>{formatCurrency(p.amount)}</td>
-                <td>{p.payment_mode}</td>
-                <td className="bkd-mono">{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
-                <td style={{fontSize:12}}>{p.bank_name || '—'}</td>
-                <td style={{fontSize:12}}>{p.payment_type}</td>
-                <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
-                  : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
-                  : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
-                <td>—</td>
-              </tr>
-            ))}
-          </tbody></table>
-        )}</div>
-      </div>
-
-      {/* Activity Log */}
-      <div className="bkd-card">
-        <div className="bkd-card-header">
-          <div className="bkd-card-title"><ClockIcon style={{width:15,height:15}}/> Activity Log</div>
-          <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => {
-            setActivitiesLoading(true);
-            bookingApi.getActivities(bookingId).then(r=>setActivities(r.data?.data||r.data||[])).catch(()=>{}).finally(()=>setActivitiesLoading(false));
-          }}><ArrowPathIcon style={{width:14,height:14}}/></button>
-        </div>
-        <div className="bkd-card-body">
-          {activitiesLoading ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)'}}>Loading...</div>
-          : activities.length === 0 ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)',fontSize:13}}>No activity recorded yet</div>
-          : (
-            <div className="bkd-timeline">
-              {activities.map((act,i) => {
-                const color = act.activity_type==='PAYMENT_RECORDED'?'#10b981':act.activity_type==='STATUS_CHANGE'?'#3b82f6':act.activity_type==='CANCELLED'?'#ef4444':'#6b7280';
-                return (
-                  <div className="bkd-timeline-item" key={act.id||i}>
-                    <div className="bkd-timeline-dot" style={{borderColor:color}}/>
-                    <div className="bkd-timeline-time">{new Date(act.performed_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
-                    <div className="bkd-timeline-text">{act.title}</div>
-                    {act.description && <div className="bkd-timeline-sub">{act.description}</div>}
-                    <div className="bkd-timeline-sub">By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'}</div>
+            <div className="bkd-card bkd-payment-preview-card">
+              <div className="bkd-payment-preview-header">
+                <div className="bkd-payment-preview-header-left">
+                  <div className="bkd-payment-preview-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M17 9V7a5 5 0 00-10 0v2M5 9h14l1 11H4L5 9z" />
+                    </svg>
                   </div>
-                );
-              })}
+
+                  <div>
+                    <h3 className="bkd-payment-preview-title">Payment Summary</h3>
+                    <p className="bkd-payment-preview-subtitle">Financial overview & collection progress</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bkd-payment-preview-body">
+                <div className="bkd-payment-preview-top-grid">
+                  <div className="bkd-payment-preview-card bkd-payment-preview-card-total">
+                    <p className="bkd-payment-preview-card-label">Total Value</p>
+                    <h2 className="bkd-payment-preview-card-value">{formatCurrency(liveTotalValue)}</h2>
+                  </div>
+
+                  <div className="bkd-payment-preview-card bkd-payment-preview-card-collected">
+                    <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-collected">Total Collected</p>
+                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-collected">{formatCurrency(totalPaid)}</h2>
+                  </div>
+
+                  <div className="bkd-payment-preview-card bkd-payment-preview-card-balance">
+                    <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-balance">Balance Due</p>
+                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-balance">{formatCurrency(balanceDue)}</h2>
+                  </div>
+
+                  <div className="bkd-payment-preview-card bkd-payment-preview-card-unverified">
+                    <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-unverified">Unverified</p>
+                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-unverified">{formatCurrency(unverifiedAmt)}</h2>
+                  </div>
+                </div>
+
+                <div className="bkd-payment-preview-breakdown-shell">
+                  <div className="bkd-payment-preview-breakdown-head">
+                    <div>
+                      <h4 className="bkd-payment-preview-breakdown-title">Cost Breakdown</h4>
+                      <p className="bkd-payment-preview-breakdown-subtitle">Detailed property pricing structure</p>
+                    </div>
+
+                    <div className="bkd-payment-preview-grand-total">
+                      <button type="button" className="bkd-payment-preview-edit-btn" onClick={() => openActionModal('devCost')}>
+                        Edit
+                      </button>
+                      <p className="bkd-payment-preview-grand-label">Grand Total</p>
+                      <p className="bkd-payment-preview-grand-value">{formatCurrency(totalValue)}</p>
+                    </div>
+                  </div>
+
+                  <div className="bkd-payment-preview-breakdown-grid">
+                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-total">
+                      <div className="bkd-payment-preview-breakdown-item-head">
+                        <div className="bkd-payment-preview-breakdown-icon-shell">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 7l9-4 9 4-9 4-9-4zm0 0v10l9 4 9-4V7" />
+                          </svg>
+                        </div>
+
+                        <div>
+                          <p className="bkd-payment-preview-breakdown-item-label">Plot Value</p>
+                          <p className="bkd-payment-preview-breakdown-item-sub">90% of total</p>
+                        </div>
+                      </div>
+
+                      <h3 className="bkd-payment-preview-breakdown-item-value">{formatCurrency(plotValue)}</h3>
+                    </div>
+
+                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-stamp">
+                      <div className="bkd-payment-preview-breakdown-item-head">
+                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-stamp">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-stamp" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 12h6m-6 4h6M7 4h10l2 2v14H5V4h2z" />
+                          </svg>
+                        </div>
+
+                        <div>
+                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-stamp">Stamp Duty</p>
+                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-stamp">Govt Charge</p>
+                        </div>
+                      </div>
+
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-stamp">{formatCurrency(stampValue)}</h3>
+                    </div>
+
+                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-registration">
+                      <div className="bkd-payment-preview-breakdown-item-head">
+                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-registration">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-registration" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a1 1 0 001-1V7H5v12a1 1 0 001 1z" />
+                          </svg>
+                        </div>
+
+                        <div>
+                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-registration">Registration</p>
+                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-registration">Legal Charge</p>
+                        </div>
+                      </div>
+
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-registration">{formatCurrency(registrationValue)}</h3>
+                    </div>
+
+                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-development">
+                      <div className="bkd-payment-preview-breakdown-item-head">
+                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-development">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-development" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14.7 6.3l3 3m-9.4 9.4H5v-3.3l9.4-9.4a1 1 0 011.4 0l1.9 1.9a1 1 0 010 1.4l-9.4 9.4z" />
+                          </svg>
+                        </div>
+
+                        <div>
+                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-development">Development</p>
+                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-development">Infrastructure</p>
+                        </div>
+                      </div>
+
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-development">{formatCurrency(developmentValue)}</h3>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bkd-payment-preview-progress">
+                  <div className="bkd-payment-preview-progress-head">
+                    <h4 className="bkd-payment-preview-progress-title">Collection Progress</h4>
+                    <span className="bkd-payment-preview-progress-percent">{pctCollected}%</span>
+                  </div>
+
+                  <div className="bkd-payment-preview-progress-bar">
+                    <div className="bkd-payment-preview-progress-fill" style={{ width: `${pctCollected}%` }} />
+                  </div>
+
+                  <div className="bkd-payment-preview-progress-foot">
+                    <p className="bkd-payment-preview-progress-foot-text">{formatCurrency(totalPaid)} collected out of {formatCurrency(liveTotalValue)}</p>
+                    <p className="bkd-payment-preview-progress-foot-pending">{formatCurrency(liveTotalValue - totalPaid)} pending</p>
+                  </div>
+                </div>
+
+                <div className="bkd-payment-preview-stats-grid">
+                  <div className="bkd-payment-preview-stat-card bkd-payment-preview-stat-card-neutral">
+                    <p className="bkd-payment-preview-stat-label">Payments</p>
+                    <h4 className="bkd-payment-preview-stat-value">{payments.length}</h4>
+                  </div>
+
+                  <div className="bkd-payment-preview-stat-card bkd-payment-preview-stat-card-success">
+                    <p className="bkd-payment-preview-stat-label bkd-payment-preview-stat-label-success">Verified</p>
+                    <h4 className="bkd-payment-preview-stat-value bkd-payment-preview-stat-value-success">{verifiedCount}</h4>
+                  </div>
+
+                  <div className="bkd-payment-preview-stat-card bkd-payment-preview-stat-card-warning">
+                    <p className="bkd-payment-preview-stat-label bkd-payment-preview-stat-label-warning">Pending</p>
+                    <h4 className="bkd-payment-preview-stat-value bkd-payment-preview-stat-value-warning">{pendingCount}</h4>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+
       </div>
+
+      <div className="bkd-tabs">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              className={`bkd-tab${activeTab === tab.key ? ' active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <Icon style={{ width: 14, height: 14 }} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'payment-history' && (
+        <div className="bkd-card">
+          <div className="bkd-card-header">
+            <div><div className="bkd-card-title"><CreditCardIcon style={{width:15,height:15}}/> Payment History</div>
+              <div className="bkd-card-subtitle">All payments recorded for this booking</div></div>
+            <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
+          </div>
+          <div>{payments.length === 0 ? (
+            <div style={{padding:30,textAlign:'center',color:'var(--text-muted,#9ca3af)',fontSize:13}}>No payments recorded yet</div>
+          ) : (
+            <table className="bkd-table"><thead><tr>
+              <th>Date</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Type</th><th>Status</th><th>Actions</th>
+            </tr></thead><tbody>
+              {payments.map(p => (
+                <tr key={p.id} className={p.is_bounced?'bkd-row-bounced':p.is_verified?'bkd-row-verified':''}>
+                  <td>{fmtD(p.payment_date)}</td>
+                  <td style={{fontWeight:700}}>{formatCurrency(p.amount)}</td>
+                  <td>{p.payment_mode}</td>
+                  <td className="bkd-mono">{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
+                  <td style={{fontSize:12}}>{p.bank_name || '—'}</td>
+                  <td style={{fontSize:12}}>{p.payment_type}</td>
+                  <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
+                    : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
+                    : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
+                  <td>—</td>
+                </tr>
+              ))}
+            </tbody></table>
+          )}</div>
+        </div>
+      )}
+
+      {activeTab === 'activity-log' && (
+        <div className="bkd-card">
+          <div className="bkd-card-header">
+            <div className="bkd-card-title"><ClockIcon style={{width:15,height:15}}/> Activity Log</div>
+            <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => {
+              setActivitiesLoading(true);
+              bookingApi.getActivities(bookingId).then(r=>setActivities(r.data?.data||r.data||[])).catch(()=>{}).finally(()=>setActivitiesLoading(false));
+            }}><ArrowPathIcon style={{width:14,height:14}}/></button>
+          </div>
+          <div className="bkd-card-body">
+            {activitiesLoading ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)'}}>Loading...</div>
+            : activities.length === 0 ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)',fontSize:13}}>No activity recorded yet</div>
+            : (
+              <div className="bkd-timeline">
+                {activities.map((act,i) => {
+                  const color = act.activity_type==='PAYMENT_RECORDED'?'#10b981':act.activity_type==='STATUS_CHANGE'?'#3b82f6':act.activity_type==='CANCELLED'?'#ef4444':'#6b7280';
+                  return (
+                    <div className="bkd-timeline-item" key={act.id||i}>
+                      <div className="bkd-timeline-dot" style={{borderColor:color}}/>
+                      <div className="bkd-timeline-time">{new Date(act.performed_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+                      <div className="bkd-timeline-text">{act.title}</div>
+                      {act.description && <div className="bkd-timeline-sub">{act.description}</div>}
+                      <div className="bkd-timeline-sub">By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'uploads' && (
+        <div className="bkd-card">
+          <div className="bkd-card-header">
+            <div><div className="bkd-card-title"><FolderOpenIcon style={{width:15,height:15}}/> Uploads</div>
+              <div className="bkd-card-subtitle">Store documents against the lead linked to this booking</div></div>
+          </div>
+          <div className="bkd-card-body">
+            <div className="bkd-upload-grid">
+              <div className="bkd-upload-panel">
+                <div className="bkd-upload-dropzone">
+                  <CloudArrowUpIcon style={{ width: 22, height: 22, color: 'var(--col-primary, #4f46e5)' }} />
+                  <div style={{ fontWeight: 700, color: 'var(--col-text, #111827)' }}>Upload booking documents</div>
+                  <div style={{ fontSize: 12, color: 'var(--col-text-secondary, #6b7280)' }}>PDF, images, docs, spreadsheets. Up to 5 files.</div>
+                </div>
+                <div className="bkd-form-group" style={{ marginTop: 14 }}>
+                  <label className="bkd-form-label">Document Title</label>
+                  <input className="bkd-form-control" value={documentForm.document_name} onChange={(e) => setDocumentForm((p) => ({ ...p, document_name: e.target.value }))} placeholder="e.g. Sale Agreement" />
+                </div>
+                <div className="bkd-form-group">
+                  <label className="bkd-form-label">Document Type</label>
+                  <input className="bkd-form-control" value={documentForm.document_type} onChange={(e) => setDocumentForm((p) => ({ ...p, document_type: e.target.value }))} placeholder="e.g. Agreement / ID Proof / Receipt" />
+                </div>
+                <div className="bkd-form-group">
+                  <label className="bkd-form-label">Description</label>
+                  <textarea className="bkd-form-control" rows={3} value={documentForm.description} onChange={(e) => setDocumentForm((p) => ({ ...p, description: e.target.value }))} placeholder="Optional notes for this upload" />
+                </div>
+                <div className="bkd-form-group">
+                  <label className="bkd-form-label">Files</label>
+                  <input className="bkd-form-control" type="file" multiple onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))} />
+                </div>
+                <button className="bkd-btn bkd-btn-primary" onClick={handleUploadDocuments} disabled={documentsSaving || selectedFiles.length === 0} style={{ marginTop: 10 }}>
+                  {documentsSaving ? 'Uploading...' : <><CloudArrowUpIcon style={{ width: 14, height: 14 }} /> Upload Documents</>}
+                </button>
+              </div>
+              <div className="bkd-upload-panel">
+                <div className="bkd-card-title" style={{ marginBottom: 12 }}><DocumentTextIcon style={{ width: 15, height: 15 }} /> Uploaded Documents</div>
+                {documentsLoading ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>Loading...</div>
+                ) : documents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>No documents uploaded yet.</div>
+                ) : (
+                  <div className="bkd-document-list">
+                    {documents.map((doc) => (
+                      <div className="bkd-document-item" key={doc.id}>
+                        <div className="bkd-document-main">
+                          <div className="bkd-document-title">{doc.document_name}</div>
+                          <div className="bkd-document-meta">{doc.document_type || 'Document'} · {doc.mime_type || 'Unknown type'} · {doc.file_size ? `${Math.round(Number(doc.file_size) / 1024)} KB` : '—'}</div>
+                          <div className="bkd-document-meta">Uploaded by {doc.uploader ? `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim() : 'System'} · {fmtD(doc.created_at)}</div>
+                        </div>
+                        <div className="bkd-document-actions">
+                          <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={doc.download_url || doc.file_url} target="_blank" rel="noreferrer">
+                            <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Open
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── QUICK ACTION MODAL (same as bookings list style) ── */}
       {actionMode && (
@@ -465,9 +805,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     display: 'flex', gap: 16, background: 'var(--bg-secondary)', 
                     padding: '8px 12px', borderRadius: 6, marginBottom: 16, fontSize: 12
                   }}>
-                    <div>Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalValue)}</strong></div>
+                    <div>Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(liveTotalValue)}</strong></div>
                     <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaid)}</strong></div>
-                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(totalValue - totalPaid)}</strong></div>
+                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(liveTotalValue - totalPaid)}</strong></div>
                   </div>
 
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
@@ -477,24 +817,36 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group"><label className="bkd-form-label">Payment Mode *</label>
-                      <select className="bkd-form-control" value={payForm.payment_mode} onChange={e => setPayForm(p => ({...p, payment_mode:e.target.value}))}>
-                        {['Online','NEFT/RTGS','Cheque','Demand Draft','Cash','UPI'].map(m => <option key={m}>{m}</option>)}
+                      <select className="bkd-form-control" value={payForm.payment_mode_id} onChange={e => {
+                        const selectedId = e.target.value;
+                        const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(selectedId));
+                        setPayForm(p => ({ ...p, payment_mode_id: selectedId, payment_mode: selectedMode?.mode_name || '' }));
+                      }}>
+                        <option value="">Select payment mode</option>
+                        {paymentModeOptions.map((mode) => <option key={mode.id} value={mode.id}>{mode.mode_name}</option>)}
                       </select></div>
-                    <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. *</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/></div>
                   </div>
                   <div className="bkd-form-row">
-                    <div className="bkd-form-group"><label className="bkd-form-label">Bank / Drawn On</label><input type="text" className="bkd-form-control" placeholder="e.g. HDFC Bank" value={payForm.bank_name} onChange={e => setPayForm(p => ({...p, bank_name:e.target.value}))}/></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Company Bank</label>
+                      <select className="bkd-form-control" value={payForm.bank_id || ''} onChange={e => setPayForm(p => ({ ...p, bank_id: e.target.value }))}>
+                        <option value="">Select bank</option>
+                        {bankOptions.map((bank) => (
+                          <option key={bank.id} value={bank.id}>{bank.bank_name} - {bank.account_number}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="bkd-form-group"><label className="bkd-form-label">Payment Type</label>
                       <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({...p, payment_type:e.target.value}))}>
-                        {['Token','Down Payment','Installment','EMI','Final Payment','Other'].map(t => <option key={t}>{t}</option>)}
+                        <option value="">Select payment type</option>
+                        {paymentTypeOptions.map((type) => <option key={type.id} value={type.type_name}>{type.type_name}</option>)}
                       </select></div>
                   </div>
                   <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({...p, remarks:e.target.value}))}/></div>
                   <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
-                  {renderActivityHistory()}
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount} onClick={handleAddPayment}>
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
                     {paySaving ? 'Saving...' : 'Submit Payment'}
                   </button>
                 </div>
@@ -594,17 +946,42 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {actionMode === 'devCost' && (
               <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Development Cost</div>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Cost Breakdown</div>
+                  <div className="bkd-dev-summary-grid">
+                    <div className="bkd-dev-summary-item">
+                      <div className="bkd-dev-summary-label">Plot Value</div>
+                      <div className="bkd-dev-summary-value">{formatCurrency(previewPlotValue || plotValue)}</div>
+                    </div>
+                    <div className="bkd-dev-summary-item">
+                      <div className="bkd-dev-summary-label">Stamp Duty</div>
+                      <div className="bkd-dev-summary-value">{formatCurrency(previewStampValue || stampValue)}</div>
+                    </div>
+                    <div className="bkd-dev-summary-item">
+                      <div className="bkd-dev-summary-label">Registration</div>
+                      <div className="bkd-dev-summary-value">{formatCurrency(previewRegistrationValue || registrationValue)}</div>
+                    </div>
+                    <div className="bkd-dev-summary-item bkd-dev-summary-item-editable">
+                      <div className="bkd-dev-summary-label">Development</div>
+                      <div className="bkd-dev-summary-value">{formatCurrency(previewDevelopmentValue || developmentValue)}</div>
+                    </div>
+                  </div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group"><label className="bkd-form-label">Guideline Value *</label>
-                      <input type="number" className="bkd-form-control" value={devCostForm.guideline_value} onChange={e => setDevCostForm(p => ({ ...p, guideline_value: e.target.value }))} />
+                      <input type="number" className="bkd-form-control" value={devCostForm.guideline_value} readOnly />
                     </div>
                     <div className="bkd-form-group"><label className="bkd-form-label">Plot Area *</label>
-                      <input type="number" className="bkd-form-control" value={devCostForm.plot_area} onChange={e => setDevCostForm(p => ({ ...p, plot_area: e.target.value }))} />
+                      <input type="number" className="bkd-form-control" value={devCostForm.plot_area} readOnly />
                     </div>
                   </div>
                   <div className="bkd-form-group"><label className="bkd-form-label">Development Cost / Sqft *</label>
                     <input type="number" className="bkd-form-control" value={devCostForm.development_cost_per_sqft} onChange={e => setDevCostForm(p => ({ ...p, development_cost_per_sqft: e.target.value }))} />
+                  </div>
+                  <div className="bkd-dev-hint">Only development cost is editable here. Plot, stamp, and registration values are derived from the booking and kept read-only.</div>
+                  <div className="bkd-dev-summary-grid" style={{ marginTop: 14 }}>
+                    <div className="bkd-dev-summary-item bkd-dev-summary-item-editable" style={{ gridColumn: '1 / -1' }}>
+                      <div className="bkd-dev-summary-label">Live Grand Total</div>
+                      <div className="bkd-dev-summary-value" style={{ fontSize: 22, fontWeight: 800 }}>{formatCurrency(previewGrandTotal || totalValue)}</div>
+                    </div>
                   </div>
                   {renderActivityHistory()}
                 </div>
