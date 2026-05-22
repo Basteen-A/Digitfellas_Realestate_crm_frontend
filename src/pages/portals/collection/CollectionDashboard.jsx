@@ -7,13 +7,10 @@ import {
   CreditCardIcon,
   ArrowPathIcon,
   CheckCircleIcon,
-  CalendarDaysIcon,
   HomeIcon,
-  CurrencyRupeeIcon,
   ClipboardDocumentListIcon,
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
-  EnvelopeIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
@@ -161,7 +158,6 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
 
   const recentPayments = stats?.recentPayments || [];
   const recentBookings = stats?.recentBookings || [];
-  const upcomingDemands = stats?.upcomingDemands || [];
 
   return (
     <div className="col-dashboard">
