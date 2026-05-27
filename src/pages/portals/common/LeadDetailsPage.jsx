@@ -11,7 +11,7 @@ import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatCurrency, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
 import { getRoleCode } from '../../../utils/permissions';
 import { getActionsForRole } from './workflowConfig';
 import {
@@ -85,15 +85,6 @@ const isRemarkMandatoryForAction = (action) => {
   return MANDATORY_REMARK_STATUS_CODES.has(statusCode);
 };
 
-const toDateTimeLocalValue = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
 const toDayStart = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
@@ -109,34 +100,40 @@ const isFollowUpMissedByDate = (value, referenceDate = new Date()) => {
   return followUpDate.getTime() < referenceStart.getTime();
 };
 
-const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
-  const date = new Date();
-  date.setSeconds(0, 0);
-  date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return toDateTimeLocalValue(date.toISOString());
+// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+const toDateOnlyValue = (date) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
+const getQuickFollowUpDate = (dayOffset) => {
   const date = new Date();
-  date.setSeconds(0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  return toDateOnlyValue(date);
+};
+
+const getQuickFollowUpForWeekday = (weekday) => {
+  const date = new Date();
   const currentDay = date.getDay();
   const dayOffset = (weekday - currentDay + 7) % 7;
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return toDateTimeLocalValue(date.toISOString());
+  return toDateOnlyValue(date);
 };
 
-const FOLLOW_UP_MINUTES_AHEAD = 5;
 const MISSED_FOLLOW_UP_BLOCK_ROLES = ['TC', 'SM', 'SH'];
 
-const getFollowUpMinimumTime = (minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => new Date(Date.now() + (minutesAhead * 60 * 1000));
+// Follow-ups are date-only: the minimum selectable value is the start of today.
+const getFollowUpMinimumTime = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
 
-const isFollowUpAtLeastMinutesAhead = (value, minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => {
-  if (!value) return false;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.getTime() > getFollowUpMinimumTime(minutesAhead).getTime();
+// A follow-up date is valid when it is today or later (no time comparison).
+const isFollowUpAtLeastMinutesAhead = (value) => {
+  const day = toDayStart(value);
+  if (!day) return false;
+  return day.getTime() >= getFollowUpMinimumTime().getTime();
 };
 
 const SYSTEM_REMARK_PREFIXES = ['Lead created with status:', 'Response:', 'Quick action:', 'Follow-up call scheduled for', 'Action:'];
@@ -712,7 +709,7 @@ const LeadDetailsPage = () => {
 
     if (selectedAction.needsFollowUp) {
       if (!actionForm.nextFollowUpAt) {
-        toast.error('Follow-up date & time is required');
+        toast.error('Follow-up date is required');
         return;
       }
       payload.nextFollowUpAt = new Date(actionForm.nextFollowUpAt).toISOString();
@@ -902,7 +899,7 @@ const LeadDetailsPage = () => {
     }
 
     if (quickActionForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(quickActionForm.nextFollowUpAt)) {
-      toast.error('Follow-up time must be greater than current time');
+      toast.error('Follow-up date cannot be in the past');
       return;
     }
 
@@ -982,11 +979,11 @@ const LeadDetailsPage = () => {
 
     if (quickSelectedAction.needsFollowUp) {
       if (!quickActionForm.nextFollowUpAt) {
-        toast.error('Follow-up date & time is required');
+        toast.error('Follow-up date is required');
         return;
       }
       if (!isFollowUpAtLeastMinutesAhead(quickActionForm.nextFollowUpAt)) {
-        toast.error('Follow-up time must be greater than current time');
+        toast.error('Follow-up date cannot be in the past');
         return;
       }
     }
@@ -1193,7 +1190,7 @@ const LeadDetailsPage = () => {
         </article>
         <article className="lead-details-metric-card">
           <span>Next Follow-Up</span>
-          <strong>{lead.nextFollowUpAt ? formatDateTime(lead.nextFollowUpAt) : 'Not scheduled'}</strong>
+          <strong>{lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : 'Not scheduled'}</strong>
         </article>
         <article className="lead-details-metric-card">
           <span>Last Contacted</span>
@@ -1454,18 +1451,19 @@ const LeadDetailsPage = () => {
 
                         {selectedAction.needsFollowUp && (
                           <label className="lead-actions-label">
-                            <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up Date & Time *
-                            <input
-                              type="datetime-local"
+                            <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up Date *
+                            <CalendarPicker
+                              type="date"
                               value={actionForm.nextFollowUpAt}
-                              onChange={(e) => setActionForm((p) => ({ ...p, nextFollowUpAt: e.target.value }))}
-                              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                              onChange={(val) => setActionForm((p) => ({ ...p, nextFollowUpAt: val || '' }))}
+                              placeholder="Select Date..."
+                              minDate={getFollowUpMinimumTime().toISOString()}
                             />
                             <div className="qa-remarks-wrap" style={{ marginTop: 8 }}>
-                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today 6PM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tomorrow 11AM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat 11AM</button>
-                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun 11AM</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0) }))}>Today</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1) }))}>Tomorrow</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6) }))}>This Sat</button>
+                              <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0) }))}>This Sun</button>
                             </div>
                           </label>
                         )}
@@ -2097,18 +2095,18 @@ const LeadDetailsPage = () => {
                     <div className="qa-drawer-ctx-block">
                       <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today </button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tmrw </button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2, 11, 0) }))}>In 2 days</button>
-                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7, 11, 0) }))}>Next week</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0) }))}>Today</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1) }))}>Tmrw</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6) }))}>This Sat</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0) }))}>This Sun</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2) }))}>In 2 days</button>
+                        <button type="button" className="qa-drawer-rchip" onClick={() => setQuickActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7) }))}>Next week</button>
                       </div>
                       <CalendarPicker
-                        type="datetime"
+                        type="date"
                         value={quickActionForm.nextFollowUpAt}
                         onChange={(val) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                        placeholder="Select follow-up date & time..."
+                        placeholder="Select follow-up date..."
                         minDate={new Date().toISOString()}
                       />
                     </div>

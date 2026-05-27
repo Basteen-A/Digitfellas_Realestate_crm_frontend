@@ -23,7 +23,7 @@ const TelecallerWorkspace = () => {
       defaultScreen="dashboard"
       searchPlaceholder="Search leads by name, phone, email..."
     >
-      {({ activeScreen, setActiveScreen }) => {
+      {({ activeScreen, setActiveScreen, screenContext }) => {
         // Reset lead workspace options when navigating away from the leads screen
         if (lastScreenRef.current !== activeScreen) {
           lastScreenRef.current = activeScreen;
@@ -58,7 +58,11 @@ const TelecallerWorkspace = () => {
               <TelecallerPipeline user={user} onNavigate={handleNavigate} />
             )}
             {activeScreen === 'addlead' && (
-              <TelecallerAddLead user={user} onNavigate={handleNavigate} />
+              <TelecallerAddLead
+                user={user}
+                onNavigate={handleNavigate}
+                prefillPhone={screenContext?.prefillPhone || ''}
+              />
             )}
             {activeScreen === 'calllog' && (
               <TelecallerCallLog user={user} />

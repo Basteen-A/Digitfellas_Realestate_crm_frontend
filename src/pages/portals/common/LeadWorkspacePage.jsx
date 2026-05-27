@@ -14,7 +14,7 @@ import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 // userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
 // customerTypeApi removed — Customer Type field removed from TC lead creation
-import { formatCurrency, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 
 import {
@@ -58,10 +58,10 @@ import {
 } from '@heroicons/react/24/outline';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { isValidPhoneNumber } from 'libphonenumber-js/max';
 import './LeadWorkspacePage.css';
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FOLLOW_UP_MINUTES_AHEAD = 5;
 
 const NEW_LEAD_FOLLOW_UP_SHORTCUTS = [
   { label: 'Today ', kind: 'dayOffset', dayOffset: 0, hour: 18, minute: 0 },
@@ -337,9 +337,32 @@ const phoneMatchesAcrossCountryCode = (candidatePhone, inputPhone, countryCode =
   return candidateDigits.endsWith(inputDigits) || inputDigits.endsWith(candidateDigits);
 };
 
-const hasValidPhoneLength = (value) => {
-  const len = sanitizePhoneNumberInput(value).length;
-  return len >= 9 && len <= 12;
+// Build an E.164 string from a dial code ('+91') and the national part. If the
+// user typed the full international number (incl. the country code) into the
+// national field, the code is not prepended twice — but only when re-prepending
+// would be invalid, so normal national numbers are never altered.
+const buildE164Phone = (dialCode, localNumber) => {
+  const digits = sanitizePhoneNumberInput(localNumber);
+  const dial = sanitizeCountryCodeDigits(dialCode);
+  if (!digits || !dial) return '';
+  try {
+    if (digits.startsWith(dial) && isValidPhoneNumber(`+${digits}`) && !isValidPhoneNumber(`+${dial}${digits}`)) {
+      return `+${digits}`;
+    }
+  } catch { /* fall through to naive assembly */ }
+  return `+${dial}${digits}`;
+};
+
+// Production-grade per-country validity (correct length AND valid prefix) via
+// Google's libphonenumber. dialCode is like '+91'; localNumber is the national part.
+const isValidPhoneForCountry = (dialCode, localNumber) => {
+  const e164 = buildE164Phone(dialCode, localNumber);
+  if (!e164) return false;
+  try {
+    return isValidPhoneNumber(e164);
+  } catch {
+    return false;
+  }
 };
 
 const isClosedLostLead = (lead) => {
@@ -406,21 +429,16 @@ const initialNewLead = {
 
 const SM_CREATE_STATUS_CODE = 'SV_DONE';
 
-const toDateTimeLocalValue = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
+// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+const toDateOnlyValue = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
+const getQuickFollowUpValue = (dayOffset) => {
   const date = new Date();
-  date.setSeconds(0, 0);
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return toDateTimeLocalValue(date.toISOString());
+  return toDateOnlyValue(date);
 };
 
 const toDayStart = (value) => {
@@ -439,23 +457,26 @@ const isFollowUpMissedByDate = (value, referenceDate = new Date()) => {
   return followUpDate.getTime() < referenceStart.getTime();
 };
 
-const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
+const getQuickFollowUpForWeekday = (weekday) => {
   const date = new Date();
-  date.setSeconds(0, 0);
   const currentDay = date.getDay();
   const dayOffset = (weekday - currentDay + 7) % 7;
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return toDateTimeLocalValue(date.toISOString());
+  return toDateOnlyValue(date);
 };
 
-const getFollowUpMinimumTime = (minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => new Date(Date.now() + (minutesAhead * 60 * 1000));
+// Follow-ups are date-only: the minimum selectable value is the start of today.
+const getFollowUpMinimumTime = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
 
-const isFollowUpAtLeastMinutesAhead = (value, minutesAhead = FOLLOW_UP_MINUTES_AHEAD) => {
-  if (!value) return false;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.getTime() > getFollowUpMinimumTime(minutesAhead).getTime();
+// A follow-up date is valid when it is today or later (no time comparison).
+const isFollowUpAtLeastMinutesAhead = (value) => {
+  const day = toDayStart(value);
+  if (!day) return false;
+  return day.getTime() >= getFollowUpMinimumTime().getTime();
 };
 
 const buildNewLeadFollowUpShortcut = (shortcut) => {
@@ -1253,15 +1274,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     : shouldShowCallStatus(selectedNewLeadStatusCode);
 
   const newLeadFollowUpShortcutOptions = useMemo(() => {
-    const thresholdTime = timeTick + (FOLLOW_UP_MINUTES_AHEAD * 60 * 1000);
+    // Follow-ups are date-only: keep shortcuts whose day is today or later.
+    const todayStart = toDayStart(new Date(timeTick))?.getTime() ?? 0;
     return NEW_LEAD_FOLLOW_UP_SHORTCUTS
       .map((shortcut) => ({
         ...shortcut,
         value: buildNewLeadFollowUpShortcut(shortcut),
       }))
       .filter((shortcut) => {
-        const shortcutTime = new Date(shortcut.value).getTime();
-        return Number.isFinite(shortcutTime) && shortcutTime > thresholdTime;
+        const shortcutDay = toDayStart(shortcut.value)?.getTime();
+        return Number.isFinite(shortcutDay) && shortcutDay >= todayStart;
       });
   }, [timeTick]);
 
@@ -1272,14 +1294,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     const whatsappPhone = sanitizePhoneNumberInput(newLeadForm.whatsapp_number);
 
     if (!newLeadForm.full_name?.trim()) errors.push('Full name is required');
-    if (!hasValidPhoneLength(primaryPhone)) errors.push('Phone number must be 9 to 12 digits');
-
-    if (alternatePhone && !hasValidPhoneLength(alternatePhone)) {
-      errors.push('Alternate phone number must be 9 to 12 digits');
+    if (!isValidPhoneForCountry(newLeadForm.phone_country_code, primaryPhone)) {
+      errors.push('Enter a valid phone number for the selected country');
     }
 
-    if (!newLeadForm.whatsappSameAsPhone && whatsappPhone && !hasValidPhoneLength(whatsappPhone)) {
-      errors.push('WhatsApp number must be 9 to 12 digits');
+    if (alternatePhone && !isValidPhoneForCountry(newLeadForm.alternate_phone_country_code, alternatePhone)) {
+      errors.push('Enter a valid alternate phone number for the selected country');
+    }
+
+    if (!newLeadForm.whatsappSameAsPhone && whatsappPhone && !isValidPhoneForCountry(newLeadForm.phone_country_code, whatsappPhone)) {
+      errors.push('Enter a valid WhatsApp number for the selected country');
     }
 
     if (newLeadForm.email?.trim() && !EMAIL_REGEX.test(newLeadForm.email.trim())) {
@@ -1355,11 +1379,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       isValid: errors.length === 0,
       errors,
       sanitized: {
-        primaryPhone: `${newLeadForm.phone_country_code}${primaryPhone}`,
-        alternatePhone: alternatePhone ? `${newLeadForm.alternate_phone_country_code}${alternatePhone}` : '',
+        primaryPhone: buildE164Phone(newLeadForm.phone_country_code, primaryPhone),
+        alternatePhone: alternatePhone ? buildE164Phone(newLeadForm.alternate_phone_country_code, alternatePhone) : '',
         whatsappPhone: newLeadForm.whatsappSameAsPhone
-          ? `${newLeadForm.phone_country_code}${primaryPhone}`
-          : (whatsappPhone ? `${newLeadForm.phone_country_code}${whatsappPhone}` : ''),
+          ? buildE164Phone(newLeadForm.phone_country_code, primaryPhone)
+          : (whatsappPhone ? buildE164Phone(newLeadForm.phone_country_code, whatsappPhone) : ''),
       },
     };
   }, [
@@ -1649,7 +1673,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   const checkDuplicatePhone = async (phone, type, countryCode = '+91') => {
     const digits = sanitizePhoneNumberInput(phone);
 
-    if (!digits || digits.length < 9) {
+    // Only look up duplicates once the number is a complete, valid phone for the
+    // selected country. A fixed length gate (e.g. >= 9) wrongly skipped shorter
+    // national numbers such as Kuwait's 8-digit mobiles, so they never got the
+    // "Valid" confirmation or a duplicate check.
+    if (!isValidPhoneForCountry(countryCode, phone)) {
       if (type === 'primary') setPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
       else setAltPhoneCheck({ status: 'idle', leadInfo: null, duplicateLead: null });
       return;
@@ -1774,7 +1802,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       const resp = await leadWorkflowApi.getLeadById(leadId);
       setSelectedLead(resp.data || null);
       setManualStatus(resp.data?.statusCode || '');
-      setManualNextFollowUpAt(toDateTimeLocalValue(resp.data?.nextFollowUpAt));
+      setManualNextFollowUpAt(resp.data?.nextFollowUpAt ? toDateOnlyValue(new Date(resp.data.nextFollowUpAt)) : '');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load lead details'));
       setSelectedLead(null);
@@ -2121,7 +2149,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
     if (action.needsFollowUp && !payload.nextFollowUpAt) { toast.error('Follow-up date is required'); return; }
     if (action.needsFollowUp && actionState.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(actionState.nextFollowUpAt)) {
-      toast.error('Follow-up time must be greater than current time');
+      toast.error('Follow-up date cannot be in the past');
       return;
     }
     if (action.needsAssignee && !payload.assignToUserId) { toast.error('Please select user to assign'); return; }
@@ -2400,12 +2428,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     }
 
     if (stagePopupData.needsFollowUp && !stagePopupData.followUpAt) {
-      toast.error('Follow-up date & time is required for this stage');
+      toast.error('Follow-up date is required for this stage');
       return;
     }
 
     if (stagePopupData.followUpAt && !isFollowUpAtLeastMinutesAhead(stagePopupData.followUpAt)) {
-      toast.error('Follow-up time must be greater than current time');
+      toast.error('Follow-up date cannot be in the past');
       return;
     }
 
@@ -2458,7 +2486,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
     const statusChanged = manualStatus && manualStatus !== selectedLead.statusCode;
     const followUpChanged = Boolean(manualNextFollowUpAt)
-      && manualNextFollowUpAt !== toDateTimeLocalValue(selectedLead.nextFollowUpAt);
+      && toDayStart(manualNextFollowUpAt)?.getTime() !== toDayStart(selectedLead.nextFollowUpAt)?.getTime();
 
     if (!statusChanged && !followUpChanged && !noteDraft.trim()) {
       toast('No changes to update');
@@ -2475,7 +2503,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     };
 
     if (manualNextFollowUpAt && !isFollowUpAtLeastMinutesAhead(manualNextFollowUpAt)) {
-      toast.error('Follow-up time must be greater than current time');
+      toast.error('Follow-up date cannot be in the past');
       return;
     }
 
@@ -2717,7 +2745,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         }
 
         if (f.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(f.nextFollowUpAt)) {
-          toast.error('Follow-up time must be greater than current time');
+          toast.error('Follow-up date cannot be in the past');
           setQuickActionLoading(false);
           return;
         }
@@ -3298,7 +3326,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           {lead.nextFollowUpAt && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#475569', fontSize: '11px', fontWeight: '500' }}>
                               <CalendarDaysIcon style={{ width: 12, height: 12, color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#64748b' }} />
-                              <span>{formatDateTime(lead.nextFollowUpAt)}</span>
+                              <span>{formatDate(lead.nextFollowUpAt)}</span>
                             </div>
                           )}
                         </td>
@@ -3461,7 +3489,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                     <label>Next Follow-Up</label>
                                     <p style={{ display: 'flex', alignItems: 'center', gap: '4px', color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#1e293b', fontWeight: '500' }}>
                                       <CalendarDaysIcon style={{ width: 14, height: 14, color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#64748b' }} />
-                                      <span>{formatDateTime(lead.nextFollowUpAt)}</span>
+                                      <span>{formatDate(lead.nextFollowUpAt)}</span>
                                     </p>
                                   </div>
                                 )}
@@ -3814,10 +3842,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                     <div style={{ marginTop: 16 }}>
                       <div className="crm-form-label">Next Follow Up</div>
                       <CalendarPicker
-                        type="datetime"
+                        type="date"
                         value={manualNextFollowUpAt || ''}
-                        onChange={(val) => setManualNextFollowUpAt(val ? val.slice(0, 16) : '')}
-                        placeholder="Select Date & Time..."
+                        onChange={(val) => setManualNextFollowUpAt(val || '')}
+                        placeholder="Select Date..."
                         className="lead-detail__calendar-input"
                         minDate={getFollowUpMinimumTime().toISOString()}
                         disabled={selectedLeadReadOnly}
@@ -3925,13 +3953,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
               {/* Follow-up Date & Time */}
               <div style={{ marginBottom: 18 }}>
                 <div className="crm-form-label" style={{ marginBottom: 6 }}>
-                  <CalendarDaysIcon style={{ width: 14, height: 14, marginRight: 4 }} />Follow-up Date & Time {stagePopupData.needsFollowUp && <span style={{ color: '#dc2626' }}>*</span>}
+                  <CalendarDaysIcon style={{ width: 14, height: 14, marginRight: 4 }} />Follow-up Date {stagePopupData.needsFollowUp && <span style={{ color: '#dc2626' }}>*</span>}
                 </div>
                 <CalendarPicker
-                  type="datetime"
+                  type="date"
                   value={stagePopupData.followUpAt || ''}
-                  onChange={(val) => setStagePopupData((p) => ({ ...p, followUpAt: val ? val.slice(0, 16) : '' }))}
-                  placeholder="Select Date & Time..."
+                  onChange={(val) => setStagePopupData((p) => ({ ...p, followUpAt: val || '' }))}
+                  placeholder="Select Date..."
                   className="lead-detail__calendar-input"
                   minDate={getFollowUpMinimumTime().toISOString()}
                 />
@@ -3942,7 +3970,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
                   <button type="button" className="calendar-shortcut-btn calendar-shortcut-btn--clear" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: '' }))}><XMarkIcon style={{ width: 12, height: 12 }} /> Clear</button>
                 </div>
-                <div className="followup-warning"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Follow-up date & time is required for this stage.</div>
+                <div className="followup-warning"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Follow-up date is required for this stage.</div>
               </div>
 
               {/* Assignee selection in Modal */}
@@ -4166,8 +4194,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       />
                       <div className="create-lead-phone-status">
                         <div>
-                          {phoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {phoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>}
-                          {phoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid</span>}
+                          {newLeadForm.phone && !isValidPhoneForCountry(newLeadForm.phone_country_code, newLeadForm.phone)
+                            ? <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Invalid number for the selected country</span>
+                            : phoneCheck.status === 'exists'
+                              ? <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {phoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>
+                              : phoneCheck.status === 'valid'
+                                ? <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid</span>
+                                : null}
                         </div>
                         {phoneCheck.status === 'exists' && phoneCheck.duplicateLead && isClosedLostLead(phoneCheck.duplicateLead) && (
                           <button
@@ -4246,8 +4279,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       />
                       <div className="create-lead-phone-status">
                         <div>
-                          {altPhoneCheck.status === 'exists' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {altPhoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>}
-                          {altPhoneCheck.status === 'valid' && <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid Number</span>}
+                          {newLeadForm.alternate_phone && !isValidPhoneForCountry(newLeadForm.alternate_phone_country_code, newLeadForm.alternate_phone)
+                            ? <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Invalid number for the selected country</span>
+                            : altPhoneCheck.status === 'exists'
+                              ? <span className="create-lead-phone-status__msg create-lead-phone-status__msg--error"><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> {altPhoneCheck.leadInfo || 'This number already exists. New lead cannot be created.'}</span>
+                              : altPhoneCheck.status === 'valid'
+                                ? <span className="create-lead-phone-status__msg create-lead-phone-status__msg--success"><CheckIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Valid Number</span>
+                                : null}
                         </div>
                         {altPhoneCheck.status === 'exists' && altPhoneCheck.duplicateLead && isClosedLostLead(altPhoneCheck.duplicateLead) && (
                           <button
@@ -4521,10 +4559,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             ))}
                           </div>
                           <CalendarPicker
-                            type="datetime"
+                            type="date"
                             value={newLeadForm.nextFollowUpAt}
                             onChange={(val) => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                            placeholder="Select follow-up date & time..."
+                            placeholder="Select follow-up date..."
                             minDate={getFollowUpMinimumTime().toISOString()}
                           />
                         </div>
@@ -5391,10 +5429,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpValue(7, 11, 0) }))}>Next week</button>
                       </div>
                       <CalendarPicker
-                        type="datetime"
+                        type="date"
                         value={quickWorkflowForm.nextFollowUpAt}
                         onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                        placeholder="Select follow-up date & time..."
+                        placeholder="Select follow-up date..."
                         minDate={getFollowUpMinimumTime().toISOString()}
                       />
                     </div>

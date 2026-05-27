@@ -1,8 +1,10 @@
 import React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { toggleSidebar } from '../../../redux/slices/uiSlice';
 import { useThemeContext } from '../../../contexts/ThemeContext';
 import { Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import notificationApi from '../../../api/notificationApi';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
 import './Header.css';
@@ -10,6 +12,30 @@ import './Header.css';
 const Header = ({ onMenuClick }) => {
   const dispatch = useDispatch();
   const { isDark, toggleTheme } = useThemeContext();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const resp = await notificationApi.getUnreadCount();
+      setUnreadCount(resp.data?.data?.count || 0);
+    } catch {
+      // Keep the existing badge if the request fails.
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUnreadCount();
+
+    const interval = setInterval(loadUnreadCount, 30000);
+    const onFocus = () => loadUnreadCount();
+
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [loadUnreadCount]);
 
   const handleMenuToggle = () => {
     if (onMenuClick) {
@@ -47,7 +73,7 @@ const Header = ({ onMenuClick }) => {
           <span aria-hidden="true">{isDark ? <SunIcon style={{ width: 18, height: 18 }} /> : <MoonIcon style={{ width: 18, height: 18 }} />}</span>
           <span className="hidden md:inline">{isDark ? 'Light' : 'Dark'}</span>
         </button>
-        <NotificationBell />
+        <NotificationBell unreadCount={unreadCount} />
         <UserMenu />
       </div>
     </header>

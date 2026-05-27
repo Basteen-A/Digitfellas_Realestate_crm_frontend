@@ -984,6 +984,69 @@
   transform: scale(0.95);
 }
 
+/* The Quick Actions modal reuses .qa-modal-panel / .qa-drawer-body, which are
+   defined in LeadWorkspacePage.css. This page doesn't import that file, so pin
+   them to the white card surface here — otherwise the body is transparent and
+   the dark blurred backdrop shows through as a gray gap. */
+.lead-quick-modal .qa-modal-panel,
+.lead-quick-modal .qa-drawer-body {
+  background: var(--bg-card, #fff);
+}
+
+/* ── Contextual Fields Block inside Quick Update Modal ── */
+.qa-drawer-ctx-block {
+  padding: 0 20px 12px;
+}
+
+.qa-drawer-ctx-block .qa-drawer-section {
+  padding: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Style CalendarPicker input to match standard drawer inputs (border, padding, border-radius, background) */
+.qa-drawer-ctx-block .cp-input {
+  /* Opaque card surface — a transparent fill lets the modal's dark blurred
+     backdrop show through as a grey block (see the .qa-modal-panel pin above). */
+  background: var(--bg-card, #fff);
+  border: 1.5px solid var(--border-primary, #e2e8f0);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.qa-drawer-ctx-block .cp-popup {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 12px;
+}
+
+.qa-drawer-rchip {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+
+.qa-drawer-rchip.sel {
+  background: var(--text-primary, #1e293b);
+  color: #fff;
+  border-color: var(--text-primary, #1e293b);
+}
+
+.qa-drawer-rchip:hover:not(.sel) {
+  background: var(--border-primary, #e2e8f0);
+}
+
 .lead-quick-modal .cp-popup {
   left: 50%;
   transform: translateX(-50%);

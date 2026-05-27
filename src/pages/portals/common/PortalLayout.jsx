@@ -1,9 +1,12 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useThemeContext } from '../../../contexts/ThemeContext';
 import { logout } from '../../../redux/slices/authSlice';
+import notificationApi from '../../../api/notificationApi';
+import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import { useWebSocket } from '../../../hooks/useWebSocket';
 import PortalSidebar from './PortalSidebar';
 import {
   Bars3Icon,
@@ -11,10 +14,14 @@ import {
   ChevronRightIcon,
   SunIcon,
   MoonIcon,
+  PhoneIcon,
   BellIcon,
   UserIcon,
   LockClosedIcon,
   ArrowRightOnRectangleIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import './PortalSidebar.css';
 
@@ -59,18 +66,37 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const topbarMenuRef = useRef(null);
 
+  // ── Notifications (bell dropdown) ──
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifBellPulse, setNotifBellPulse] = useState(false);
+  const notifMenuRef = useRef(null);
+  const [phoneLookupOpen, setPhoneLookupOpen] = useState(false);
+  const [phoneLookupValue, setPhoneLookupValue] = useState('');
+  const [phoneLookupLoading, setPhoneLookupLoading] = useState(false);
+  const [phoneLookupResults, setPhoneLookupResults] = useState([]);
+  const [phoneLookupMessage, setPhoneLookupMessage] = useState('');
+  const [phoneLookupError, setPhoneLookupError] = useState('');
+  const [screenContext, setScreenContext] = useState(null);
+  const locationScreen = location.state?.screen;
+  const locationScreenData = location.state?.screenData;
+
   useEffect(() => {
-    if (location.state?.screen) {
-      setActiveScreen(location.state.screen);
+    if (locationScreen) {
+      setActiveScreen(locationScreen);
+      setScreenContext(locationScreenData || null);
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state?.screen, location.pathname, navigate]);
+  }, [locationScreen, locationScreenData, location.pathname, navigate]);
 
-  const handleNavigate = (key) => {
+  const handleNavigate = (key, context = null) => {
     if (onNavigateOverride) {
-      onNavigateOverride(key);
+      onNavigateOverride(key, context);
     } else {
       setActiveScreen(key);
+      setScreenContext(context);
     }
     // Auto-collapse sidebar on desktop after navigating
     if (window.innerWidth >= 1024) {
@@ -86,21 +112,175 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
 
   const fullName = user?.fullName || user?.full_name || `${user?.firstName || user?.first_name || ''} ${user?.lastName || user?.last_name || ''}`.trim() || 'User';
 
+  // ── Notification loaders ──
+  const loadNotifUnread = useCallback(async () => {
+    try {
+      const resp = await notificationApi.getUnreadCount();
+      setNotifUnread(resp.data?.data?.count || 0);
+    } catch { /* silent — badge just stays as-is */ }
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const resp = await notificationApi.getAll({ limit: 20, unread: 'true' });
+      const rows = resp.data?.data || [];
+      setNotifications(rows);
+      setNotifUnread(rows.length);
+      return rows;
+    } catch { /* silent */ } finally {
+      setNotifLoading(false);
+    }
+    return [];
+  }, []);
+
+  const handleIncomingNotification = useCallback((notif) => {
+    if (!notif) return;
+
+    setNotifications((prev) => {
+      const next = [notif, ...prev.filter((item) => item.id !== notif.id)];
+      return next.slice(0, 20);
+    });
+
+    setNotifUnread((current) => current + (notif.is_read ? 0 : 1));
+    setNotifBellPulse(true);
+
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate([80, 40, 80]);
+    }
+
+    if (!notifOpen) {
+      toast.success(notif.message || notif.title || 'New notification', { duration: 2500 });
+    }
+  }, [notifOpen]);
+
+  useWebSocket({ onNotification: handleIncomingNotification });
+
+  useEffect(() => {
+    if (!notifBellPulse) return undefined;
+    const t = setTimeout(() => setNotifBellPulse(false), 1600);
+    return () => clearTimeout(t);
+  }, [notifBellPulse]);
+
+  // Keep the unread badge fresh (initial load + light polling).
+  useEffect(() => {
+    loadNotifUnread();
+    const t = setInterval(loadNotifUnread, 60000);
+    return () => clearInterval(t);
+  }, [loadNotifUnread]);
+
+  const handleMarkAllNotifRead = useCallback(async () => {
+    try { await notificationApi.markAllAsRead(); } catch { /* silent */ }
+  }, []);
+
+  const clearNotifications = useCallback(async () => {
+    setNotifications([]);
+    setNotifUnread(0);
+    await handleMarkAllNotifRead();
+  }, [handleMarkAllNotifRead]);
+
+  const closeNotif = useCallback(async () => {
+    setNotifOpen(false);
+    await clearNotifications();
+  }, [clearNotifications]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (topbarMenuRef.current && !topbarMenuRef.current.contains(e.target)) {
         setTopbarMenuOpen(false);
       }
+      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target)) {
+        closeNotif();
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [closeNotif]);
+
+  const toggleNotif = async () => {
+    if (notifOpen) {
+      await closeNotif();
+      return;
+    }
+
+    await loadNotifications();
+    setNotifOpen(true);
+  };
+
+  const handleNotifClick = async (n) => {
+    if (!n.is_read) {
+      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
+      setNotifUnread((c) => Math.max(0, c - 1));
+      try { await notificationApi.markAsRead(n.id); } catch { /* silent */ }
+    }
+    if (n.link && String(n.link).startsWith('/')) {
+      await clearNotifications();
+      setNotifOpen(false);
+      navigate(n.link);
+    }
+  };
 
   const handleLogout = async () => {
     setTopbarMenuOpen(false);
     await dispatch(logout());
     toast.success('Logged out');
     navigate('/login');
+  };
+
+  const normalizePhoneLookup = (value) => String(value || '').replace(/\D/g, '').slice(0, 15);
+
+  const openPhoneLookup = () => {
+    setPhoneLookupOpen(true);
+    setPhoneLookupError('');
+    setPhoneLookupMessage('');
+  };
+
+  const closePhoneLookup = () => {
+    setPhoneLookupOpen(false);
+    setPhoneLookupLoading(false);
+    setPhoneLookupError('');
+    setPhoneLookupMessage('');
+  };
+
+  const handlePhoneLookup = async (event) => {
+    event.preventDefault();
+    const phone = normalizePhoneLookup(phoneLookupValue);
+
+    if (phone.length < 7) {
+      setPhoneLookupError('Enter at least 7 digits.');
+      setPhoneLookupResults([]);
+      return;
+    }
+
+    setPhoneLookupLoading(true);
+    setPhoneLookupError('');
+    setPhoneLookupMessage('');
+
+    try {
+      const response = await leadWorkflowApi.searchLeadByPhone(phone);
+      const rows = Array.isArray(response) ? response : response?.data || [];
+      setPhoneLookupResults(rows);
+      setPhoneLookupMessage(rows.length > 0
+        ? `${rows.length} lead${rows.length === 1 ? '' : 's'} found for this phone.`
+        : 'No lead found for this phone. You can create a new lead.');
+    } catch (error) {
+      setPhoneLookupResults([]);
+      setPhoneLookupError(error?.response?.data?.message || 'Unable to check this phone number.');
+    } finally {
+      setPhoneLookupLoading(false);
+    }
+  };
+
+  const handleOpenLeadFromLookup = (leadId) => {
+    closePhoneLookup();
+    navigate(`/portal/lead/${leadId}`);
+  };
+
+  const handleCreateLeadFromLookup = () => {
+    const phone = normalizePhoneLookup(phoneLookupValue);
+    if (!phone) return;
+    closePhoneLookup();
+    handleNavigate('addlead', { prefillPhone: phone });
   };
 
   return (
@@ -163,9 +343,70 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                 : <MoonIcon style={{ width: 20, height: 20 }} />
               }
             </button>
-            <button className="portal-topbar-btn" type="button">
-              <BellIcon style={{ width: 20, height: 20 }} /><span className="notif-dot"></span>
+            <button
+              type="button"
+              className={`portal-topbar-btn ${phoneLookupOpen ? 'is-notif-pulse' : ''}`}
+              onClick={openPhoneLookup}
+              title="Check phone number"
+              aria-label="Check phone number"
+            >
+              <PhoneIcon style={{ width: 20, height: 20 }} />
             </button>
+            <div className="portal-topbar__notif-menu" ref={notifMenuRef}>
+              <button
+                type="button"
+                className={`portal-topbar-btn ${notifBellPulse ? 'is-notif-pulse' : ''}`}
+                onClick={toggleNotif}
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                <BellIcon style={{ width: 20, height: 20 }} />
+                {notifUnread > 0 && <span className="notif-dot"></span>}
+              </button>
+
+              {notifOpen && (
+                <div className="portal-topbar__user-dropdown portal-topbar__notif-dropdown">
+                  <div className="portal-topbar__notif-header">
+                    <strong>Notifications{notifUnread > 0 ? ` (${notifUnread})` : ''}</strong>
+                    {notifUnread > 0 && (
+                      <button type="button" className="portal-topbar__notif-markall" onClick={handleMarkAllNotifRead}>
+                        Clear new
+                      </button>
+                    )}
+                  </div>
+                  <div className="portal-topbar__notif-list">
+                    {notifLoading ? (
+                      <div className="portal-topbar__notif-empty">Loading…</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="portal-topbar__notif-empty">You&apos;re all caught up</div>
+                    ) : (
+                      notifications.map((n) => {
+                        const isLead = String(n.entity_type || '').toLowerCase() === 'lead';
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            className={`portal-topbar__notif-item ${n.is_read ? '' : 'is-unread'}`}
+                            onClick={() => handleNotifClick(n)}
+                          >
+                            <span className="portal-topbar__notif-icon">
+                              {isLead
+                                ? <UserIcon style={{ width: 16, height: 16 }} />
+                                : <BellIcon style={{ width: 16, height: 16 }} />}
+                            </span>
+                            <span className="portal-topbar__notif-text">
+                              <span className="portal-topbar__notif-title">{n.title}</span>
+                              {n.message && <span className="portal-topbar__notif-msg">{n.message}</span>}
+                            </span>
+                            {!n.is_read && <span className="portal-topbar__notif-unreaddot" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Menu */}
             <div className="portal-topbar__user-menu" ref={topbarMenuRef}>
@@ -200,9 +441,101 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
             </div>
           </div>
         </div>
+        {phoneLookupOpen && (
+          <div className="portal-phone-modal-overlay" onClick={closePhoneLookup} role="presentation">
+            <div className="portal-phone-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+              <div className="portal-phone-modal__header">
+                <div>
+                  <h3>Phone Lookup</h3>
+                  <p>Check whether this number already exists in the CRM.</p>
+                </div>
+                <button type="button" className="portal-phone-modal__close" onClick={closePhoneLookup} aria-label="Close lookup">
+                  <XMarkIcon style={{ width: 18, height: 18 }} />
+                </button>
+              </div>
+
+              <form className="portal-phone-modal__form" onSubmit={handlePhoneLookup}>
+                <label className="portal-phone-modal__label" htmlFor="portal-phone-lookup">
+                  Phone number
+                </label>
+                <div className="portal-phone-modal__input-row">
+                  <input
+                    id="portal-phone-lookup"
+                    type="tel"
+                    className="portal-phone-modal__input"
+                    value={phoneLookupValue}
+                    onChange={(e) => setPhoneLookupValue(normalizePhoneLookup(e.target.value))}
+                    placeholder="Enter phone number"
+                    inputMode="numeric"
+                    autoComplete="off"
+                  />
+                  <button type="submit" className="portal-phone-modal__check-btn" disabled={phoneLookupLoading}>
+                    <MagnifyingGlassIcon style={{ width: 16, height: 16 }} />
+                    {phoneLookupLoading ? 'Checking…' : 'Check'}
+                  </button>
+                </div>
+              </form>
+
+              {phoneLookupError && (
+                <div className="portal-phone-modal__notice portal-phone-modal__notice--error">
+                  <ExclamationTriangleIcon style={{ width: 16, height: 16 }} />
+                  <span>{phoneLookupError}</span>
+                </div>
+              )}
+
+              {phoneLookupMessage && !phoneLookupError && (
+                <div className="portal-phone-modal__notice">
+                  {phoneLookupMessage}
+                </div>
+              )}
+
+              <div className="portal-phone-modal__results">
+                {phoneLookupResults.length === 0 ? (
+                  <div className="portal-phone-modal__empty">
+                    No results yet. Run a phone check to see current status and owner.
+                  </div>
+                ) : (
+                  phoneLookupResults.map((lead) => (
+                    <div key={lead.id} className="portal-phone-modal__result-card">
+                      <div className="portal-phone-modal__result-top">
+                        <div>
+                          <strong>{lead.fullName || lead.leadNumber || 'Unnamed lead'}</strong>
+                          <div className="portal-phone-modal__muted">{lead.leadNumber || 'No lead number'}</div>
+                        </div>
+                        <span className={`portal-phone-modal__status ${lead.isClosed ? 'is-closed' : 'is-open'}`}>
+                          {lead.currentStatus || lead.statusLabel || 'Unknown status'}
+                        </span>
+                      </div>
+
+                      <div className="portal-phone-modal__meta">
+                        <div><span>Held by:</span> {lead.currentHeldBy || 'Unassigned'}</div>
+                        <div><span>Role:</span> {lead.assignedToRoleName || lead.assignedToRole || 'N/A'}</div>
+                      </div>
+
+                      <div className="portal-phone-modal__actions">
+                        <button type="button" className="portal-phone-modal__secondary" onClick={() => handleOpenLeadFromLookup(lead.id)}>
+                          Open Lead
+                        </button>
+                       
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {phoneLookupResults.length === 0 && roleName === 'Telecaller' && phoneLookupMessage && !phoneLookupError && (
+                <div className="portal-phone-modal__footer">
+                  <button type="button" className="portal-phone-modal__primary" onClick={handleCreateLeadFromLookup}>
+                    Create Lead With This Number
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <div className="portal-content">
           {typeof children === 'function'
-            ? children({ activeScreen, setActiveScreen: handleNavigate })
+            ? children({ activeScreen, setActiveScreen: handleNavigate, screenContext })
             : children}
         </div>
       </div>

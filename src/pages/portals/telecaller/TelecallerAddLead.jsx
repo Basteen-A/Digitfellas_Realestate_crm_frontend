@@ -38,21 +38,20 @@ const toDateTimeLocalValue = (value) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-const getQuickFollowUpValue = (dayOffset, hour, minute = 0) => {
+// Follow-ups are date-only — shortcuts resolve to the start of the chosen day.
+const getQuickFollowUpValue = (dayOffset) => {
   const date = new Date();
-  date.setSeconds(0, 0);
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
+  date.setHours(0, 0, 0, 0);
   return toDateTimeLocalValue(date.toISOString());
 };
 
-const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
+const getQuickFollowUpForWeekday = (weekday) => {
   const date = new Date();
-  date.setSeconds(0, 0);
   const currentDay = date.getDay();
   const dayOffset = (weekday - currentDay + 7) % 7;
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
+  date.setHours(0, 0, 0, 0);
   return toDateTimeLocalValue(date.toISOString());
 };
 
@@ -75,7 +74,7 @@ const initialForm = {
   remark: '',
 };
 
-const TelecallerAddLead = ({ onNavigate }) => {
+const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -217,6 +216,13 @@ const TelecallerAddLead = ({ onNavigate }) => {
 
     loadOptions();
   }, []);
+
+  useEffect(() => {
+    const phone = sanitizePhoneNumberInput(prefillPhone);
+    if (phone) {
+      setForm((prev) => ({ ...prev, phone }));
+    }
+  }, [prefillPhone]);
 
   useEffect(() => {
     const category = getClosureReasonCategoryForStatus(selectedStatusCode);
@@ -498,10 +504,10 @@ const TelecallerAddLead = ({ onNavigate }) => {
                   <button type="button" className="calendar-shortcut-btn" style={{ width: '100%', minWidth: 0, whiteSpace: 'nowrap' }} onClick={() => setForm((p) => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
                 </div>
                 <CalendarPicker
-                  type="datetime"
+                  type="date"
                   value={form.nextFollowUpAt}
                   onChange={(val) => setForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                  placeholder="Select Date & Time..."
+                  placeholder="Select Date..."
                   minDate={new Date().toISOString()}
                 />
               </div>

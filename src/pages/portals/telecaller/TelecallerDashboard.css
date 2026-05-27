@@ -165,6 +165,16 @@
 .td-badge-followup { background: var(--accent-blue-bg); color: var(--accent-blue); }
 .td-badge-sitevisit { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
 
+/* Lead status pill — color is applied inline from the status's own color_code. */
+.td-status-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .view-all-link {
   font-size: 12px;
   font-weight: 600;

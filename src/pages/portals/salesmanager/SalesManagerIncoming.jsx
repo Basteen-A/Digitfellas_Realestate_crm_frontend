@@ -41,30 +41,24 @@ const DATE_FILTERS = [
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const endOfDay = (d) => { const e = new Date(d); e.setHours(23, 59, 59, 999); return e; };
 
-const toDateTimeLocalValue = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
+// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+const toDateOnlyValue = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-const getQuickFollowUpDate = (dayOffset, hour, minute = 0) => {
+const getQuickFollowUpDate = (dayOffset) => {
   const date = new Date();
-  date.setSeconds(0, 0);
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return toDateTimeLocalValue(date.toISOString());
+  return toDateOnlyValue(date);
 };
 
-const getQuickFollowUpForWeekday = (weekday, hour, minute = 0) => {
+const getQuickFollowUpForWeekday = (weekday) => {
   const date = new Date();
-  date.setSeconds(0, 0);
   const currentDay = date.getDay();
   const dayOffset = (weekday - currentDay + 7) % 7;
   date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return toDateTimeLocalValue(date.toISOString());
+  return toDateOnlyValue(date);
 };
 
 const getAssigneeRoleForAction = (action) => {
@@ -483,21 +477,18 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                           <div className="qa-drawer-ctx-block">
                             <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 14, 0) }))}>Today</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0, 18, 0) }))}>Today 6PM
-                                
-                              </button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1, 11, 0) }))}>Tmrw 11AM</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6, 11, 0) }))}>This Sat</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0, 11, 0) }))}>This Sun</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2, 11, 0) }))}>In 2 days</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7, 11, 0) }))}>Next week</button>
+                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0) }))}>Today</button>
+                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1) }))}>Tmrw</button>
+                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6) }))}>This Sat</button>
+                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0) }))}>This Sun</button>
+                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2) }))}>In 2 days</button>
+                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7) }))}>Next week</button>
                             </div>
                             <CalendarPicker
-                              type="datetime"
+                              type="date"
                               value={quickWorkflowForm.nextFollowUpAt}
                               onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                              placeholder="Select follow-up date & time..."
+                              placeholder="Select follow-up date..."
                               minDate={new Date().toISOString()}
                             />
                           </div>

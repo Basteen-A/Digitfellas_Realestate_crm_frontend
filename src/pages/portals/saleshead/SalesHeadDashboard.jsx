@@ -118,7 +118,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                         ) : '—'}
                       </td>
                       <td>
-                        <span className="col-badge" style={{ background: `${lead.statusColor}22`, color: lead.statusColor }}>
+                        <span className="col-badge" style={{ background: `${lead.statusColor}22`, color: lead.statusColor, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {lead.statusName}
                         </span>
                       </td>

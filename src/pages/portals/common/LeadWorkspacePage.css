@@ -3546,7 +3546,7 @@ textarea.crm-form-input {
   padding: 5px 12px;
   border-radius: 20px;
   border: 1px solid var(--border-primary, #e2e8f0);
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--bg-card, #fff);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.12s;
@@ -3598,6 +3598,23 @@ textarea.crm-form-input {
 
 .qa-drawer-ctx-block .qa-drawer-section {
   padding: 0 0 6px;
+}
+
+/* Style CalendarPicker input to match standard drawer inputs (border, padding, border-radius, background) */
+.qa-drawer-ctx-block .cp-input {
+  /* Opaque card surface — a transparent fill lets the modal's dark blurred
+     backdrop show through as a grey block. */
+  background: var(--bg-card, #fff);
+  border: 1.5px solid var(--border-primary, #e2e8f0);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.qa-drawer-ctx-block .cp-popup {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 12px;
 }
 
 .qa-drawer-field-row {
@@ -3795,6 +3812,7 @@ textarea.crm-form-input {
   overflow-y: auto;
   max-height: calc(100vh - 100px);
   scrollbar-width: none;
+  background: var(--bg-card, #fff);
 }
 
 .qa-drawer-body::-webkit-scrollbar {

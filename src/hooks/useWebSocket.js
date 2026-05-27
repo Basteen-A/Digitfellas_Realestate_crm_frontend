@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 const WS_BASE = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
   (window.location.hostname) + ':' +
@@ -41,7 +41,6 @@ export function useWebSocket({ onNotification, onLeadUpdate, onConnect, onDiscon
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('[WS] Connected');
         setIsConnected(true);
         reconnectAttempts.current = 0;
         onConnect?.();
@@ -54,7 +53,6 @@ export function useWebSocket({ onNotification, onLeadUpdate, onConnect, onDiscon
 
           switch (msg.type) {
             case 'CONNECTED':
-              console.log('[WS] Authenticated:', msg.payload?.userId);
               break;
 
             case 'NOTIFICATION':
@@ -72,15 +70,12 @@ export function useWebSocket({ onNotification, onLeadUpdate, onConnect, onDiscon
               break;
 
             default:
-              console.log('[WS] Message:', msg.type, msg.payload);
           }
         } catch (e) {
-          console.warn('[WS] Failed to parse message:', e);
         }
       };
 
       ws.onclose = (event) => {
-        console.log('[WS] Disconnected:', event.code, event.reason);
         setIsConnected(false);
         wsRef.current = null;
         onDisconnect?.();
@@ -89,16 +84,13 @@ export function useWebSocket({ onNotification, onLeadUpdate, onConnect, onDiscon
         if (reconnectAttempts.current < maxReconnectAttempts && token) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
           reconnectAttempts.current += 1;
-          console.log(`[WS] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
           reconnectTimerRef.current = setTimeout(connect, delay);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[WS] Error:', error);
       };
     } catch (error) {
-      console.error('[WS] Connection failed:', error);
     }
   }, [token, onNotification, onLeadUpdate, onConnect, onDisconnect]);
 

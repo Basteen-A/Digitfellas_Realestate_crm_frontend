@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatDateTime } from '../../../utils/formatters';
+import { formatDate, formatDateTime } from '../../../utils/formatters';
 import {
   UsersIcon,
   UserIcon,
@@ -20,6 +20,15 @@ import './TelecallerDashboard.css';
 
 const ICON_SIZE = { width: 20, height: 20 };
 const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
+
+// Small colored pill showing the lead's current status, tinted with its own color.
+const StatusChip = ({ name, color }) => {
+  if (!name) return null;
+  const c = color || '#6B7280';
+  return (
+    <span className="td-status-chip" style={{ background: `${c}22`, color: c }}>{name}</span>
+  );
+};
 
 const TelecallerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -141,6 +150,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                   <div className="td-item-info">
                     <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
                     <div className="td-item-meta">
+                      <StatusChip name={lead.statusName} color={lead.statusColor} />
                       <span>{lead.phone}</span>
                       {lead.source && <span> · {lead.source}</span>}
                     </div>
@@ -169,11 +179,11 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                       {fu.fullName || fu.lead?.fullName || (fu.first_name ? `${fu.first_name} ${fu.last_name || ''}`.trim() : 'Unknown Lead')}
                     </div>
                     <div className="td-item-meta">
-                      <span className="td-badge" style={{ background: '#fee2e2', color: '#b91c1c' }}>Overdue</span>
+                      <StatusChip name={fu.statusName} color={fu.statusColor} />
                       <span>{fu.phone || fu.lead?.phone || 'N/A'}</span>
                     </div>
                   </div>
-                  <span className="td-item-date">{formatDateTime(fu.next_follow_up_date || fu.scheduled_at || fu.updated_at)}</span>
+                  <span className="td-item-date">{formatDate(fu.next_follow_up_date || fu.scheduled_at || fu.updated_at)}</span>
                 </div>
               ))
             )}
@@ -198,8 +208,9 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                   <div className="td-item-info">
                     <div className="td-item-name">{fu.fullName || fu.lead?.fullName || (fu.first_name ? `${fu.first_name} ${fu.last_name || ''}`.trim() : 'Unknown Lead')}</div>
                     <div className="td-item-meta">
+                      <StatusChip name={fu.statusName} color={fu.statusColor} />
                       <span className="td-item-date" style={{ background: 'var(--accent-green-bg)', color: '#15803d' }}>
-                        {(fu.next_follow_up_date || fu.scheduled_at) ? new Date(fu.next_follow_up_date || fu.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Time'}
+                        {(fu.next_follow_up_date || fu.scheduled_at) ? formatDate(fu.next_follow_up_date || fu.scheduled_at) : 'No Date'}
                       </span>
                       <span>{fu.phone || fu.lead?.phone || 'N/A'}</span>
                     </div>
@@ -226,6 +237,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                   <div className="td-item-info">
                     <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
                     <div className="td-item-meta">
+                      <StatusChip name={lead.statusName} color={lead.statusColor} />
                       <span className="td-item-date">{formatDateTime(lead.scheduled_at || lead.next_follow_up_date || lead.updated_at)}</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><MapPinIcon style={{ width: 12, height: 12 }} /> {lead.project || 'Project'}</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><PhoneIcon style={{ width: 12, height: 12 }} /> {lead.phone}</span>

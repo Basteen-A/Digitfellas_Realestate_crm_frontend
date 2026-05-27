@@ -163,8 +163,11 @@ const SalesManagerDashboard = ({ onNavigate }) => {
                       <div className="followup-name" style={{ fontWeight: 700, fontSize: 13 }}>
                         {lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim()}
                       </div>
-                      <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {lead.phone || '-'} · {lead.projectName || lead.project || '-'}
+                      <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span>{lead.phone || '-'} · {lead.projectName || lead.project || '-'}</span>
+                        {lead.statusName && (
+                          <span style={{ padding: '1px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', background: `${lead.statusColor || '#6B7280'}22`, color: lead.statusColor || '#6B7280' }}>{lead.statusName}</span>
+                        )}
                       </div>
                     </div>
                     <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => navigate(`/portal/lead/${lead.id}`)}>View</button>
@@ -188,8 +191,11 @@ const SalesManagerDashboard = ({ onNavigate }) => {
                       <div className="followup-name" style={{ fontWeight: 700, fontSize: 13 }}>
                         {lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim()}
                       </div>
-                      <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {lead.phone || '-'} · {lead.projectName || lead.project || '-'}
+                      <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span>{lead.phone || '-'} · {lead.projectName || lead.project || '-'}</span>
+                        {lead.statusName && (
+                          <span style={{ padding: '1px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', background: `${lead.statusColor || '#6B7280'}22`, color: lead.statusColor || '#6B7280' }}>{lead.statusName}</span>
+                        )}
                       </div>
                     </div>
                     <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => navigate(`/portal/lead/${lead.id}`)}>View</button>

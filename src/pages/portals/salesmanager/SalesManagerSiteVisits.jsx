@@ -9,41 +9,32 @@ import { HomeModernIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
 
+// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
 const FOLLOW_UP_SHORTCUTS = [
-  { label: 'Today', kind: 'dayOffset', dayOffset: 0, hour: 18, minute: 0 },
-  { label: 'Tmrw', kind: 'dayOffset', dayOffset: 1, hour: 11, minute: 0 },
-  { label: 'This Sat', kind: 'weekday', weekday: 6, hour: 11, minute: 0 },
-  { label: 'This Sun', kind: 'weekday', weekday: 0, hour: 11, minute: 0 },
+  { label: 'Today', kind: 'dayOffset', dayOffset: 0 },
+  { label: 'Tmrw', kind: 'dayOffset', dayOffset: 1 },
+  { label: 'This Sat', kind: 'weekday', weekday: 6 },
+  { label: 'This Sun', kind: 'weekday', weekday: 0 },
 ];
 
-const toDateTimeLocalValue = (date) => {
+const toDateOnlyValue = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const buildFollowUpShortcutValue = (shortcut) => {
-  const now = new Date();
-  const target = new Date(now);
+  const target = new Date();
 
   if (shortcut.kind === 'dayOffset') {
     target.setDate(target.getDate() + shortcut.dayOffset);
   } else if (shortcut.kind === 'weekday') {
     const currentDay = target.getDay();
-    let daysUntil = (shortcut.weekday - currentDay + 7) % 7;
-    if (daysUntil === 0 && now.getHours() >= shortcut.hour) {
-      daysUntil = 7;
-    }
+    const daysUntil = (shortcut.weekday - currentDay + 7) % 7;
     target.setDate(target.getDate() + daysUntil);
   }
 
-  target.setHours(shortcut.hour, shortcut.minute, 0, 0);
-
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
-
-  return toDateTimeLocalValue(target);
+  return toDateOnlyValue(target);
 };
 
 const SalesManagerSiteVisits = ({ onNavigate }) => {
@@ -367,7 +358,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       return;
     }
     if (selectedAction.needsFollowUp && !createForm.next_follow_up_at) {
-      toast.error('Next follow up date & time is required for selected action');
+      toast.error('Next follow up date is required for selected action');
       return;
     }
     if (selectedAction.needsReason && !createForm.closure_reason_id) {
@@ -713,9 +704,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Action Details (Required)</div>
                     <div style={{ marginBottom: 16 }}>
-                      <label style={fieldLabelStyle}>Next Follow Up Date & Time *</label>
+                      <label style={fieldLabelStyle}>Next Follow Up Date *</label>
                       <input
-                        type="datetime-local"
+                        type="date"
                         value={createForm.next_follow_up_at}
                         onChange={(e) => setCreateForm((p) => ({ ...p, next_follow_up_at: e.target.value }))}
                         style={fieldInputStyle}

@@ -82,6 +82,22 @@
   right: 6px;
 }
 
+.header-icon-button__badge {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--border-radius-full);
+  background: var(--accent-red);
+  color: var(--text-white);
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
 .user-menu {
   position: relative;
 }
