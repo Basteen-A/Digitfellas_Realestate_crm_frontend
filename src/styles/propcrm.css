@@ -228,6 +228,16 @@
   cursor: pointer;
   transition: background 0.12s;
 }
+/* Rows that carry a due-date switch to a grid so the due block sits in a
+   centered middle column, with equal flexible space on each side and the
+   status/call actions pinned to the right. */
+.dash-row:has(.dash-due) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+.dash-row:has(.dash-due) > .dash-due { justify-self: center; }
+.dash-row:has(.dash-due) > .dash-right { justify-self: end; }
 .dash-row:last-child { border-bottom: none; }
 .dash-row:hover { background: var(--bg-card-hover); }
 
@@ -287,11 +297,16 @@
   white-space: nowrap;
 }
 
+/* Due-date block: its own centered column (label over date), separate from
+   the status/call column on the right. */
 .dash-due {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  text-align: center;
   gap: 1px;
+  flex-shrink: 0;
+  width: 116px;
 }
 .dash-due-label {
   font-size: 10px;
@@ -300,7 +315,7 @@
   letter-spacing: 0.04em;
   color: var(--text-muted);
 }
-.dash-due-label--over { color: var(--accent-red); opacity: 0.85; }
+.dash-due-label--over { color: var(--accent-gray); opacity: 0.85; }
 .dash-due-val {
   font-size: 12px;
   color: var(--text-secondary);
@@ -310,7 +325,7 @@
   gap: 3px;
 }
 .dash-due-val svg { width: 11px; height: 11px; opacity: 0.7; flex-shrink: 0; }
-.dash-due-val--over { color: var(--accent-red); font-weight: 600; }
+.dash-due-val--over { color: var(--accent-gray); font-weight: 600; }
 
 .dash-call {
   width: 30px;
@@ -337,7 +352,11 @@
 }
 
 @media (max-width: 480px) {
-  .dash-due { display: none; }
+  /* Keep the due-date visible on phones: drop the centered grid (its two
+     flexible side-columns starve the name) and fall back to a flex row so the
+     name takes the slack and the due block stays compact before the actions. */
+  .dash-row:has(.dash-due) { display: flex; }
+  .dash-due { width: auto; }
 }
 
 /* ===== CARDS ===== */

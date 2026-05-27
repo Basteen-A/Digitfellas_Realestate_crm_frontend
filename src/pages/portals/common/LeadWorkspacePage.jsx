@@ -3323,16 +3323,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                               {lead.leadNumber}
                             </a>
                           </small>
-                          {lead.nextFollowUpAt && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#475569', fontSize: '11px', fontWeight: '500' }}>
-                              <CalendarDaysIcon style={{ width: 12, height: 12, color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#64748b' }} />
-                              <span>{formatDate(lead.nextFollowUpAt)}</span>
-                            </div>
-                          )}
                         </td>
                         {workspaceRole !== 'SH' && (
                           <td className="hide-mobile">
-                            <p>{lead.phone}</p>
+                            <p className="lead-title">{lead.phone}</p>
                             <small>{lead.email || '-'}</small>
                           </td>
                         )}
@@ -3347,26 +3341,32 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           >
                             {lead.statusLabel}
                           </span>
+                          {lead.nextFollowUpAt && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#64748b', fontSize: 11, fontWeight: 500 }}>
+                              <CalendarDaysIcon style={{ width: 12, height: 12, color: '#64748b' }} />
+                              <span>{formatDate(lead.nextFollowUpAt)}</span>
+                            </div>
+                          )}
                         </td>
                         {workspaceRole !== 'SH' && (
                           <td className="hide-mobile">
-                            <small>{lead.source || '-'}</small><br />
-                            <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>{lead.subSource || '-'}</small>
+                            <p className="lead-title">{lead.source || '-'}</p>
+                            <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>{lead.subSource || '-'}</small>
                           </td>
                         )}
                         <td className="hide-mobile">
-                          <small>{(() => {
+                          <p className="lead-title">{(() => {
                             const projText = lead.interestedProjects?.length > 0
                               ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
                               : lead.project;
                             return projText || '-';
-                          })()}</small>
+                          })()}</p>
                           {(() => {
                             const locText = lead.interestedLocations?.length > 0
                               ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
                               : lead.location;
                             return locText ? (
-                              <small style={{ display: 'block', color: '#64748b', fontSize: 10 }}>Location: {locText}</small>
+                              <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Location: {locText}</small>
                             ) : null;
                           })()}
                         </td>
@@ -3487,8 +3487,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                 {lead.nextFollowUpAt && (
                                   <div className="expanded-info-item">
                                     <label>Next Follow-Up</label>
-                                    <p style={{ display: 'flex', alignItems: 'center', gap: '4px', color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#1e293b', fontWeight: '500' }}>
-                                      <CalendarDaysIcon style={{ width: 14, height: 14, color: new Date(lead.nextFollowUpAt) < new Date() ? '#dc2626' : '#64748b' }} />
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#475569', fontWeight: '500' }}>
+                                      <CalendarDaysIcon style={{ width: 14, height: 14, color: '#64748b' }} />
                                       <span>{formatDate(lead.nextFollowUpAt)}</span>
                                     </p>
                                   </div>

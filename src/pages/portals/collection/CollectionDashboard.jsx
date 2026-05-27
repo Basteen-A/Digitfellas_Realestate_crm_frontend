@@ -121,9 +121,9 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
 
   if (loading) {
     return (
-      <div className="col-loading-state">
-        <ArrowPathIcon className="col-loading-icon" />
-        <p>Loading dashboard...</p>
+      <div className="simple-loader">
+        <div className="simple-spinner" />
+        <p>Loading...</p>
       </div>
     );
   }

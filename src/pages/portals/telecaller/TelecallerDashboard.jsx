@@ -5,17 +5,16 @@ import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDate } from '../../../utils/formatters';
 import {
+  UserPlusIcon,
+  UsersIcon,
   PhoneIcon,
   HomeModernIcon,
+  CheckCircleIcon,
   ExclamationTriangleIcon,
-  UserPlusIcon,
-  CalendarIcon,
   ArrowPathIcon,
-  PlusIcon,
-  MapPinIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, StatusChip, leadName } from '../common/dashWidgets';
-import './TelecallerDashboard.css';
+import { StatusChip, leadName } from '../common/dashWidgets';
+import '../collection/CollectionWorkspace.css';
 
 const TelecallerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -66,201 +65,276 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  const handleLeadClick = (leadId) => {
+    if (!leadId) return;
+    navigate(`/portal/lead/${leadId}`);
+  };
+
   if (loading) {
     return (
-      <div className="td-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <div className="crm-spinner" />
+      <div className="simple-loader">
+        <div className="simple-spinner" />
+        <p>Loading...</p>
       </div>
     );
   }
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  const firstName = user?.first_name || user?.firstName || 'User';
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const statCardsData = [
-    { label: 'New Leads', value: stats?.newLeadsToday ?? 0, color: 'var(--accent-green)' },
-    { label: 'All Active Leads', value: stats?.activeLeads ?? 0, color: 'var(--text-primary)' },
-    { label: "Today's Follow Ups", value: stats?.todaysPendingFollowUps ?? 0, color: 'var(--accent-yellow)' },
-    { label: 'Missed Follow Ups', value: stats?.overdueFollowUps ?? 0, color: 'var(--accent-red)' },
-    { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, color: 'var(--accent-green)' },
-    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, color: 'var(--accent-yellow)' },
-    { label: 'SV Done', value: stats?.svCompleted ?? 0, color: 'var(--accent-green)' },
+  const kpiCards = [
+    { label: 'New Leads', value: stats?.newLeadsToday ?? 0, sub: 'unclaimed today', icon: UserPlusIcon, variant: 'info' },
+    { label: 'Active Leads', value: stats?.activeLeads ?? 0, sub: 'in your pipeline', icon: UsersIcon, variant: '' },
+    { label: "Today's Follow-Ups", value: stats?.todaysPendingFollowUps ?? 0, sub: 'due today', icon: PhoneIcon, variant: 'warning' },
+    { label: 'Missed Follow-Ups', value: stats?.overdueFollowUps ?? 0, sub: 'overdue', icon: ExclamationTriangleIcon, variant: 'danger' },
+    { label: 'Answered Today', value: stats?.answeredToday ?? 0, sub: 'calls answered', icon: CheckCircleIcon, variant: 'success' },
+    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, sub: 'site visits', icon: HomeModernIcon, variant: 'warning' },
+    { label: 'SV Done', value: stats?.svCompleted ?? 0, sub: 'completed', icon: CheckCircleIcon, variant: 'success' },
   ];
 
-  const handleLeadClick = (leadId) => {
-    if (!leadId) return;
-    navigate(`/portal/lead/${leadId}`);
-  };
-
   return (
-    <div className="td-container">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{greeting}, {user?.first_name || user?.firstName}</h1>
-          <p style={{ color: 'var(--text-secondary)', marginTop: 4 }}>Let's close some deals today!</p>
+    <div className="col-dashboard">
+      {/* Page Header */}
+      <div className="col-page-header">
+        <div className="col-page-header-left">
+          <h1>{greeting}, {firstName}</h1>
+          <p>Here's your lead overview for today — {today}</p>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="crm-btn crm-btn-ghost" onClick={loadDashboardData} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
-          <button className="crm-btn crm-btn-primary" onClick={() => onNavigate?.('leads-addnew')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PlusIcon style={{ width: 16, height: 16 }} /> Add Lead</button>
+        <div className="col-page-header-actions">
+          <button className="col-btn col-btn-ghost col-btn-sm" onClick={loadDashboardData}>
+            <ArrowPathIcon style={{ width: 14, height: 14 }} /> Refresh
+          </button>
+          <button className="col-btn col-btn-primary" onClick={() => onNavigate?.('leads-addnew')}>
+            + Add Lead
+          </button>
         </div>
       </div>
 
-      {/* Row 1: Stats */}
-      <div className="stat-bar">
-        {statCardsData.map((card) => (
-          <div className="stat" key={card.label}>
-            <div className="stat-label">{card.label}</div>
-            <div className="stat-val" style={{ color: card.color }}>{card.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Lead widgets */}
-      <div className="dash-grid">
-        {/* New Leads (Unassigned) */}
-        <div className="dash-widget">
-          <div className="dash-widget-head">
-            <div className="dash-widget-title"><UserPlusIcon /> New Leads (Unassigned)</div>
-            <div className="dash-widget-actions">
-              <span className="dash-count">{unassignedLeads.length}</span>
-              <span className="dash-viewall" onClick={() => onNavigate?.('leads')}>View all →</span>
+      {/* Stat Cards */}
+      <div className="col-stat-grid-new">
+        {kpiCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div className={`col-stat-card-new ${card.variant}`} key={card.label}>
+              <div className="col-stat-label-new">{card.label}</div>
+              <div className="col-stat-value-new">{card.value}</div>
+              <div className="col-stat-sub-new">{card.sub}</div>
+              <div className="col-stat-icon-new">
+                {Icon ? <Icon style={{ width: 24, height: 24 }} /> : null}
+              </div>
             </div>
+          );
+        })}
+      </div>
+
+      {/* Two Column Layout */}
+      <div className="col-two-col-new">
+        {/* New Leads (Unassigned) */}
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserPlusIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
+              <div>
+                <div className="col-card-title-new">New Leads (Unassigned)</div>
+                <div className="col-card-subtitle-new">Leads waiting in the pool</div>
+              </div>
+            </div>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads')}>
+              View All →
+            </button>
           </div>
-          <div className="dash-widget-body">
+          <div className="col-card-body-flush-new">
             {unassignedLeads.length === 0 ? (
-              <div className="dash-empty">No unassigned leads in the pool.</div>
+              <div className="col-empty-mini">
+                <UserPlusIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No unassigned leads in the pool</span>
+              </div>
             ) : (
-              unassignedLeads.map((lead) => (
-                <div key={lead.id} className="dash-row" onClick={() => handleLeadClick(lead.id)}>
-                  <Avatar name={leadName(lead)} color={lead.statusColor} />
-                  <div className="dash-main">
-                    <div className="dash-name">{leadName(lead)}</div>
-                    <div className="dash-meta">
-                      <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
-                      {lead.source && <span className="dash-meta-item">· {lead.source}</span>}
-                    </div>
-                  </div>
-                  <div className="dash-right">
-                    <StatusChip name={lead.statusName} color={lead.statusColor} />
-                    <button className="crm-btn crm-btn-sm crm-btn-outline" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>Claim</button>
-                  </div>
-                </div>
-              ))
+              <div className="col-table-scroll-y"><table className="col-table-new">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassignedLeads.slice(0, 10).map((lead) => (
+                    <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadClick(lead.id)}>
+                      <td>
+                        <div className="col-cell-primary">{leadName(lead)}</div>
+                        {lead.source && <div className="col-cell-secondary">{lead.source}</div>}
+                      </td>
+                      <td className="col-cell-mono">{lead.phone || '—'}</td>
+                      <td><StatusChip name={lead.statusName} color={lead.statusColor} /></td>
+                      <td>
+                        <button className="col-btn col-btn-primary col-btn-sm" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>
+                          Claim
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
             )}
           </div>
         </div>
 
         {/* Today's Follow-ups */}
-        <div className="dash-widget">
-          <div className="dash-widget-head">
-            <div className="dash-widget-title"><PhoneIcon /> Today's Follow-ups</div>
-            <div className="dash-widget-actions">
-              <span className="dash-count">{todayFollowUps.length}</span>
-              <span className="dash-viewall" onClick={() => onNavigate?.('leads', { tab: 'today' })}>Open my leads →</span>
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PhoneIcon style={{ width: 20, height: 20, color: 'var(--accent-green)' }} />
+              <div>
+                <div className="col-card-title-new">Today's Follow-ups</div>
+                <div className="col-card-subtitle-new">Scheduled for today</div>
+              </div>
             </div>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads', { tab: 'today' })}>
+              View All →
+            </button>
           </div>
-          <div className="dash-widget-body">
+          <div className="col-card-body-flush-new">
             {todayFollowUps.length === 0 ? (
-              <div className="dash-empty">No follow-ups scheduled for today.</div>
+              <div className="col-empty-mini">
+                <PhoneIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No follow-ups scheduled for today</span>
+              </div>
             ) : (
-              todayFollowUps.map((fu) => {
-                const due = fu.next_follow_up_date || fu.scheduled_at;
-                return (
-                  <div key={fu.id} className="dash-row" onClick={() => handleLeadClick(fu.id)}>
-                    <Avatar name={leadName(fu)} color={fu.statusColor} />
-                    <div className="dash-main">
-                      <div className="dash-name">{leadName(fu)}</div>
-                      <div className="dash-meta">
-                        <span className="dash-meta-item"><PhoneIcon /> {fu.phone || fu.lead?.phone || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <div className="dash-right">
-                      <StatusChip name={fu.statusName} color={fu.statusColor} />
-                      <div className="dash-due">
-                        <span className="dash-due-label">Next follow-up</span>
-                        <span className="dash-due-val"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
-                      </div>
-                      <button className="dash-call" title={`Call ${leadName(fu)}`} onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}><PhoneIcon /></button>
-                    </div>
-                  </div>
-                );
-              })
+              <div className="col-table-scroll-y"><table className="col-table-new">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Phone</th>
+                    <th>Due</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayFollowUps.slice(0, 10).map((fu) => {
+                    const due = fu.next_follow_up_date || fu.scheduled_at;
+                    return (
+                      <tr key={fu.id} className="col-clickable-row" onClick={() => handleLeadClick(fu.id)}>
+                        <td>
+                          <div className="col-cell-primary">{leadName(fu)}</div>
+                          {fu.statusName && <div className="col-cell-secondary"><StatusChip name={fu.statusName} color={fu.statusColor} /></div>}
+                        </td>
+                        <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '—'}</td>
+                        <td>{due ? formatDate(due) : '—'}</td>
+                        <td>
+                          <button className="col-btn col-btn-success col-btn-sm" onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}>
+                            Call
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table></div>
             )}
           </div>
         </div>
 
         {/* Missed Follow-ups */}
-        <div className="dash-widget">
-          <div className="dash-widget-head">
-            <div className="dash-widget-title"><ExclamationTriangleIcon /> Missed Follow-ups</div>
-            <div className="dash-widget-actions">
-              <span className="dash-count dash-count--alert">{missedFollowUps.length}</span>
-              <span className="dash-viewall" onClick={() => onNavigate?.('leads', { tab: 'missed' })}>View my leads →</span>
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ExclamationTriangleIcon style={{ width: 20, height: 20, color: 'var(--accent-red)' }} />
+              <div>
+                <div className="col-card-title-new">Missed Follow-ups</div>
+                <div className="col-card-subtitle-new">Overdue — needs attention</div>
+              </div>
             </div>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads', { tab: 'missed' })}>
+              View All →
+            </button>
           </div>
-          <div className="dash-widget-body">
+          <div className="col-card-body-flush-new">
             {missedFollowUps.length === 0 ? (
-              <div className="dash-empty">No missed follow-ups. Great work!</div>
+              <div className="col-empty-mini">
+                <CheckCircleIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No missed follow-ups. Great work!</span>
+              </div>
             ) : (
-              missedFollowUps.map((fu) => {
-                const due = fu.next_follow_up_date || fu.scheduled_at || fu.updated_at;
-                return (
-                  <div key={fu.id} className="dash-row" onClick={() => handleLeadClick(fu.id)}>
-                    <Avatar name={leadName(fu)} color={fu.statusColor} />
-                    <div className="dash-main">
-                      <div className="dash-name">{leadName(fu)}</div>
-                      <div className="dash-meta">
-                        <span className="dash-meta-item"><PhoneIcon /> {fu.phone || fu.lead?.phone || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <div className="dash-right">
-                      <StatusChip name={fu.statusName} color={fu.statusColor} />
-                      <div className="dash-due">
-                        <span className="dash-due-label dash-due-label--over">Overdue since</span>
-                        <span className="dash-due-val dash-due-val--over"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
-                      </div>
-                      <button className="dash-call" title={`Call ${leadName(fu)}`} onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}><PhoneIcon /></button>
-                    </div>
-                  </div>
-                );
-              })
+              <div className="col-table-scroll-y"><table className="col-table-new">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Phone</th>
+                    <th>Overdue Since</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {missedFollowUps.slice(0, 10).map((fu) => {
+                    const due = fu.next_follow_up_date || fu.scheduled_at || fu.updated_at;
+                    return (
+                      <tr key={fu.id} className="col-clickable-row" onClick={() => handleLeadClick(fu.id)}>
+                        <td>
+                          <div className="col-cell-primary">{leadName(fu)}</div>
+                          {fu.statusName && <div className="col-cell-secondary"><StatusChip name={fu.statusName} color={fu.statusColor} /></div>}
+                        </td>
+                        <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '—'}</td>
+                        <td style={{ color: 'var(--accent-red)', fontWeight: 600 }}>{due ? formatDate(due) : '—'}</td>
+                        <td>
+                          <button className="col-btn col-btn-success col-btn-sm" onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}>
+                            Call
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table></div>
             )}
           </div>
         </div>
 
         {/* SV Scheduled */}
-        <div className="dash-widget">
-          <div className="dash-widget-head">
-            <div className="dash-widget-title"><HomeModernIcon /> SV Scheduled</div>
-            <div className="dash-widget-actions">
-              <span className="dash-count">{upcomingVisits.length}</span>
-              <span className="dash-viewall" onClick={() => onNavigate?.('handoffs')}>Track →</span>
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <HomeModernIcon style={{ width: 20, height: 20, color: 'var(--accent-yellow)' }} />
+              <div>
+                <div className="col-card-title-new">SV Scheduled</div>
+                <div className="col-card-subtitle-new">Upcoming site visits</div>
+              </div>
             </div>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('handoffs')}>
+              Track →
+            </button>
           </div>
-          <div className="dash-widget-body">
+          <div className="col-card-body-flush-new">
             {upcomingVisits.length === 0 ? (
-              <div className="dash-empty">No site visits scheduled for your leads.</div>
+              <div className="col-empty-mini">
+                <HomeModernIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No site visits scheduled</span>
+              </div>
             ) : (
-              upcomingVisits.map((lead) => (
-                <div key={lead.id} className="dash-row" onClick={() => handleLeadClick(lead.id)}>
-                  <Avatar name={leadName(lead)} color={lead.statusColor} />
-                  <div className="dash-main">
-                    <div className="dash-name">{leadName(lead)}</div>
-                    <div className="dash-meta">
-                      <span className="dash-meta-item"><MapPinIcon /> {lead.project || 'Project'}</span>
-                      <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
-                    </div>
-                  </div>
-                  <div className="dash-right">
-                    <StatusChip name={lead.statusName || 'Scheduled'} color={lead.statusColor || '#7B5800'} />
-                    <div className="dash-due">
-                      <span className="dash-due-label">Site visit</span>
-                      <span className="dash-due-val"><CalendarIcon /> {formatDate(lead.scheduled_at || lead.next_follow_up_date )}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
+              <div className="col-table-scroll-y"><table className="col-table-new">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Project</th>
+                    <th>Visit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingVisits.slice(0, 10).map((lead) => (
+                    <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadClick(lead.id)}>
+                      <td>
+                        <div className="col-cell-primary">{leadName(lead)}</div>
+                        <div className="col-cell-secondary">{lead.phone || '—'}</div>
+                      </td>
+                      <td>{lead.project || '—'}</td>
+                      <td>{formatDate(lead.scheduled_at || lead.next_follow_up_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
             )}
           </div>
         </div>

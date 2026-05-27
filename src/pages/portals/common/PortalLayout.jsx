@@ -14,10 +14,10 @@ import {
   ChevronRightIcon,
   SunIcon,
   MoonIcon,
-  PhoneIcon,
   BellIcon,
   UserIcon,
   LockClosedIcon,
+  DocumentMagnifyingGlassIcon,
   ArrowRightOnRectangleIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -350,7 +350,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
               title="Check phone number"
               aria-label="Check phone number"
             >
-              <PhoneIcon style={{ width: 20, height: 20 }} />
+              <DocumentMagnifyingGlassIcon style={{ width: 20, height: 20 }} />
             </button>
             <div className="portal-topbar__notif-menu" ref={notifMenuRef}>
               <button

@@ -1020,7 +1020,7 @@
 
 .col-cell-primary { font-weight: 600; }
 .col-cell-secondary { font-size: 11px; color: var(--text-muted, #9ca3af); }
-.col-cell-mono { font-family: 'DM Mono', 'SF Mono', monospace; font-size: 12px; }
+.col-cell-mono { font-family: inherit; font-size: inherit; }
 
 /* ── Badges (New) ── */
 .col-badge-new {
@@ -1060,6 +1060,42 @@
   padding: 32px 16px;
   color: var(--text-muted, #9ca3af);
   font-size: 13px;
+}
+
+/* ── Simple Loader (shared plain spinner) ── */
+.simple-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 24px;
+  color: var(--text-muted, #9ca3af);
+  font-size: 13px;
+}
+.simple-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--border-primary, #e5e7eb);
+  border-top-color: var(--accent-blue, #5b4fcf);
+  border-radius: 50%;
+  animation: simple-spin 0.7s linear infinite;
+}
+@keyframes simple-spin { to { transform: rotate(360deg); } }
+
+/* ── Scrollable table region (shows the latest ~10 rows with a vertical scroller) ── */
+.col-table-scroll-y {
+  max-height: 340px;
+  overflow: auto;
+}
+.col-table-scroll-y .col-table-new thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-tertiary, #f9fafb);
+}
+@media (max-width: 768px) {
+  .col-table-scroll-y { max-height: 300px; }
 }
 
 /* ── Accounts-specific styles ── */

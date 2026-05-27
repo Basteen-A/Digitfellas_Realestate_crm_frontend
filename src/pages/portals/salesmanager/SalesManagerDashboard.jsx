@@ -6,15 +6,18 @@ import { getErrorMessage } from '../../../utils/helpers';
 import { formatDate } from '../../../utils/formatters';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import {
+  HomeModernIcon,
+  ChartBarIcon,
+  ArrowPathIcon,
+  ClipboardDocumentListIcon,
   PhoneIcon,
-  MapPinIcon,
-  CalendarIcon,
   XCircleIcon,
   InboxArrowDownIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, StatusChip, leadName } from '../common/dashWidgets';
+import { StatusChip, leadName } from '../common/dashWidgets';
+import '../collection/CollectionWorkspace.css';
 
-const SalesManagerDashboard = ({ onNavigate }) => {
+const SalesManagerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [incomingPendingCount, setIncomingPendingCount] = useState(0);
@@ -56,9 +59,7 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       if (Array.isArray(dashData.todaysFollowUpLeads)) setTodayFollowUps(dashData.todaysFollowUpLeads);
       if (Array.isArray(dashData.missedFollowUpLeads)) setMissedFollowUps(dashData.missedFollowUpLeads);
 
-
-
-      // FALLBACK: If lists are empty or stats fetch failed, fetch lists explicitl
+      // FALLBACK: If lists are empty or stats fetch failed, fetch lists explicitly
       if (!dashData.todaysFollowUpLeads && !dashData.missedFollowUpLeads) {
         console.warn('[SM Dashboard] Backend lists missing, triggering fallback fetch...');
         const extractLeads = (resp) => {
@@ -87,7 +88,6 @@ const SalesManagerDashboard = ({ onNavigate }) => {
         setTodayFollowUps(extractLeads(todayFuResp));
         setMissedFollowUps(extractLeads(missedFuResp));
       }
-
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load dashboard'));
     } finally {
@@ -99,24 +99,80 @@ const SalesManagerDashboard = ({ onNavigate }) => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, color: 'var(--text-secondary)' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid var(--accent-blue-bg)', borderTopColor: 'var(--accent-blue)', borderRadius: '50%', animation: 'tc-spin 0.8s linear infinite', marginBottom: 12 }} />
-        <p>Loading dashboard...</p>
+      <div className="simple-loader">
+        <div className="simple-spinner" />
+        <p>Loading...</p>
       </div>
     );
   }
 
-  const statCards = [
-    { label: 'Active Site Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, valueColor: 'var(--accent-cyan)' },
-    { label: 'Under Negotiations', value: stats?.negotiations ?? 0, valueColor: 'var(--accent-purple)' },
-    { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, valueColor: 'var(--accent-yellow)' },
-    { label: 'Under Follow Up', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, valueColor: 'var(--accent-blue)' },
-    { label: "Today's Follow Up", value: todayFollowUps.length, valueColor: 'var(--accent-green)' },
-    { label: 'Missed Follow Up', value: missedFollowUps.length, valueColor: 'var(--accent-red)' },
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  const firstName = user?.first_name || user?.firstName || '';
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const kpiCards = [
+    { label: 'Active Site Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, sub: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, icon: HomeModernIcon, variant: 'info' },
+    { label: 'Under Negotiations', value: stats?.negotiations ?? 0, sub: 'in negotiation', icon: ChartBarIcon, variant: '' },
+    { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, sub: 'pending revisit', icon: ArrowPathIcon, variant: 'warning' },
+    { label: 'Under Follow Up', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, sub: `${todayFollowUps.length} today`, icon: ClipboardDocumentListIcon, variant: '' },
+    { label: "Today's Follow Up", value: todayFollowUps.length, sub: 'scheduled today', icon: PhoneIcon, variant: 'success' },
+    { label: 'Missed Follow Up', value: missedFollowUps.length, sub: 'overdue', icon: XCircleIcon, variant: 'danger' },
   ];
 
+  const renderFollowUpTable = (rows, { dueLabel, overdue }) => (
+    <div className="col-table-scroll-y"><table className="col-table-new">
+      <thead>
+        <tr>
+          <th>Lead</th>
+          <th>Project</th>
+          <th>{dueLabel}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.slice(0, 10).map((lead) => {
+          const due = lead.next_follow_up_date || lead.scheduled_at || lead.updated_at;
+          return (
+            <tr key={lead.id} className="col-clickable-row" onClick={() => navigate(`/portal/lead/${lead.id}`)}>
+              <td>
+                <div className="col-cell-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {leadName(lead)} <StatusChip name={lead.statusName} color={lead.statusColor} />
+                </div>
+                <div className="col-cell-secondary">{lead.phone || '—'}</div>
+              </td>
+              <td>{lead.projectName || lead.project || '—'}</td>
+              <td style={overdue ? { color: 'var(--accent-red)', fontWeight: 600 } : undefined}>{due ? formatDate(due) : '—'}</td>
+              <td>
+                <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}>
+                  View
+                </button>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table></div>
+  );
+
   return (
-    <div>
+    <div className="col-dashboard">
+      {/* Page Header */}
+      <div className="col-page-header">
+        <div className="col-page-header-left">
+          <h1>{greeting}{firstName ? `, ${firstName}` : ''}</h1>
+          <p>Here's your sales overview for today — {today}</p>
+        </div>
+        <div className="col-page-header-actions">
+          <button className="col-btn col-btn-ghost col-btn-sm" onClick={load}>
+            <ArrowPathIcon style={{ width: 14, height: 14 }} /> Refresh
+          </button>
+          <button className="col-btn col-btn-primary" onClick={() => onNavigate?.('leads')}>
+            My Leads →
+          </button>
+        </div>
+      </div>
+
       {/* Handoff Banner */}
       {incomingPendingCount > 0 && (
         <div className="handoff-banner" style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a' }}>
@@ -125,103 +181,77 @@ const SalesManagerDashboard = ({ onNavigate }) => {
             <div className="handoff-banner-title" style={{ color: '#92400e', fontWeight: 700 }}>{incomingPendingCount} incoming lead{incomingPendingCount > 1 ? 's' : ''} awaiting your review</div>
             <div className="handoff-banner-desc" style={{ color: '#b45309' }}>Leads handed off from telecallers are ready for your action.</div>
           </div>
-          <button className="crm-btn crm-btn-warning crm-btn-sm" style={{ fontWeight: 700 }} onClick={() => onNavigate?.('incoming')}>Review Now →</button>
+          <button className="col-btn col-btn-warning col-btn-sm" style={{ fontWeight: 700 }} onClick={() => onNavigate?.('incoming')}>Review Now →</button>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="stat-bar">
-        {statCards.map((card) => (
-          <div className="stat" key={card.label}>
-            <div className="stat-label">{card.label}</div>
-            <div className="stat-val" style={card.valueColor ? { color: card.valueColor } : {}}>{card.value}</div>
-          </div>
-        ))}
+      {/* Stat Cards */}
+      <div className="col-stat-grid-new">
+        {kpiCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div className={`col-stat-card-new ${card.variant}`} key={card.label}>
+              <div className="col-stat-label-new">{card.label}</div>
+              <div className="col-stat-value-new">{card.value}</div>
+              <div className="col-stat-sub-new">{card.sub}</div>
+              <div className="col-stat-icon-new">
+                {Icon ? <Icon style={{ width: 24, height: 24 }} /> : null}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Follow-up widgets */}
-      <div className="dash-grid">
+      {/* Two Column Layout */}
+      <div className="col-two-col-new">
         {/* Today's Follow Up */}
-        <div className="dash-widget">
-          <div className="dash-widget-head">
-            <div className="dash-widget-title"><PhoneIcon /> Today's Follow Up</div>
-            <div className="dash-widget-actions">
-              <span className="dash-count">{todayFollowUps.length}</span>
-              <span className="dash-viewall" onClick={() => onNavigate?.('leads')}>View all →</span>
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PhoneIcon style={{ width: 20, height: 20, color: 'var(--accent-green)' }} />
+              <div>
+                <div className="col-card-title-new">Today's Follow Up</div>
+                <div className="col-card-subtitle-new">Scheduled for today</div>
+              </div>
             </div>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads')}>
+              View All →
+            </button>
           </div>
-          <div className="dash-widget-body">
+          <div className="col-card-body-flush-new">
             {todayFollowUps.length === 0 ? (
-              <div className="dash-empty">No follow-ups scheduled for today.</div>
-            ) : (
-              todayFollowUps.map((lead) => {
-                const due = lead.next_follow_up_date || lead.scheduled_at;
-                return (
-                  <div key={lead.id} className="dash-row" onClick={() => navigate(`/portal/lead/${lead.id}`)}>
-                    <Avatar name={leadName(lead)} color={lead.statusColor} />
-                    <div className="dash-main">
-                      <div className="dash-name">{leadName(lead)}</div>
-                      <div className="dash-meta">
-                        <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
-                        <span className="dash-meta-item"><MapPinIcon /> {lead.projectName || lead.project || '-'}</span>
-                      </div>
-                    </div>
-                    <div className="dash-right">
-                      <StatusChip name={lead.statusName} color={lead.statusColor} />
-                      <div className="dash-due">
-                        <span className="dash-due-label">Next follow-up</span>
-                        <span className="dash-due-val"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
-                      </div>
-                      <button className="dash-call" title={`Call ${leadName(lead)}`} onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}><PhoneIcon /></button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+              <div className="col-empty-mini">
+                <PhoneIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No follow-ups scheduled for today</span>
+              </div>
+            ) : renderFollowUpTable(todayFollowUps, { dueLabel: 'Due', overdue: false })}
           </div>
         </div>
 
         {/* Missed Follow Up */}
-        <div className="dash-widget">
-          <div className="dash-widget-head">
-            <div className="dash-widget-title"><XCircleIcon /> Missed Follow Up</div>
-            <div className="dash-widget-actions">
-              <span className="dash-count dash-count--alert">{missedFollowUps.length}</span>
-              <span className="dash-viewall" onClick={() => onNavigate?.('leads')}>View all →</span>
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <XCircleIcon style={{ width: 20, height: 20, color: 'var(--accent-red)' }} />
+              <div>
+                <div className="col-card-title-new">Missed Follow Up</div>
+                <div className="col-card-subtitle-new">Overdue — needs attention</div>
+              </div>
             </div>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads')}>
+              View All →
+            </button>
           </div>
-          <div className="dash-widget-body">
+          <div className="col-card-body-flush-new">
             {missedFollowUps.length === 0 ? (
-              <div className="dash-empty">No missed follow-ups. Great work!</div>
-            ) : (
-              missedFollowUps.map((lead) => {
-                const due = lead.next_follow_up_date || lead.scheduled_at || lead.updated_at;
-                return (
-                  <div key={lead.id} className="dash-row" onClick={() => navigate(`/portal/lead/${lead.id}`)}>
-                    <Avatar name={leadName(lead)} color={lead.statusColor} />
-                    <div className="dash-main">
-                      <div className="dash-name">{leadName(lead)}</div>
-                      <div className="dash-meta">
-                        <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
-                        <span className="dash-meta-item"><MapPinIcon /> {lead.projectName || lead.project || '-'}</span>
-                      </div>
-                    </div>
-                    <div className="dash-right">
-                      <StatusChip name={lead.statusName} color={lead.statusColor} />
-                      <div className="dash-due">
-                        <span className="dash-due-label dash-due-label--over">Overdue since</span>
-                        <span className="dash-due-val dash-due-val--over"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
-                      </div>
-                      <button className="dash-call" title={`Call ${leadName(lead)}`} onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}><PhoneIcon /></button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+              <div className="col-empty-mini">
+                <XCircleIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No missed follow-ups. Great work!</span>
+              </div>
+            ) : renderFollowUpTable(missedFollowUps, { dueLabel: 'Overdue Since', overdue: true })}
           </div>
         </div>
       </div>
-
     </div>
   );
 };

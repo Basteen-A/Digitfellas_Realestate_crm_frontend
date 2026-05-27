@@ -24,7 +24,7 @@ const SalesManagerWorkspace = () => {
     >
       {({ activeScreen, setActiveScreen }) => (
         <>
-          {activeScreen === 'dashboard' && <SalesManagerDashboard onNavigate={setActiveScreen} />}
+          {activeScreen === 'dashboard' && <SalesManagerDashboard user={user} onNavigate={setActiveScreen} />}
           {activeScreen === 'leads' && <LeadWorkspacePage user={user} workspaceRole="SM" />}
           {activeScreen === 'visits' && <SalesManagerVisits onNavigate={setActiveScreen} />}
           {activeScreen === 'incoming' && <SalesManagerIncoming onNavigate={setActiveScreen} />}
