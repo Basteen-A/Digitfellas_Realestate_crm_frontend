@@ -3,32 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatDate, formatDateTime } from '../../../utils/formatters';
+import { formatDate } from '../../../utils/formatters';
 import {
-  UsersIcon,
-  UserIcon,
   PhoneIcon,
   HomeModernIcon,
-  CheckCircleIcon,
   ExclamationTriangleIcon,
-  SparklesIcon,
+  UserPlusIcon,
+  CalendarIcon,
   ArrowPathIcon,
   PlusIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline';
+import { Avatar, StatusChip, leadName } from '../common/dashWidgets';
 import './TelecallerDashboard.css';
-
-const ICON_SIZE = { width: 20, height: 20 };
-const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
-
-// Small colored pill showing the lead's current status, tinted with its own color.
-const StatusChip = ({ name, color }) => {
-  if (!name) return null;
-  const c = color || '#6B7280';
-  return (
-    <span className="td-status-chip" style={{ background: `${c}22`, color: c }}>{name}</span>
-  );
-};
 
 const TelecallerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -91,14 +78,13 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const statCardsData = [
-    { label: 'New Leads', value: stats?.newLeadsToday ?? 0, icon: <UsersIcon style={ICON_SIZE} />, color: 'var(--accent-purple)' },
-    { label: 'All Active Leads', value: stats?.activeLeads ?? 0, icon: <UserIcon style={ICON_SIZE} />, color: 'var(--accent-blue)' },
-    { label: "Today's Follow Ups", value: stats?.todaysPendingFollowUps ?? 0, icon: <PhoneIcon style={ICON_SIZE} />, color: '#15803d' },
-    { label: 'Missed Follow Ups', value: stats?.overdueFollowUps ?? 0, icon: <ExclamationTriangleIcon style={ICON_SIZE} />, color: 'var(--accent-red)' },
-    { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#6366f1' },
-    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, color: 'var(--accent-cyan)' },
-    { label: 'SV Done', value: stats?.svCompleted ?? 0, icon: <CheckCircleIcon style={ICON_SIZE} />, color: '#10b981' },
-    
+    { label: 'New Leads', value: stats?.newLeadsToday ?? 0, color: 'var(--accent-green)' },
+    { label: 'All Active Leads', value: stats?.activeLeads ?? 0, color: 'var(--text-primary)' },
+    { label: "Today's Follow Ups", value: stats?.todaysPendingFollowUps ?? 0, color: 'var(--accent-yellow)' },
+    { label: 'Missed Follow Ups', value: stats?.overdueFollowUps ?? 0, color: 'var(--accent-red)' },
+    { label: 'Total Answered Today', value: stats?.answeredToday ?? 0, color: 'var(--accent-green)' },
+    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, color: 'var(--accent-yellow)' },
+    { label: 'SV Done', value: stats?.svCompleted ?? 0, color: 'var(--accent-green)' },
   ];
 
   const handleLeadClick = (leadId) => {
@@ -121,129 +107,158 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
       </div>
 
       {/* Row 1: Stats */}
-      <div className="td-stats-grid">
+      <div className="stat-bar">
         {statCardsData.map((card) => (
-          <div className="td-stat-card" key={card.label}>
-            <div className="td-stat-label">{card.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span className="td-stat-value" style={{ color: card.color }}>{card.value}</span>
-              <span style={{ color: card.color }}>{card.icon}</span>
-            </div>
+          <div className="stat" key={card.label}>
+            <div className="stat-label">{card.label}</div>
+            <div className="stat-val" style={{ color: card.color }}>{card.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Row 2: Leads Containers */}
-      <div className="td-row">
-        {/* Unassigned Leads */}
-        <div className="td-card">
-          <div className="td-card-header">
-            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><SparklesIcon style={ICON_SM} /> New Leads (Unassigned)</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('leads')}>View All →</span>
+      {/* Lead widgets */}
+      <div className="dash-grid">
+        {/* New Leads (Unassigned) */}
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><UserPlusIcon /> New Leads (Unassigned)</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count">{unassignedLeads.length}</span>
+              <span className="dash-viewall" onClick={() => onNavigate?.('leads')}>View all →</span>
+            </div>
           </div>
-          <div className="td-card-body">
+          <div className="dash-widget-body">
             {unassignedLeads.length === 0 ? (
-              <div className="empty-msg">No unassigned leads in the pool.</div>
+              <div className="dash-empty">No unassigned leads in the pool.</div>
             ) : (
-              unassignedLeads.map(lead => (
-                <div key={lead.id} className="td-list-item" onClick={() => handleLeadClick(lead.id)}>
-                  <div className="td-item-info">
-                    <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
-                    <div className="td-item-meta">
-                      <StatusChip name={lead.statusName} color={lead.statusColor} />
-                      <span>{lead.phone}</span>
-                      {lead.source && <span> · {lead.source}</span>}
+              unassignedLeads.map((lead) => (
+                <div key={lead.id} className="dash-row" onClick={() => handleLeadClick(lead.id)}>
+                  <Avatar name={leadName(lead)} color={lead.statusColor} />
+                  <div className="dash-main">
+                    <div className="dash-name">{leadName(lead)}</div>
+                    <div className="dash-meta">
+                      <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
+                      {lead.source && <span className="dash-meta-item">· {lead.source}</span>}
                     </div>
                   </div>
-                  <button className="crm-btn crm-btn-sm crm-btn-outline" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>Claim</button>
+                  <div className="dash-right">
+                    <StatusChip name={lead.statusName} color={lead.statusColor} />
+                    <button className="crm-btn crm-btn-sm crm-btn-outline" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>Claim</button>
+                  </div>
                 </div>
               ))
+            )}
+          </div>
+        </div>
+
+        {/* Today's Follow-ups */}
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><PhoneIcon /> Today's Follow-ups</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count">{todayFollowUps.length}</span>
+              <span className="dash-viewall" onClick={() => onNavigate?.('leads', { tab: 'today' })}>Open my leads →</span>
+            </div>
+          </div>
+          <div className="dash-widget-body">
+            {todayFollowUps.length === 0 ? (
+              <div className="dash-empty">No follow-ups scheduled for today.</div>
+            ) : (
+              todayFollowUps.map((fu) => {
+                const due = fu.next_follow_up_date || fu.scheduled_at;
+                return (
+                  <div key={fu.id} className="dash-row" onClick={() => handleLeadClick(fu.id)}>
+                    <Avatar name={leadName(fu)} color={fu.statusColor} />
+                    <div className="dash-main">
+                      <div className="dash-name">{leadName(fu)}</div>
+                      <div className="dash-meta">
+                        <span className="dash-meta-item"><PhoneIcon /> {fu.phone || fu.lead?.phone || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className="dash-right">
+                      <StatusChip name={fu.statusName} color={fu.statusColor} />
+                      <div className="dash-due">
+                        <span className="dash-due-label">Next follow-up</span>
+                        <span className="dash-due-val"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
+                      </div>
+                      <button className="dash-call" title={`Call ${leadName(fu)}`} onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}><PhoneIcon /></button>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
 
         {/* Missed Follow-ups */}
-        <div className="td-card">
-          <div className="td-card-header">
-            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExclamationTriangleIcon style={ICON_SM} /> Missed Follow-ups</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('leads', { tab: 'missed' })}>View My Leads →</span>
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><ExclamationTriangleIcon /> Missed Follow-ups</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count dash-count--alert">{missedFollowUps.length}</span>
+              <span className="dash-viewall" onClick={() => onNavigate?.('leads', { tab: 'missed' })}>View my leads →</span>
+            </div>
           </div>
-          <div className="td-card-body">
+          <div className="dash-widget-body">
             {missedFollowUps.length === 0 ? (
-              <div className="empty-msg">No missed follow-ups. Great work!</div>
+              <div className="dash-empty">No missed follow-ups. Great work!</div>
             ) : (
-              missedFollowUps.map((fu) => (
-                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.id)}>
-                  <div className="td-item-info">
-                    <div className="td-item-name">
-                      {fu.fullName || fu.lead?.fullName || (fu.first_name ? `${fu.first_name} ${fu.last_name || ''}`.trim() : 'Unknown Lead')}
+              missedFollowUps.map((fu) => {
+                const due = fu.next_follow_up_date || fu.scheduled_at || fu.updated_at;
+                return (
+                  <div key={fu.id} className="dash-row" onClick={() => handleLeadClick(fu.id)}>
+                    <Avatar name={leadName(fu)} color={fu.statusColor} />
+                    <div className="dash-main">
+                      <div className="dash-name">{leadName(fu)}</div>
+                      <div className="dash-meta">
+                        <span className="dash-meta-item"><PhoneIcon /> {fu.phone || fu.lead?.phone || 'N/A'}</span>
+                      </div>
                     </div>
-                    <div className="td-item-meta">
+                    <div className="dash-right">
                       <StatusChip name={fu.statusName} color={fu.statusColor} />
-                      <span>{fu.phone || fu.lead?.phone || 'N/A'}</span>
+                      <div className="dash-due">
+                        <span className="dash-due-label dash-due-label--over">Overdue since</span>
+                        <span className="dash-due-val dash-due-val--over"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
+                      </div>
+                      <button className="dash-call" title={`Call ${leadName(fu)}`} onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}><PhoneIcon /></button>
                     </div>
                   </div>
-                  <span className="td-item-date">{formatDate(fu.next_follow_up_date || fu.scheduled_at || fu.updated_at)}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Actions Containers */}
-      <div className="td-row">
-        {/* Today's Follow-ups */}
-        <div className="td-card">
-          <div className="td-card-header">
-            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PhoneIcon style={ICON_SM} /> Today's Follow-ups</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('leads', { tab: 'today' })}>Open My Leads →</span>
-          </div>
-          <div className="td-card-body">
-            {todayFollowUps.length === 0 ? (
-              <div className="empty-msg">No follow-ups scheduled for today.</div>
-            ) : (
-              todayFollowUps.map(fu => (
-                <div key={fu.id} className="td-list-item" onClick={() => handleLeadClick(fu.id)}>
-                  <div className="td-item-info">
-                    <div className="td-item-name">{fu.fullName || fu.lead?.fullName || (fu.first_name ? `${fu.first_name} ${fu.last_name || ''}`.trim() : 'Unknown Lead')}</div>
-                    <div className="td-item-meta">
-                      <StatusChip name={fu.statusName} color={fu.statusColor} />
-                      <span className="td-item-date" style={{ background: 'var(--accent-green-bg)', color: '#15803d' }}>
-                        {(fu.next_follow_up_date || fu.scheduled_at) ? formatDate(fu.next_follow_up_date || fu.scheduled_at) : 'No Date'}
-                      </span>
-                      <span>{fu.phone || fu.lead?.phone || 'N/A'}</span>
-                    </div>
-                  </div>
-                  <button className="crm-btn crm-btn-sm crm-btn-success" onClick={(e) => { e.stopPropagation(); handleLeadClick(fu.id); }}>Call</button>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* Upcoming Site Visits */}
-        <div className="td-card">
-          <div className="td-card-header">
-            <div className="td-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={ICON_SM} /> SV Scheduled</div>
-            <span className="view-all-link" onClick={() => onNavigate?.('handoffs')}>Track →</span>
+        {/* SV Scheduled */}
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><HomeModernIcon /> SV Scheduled</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count">{upcomingVisits.length}</span>
+              <span className="dash-viewall" onClick={() => onNavigate?.('handoffs')}>Track →</span>
+            </div>
           </div>
-          <div className="td-card-body">
+          <div className="dash-widget-body">
             {upcomingVisits.length === 0 ? (
-              <div className="empty-msg">No site visits scheduled for your leads.</div>
+              <div className="dash-empty">No site visits scheduled for your leads.</div>
             ) : (
-              upcomingVisits.map(lead => (
-                <div key={lead.id} className="td-list-item" onClick={() => handleLeadClick(lead.id)}>
-                  <div className="td-item-info">
-                    <div className="td-item-name">{lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`}</div>
-                    <div className="td-item-meta">
-                      <StatusChip name={lead.statusName} color={lead.statusColor} />
-                      <span className="td-item-date">{formatDateTime(lead.scheduled_at || lead.next_follow_up_date || lead.updated_at)}</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><MapPinIcon style={{ width: 12, height: 12 }} /> {lead.project || 'Project'}</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><PhoneIcon style={{ width: 12, height: 12 }} /> {lead.phone}</span>
+              upcomingVisits.map((lead) => (
+                <div key={lead.id} className="dash-row" onClick={() => handleLeadClick(lead.id)}>
+                  <Avatar name={leadName(lead)} color={lead.statusColor} />
+                  <div className="dash-main">
+                    <div className="dash-name">{leadName(lead)}</div>
+                    <div className="dash-meta">
+                      <span className="dash-meta-item"><MapPinIcon /> {lead.project || 'Project'}</span>
+                      <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
                     </div>
                   </div>
-                  <span className={`td-badge td-badge-sitevisit`}>Scheduled</span>
+                  <div className="dash-right">
+                    <StatusChip name={lead.statusName || 'Scheduled'} color={lead.statusColor || '#7B5800'} />
+                    <div className="dash-due">
+                      <span className="dash-due-label">Site visit</span>
+                      <span className="dash-due-val"><CalendarIcon /> {formatDate(lead.scheduled_at || lead.next_follow_up_date )}</span>
+                    </div>
+                  </div>
                 </div>
               ))
             )}

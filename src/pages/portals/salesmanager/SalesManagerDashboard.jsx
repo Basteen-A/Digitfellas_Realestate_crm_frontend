@@ -3,19 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { formatDate } from '../../../utils/formatters';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import {
-  UsersIcon,
+  PhoneIcon,
   MapPinIcon,
-  HomeModernIcon,
-  ArrowPathIcon,
+  CalendarIcon,
   XCircleIcon,
   InboxArrowDownIcon,
-  ChartBarIcon,
 } from '@heroicons/react/24/outline';
-
-const ICON_SIZE = { width: 22, height: 22 };
-const ICON_SM = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 };
+import { Avatar, StatusChip, leadName } from '../common/dashWidgets';
 
 const SalesManagerDashboard = ({ onNavigate }) => {
   const navigate = useNavigate();
@@ -110,12 +107,12 @@ const SalesManagerDashboard = ({ onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'Active Site Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, icon: <HomeModernIcon style={ICON_SIZE} />, iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, changeType: 'neutral' },
-    { label: 'Under Negotiations', value: stats?.negotiations ?? 0, icon: <ChartBarIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In negotiation stage', changeType: 'neutral' },
-    { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, icon: <ArrowPathIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Pending revisit', changeType: 'neutral' },
-    { label: 'Under Follow Up', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, icon: <MapPinIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: `${todayFollowUps.length} today`, changeType: 'neutral' },
-    { label: "Today's Follow Up", value: todayFollowUps.length, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: '#15803d', valueColor: '#15803d', change: 'Scheduled today', changeType: 'neutral' },
-    { label: 'Missed Follow Up', value: missedFollowUps.length, icon: <XCircleIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'Overdue', changeType: 'down' },
+    { label: 'Active Site Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, valueColor: 'var(--accent-cyan)' },
+    { label: 'Under Negotiations', value: stats?.negotiations ?? 0, valueColor: 'var(--accent-purple)' },
+    { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, valueColor: 'var(--accent-yellow)' },
+    { label: 'Under Follow Up', value: stats?.todaysTasks ?? stats?.dueToday ?? 0, valueColor: 'var(--accent-blue)' },
+    { label: "Today's Follow Up", value: todayFollowUps.length, valueColor: 'var(--accent-green)' },
+    { label: 'Missed Follow Up', value: missedFollowUps.length, valueColor: 'var(--accent-red)' },
   ];
 
   return (
@@ -133,79 +130,97 @@ const SalesManagerDashboard = ({ onNavigate }) => {
       )}
 
       {/* Stats */}
-      <div className="stats-grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="stat-bar">
         {statCards.map((card) => (
-          <div className="stat-card" key={card.label}>
-            <div className="stat-card-header">
-              <div className="stat-card-label">{card.label}</div>
-              <div className="stat-card-icon" style={{ background: card.iconBg, color: card.iconColor }}>{card.icon}</div>
-            </div>
-            <div className="stat-card-value" style={card.valueColor ? { color: card.valueColor } : {}}>{card.value}</div>
-            <div className={`stat-card-change change-${card.changeType}`}>{card.change}</div>
+          <div className="stat" key={card.label}>
+            <div className="stat-label">{card.label}</div>
+            <div className="stat-val" style={card.valueColor ? { color: card.valueColor } : {}}>{card.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Two Column Grid - Only show if there are follow-ups */}
-      {(todayFollowUps.length > 0 || missedFollowUps.length > 0) && (
-        <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4">
-          {/* Today's Follow Up List */}
-          {todayFollowUps.length > 0 && (
-            <div className="crm-card">
-              <div className="crm-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><UsersIcon style={ICON_SM} /> Today's Follow Up ({todayFollowUps.length})</div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', cursor: 'pointer', opacity: 0.8 }} onClick={() => onNavigate?.('leads')}>View All →</span>
-              </div>
-              <div className="crm-card-body-flush">
-                {todayFollowUps.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="followup-item" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #f1f5f9)' }}>
-                    <div className="followup-content">
-                      <div className="followup-name" style={{ fontWeight: 700, fontSize: 13 }}>
-                        {lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim()}
-                      </div>
-                      <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span>{lead.phone || '-'} · {lead.projectName || lead.project || '-'}</span>
-                        {lead.statusName && (
-                          <span style={{ padding: '1px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', background: `${lead.statusColor || '#6B7280'}22`, color: lead.statusColor || '#6B7280' }}>{lead.statusName}</span>
-                        )}
+      {/* Follow-up widgets */}
+      <div className="dash-grid">
+        {/* Today's Follow Up */}
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><PhoneIcon /> Today's Follow Up</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count">{todayFollowUps.length}</span>
+              <span className="dash-viewall" onClick={() => onNavigate?.('leads')}>View all →</span>
+            </div>
+          </div>
+          <div className="dash-widget-body">
+            {todayFollowUps.length === 0 ? (
+              <div className="dash-empty">No follow-ups scheduled for today.</div>
+            ) : (
+              todayFollowUps.map((lead) => {
+                const due = lead.next_follow_up_date || lead.scheduled_at;
+                return (
+                  <div key={lead.id} className="dash-row" onClick={() => navigate(`/portal/lead/${lead.id}`)}>
+                    <Avatar name={leadName(lead)} color={lead.statusColor} />
+                    <div className="dash-main">
+                      <div className="dash-name">{leadName(lead)}</div>
+                      <div className="dash-meta">
+                        <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
+                        <span className="dash-meta-item"><MapPinIcon /> {lead.projectName || lead.project || '-'}</span>
                       </div>
                     </div>
-                    <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => navigate(`/portal/lead/${lead.id}`)}>View</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Missed Follow Up List */}
-          {missedFollowUps.length > 0 && (
-            <div className="crm-card">
-              <div className="crm-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><XCircleIcon style={ICON_SM} /> Missed Follow Up ({missedFollowUps.length})</div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', cursor: 'pointer', opacity: 0.8 }} onClick={() => onNavigate?.('leads')}>View All →</span>
-              </div>
-              <div className="crm-card-body-flush">
-                {missedFollowUps.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="followup-item" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #f1f5f9)' }}>
-                    <div className="followup-content">
-                      <div className="followup-name" style={{ fontWeight: 700, fontSize: 13 }}>
-                        {lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim()}
+                    <div className="dash-right">
+                      <StatusChip name={lead.statusName} color={lead.statusColor} />
+                      <div className="dash-due">
+                        <span className="dash-due-label">Next follow-up</span>
+                        <span className="dash-due-val"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
                       </div>
-                      <div className="followup-note" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span>{lead.phone || '-'} · {lead.projectName || lead.project || '-'}</span>
-                        {lead.statusName && (
-                          <span style={{ padding: '1px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', background: `${lead.statusColor || '#6B7280'}22`, color: lead.statusColor || '#6B7280' }}>{lead.statusName}</span>
-                        )}
-                      </div>
+                      <button className="dash-call" title={`Call ${leadName(lead)}`} onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}><PhoneIcon /></button>
                     </div>
-                    <button className="crm-btn crm-btn-sm crm-btn-ghost" onClick={() => navigate(`/portal/lead/${lead.id}`)}>View</button>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
-      )}
+
+        {/* Missed Follow Up */}
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><XCircleIcon /> Missed Follow Up</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count dash-count--alert">{missedFollowUps.length}</span>
+              <span className="dash-viewall" onClick={() => onNavigate?.('leads')}>View all →</span>
+            </div>
+          </div>
+          <div className="dash-widget-body">
+            {missedFollowUps.length === 0 ? (
+              <div className="dash-empty">No missed follow-ups. Great work!</div>
+            ) : (
+              missedFollowUps.map((lead) => {
+                const due = lead.next_follow_up_date || lead.scheduled_at || lead.updated_at;
+                return (
+                  <div key={lead.id} className="dash-row" onClick={() => navigate(`/portal/lead/${lead.id}`)}>
+                    <Avatar name={leadName(lead)} color={lead.statusColor} />
+                    <div className="dash-main">
+                      <div className="dash-name">{leadName(lead)}</div>
+                      <div className="dash-meta">
+                        <span className="dash-meta-item"><PhoneIcon /> {lead.phone || 'N/A'}</span>
+                        <span className="dash-meta-item"><MapPinIcon /> {lead.projectName || lead.project || '-'}</span>
+                      </div>
+                    </div>
+                    <div className="dash-right">
+                      <StatusChip name={lead.statusName} color={lead.statusColor} />
+                      <div className="dash-due">
+                        <span className="dash-due-label dash-due-label--over">Overdue since</span>
+                        <span className="dash-due-val dash-due-val--over"><CalendarIcon /> {due ? formatDate(due) : 'No date'}</span>
+                      </div>
+                      <button className="dash-call" title={`Call ${leadName(lead)}`} onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}><PhoneIcon /></button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
 
     </div>
   );

@@ -10,7 +10,6 @@ import {
   HandRaisedIcon,
   BriefcaseIcon,
   CreditCardIcon,
-  DevicePhoneMobileIcon,
   HomeModernIcon,
   ArrowsRightLeftIcon,
   BuildingStorefrontIcon,
@@ -21,6 +20,10 @@ import {
   BanknotesIcon,
   XCircleIcon,
   MagnifyingGlassIcon,
+  MapPinIcon,
+  UserPlusIcon,
+  TrophyIcon,
+  PhoneArrowDownLeftIcon,
 } from '@heroicons/react/24/outline';
 
 /**
@@ -118,39 +121,39 @@ const adminSidebar = [
 
 // ── Telecaller ──
 const telecallerSidebar = [
-  { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
-  { label: 'Leads', path: '/telecaller/leads', icon: UsersIcon },
-  { label: 'SV Leads', path: '/telecaller/handoffs', icon: HandRaisedIcon },
-  { label: 'Performance Tracker', path: '/telecaller/pipeline', icon: ClipboardDocumentListIcon },
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+  { label: 'Leads', path: '/telecaller/leads', icon: UserPlusIcon },
+  { label: 'SV Leads', path: '/telecaller/handoffs', icon: MapPinIcon },
+  { label: 'Performance Tracker', path: '/telecaller/pipeline', icon: TrophyIcon },
 ];
 
 // ── Sales Manager ──
 const salesManagerSidebar = [
-  { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
-  { label: 'Leads', path: '/sales-manager/leads', icon: UsersIcon },
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+  { label: 'Leads', path: '/sales-manager/leads', icon: UserPlusIcon },
   { label: 'Revisits', path: '/sales-manager/visits', icon: ArrowPathIcon },
   { label: 'Incoming Leads', path: '/sales-manager/incoming', icon: BoltIcon },
 ];
 
 // ── Sales Head ──
 const salesHeadSidebar = [
-  { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
   { label: 'Negotiations', path: '/sales-head/leads', icon: HandRaisedIcon },
   { label: 'Bookings', path: '/sales-head/bookings', icon: ClipboardDocumentListIcon },
-  { label: 'All Leads', path: '/sales-head/all-leads', icon: UsersIcon },
+  { label: 'All Leads', path: '/sales-head/all-leads', icon: UserPlusIcon },
   { label: 'Team', path: '/sales-head/team', icon: BriefcaseIcon },
 ];
 
 // ── Collection Manager ──
 const collectionSidebar = [
-  { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
   { label: 'Bookings', path: '/collection/bookings', icon: ClipboardDocumentListIcon },
   { label: 'Payments', path: '/collection/payments', icon: CreditCardIcon },
 ];
 
 // ── Accounts Executive ──
 const accountsSidebar = [
-  { label: 'Dashboard', path: '/dashboard', icon: ChartBarIcon },
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
   { label: 'Verify Payments', path: '/accounts/verify', icon: MagnifyingGlassIcon },
 ];
 
@@ -160,18 +163,18 @@ export const sidebarMenu = adminSidebar;
 // ── Portal menus (key-based, used inside workspace components) ──
 export const telecallerMenu = [
   { group: 'Menu' },
-  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
-  { label: 'Leads', key: 'leads', icon: UsersIcon, badgeColor: 'blue' },
-  { label: 'SV Leads', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
-  { label: 'Performance Tracker', key: 'pipeline', icon: ClipboardDocumentListIcon, badge: null },
-  { label: 'Call Log', key: 'calllog', icon: DevicePhoneMobileIcon, badge: null },
+  { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
+  { label: 'Leads', key: 'leads', icon: UserPlusIcon, badgeColor: 'blue' },
+  { label: 'SV Leads', key: 'handoffs', icon: MapPinIcon, badgeColor: 'purple' },
+  { label: 'Performance Tracker', key: 'pipeline', icon: TrophyIcon, badge: null },
+  { label: 'Call Log', key: 'calllog', icon: PhoneArrowDownLeftIcon, badge: null },
   // { label: 'Pull Requests', key: 'pullrequests', icon: InboxArrowDownIcon, badgeColor: 'red' },
 ];
 
 export const salesManagerMenu = [
   { group: 'Menu' },
-  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
-  { label: 'My Leads', key: 'leads', icon: UsersIcon, badgeColor: 'green' },
+  { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
+  { label: 'My Leads', key: 'leads', icon: UserPlusIcon, badgeColor: 'green' },
   { label: 'Negotiations', key: 'handoffs', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
@@ -180,7 +183,7 @@ export const salesManagerMenu = [
 
 export const salesHeadMenu = [
   { group: 'Sales' },
-  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
   { label: 'Negotiation Leads', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'My Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
   { label: 'Bookings Analytics', key: 'bookingsummary', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
@@ -192,7 +195,7 @@ export const salesHeadMenu = [
 
 export const collectionMenu = [
   { group: 'Overview' },
-  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
   { label: 'My Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { label: 'Payment Log', key: 'payments', icon: BanknotesIcon, badge: null },
   { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },
@@ -201,7 +204,7 @@ export const collectionMenu = [
 
 export const accountsMenu = [
   { group: 'Menu' },
-  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
   { label: 'Verify Payments', key: 'verify', icon: MagnifyingGlassIcon, badgeColor: 'orange' },
   { label: 'Accounts Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];

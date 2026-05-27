@@ -6,12 +6,11 @@ import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   HandRaisedIcon,
-  UsersIcon,
   ArrowPathIcon,
   DocumentTextIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline';
-
-const ICON_SIZE = { width: 22, height: 22 };
+import { Avatar, StatusChip, leadName } from '../common/dashWidgets';
 
 const SalesHeadDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -42,10 +41,10 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
   }
 
   const statCards = [
-    { label: 'Under Negotiation', value: stats?.inNegotiation ?? 0, icon: <HandRaisedIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', valueColor: 'var(--accent-purple)', change: 'In negotiation stage', changeType: 'neutral' },
-    { label: 'Hot Negotiations', value: stats?.hotNegotiations ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-red-bg)', iconColor: 'var(--accent-red)', valueColor: 'var(--accent-red)', change: 'High priority leads', changeType: 'up' },
-    { label: 'Warm Negotiations', value: stats?.warmNegotiations ?? 0, icon: <ArrowPathIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Medium priority leads', changeType: 'neutral' },
-    { label: 'Follow Up', value: stats?.followUpCount ?? 0, icon: <DocumentTextIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', valueColor: 'var(--accent-blue)', change: 'Today follow-ups', changeType: 'neutral' },
+    { label: 'Under Negotiation', value: stats?.inNegotiation ?? 0, valueColor: 'var(--accent-purple)' },
+    { label: 'Hot Negotiations', value: stats?.hotNegotiations ?? 0, valueColor: 'var(--accent-red)' },
+    { label: 'Warm Negotiations', value: stats?.warmNegotiations ?? 0, valueColor: 'var(--accent-yellow)' },
+    { label: 'Follow Up', value: stats?.followUpCount ?? 0, valueColor: 'var(--accent-blue)' },
   ];
 
   return (
@@ -61,120 +60,81 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
       </div>
 
       {/* Stats */}
-      <div className="stats-grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="stat-bar">
         {statCards.map((card) => (
-          <div className="stat-card" key={card.label}>
-            <div className="stat-card-header">
-              <div className="stat-card-label">{card.label}</div>
-              <div className="stat-card-icon" style={{ background: card.iconBg, color: card.iconColor }}>{card.icon}</div>
-            </div>
-            <div className="stat-card-value" style={card.valueColor ? { color: card.valueColor } : {}}>{card.value}</div>
-            <div className={`stat-card-change change-${card.changeType}`}>{card.change}</div>
+          <div className="stat" key={card.label}>
+            <div className="stat-label">{card.label}</div>
+            <div className="stat-val" style={card.valueColor ? { color: card.valueColor } : {}}>{card.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4">
+      <div className="dash-grid">
         {/* Negotiation Leads Today */}
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HandRaisedIcon style={{ width: 18, height: 18 }} /> Negotiation Leads Today (Latest 10)</div>
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><HandRaisedIcon /> Negotiation Leads Today</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count">{stats?.negotiationLeads?.length ?? 0}</span>
+            </div>
           </div>
-          <div className="crm-card-body-flush" style={{ padding: 0 }}>
+          <div className="dash-widget-body">
             {(!stats?.negotiationLeads || stats.negotiationLeads.length === 0) ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No leads in negotiation today.</div>
+              <div className="dash-empty">No leads in negotiation today.</div>
             ) : (
-              <table className="crm-table">
-                <thead>
-                  <tr>
-                    <th>Lead</th>
-                    <th>Project</th>
-                    <th className="hide-tablet">Customer Type</th>
-                    <th className="hide-tablet">Motivation</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.negotiationLeads.map(lead => (
-                    <tr key={lead.id}>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{lead.fullName}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.lead_number}</div>
-                      </td>
-                      <td>{lead.projectName}</td>
-                      <td className="hide-tablet">
-                        {lead.customerType ? (
-                          <span className="col-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)', fontSize: 11 }}>
-                            {lead.customerType}
-                          </span>
-                        ) : '—'}
-                      </td>
-                      <td className="hide-tablet">
-                        {lead.motivationType ? (
-                          <span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
-                            {lead.motivationType}
-                          </span>
-                        ) : '—'}
-                      </td>
-                      <td>
-                        <span className="col-badge" style={{ background: `${lead.statusColor}22`, color: lead.statusColor, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {lead.statusName}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="crm-btn crm-btn-ghost crm-btn-sm"
-                          onClick={() => {
-                            if (!lead?.id) return;
-                            navigate(`/portal/lead/${lead.id}`);
-                          }}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              stats.negotiationLeads.map((lead) => (
+                <div key={lead.id} className="dash-row" onClick={() => lead?.id && navigate(`/portal/lead/${lead.id}`)}>
+                  <Avatar name={leadName(lead)} color={lead.statusColor} />
+                  <div className="dash-main">
+                    <div className="dash-name">{leadName(lead)}</div>
+                    <div className="dash-meta">
+                      {lead.lead_number && <span className="dash-meta-item">{lead.lead_number}</span>}
+                      <span className="dash-meta-item"><MapPinIcon /> {lead.projectName || '-'}</span>
+                      {lead.customerType && <span className="dash-chip" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>{lead.customerType}</span>}
+                      {lead.motivationType && <span className="dash-chip" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{lead.motivationType}</span>}
+                    </div>
+                  </div>
+                  <div className="dash-right">
+                    <StatusChip name={lead.statusName} color={lead.statusColor} />
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); lead?.id && navigate(`/portal/lead/${lead.id}`); }}>View</button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
 
         {/* Latest Bookings */}
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <div className="crm-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><DocumentTextIcon style={{ width: 18, height: 18 }} /> Latest 10 Bookings</div>
+        <div className="dash-widget">
+          <div className="dash-widget-head">
+            <div className="dash-widget-title"><DocumentTextIcon /> Latest Bookings</div>
+            <div className="dash-widget-actions">
+              <span className="dash-count">{stats?.latestBookings?.length ?? 0}</span>
+            </div>
           </div>
-          <div className="crm-card-body-flush" style={{ padding: 0 }}>
+          <div className="dash-widget-body">
             {(!stats?.latestBookings || stats.latestBookings.length === 0) ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No recent bookings found.</div>
+              <div className="dash-empty">No recent bookings found.</div>
             ) : (
-              <table className="crm-table">
-                <thead>
-                  <tr>
-                    <th>Buyer</th>
-                    <th>Project</th>
-                    <th>Net Value</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.latestBookings.map(booking => (
-                    <tr key={booking.id}>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{booking.customer_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.booking_number}</div>
-                      </td>
-                      <td>{booking.project_name}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--accent-green)' }}>{formatCurrency(booking.net_amount)}</td>
-                      <td>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => onNavigate('BOOKINGS', { selectedId: booking.id })}>Details</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              stats.latestBookings.map((booking) => (
+                <div key={booking.id} className="dash-row" onClick={() => onNavigate('BOOKINGS', { selectedId: booking.id })}>
+                  <Avatar name={booking.customer_name} color="#22c55e" />
+                  <div className="dash-main">
+                    <div className="dash-name">{booking.customer_name}</div>
+                    <div className="dash-meta">
+                      {booking.booking_number && <span className="dash-meta-item">{booking.booking_number}</span>}
+                      <span className="dash-meta-item"><MapPinIcon /> {booking.project_name || '-'}</span>
+                    </div>
+                  </div>
+                  <div className="dash-right">
+                    <div className="dash-due">
+                      <span className="dash-due-label">Net value</span>
+                      <span className="dash-due-val" style={{ fontWeight: 700, fontSize: 13, color: 'var(--accent-green)' }}>{formatCurrency(booking.net_amount)}</span>
+                    </div>
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={(e) => { e.stopPropagation(); onNavigate('BOOKINGS', { selectedId: booking.id }); }}>Details</button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
