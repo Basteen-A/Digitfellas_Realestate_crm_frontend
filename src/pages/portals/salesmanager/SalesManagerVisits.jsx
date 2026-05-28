@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const SalesManagerVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
@@ -81,7 +82,7 @@ const SalesManagerVisits = ({ onNavigate }) => {
             <button className={`crm-btn ${filter === 'completed' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('completed')}>Completed</button>
             <button className={`crm-btn ${filter === 'cancelled' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('cancelled')}>Cancelled</button>
           </div>
-          <button className="crm-btn crm-btn-ghost" onClick={loadVisits}> Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadVisits}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 

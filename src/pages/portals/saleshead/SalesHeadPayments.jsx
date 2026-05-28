@@ -4,7 +4,7 @@ import bookingApi from '../../../api/bookingApi';
 import paymentTypeApi from '../../../api/paymentTypeApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { CreditCardIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CreditCardIcon, ClockIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadPayments = ({ user }) => {
@@ -80,7 +80,7 @@ const SalesHeadPayments = ({ user }) => {
           <p className="hidden sm:block">Add payments and track collection progress for bookings</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadBookings}>Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadBookings}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 

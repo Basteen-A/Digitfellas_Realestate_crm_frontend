@@ -302,11 +302,6 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     }
   };
 
-  const handleOpenLeadFromLookup = (leadId) => {
-    closePhoneLookup();
-    navigate(`/portal/lead/${leadId}`);
-  };
-
   const handleCreateLeadFromLookup = () => {
     const phone = normalizePhoneLookup(phoneLookupValue);
     if (!phone) return;
@@ -595,11 +590,6 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                           </span>
                         </div>
 
-                        <div className="portal-phone-modal__actions">
-                          <button type="button" className="portal-phone-modal__secondary" onClick={() => handleOpenLeadFromLookup(lead.id)}>
-                            Open Lead
-                          </button>
-                        </div>
                       </div>
                     ))}
                   </>

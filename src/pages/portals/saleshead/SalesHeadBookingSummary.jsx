@@ -395,9 +395,8 @@ const SalesHeadBookingSummary = () => {
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={expandAll}>Expand All</button>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={collapseAll}>Collapse All</button>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => load()} disabled={loading}>
-            <ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4, verticalAlign: 'text-bottom', animation: loading ? 'tc-spin 1s linear infinite' : 'none' }} />
-            {loading ? 'Refreshing...' : 'Refresh'}
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={() => load()} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>

@@ -6,7 +6,22 @@ import {
 } from '@heroicons/react/24/outline';
 import './CalendarPicker.css';
 
-const CalendarPicker = ({ 
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// Date-only strings (YYYY-MM-DD) are parsed in LOCAL time. `new Date('2026-05-29')`
+// would otherwise be treated as UTC midnight, which renders/serialises as the previous
+// day in positive-offset timezones (e.g. IST, +5:30).
+const parseCalendarValue = (val) => {
+  if (!val) return null;
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    const [y, m, d] = val.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const dt = new Date(val);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const CalendarPicker = ({
   value, 
   onChange, 
   type = 'date', // 'date' | 'datetime'
@@ -18,7 +33,7 @@ const CalendarPicker = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null);
+  const [selectedDate, setSelectedDate] = useState(() => parseCalendarValue(value));
   const wrapperRef = useRef(null);
   const minD = minDate ? new Date(minDate) : null;
   const maxD = maxDate ? new Date(maxDate) : null;
@@ -30,14 +45,23 @@ const CalendarPicker = ({
     return nextDate;
   };
 
+  // For date-only pickers emit a local YYYY-MM-DD string so the selection is never
+  // shifted across a day boundary by UTC conversion, and so it matches the quick-chip
+  // values. datetime pickers keep the full ISO timestamp.
+  const emitChange = (dateObj) => {
+    if (type === 'date') {
+      onChange(`${dateObj.getFullYear()}-${pad2(dateObj.getMonth() + 1)}-${pad2(dateObj.getDate())}`);
+    } else {
+      onChange(dateObj.toISOString());
+    }
+  };
+
   // Sync prop value
   useEffect(() => {
-    if (value) {
-      const d = new Date(value);
-      if (!isNaN(d.getTime())) {
-        setSelectedDate(d);
-        setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-      }
+    const d = parseCalendarValue(value);
+    if (d) {
+      setSelectedDate(d);
+      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
     } else {
       setSelectedDate(null);
     }
@@ -73,7 +97,7 @@ const CalendarPicker = ({
     const nextDate = clampToBounds(newDate);
 
     setSelectedDate(nextDate);
-    onChange(nextDate.toISOString());
+    emitChange(nextDate);
     if (type === 'date') setIsOpen(false);
   };
 
@@ -132,7 +156,7 @@ const CalendarPicker = ({
     const nextDate = clampToBounds(today);
     setSelectedDate(nextDate);
     setCurrentMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
-    onChange(nextDate.toISOString());
+    emitChange(nextDate);
     if (type === 'date') setIsOpen(false);
   };
 
@@ -192,7 +216,7 @@ const CalendarPicker = ({
                     newD.setHours(newH);
                     const nextDate = clampToBounds(newD);
                     setSelectedDate(nextDate);
-                    onChange(nextDate.toISOString());
+                    emitChange(nextDate);
                   }}
                   disabled={!selectedDate}
                 />
@@ -212,7 +236,7 @@ const CalendarPicker = ({
                     newD.setMinutes(val);
                     const nextDate = clampToBounds(newD);
                     setSelectedDate(nextDate);
-                    onChange(nextDate.toISOString());
+                    emitChange(nextDate);
                   }}
                   disabled={!selectedDate}
                 />
@@ -226,7 +250,7 @@ const CalendarPicker = ({
                     newD.setHours(h >= 12 ? h - 12 : h + 12);
                     const nextDate = clampToBounds(newD);
                     setSelectedDate(nextDate);
-                    onChange(nextDate.toISOString());
+                    emitChange(nextDate);
                   }}
                   disabled={!selectedDate}
                 >

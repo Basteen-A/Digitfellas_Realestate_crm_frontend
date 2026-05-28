@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 
 const TelecallerPullRequests = ({ user }) => {
@@ -48,8 +49,8 @@ const TelecallerPullRequests = ({ user }) => {
           <p className="hidden sm:block">Sales Managers requesting to take over your leads</p>
         </div>
         <div className="page-header-right">
-          <button className="crm-btn crm-btn-ghost" onClick={loadPullRequests} disabled={loading}>
-             Refresh
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadPullRequests} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
           </button>
         </div>
       </div>

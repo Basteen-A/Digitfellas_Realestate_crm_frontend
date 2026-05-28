@@ -168,8 +168,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
           <p>Here's your collection overview for today — {today}</p>
         </div>
         <div className="col-page-header-actions">
-          <button className="col-btn col-btn-ghost col-btn-sm" onClick={loadStats}>
-            <ArrowPathIcon style={{ width: 14, height: 14 }} /> Refresh
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadStats}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
           </button>
           <button className="col-btn col-btn-primary" onClick={() => onNavigate('bookings')}>
             + New Booking

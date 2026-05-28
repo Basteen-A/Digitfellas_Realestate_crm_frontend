@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { EyeIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
@@ -100,7 +100,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
             onClick={() => loadHandoffs({ silent: true })}
             disabled={refreshing}
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
         <div className="handoff-leads__stats">
           <article className="crm-card handoff-stat-card"><p>Total</p><strong>{stats.total}</strong></article>
           {workspaceRole !== 'TC' && defaultType !== 'outgoing' && <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>}
-          {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card handoff-stat-card--pending"><p>Pending</p><strong>{stats.pending}</strong></article>}
+          {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card handoff-stat-card--pending"><p>Pending Acceptance</p><strong>{stats.pending}</strong></article>}
           <article className="crm-card handoff-stat-card"><p>{workspaceRole === 'TC' ? 'SV Done (Accepted)' : 'Outgoing (page)'}</p><strong>{stats.outgoing}</strong></article>
           {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Current Ownership</p><strong>{stats.current}</strong></article>}
         </div>
@@ -141,9 +141,19 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               )}
               <th>To</th>
               {showStage && <th>Stage</th>}
-              <th>Status</th>
-              {!isTC && <th className="hide-tablet">Remarks</th>}
-              <th className="hide-tablet">Assigned</th>
+              {isTC ? (
+                <>
+                  <th className="hide-tablet">Assigned</th>
+                  <th>Acceptance</th>
+                  <th>Status</th>
+                </>
+              ) : (
+                <>
+                  <th>Status</th>
+                  <th className="hide-tablet">Remarks</th>
+                  <th className="hide-tablet">Assigned</th>
+                </>
+              )}
               <th>Actions</th>
             </tr>
           </thead>
@@ -192,20 +202,39 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                     </span>
                   </td>
                 )}
-                <td>
-                  <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
-                    {row.statusName || '-'}
-                  </span>
-                </td>
-                {!isTC && (
-                  <td className="hide-tablet">
-                    <small>{dedupePipeText(row.remarks) || '-'}</small>
-                  </td>
+                {isTC ? (
+                  <>
+                    <td className="hide-tablet">
+                      <div>{row.currentAssigneeName || '-'}</div>
+                      <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
+                    </td>
+                    <td>
+                      <span className={`handoff-chip ${row.pendingAcceptance ? 'handoff-accept--pending' : 'handoff-accept--accepted'}`}>
+                        {row.pendingAcceptance ? 'Pending' : 'Accepted'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
+                        {row.statusName || '-'}
+                      </span>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td>
+                      <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
+                        {row.statusName || '-'}
+                      </span>
+                    </td>
+                    <td className="hide-tablet">
+                      <small>{dedupePipeText(row.remarks) || '-'}</small>
+                    </td>
+                    <td className="hide-tablet">
+                      <div>{row.currentAssigneeName || '-'}</div>
+                      <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
+                    </td>
+                  </>
                 )}
-                <td className="hide-tablet">
-                  <div>{row.currentAssigneeName || '-'}</div>
-                  <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
-                </td>
                 <td>
                   <button
                     className="crm-btn crm-btn-sm crm-btn-ghost"

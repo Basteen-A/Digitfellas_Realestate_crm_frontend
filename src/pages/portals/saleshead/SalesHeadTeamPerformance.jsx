@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const SalesHeadTeamPerformance = () => {
   const [loading, setLoading] = useState(true);
@@ -38,7 +39,7 @@ const SalesHeadTeamPerformance = () => {
           <p className="hidden sm:block">SMs who have shared leads with you</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={loadTeamData}>Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadTeamData}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 

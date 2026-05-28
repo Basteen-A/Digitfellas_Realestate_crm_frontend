@@ -1906,7 +1906,7 @@ textarea.crm-form-input {
 }
 
 .create-lead-input--success {
-  border-color: #22c55e;
+  border-color: #15803d;
 }
 
 .create-lead-input--success:focus {
@@ -2020,7 +2020,7 @@ textarea.crm-form-input {
 }
 
 .create-lead-phone-status__msg--success {
-  color: #22c55e;
+  color: var(--accent-green);
 }
 
 .create-lead-phone-status__btn {
@@ -2065,7 +2065,7 @@ textarea.crm-form-input {
 .create-lead-whatsapp-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #22c55e;
+  accent-color: #15803d;
   cursor: pointer;
   border-radius: 4px;
 }
@@ -5110,7 +5110,7 @@ textarea.crm-form-input {
 
 .create-lead-phone-input--success .form-control,
 .create-lead-phone-input--success .flag-dropdown {
-  border-color: #86efac !important;
+  border-color: #15803d !important;
 }
 
 .country-code-select {

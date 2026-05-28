@@ -118,7 +118,7 @@ const InventoryDashboard = () => {
                     <div className="inv-project-card__stat-label">Total</div>
                   </div>
                   <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value" style={{ color: '#22c55e' }}>
+                    <div className="inv-project-card__stat-value" style={{ color: 'var(--accent-green)' }}>
                       {available}
                     </div>
                     <div className="inv-project-card__stat-label">Available</div>

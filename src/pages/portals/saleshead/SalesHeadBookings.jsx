@@ -134,8 +134,8 @@ const SalesHeadBookings = ({ user }) => {
               </button>
             ))}
           </div>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadBookings} style={{ marginLeft: 10 }}>
-            Refresh
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadBookings} style={{ marginLeft: 10 }}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
           </button>
         </div>
       </div>

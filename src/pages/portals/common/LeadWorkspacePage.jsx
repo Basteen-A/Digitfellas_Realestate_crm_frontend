@@ -365,9 +365,14 @@ const isValidPhoneForCountry = (dialCode, localNumber) => {
   }
 };
 
+const REENGAGEABLE_STATUS_CODES = ['LOST', 'CLOSED_LOST', 'COLD_LOST', 'JUNK', 'SPAM'];
+
 const isClosedLostLead = (lead) => {
   const stageCode = String(lead?.stageCode || lead?.stage?.stage_code || '').trim().toUpperCase();
-  return stageCode === 'CLOSED_LOST';
+  if (stageCode === 'CLOSED_LOST') return true;
+  const statusCode = String(lead?.statusCode || lead?.status_code || lead?.status?.status_code || '')
+    .trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return REENGAGEABLE_STATUS_CODES.includes(statusCode);
 };
 
 const getLeadOwnerName = (lead) => {
@@ -3260,6 +3265,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <span className="show-mobile">Missed</span>
                 </button>
               )}
+              {workspaceRole === 'SM' && (
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`filter-tab ${activeTab === 'all' ? 'active' : ''}`}
+                >
+                  <span className="hide-mobile">All Leads</span>
+                  <span className="show-mobile">All</span>
+                </button>
+              )}
               {workspaceRole === 'TC' && (
                 <button
                   onClick={() => setActiveTab('new')}
@@ -3345,7 +3359,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         {workspaceRole !== 'SH' && (
                           <td className="hide-mobile">
                             <p className="lead-title">{lead.phone}</p>
-                            <small>{lead.email || '-'}</small>
                           </td>
                         )}
                         <td className="lead-col-status">

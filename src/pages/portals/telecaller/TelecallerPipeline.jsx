@@ -8,7 +8,7 @@ import {
   PhoneIcon,
   CalendarDaysIcon,
   NoSymbolIcon,
-  ArrowPathRoundedSquareIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import '../collection/CollectionWorkspace.css';
 
@@ -168,11 +168,11 @@ const TelecallerPipeline = ({ onNavigate }) => {
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
+            type="button"
             className="crm-btn crm-btn-ghost"
-            style={{ height: 38, borderRadius: 10, border: '1.5px solid var(--border-primary)', background: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
             onClick={() => load()}
           >
-            <ArrowPathRoundedSquareIcon style={{ width: 18, height: 18 }} /> Refresh
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
           </button>
         </div>
       </div>

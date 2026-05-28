@@ -395,7 +395,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
             ))}
           </div>
           {dateFilter === 'custom' && <input type="date" className="crm-form-input" value={customDate} onChange={(e) => setCustomDate(e.target.value)} style={{ height: 38, fontSize: 13, borderRadius: 10 }} />}
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ height: 38, borderRadius: 10, padding: '0 16px' }} onClick={fetchHandoffs}>Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={fetchHandoffs}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 

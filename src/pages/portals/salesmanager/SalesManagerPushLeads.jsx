@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const ELIGIBLE_STAGE_CODES = ['VISIT', 'REVISIT'];
 
@@ -72,8 +73,8 @@ const SalesManagerPushLeads = ({ onNavigate }) => {
           <p className="hidden sm:block">Move positive visit leads to negotiation with Sales Head</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={loadData} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadData} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>

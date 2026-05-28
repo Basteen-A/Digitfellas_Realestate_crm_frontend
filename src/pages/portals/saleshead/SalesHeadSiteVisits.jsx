@@ -113,7 +113,7 @@ const SalesHeadSiteVisits = () => {
               </button>
             ))}
           </div>
-          <button className="crm-btn crm-btn-ghost" onClick={() => selectedSM && loadVisits(selectedSM)} disabled={!selectedSM}><ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4 }} />Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={() => selectedSM && loadVisits(selectedSM)} disabled={!selectedSM}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 

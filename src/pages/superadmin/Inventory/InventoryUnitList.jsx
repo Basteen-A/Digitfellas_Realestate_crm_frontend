@@ -252,7 +252,7 @@ const InventoryUnitList = () => {
               <div className="inv-project-info__stat-label">Total</div>
             </div>
             <div className="inv-project-info__stat">
-              <div className="inv-project-info__stat-value" style={{ color: '#22c55e' }}>
+              <div className="inv-project-info__stat-value" style={{ color: 'var(--accent-green)' }}>
                 {parseInt(stats.available_units) || 0}
               </div>
               <div className="inv-project-info__stat-label">Available</div>

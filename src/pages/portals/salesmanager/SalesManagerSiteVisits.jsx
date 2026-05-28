@@ -5,9 +5,10 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
-import { HomeModernIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { HomeModernIcon, MapPinIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
+import CalendarPicker from '../../../components/common/CalendarPicker';
 
 // Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
 const FOLLOW_UP_SHORTCUTS = [
@@ -430,7 +431,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
               </button>
             ))}
           </div>
-          <button className="crm-btn crm-btn-ghost" onClick={loadVisits}>↻ Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadVisits}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
           <button className="crm-btn crm-btn-primary" onClick={handleOpenCreate}>+ Add Site Visit</button>
         </div>
       </div>
@@ -685,7 +686,12 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                     <div>
                       <label style={fieldLabelStyle}>Visit Date {svFieldsRequired ? '*' : ''}</label>
-                      <input type="date" value={createForm.scheduled_date} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_date: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired} />
+                      <CalendarPicker
+                        type="date"
+                        value={createForm.scheduled_date}
+                        onChange={(val) => setCreateForm(p => ({ ...p, scheduled_date: val }))}
+                        placeholder="Select visit date..."
+                      />
                     </div>
                     <div>
                       <label style={fieldLabelStyle}>Project {svFieldsRequired ? '*' : ''}</label>
@@ -705,12 +711,12 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                     <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Action Details (Required)</div>
                     <div style={{ marginBottom: 16 }}>
                       <label style={fieldLabelStyle}>Next Follow Up Date *</label>
-                      <input
+                      <CalendarPicker
                         type="date"
                         value={createForm.next_follow_up_at}
-                        onChange={(e) => setCreateForm((p) => ({ ...p, next_follow_up_at: e.target.value }))}
-                        style={fieldInputStyle}
-                        required
+                        onChange={(val) => setCreateForm((p) => ({ ...p, next_follow_up_at: val }))}
+                        placeholder="Select follow-up date..."
+                        minDate={new Date().toISOString()}
                       />
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                         {FOLLOW_UP_SHORTCUTS.map((shortcut) => {

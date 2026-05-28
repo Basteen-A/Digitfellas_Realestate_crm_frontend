@@ -113,7 +113,7 @@ const SalesHeadTeamLeads = () => {
           <p className="hidden sm:block">View your team's leads, site visits, and reassign between managers</p>
         </div>
         <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={loadTeam} disabled={loading}> Refresh</button>
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadTeam} disabled={loading}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
 

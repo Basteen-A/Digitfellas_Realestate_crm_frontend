@@ -256,8 +256,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               <button key={tab} className={`filter-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>{tab}</button>
             ))}
           </div>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadBookings}>
-            <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Refresh
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadBookings}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
           </button>
         </div>
       </div>
