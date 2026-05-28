@@ -995,7 +995,7 @@
   width: 100%;
   border-collapse: collapse;
 }
-.col-table-new thead { background: var(--accent-blue-bg); }
+.col-table-new thead { background: #625afa1f; }
 .col-table-new th {
   padding: 11px 14px;
   font-size: 11px;
@@ -1094,7 +1094,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--accent-purple-bg);
+  background: #625afa1f;
 }
 @media (max-width: 768px) {
   .col-table-scroll-y { max-height: 300px; }
