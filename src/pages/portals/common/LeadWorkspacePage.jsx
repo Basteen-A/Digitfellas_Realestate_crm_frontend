@@ -681,6 +681,16 @@ const getScheduledFollowUpIso = (activity) => {
   return firstValid ? new Date(firstValid).toISOString() : null;
 };
 
+// Two dates fall on the same local calendar day.
+const isSameLocalDay = (a, b) => (
+  a.getFullYear() === b.getFullYear()
+  && a.getMonth() === b.getMonth()
+  && a.getDate() === b.getDate()
+);
+
+// Convert a follow-up ISO timestamp to the date-only value the follow-up input expects.
+const followUpIsoToInputValue = (iso) => (iso ? toDateOnlyValue(new Date(iso)) : '');
+
 
 
 const formatActivityDescription = (description, activity) => {
@@ -787,7 +797,7 @@ const FilterDropdown = ({
   </details>
 );
 
-const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initialTab }) => {
+const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initialTab, prefillPhone = '' }) => {
   const CALL_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED'];
 
   const shouldShowCallStatus = (statusCode) => CALL_STATUS_CODES.includes(toCanonicalStatusCode(statusCode));
@@ -1892,10 +1902,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-open create modal when navigated from dashboard
+  // Auto-open create modal when navigated from dashboard (optionally with a pre-filled phone)
   useEffect(() => {
     if (autoOpenCreate && !newLeadOpen) {
       setNewLeadOpen(true);
+      const digits = sanitizePhoneNumberInput(prefillPhone);
+      if (digits) {
+        setNewLeadForm((prev) => ({ ...prev, phone: digits }));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenCreate]);
@@ -2590,7 +2604,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     }
   }, [quickActionLead, loadLeads, resetQuickWorkflowForm, isLeadReadOnly]);
 
-  const handleQuickWorkflowActionSelect = async (action) => {
+  const handleQuickWorkflowActionSelect = async (action, prefill = null) => {
     if (!action) return;
     if (isLeadReadOnly(quickActionLead)) {
       toast.error('This lead is view-only after handoff to Sales Head.');
@@ -2649,6 +2663,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       projectIds: quickActionLead?.interestedProjects?.length
         ? quickActionLead.interestedProjects.map((id) => String(id))
         : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : []),
+      // Prefill from the same-day previous update so it can be edited (rewritten).
+      ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
+      ...(prefill?.nextFollowUpAt ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
+      ...(prefill?.callResult ? { callResult: prefill.callResult } : {}),
     });
 
     if (action.needsAssignee) {
@@ -3278,7 +3296,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <th className="hide-mobile" style={{ width: 150 }}>Project/Location</th>
                   <th className="hide-tablet" style={{ width: 120 }}>Assigned</th>
                   <th className="hide-tablet" style={{ width: 150 }}>Remarks</th>
-                  <th className="lead-col-followup" style={{ textAlign: 'right' }}>Follow up</th>
+                  <th className="lead-col-followup" style={{ textAlign: 'center' }}>Follow up</th>
                 </tr>
               </thead>
               <tbody>
@@ -3387,7 +3405,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                 style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                                 onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
                               >
-                                <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> View
+                                <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> 
                               </button>
                             )}
                             {!lead.assignedToUserId && activeTab === 'new' && (
@@ -3449,13 +3467,31 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                         (a) => a.targetStatusCode === leadStatus && a.tone !== 'danger'
                                       );
                                       if (matchingAction) {
-                                        setTimeout(() => handleQuickWorkflowActionSelect(matchingAction), 100);
+                                        // If this lead was already updated today, prefill the form with
+                                        // that update so a same-day edit rewrites it instead of adding a row.
+                                        const todayUpdate = activities.find((a) => {
+                                          const d = new Date(a.at || a.created_at);
+                                          return !Number.isNaN(d.getTime())
+                                            && isSameLocalDay(d, new Date())
+                                            && getUserRemarkText(a);
+                                        });
+                                        const prefill = todayUpdate ? {
+                                          statusRemarkText: getUserRemarkText(todayUpdate),
+                                          // Activity metadata doesn't carry the follow-up date; fall back to the
+                                          // lead's current next_follow_up_date (set by the same-day update).
+                                          nextFollowUpAt: followUpIsoToInputValue(getScheduledFollowUpIso(todayUpdate) || lead.nextFollowUpAt),
+                                          callResult: todayUpdate.metadata?.statusRemarkResponseType
+                                            || todayUpdate.metadata?.callResult
+                                            || todayUpdate.metadata?.last_call_result
+                                            || '',
+                                        } : null;
+                                        setTimeout(() => handleQuickWorkflowActionSelect(matchingAction, prefill), 100);
                                       }
                                     }
                                   }
                                 }}
                               >
-                                <ArrowPathIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
+                                <BoltIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
                               </button>
                             )}
                           </div>
@@ -6069,7 +6105,19 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
                       return hasMeaningfulRemark && hasWorkflowContext;
                     });
-                    if (remarkActivities.length === 0) {
+                    // Same-day updates collapse into a single entry: activities are newest-first,
+                    // so keeping the first per local day shows that day's latest (the "rewrite").
+                    // Lead Activity tab still shows every entry, preserving the full audit trail.
+                    const seenDays = new Set();
+                    const dailyRemarkActivities = remarkActivities.filter((act) => {
+                      const d = new Date(act.at || act.created_at);
+                      if (Number.isNaN(d.getTime())) return true;
+                      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                      if (seenDays.has(dayKey)) return false;
+                      seenDays.add(dayKey);
+                      return true;
+                    });
+                    if (dailyRemarkActivities.length === 0) {
                       return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
                     }
                     return (
@@ -6085,7 +6133,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             </tr>
                           </thead>
                           <tbody>
-                            {remarkActivities.map((act) => {
+                            {dailyRemarkActivities.map((act) => {
                               const remarkText = getUserRemarkText(act);
                               const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
                               const callStatus = act.metadata?.statusRemarkResponseType

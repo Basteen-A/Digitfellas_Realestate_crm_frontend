@@ -57,6 +57,8 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
 
   const visibleRows = useMemo(() => rows.filter((row) => !isLostHandoffRow(row)), [rows]);
 
+  const isTC = workspaceRole === 'TC';
+
   const loadHandoffs = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
     else setLoading(true);
@@ -107,7 +109,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
         <div className="handoff-leads__stats">
           <article className="crm-card handoff-stat-card"><p>Total</p><strong>{stats.total}</strong></article>
           {workspaceRole !== 'TC' && defaultType !== 'outgoing' && <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>}
-          {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card"><p>Pending</p><strong>{stats.pending}</strong></article>}
+          {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card handoff-stat-card--pending"><p>Pending</p><strong>{stats.pending}</strong></article>}
           <article className="crm-card handoff-stat-card"><p>{workspaceRole === 'TC' ? 'SV Done (Accepted)' : 'Outgoing (page)'}</p><strong>{stats.outgoing}</strong></article>
           {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Current Ownership</p><strong>{stats.current}</strong></article>}
         </div>
@@ -125,13 +127,22 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
         <table className="handoff-leads__table">
           <thead>
             <tr>
-              <th>When</th>
-              <th>Lead</th>
-              <th className="hide-tablet">From</th>
+              {isTC ? (
+                <>
+                  <th>Lead</th>
+                  <th>When</th>
+                </>
+              ) : (
+                <>
+                  <th>When</th>
+                  <th>Lead</th>
+                  <th className="hide-tablet">From</th>
+                </>
+              )}
               <th>To</th>
               {showStage && <th>Stage</th>}
               <th>Status</th>
-              <th className="hide-tablet">Remarks</th>
+              {!isTC && <th className="hide-tablet">Remarks</th>}
               <th className="hide-tablet">Assigned</th>
               <th>Actions</th>
             </tr>
@@ -148,16 +159,28 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               </tr>
             )}
             {!loading && visibleRows.map((row) => (
-              <tr key={row.id}>
-                <td>{formatDateTime(row.handedOffAt)}</td>
-                <td>
-                  <div className="handoff-lead-name">{row.leadName || '-'}</div>
-                  <small>{row.leadNumber || '-'}</small>
-                </td>
-                <td className="hide-tablet">
-                  <div>{row.fromUserName || '-'}</div>
-                  <small>{ROLE_LABELS[row.fromUserRole] || row.fromUserRoleName || '-'}</small>
-                </td>
+              <tr key={row.id} className={row.pendingAcceptance ? 'handoff-row-pending' : ''}>
+                {isTC ? (
+                  <>
+                    <td>
+                      <div className="handoff-lead-name">{row.leadName || '-'}</div>
+                      <small>{row.leadNumber || '-'}</small>
+                    </td>
+                    <td>{formatDateTime(row.handedOffAt)}</td>
+                  </>
+                ) : (
+                  <>
+                    <td>{formatDateTime(row.handedOffAt)}</td>
+                    <td>
+                      <div className="handoff-lead-name">{row.leadName || '-'}</div>
+                      <small>{row.leadNumber || '-'}</small>
+                    </td>
+                    <td className="hide-tablet">
+                      <div>{row.fromUserName || '-'}</div>
+                      <small>{ROLE_LABELS[row.fromUserRole] || row.fromUserRoleName || '-'}</small>
+                    </td>
+                  </>
+                )}
                 <td>
                   <div>{row.toUserName || '-'}</div>
                   <small>{ROLE_LABELS[row.toUserRole] || row.toUserRoleName || '-'}</small>
@@ -174,9 +197,11 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                     {row.statusName || '-'}
                   </span>
                 </td>
-                <td className="hide-tablet">
-                  <small>{dedupePipeText(row.remarks) || '-'}</small>
-                </td>
+                {!isTC && (
+                  <td className="hide-tablet">
+                    <small>{dedupePipeText(row.remarks) || '-'}</small>
+                  </td>
+                )}
                 <td className="hide-tablet">
                   <div>{row.currentAssigneeName || '-'}</div>
                   <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>

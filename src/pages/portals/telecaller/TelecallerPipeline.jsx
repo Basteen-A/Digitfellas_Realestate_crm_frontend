@@ -10,48 +10,21 @@ import {
   NoSymbolIcon,
   ArrowPathRoundedSquareIcon,
 } from '@heroicons/react/24/outline';
+import '../collection/CollectionWorkspace.css';
 
 const DATE_FILTER_OPTIONS = [
   { value: 'all', label: 'All Dates' },
   { value: 'today', label: 'Today' },
-  { value: 'tomorrow', label: 'Tomorrow' },
   { value: 'yesterday', label: 'Yesterday' },
   { value: 'this_week', label: 'This Week' },
   { value: 'custom', label: 'Custom Date' },
 ];
 
 const PIPELINE_COLUMNS = [
-  {
-    key: 'RNR',
-    title: 'RNR',
-    statusCode: 'RNR',
-    icon: <NoSymbolIcon />,
-    cardGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    shadow: 'rgba(217, 119, 6, 0.28)',
-  },
-  {
-    key: 'FOLLOW_UP',
-    title: 'Follow Up',
-    statusCode: 'FOLLOW_UP',
-    icon: <PhoneIcon />,
-    cardGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-    shadow: 'rgba(59, 130, 246, 0.28)',
-  },
-  {
-    key: 'SV_SCHEDULED',
-    title: 'Scheduled',
-    statusCode: 'SV_SCHEDULED',
-    icon: <CalendarDaysIcon />,
-    cardGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-    shadow: 'rgba(109, 40, 217, 0.28)',
-  },
-  {
-    key: 'DISQUALIFIED',
-    title: 'Unqualified',
-    icon: <NoSymbolIcon />,
-    cardGradient: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-    shadow: 'rgba(185, 28, 28, 0.28)',
-  },
+  { key: 'RNR', title: 'RNR', statusCode: 'RNR', icon: <NoSymbolIcon />, variant: 'warning', sub: 'no response' },
+  { key: 'FOLLOW_UP', title: 'Follow Up', statusCode: 'FOLLOW_UP', icon: <PhoneIcon />, variant: 'info', sub: 'to follow up' },
+  { key: 'SV_SCHEDULED', title: 'Scheduled', statusCode: 'SV_SCHEDULED', icon: <CalendarDaysIcon />, variant: 'purple', sub: 'site visits' },
+  { key: 'DISQUALIFIED', title: 'Unqualified', icon: <NoSymbolIcon />, variant: 'danger', sub: 'lost / junk' },
 ];
 
 /** Compute date-only boundaries for a date filter value */
@@ -64,13 +37,6 @@ const getDateRange = (filterValue, customFrom, customTo) => {
       const todayEnd = new Date(todayStart);
       todayEnd.setHours(23, 59, 59, 999);
       return { from: todayStart.toISOString(), to: todayEnd.toISOString() };
-    }
-    case 'tomorrow': {
-      const tomorrowStart = new Date(todayStart);
-      tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-      const tomorrowEnd = new Date(tomorrowStart);
-      tomorrowEnd.setHours(23, 59, 59, 999);
-      return { from: tomorrowStart.toISOString(), to: tomorrowEnd.toISOString() };
     }
     case 'yesterday': {
       const yesterdayStart = new Date(todayStart);
@@ -141,10 +107,10 @@ const TelecallerPipeline = ({ onNavigate }) => {
     try {
       const leadParams = { roleCode: 'TC', assignedToMe: true, includeClosed: true, limit: 100, page };
 
-      // Apply date filter server-side
+      // Apply date filter server-side — count leads worked (last_contacted_at) in the period
       const dateRange = getDateRange(dateFilter, customFromDate, customToDate);
-      if (dateRange.from) leadParams.nextFollowUpFrom = dateRange.from;
-      if (dateRange.to) leadParams.nextFollowUpTo = dateRange.to;
+      if (dateRange.from) leadParams.contactedFrom = dateRange.from;
+      if (dateRange.to) leadParams.contactedTo = dateRange.to;
 
       const resp = await leadWorkflowApi.getLeads(leadParams);
       const leadRows = extractLeadRows(resp);
@@ -178,22 +144,8 @@ const TelecallerPipeline = ({ onNavigate }) => {
 
   const statCards = useMemo(() => {
     const baseCards = [
-      {
-        key: 'TOTAL',
-        label: 'Total Leads',
-        value: totalLeads,
-        icon: <UsersIcon />,
-        cardGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        shadow: 'rgba(59, 130, 246, 0.30)',
-      },
-      {
-        key: 'QUALIFIED',
-        label: 'Qualified Leads',
-        value: qualifiedLeads,
-        icon: <CheckCircleIcon />,
-        cardGradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-        shadow: 'rgba(16, 185, 129, 0.30)',
-      },
+      { key: 'TOTAL', label: 'Total Leads', value: totalLeads, icon: <UsersIcon />, variant: '', sub: 'assigned to you' },
+      { key: 'QUALIFIED', label: 'Qualified Leads', value: qualifiedLeads, icon: <CheckCircleIcon />, variant: 'success', sub: 'still active' },
     ];
 
     const statusCards = PIPELINE_COLUMNS.map((column) => ({
@@ -201,8 +153,8 @@ const TelecallerPipeline = ({ onNavigate }) => {
       label: column.title,
       value: getLeadsByColumn(column).length,
       icon: column.icon,
-      cardGradient: column.cardGradient,
-      shadow: column.shadow,
+      variant: column.variant,
+      sub: column.sub,
     }));
 
     return [...baseCards, ...statusCards];
@@ -215,34 +167,6 @@ const TelecallerPipeline = ({ onNavigate }) => {
           <h1>Performance Tracker</h1>
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select
-            className="crm-form-select"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            style={{ minWidth: 150, height: 38, borderRadius: 10, border: '1.5px solid var(--border-primary)' }}
-          >
-            {DATE_FILTER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          {dateFilter === 'custom' && (
-            <div style={{ display: 'flex', gap: 4 }}>
-              <input
-                type="date"
-                className="crm-form-input"
-                value={customFromDate}
-                onChange={(e) => setCustomFromDate(e.target.value)}
-                style={{ height: 38, borderRadius: 10, width: 130 }}
-              />
-              <input
-                type="date"
-                className="crm-form-input"
-                value={customToDate}
-                onChange={(e) => setCustomToDate(e.target.value)}
-                style={{ height: 38, borderRadius: 10, width: 130 }}
-              />
-            </div>
-          )}
           <button
             className="crm-btn crm-btn-ghost"
             style={{ height: 38, borderRadius: 10, border: '1.5px solid var(--border-primary)', background: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
@@ -253,76 +177,77 @@ const TelecallerPipeline = ({ onNavigate }) => {
         </div>
       </div>
 
+      <div className="pipeline-date-filter">
+        {DATE_FILTER_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`pipeline-date-chip ${dateFilter === option.value ? 'active' : ''}`}
+            onClick={() => setDateFilter(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+        {dateFilter === 'custom' && (
+          <div style={{ display: 'flex', gap: 6, marginLeft: 4 }}>
+            <input
+              type="date"
+              className="crm-form-input"
+              value={customFromDate}
+              onChange={(e) => setCustomFromDate(e.target.value)}
+              style={{ height: 36, borderRadius: 999, padding: '0 12px', border: '1.5px solid var(--border-primary)', width: 140 }}
+            />
+            <input
+              type="date"
+              className="crm-form-input"
+              value={customToDate}
+              onChange={(e) => setCustomToDate(e.target.value)}
+              style={{ height: 36, borderRadius: 999, padding: '0 12px', border: '1.5px solid var(--border-primary)', width: 140 }}
+            />
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-secondary)' }}>
           <div style={{ width: 32, height: 32, border: '3px solid var(--accent-blue-bg)', borderTopColor: 'var(--accent-blue)', borderRadius: '50%', animation: 'tc-spin 0.8s linear infinite', margin: '0 auto 16px' }} />
           <p>Loading your pipeline...</p>
         </div>
       ) : (
-        <>
-          <div className="pipeline-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-            {statCards.map((card) => (
-              <div
-                key={card.key}
-                className="pipeline-stat-card"
-                style={{
-                  background: card.cardGradient,
-                  borderRadius: 16,
-                  padding: '20px 24px',
-                  color: '#fff',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: `0 10px 15px -3px ${card.shadow}`,
-                }}
-              >
-                {React.cloneElement(card.icon, {
-                  style: {
-                    position: 'absolute',
-                    right: -10,
-                    top: -10,
-                    width: 80,
-                    height: 80,
-                    opacity: 0.15,
-                  },
-                })}
-                <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.9, marginBottom: 4 }}>{card.label}</div>
-                <div style={{ fontSize: 32, fontWeight: 800 }}>{card.value}</div>
+        <div className="col-stat-grid-new">
+          {statCards.map((card) => (
+            <div className={`col-stat-card-new ${card.variant || ''}`} key={card.key}>
+              <div className="col-stat-label-new">{card.label}</div>
+              <div className="col-stat-value-new">{card.value}</div>
+              {card.sub && <div className="col-stat-sub-new">{card.sub}</div>}
+              <div className="col-stat-icon-new">
+                {card.icon ? React.cloneElement(card.icon, { style: { width: 24, height: 24 } }) : null}
               </div>
-            ))}
-          </div>
-
-          {/* ── Pagination ── */}
-          {meta.totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '14px 0', marginBottom: 16 }}>
-              <button
-                type="button"
-                className="crm-btn crm-btn-ghost"
-                onClick={() => load(meta.page - 1)}
-                disabled={meta.page <= 1}
-                style={{ minWidth: 36, padding: '6px 10px', fontSize: 13, height: 34, borderRadius: 8 }}
-              >
-                ← Prev
-              </button>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                Page {meta.page} of {meta.totalPages} · {meta.total} total
-              </span>
-              <button
-                type="button"
-                className="crm-btn crm-btn-ghost"
-                onClick={() => load(meta.page + 1)}
-                disabled={meta.page >= meta.totalPages}
-                style={{ minWidth: 36, padding: '6px 10px', fontSize: 13, height: 34, borderRadius: 8 }}
-              >
-                Next →
-              </button>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
 
       <style>{`
         @keyframes tc-spin { to { transform: rotate(360deg); } }
-        .pipeline-stat-card:hover { transform: translateY(-2px); }
+        .pipeline-date-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px; }
+        .pipeline-date-chip {
+          padding: 7px 14px;
+          border-radius: 999px;
+          border: 1.5px solid var(--border-primary);
+          background: var(--bg-card, #fff);
+          color: var(--text-secondary);
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .pipeline-date-chip:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+        .pipeline-date-chip.active {
+          background: var(--accent-blue, #5b4fcf);
+          border-color: var(--accent-blue, #5b4fcf);
+          color: #fff;
+        }
       `}</style>
     </div>
   );

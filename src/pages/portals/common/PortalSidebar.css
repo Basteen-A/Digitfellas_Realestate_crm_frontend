@@ -462,8 +462,7 @@
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
 }
 
-.portal-phone-modal__header,
-.portal-phone-modal__footer {
+.portal-phone-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -525,6 +524,46 @@
   font-family: inherit;
 }
 
+/* Phone lookup input (react-phone-input-2) — mirrors the new-lead creation field */
+.portal-phone-lookup-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.portal-phone-lookup-input .form-control {
+  width: 100% !important;
+  height: 46px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border-secondary) !important;
+  background: var(--bg-input, var(--bg-secondary)) !important;
+  color: var(--text-primary) !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+  padding-left: 52px !important;
+  box-shadow: none !important;
+}
+
+.portal-phone-lookup-input .flag-dropdown,
+.portal-phone-lookup-input .flag-dropdown .selected-flag {
+  border-radius: 12px 0 0 12px !important;
+  background: var(--bg-input, var(--bg-secondary)) !important;
+}
+
+.portal-phone-lookup-input .flag-dropdown {
+  border: 1px solid var(--border-secondary) !important;
+}
+
+.portal-phone-lookup-input .selected-flag {
+  padding: 0 0 0 11px !important;
+}
+
+.portal-phone-lookup-input .country-list {
+  width: 320px !important;
+  max-width: min(90vw, 320px) !important;
+  background: var(--bg-card, var(--bg-secondary)) !important;
+  color: var(--text-primary) !important;
+}
+
 .portal-phone-modal__check-btn,
 .portal-phone-modal__primary,
 .portal-phone-modal__secondary {
@@ -564,83 +603,142 @@
   color: var(--accent-red);
 }
 
-.portal-phone-modal__results {
-  padding: 0 20px 20px;
+.portal-phone-modal__check-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.portal-phone-modal__body {
+  padding: 6px 20px 22px;
   display: grid;
   gap: 12px;
 }
 
-.portal-phone-modal__empty {
-  padding: 18px 14px;
-  border-radius: 12px;
-  background: var(--bg-secondary);
+/* ── Empty / not-found states ── */
+.portal-phone-modal__empty-state,
+.portal-phone-modal__notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 36px 16px;
   color: var(--text-muted);
-  font-size: 13px;
+}
+
+.portal-phone-modal__empty-state p,
+.portal-phone-modal__notfound p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.portal-phone-modal__empty-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.portal-phone-modal__notfound p {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ── Found state ── */
+.portal-phone-modal__found {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-green, #16a34a);
 }
 
 .portal-phone-modal__result-card {
-  padding: 14px;
+  padding: 4px 16px;
   border: 1px solid var(--border-secondary);
   border-radius: 14px;
   background: var(--bg-secondary);
 }
 
-.portal-phone-modal__result-top {
+.portal-phone-modal__row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  padding: 12px 0;
 }
 
-.portal-phone-modal__muted {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.portal-phone-modal__status {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.portal-phone-modal__status.is-open {
-  background: rgba(34, 197, 94, 0.12);
-  color: #166534;
-}
-
-.portal-phone-modal__status.is-closed {
-  background: rgba(239, 68, 68, 0.12);
-  color: #991b1b;
-}
-
-.portal-phone-modal__meta {
-  display: grid;
-  gap: 6px;
+.portal-phone-modal__row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
-.portal-phone-modal__meta span {
+.portal-phone-modal__row-value {
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
+  text-align: right;
+}
+
+.portal-phone-modal__divider {
+  height: 1px;
+  background: var(--border-secondary);
+  margin: 0 -16px;
+}
+
+.portal-phone-modal__badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.portal-phone-modal__badge.is-open {
+  background: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+}
+
+.portal-phone-modal__badge.is-closed {
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
+.portal-phone-modal__assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-phone-modal__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: var(--gradient-primary, var(--accent-primary, #625afa));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .portal-phone-modal__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 14px;
+  padding: 12px 0 14px;
 }
 
-.portal-phone-modal__footer {
-  border-top: 1px solid var(--border-secondary);
-  justify-content: flex-end;
+.portal-phone-modal__primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .portal-content {

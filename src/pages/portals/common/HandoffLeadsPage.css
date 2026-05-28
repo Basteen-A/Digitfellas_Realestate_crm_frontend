@@ -72,6 +72,14 @@
   letter-spacing: 0.4px;
 }
 
+.handoff-row-pending td {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.handoff-stat-card.handoff-stat-card--pending {
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .handoff-lead-name {
   color: var(--text-primary);
   font-weight: 600;

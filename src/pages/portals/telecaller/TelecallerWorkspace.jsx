@@ -52,7 +52,12 @@ const TelecallerWorkspace = () => {
               />
             )}
             {activeScreen === 'leads-addnew' && (
-              <LeadWorkspacePage user={user} workspaceRole="TC" autoOpenCreate />
+              <LeadWorkspacePage
+                user={user}
+                workspaceRole="TC"
+                autoOpenCreate
+                prefillPhone={screenContext?.prefillPhone || ''}
+              />
             )}
             {activeScreen === 'pipeline' && (
               <TelecallerPipeline user={user} onNavigate={handleNavigate} />

@@ -683,7 +683,8 @@
   color: var(--text-secondary, #64748b);
   white-space: nowrap;
   flex-shrink: 0;
-  text-align: right;
+  display: flex;
+  align-items: center;
 }
 
 /* ── Layout ── */

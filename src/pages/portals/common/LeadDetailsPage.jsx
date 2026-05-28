@@ -249,6 +249,16 @@ const getScheduledFollowUpIso = (activity) => {
   return firstValid ? new Date(firstValid).toISOString() : null;
 };
 
+// Two dates fall on the same local calendar day.
+const isSameLocalDay = (a, b) => (
+  a.getFullYear() === b.getFullYear()
+  && a.getMonth() === b.getMonth()
+  && a.getDate() === b.getDate()
+);
+
+// Convert a follow-up ISO timestamp to the date-only value the follow-up input expects.
+const followUpIsoToInputValue = (iso) => (iso ? toDateOnlyValue(new Date(iso)) : '');
+
 const parseAsUtcIfNeeded = (rawDateText) => {
   const direct = new Date(rawDateText);
   if (!Number.isNaN(direct.getTime())) {
@@ -475,7 +485,7 @@ const LeadDetailsPage = () => {
   const followupRemarkActivities = useMemo(() => {
     const timeline = Array.isArray(lead?.timeline) ? lead.timeline : [];
 
-    return [...timeline]
+    const sorted = [...timeline]
       .filter((evt) => {
         const remarkText = getUserRemarkText(evt);
         const statusLabel = getRemarkHistoryStatusLabel(evt, workflowConfig);
@@ -490,6 +500,18 @@ const LeadDetailsPage = () => {
         return hasMeaningfulRemark && hasWorkflowContext;
       })
       .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+    // Same-day updates collapse into a single entry (the day's latest). The full
+    // timeline still shows every entry via visibleTimelineActivities.
+    const seenDays = new Set();
+    return sorted.filter((evt) => {
+      const d = new Date(evt.at);
+      if (Number.isNaN(d.getTime())) return true;
+      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (seenDays.has(dayKey)) return false;
+      seenDays.add(dayKey);
+      return true;
+    });
   }, [lead?.timeline, workflowConfig]);
 
   const visibleTimelineActivities = useMemo(() => {
@@ -791,7 +813,7 @@ const LeadDetailsPage = () => {
 
 
 
-  const handleQuickActionPick = async (code) => {
+  const handleQuickActionPick = async (code, prefill = null) => {
     if (isSmShUnassignedReadOnly) {
       toast.error('Actions are disabled for unassigned leads. Assign the lead first.');
       return;
@@ -807,6 +829,10 @@ const LeadDetailsPage = () => {
       budgetMin: lead?.budgetMin ?? '',
       budgetMax: lead?.budgetMax ?? '',
       callResult: action.targetStatusCode === 'RNR' || action.code.includes('RNR') ? 'Not Answered' : 'Answered',
+      // Prefill from the same-day previous update so it can be edited (rewritten).
+      ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
+      ...(prefill?.nextFollowUpAt ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
+      ...(prefill?.callResult ? { callResult: prefill.callResult } : {}),
     }));
 
     setQuickStatusRemarks([]);
@@ -1124,23 +1150,42 @@ const LeadDetailsPage = () => {
 
               setQuickActionsOpen(true);
               setQaActiveTab('history');
-              
+
+              // Load activities first so a same-day reopen can prefill the last update.
+              let activities = [];
+              try {
+                const actResp = await leadWorkflowApi.getLeadActivities(lead.id);
+                activities = actResp.data || [];
+                setQuickActionActivities(activities);
+              } catch {
+                setQuickActionActivities([]);
+              }
+
               // Pre-select the action based on lead's current status (last activity)
               const currentAction = roleActions.find(a => a.targetStatusCode === lead.statusCode);
               if (currentAction) {
-                await handleQuickActionPick(currentAction.code);
+                // If this lead was already updated today, prefill that update so a same-day
+                // edit rewrites it instead of adding a new remark-history row.
+                const todayUpdate = activities.find((a) => {
+                  const d = new Date(a.at || a.created_at);
+                  return !Number.isNaN(d.getTime())
+                    && isSameLocalDay(d, new Date())
+                    && getUserRemarkText(a);
+                });
+                const prefill = todayUpdate ? {
+                  statusRemarkText: getUserRemarkText(todayUpdate),
+                  // Activity metadata doesn't carry the follow-up date; fall back to the
+                  // lead's current next_follow_up_date (set by the same-day update).
+                  nextFollowUpAt: followUpIsoToInputValue(getScheduledFollowUpIso(todayUpdate) || lead.nextFollowUpAt),
+                  callResult: todayUpdate.metadata?.statusRemarkResponseType
+                    || todayUpdate.metadata?.callResult
+                    || todayUpdate.metadata?.last_call_result
+                    || '',
+                } : null;
+                await handleQuickActionPick(currentAction.code, prefill);
               } else {
                 setQuickActionCode('');
                 setQuickActionForm(actionInitialState);
-              }
-
-              try {
-                const [actResp] = await Promise.all([
-                  leadWorkflowApi.getLeadActivities(lead.id)
-                ]);
-                setQuickActionActivities(actResp.data || []);
-              } catch {
-                setQuickActionActivities([]);
               }
             }}
             title={isSmShUnassignedReadOnly
@@ -2684,7 +2729,18 @@ const LeadDetailsPage = () => {
                     const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
                     return hasMeaningfulRemark && hasWorkflowContext;
                   });
-                  if (remarkActivities.length === 0) {
+                  // Same-day updates collapse into a single entry; activities are newest-first
+                  // so the first per local day is that day's latest. Lead Activity keeps all.
+                  const seenDays = new Set();
+                  const dailyRemarkActivities = remarkActivities.filter((act) => {
+                    const d = new Date(act.at || act.created_at);
+                    if (Number.isNaN(d.getTime())) return true;
+                    const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                    if (seenDays.has(dayKey)) return false;
+                    seenDays.add(dayKey);
+                    return true;
+                  });
+                  if (dailyRemarkActivities.length === 0) {
                     return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
                   }
                   return (
@@ -2700,7 +2756,7 @@ const LeadDetailsPage = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {remarkActivities.map((act) => {
+                          {dailyRemarkActivities.map((act) => {
                             const remarkText = getUserRemarkText(act);
                               const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
                             const callStatus = act.metadata?.statusRemarkResponseType

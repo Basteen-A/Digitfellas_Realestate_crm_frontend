@@ -8,6 +8,8 @@ import notificationApi from '../../../api/notificationApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import PortalSidebar from './PortalSidebar';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import {
   Bars3Icon,
   ChevronLeftIcon,
@@ -22,10 +24,20 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
+  PhoneXMarkIcon,
+  CheckCircleIcon,
+  TagIcon,
+  CalendarDaysIcon,
+  UserPlusIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import './PortalSidebar.css';
 
 const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 6 };
+
+// Phone helpers — mirror the new-lead creation form so the lookup input behaves identically.
+const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
+const sanitizeCountryCodeDigits = (value) => String(value || '').replace(/\D/g, '').slice(0, 4);
 
 const SCREEN_TITLES = {
   dashboard: 'Dashboard',
@@ -75,10 +87,11 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const notifMenuRef = useRef(null);
   const [phoneLookupOpen, setPhoneLookupOpen] = useState(false);
   const [phoneLookupValue, setPhoneLookupValue] = useState('');
+  const [phoneLookupCountryCode, setPhoneLookupCountryCode] = useState('+91');
   const [phoneLookupLoading, setPhoneLookupLoading] = useState(false);
   const [phoneLookupResults, setPhoneLookupResults] = useState([]);
-  const [phoneLookupMessage, setPhoneLookupMessage] = useState('');
   const [phoneLookupError, setPhoneLookupError] = useState('');
+  const [phoneLookupSearched, setPhoneLookupSearched] = useState(false);
   const [screenContext, setScreenContext] = useState(null);
   const locationScreen = location.state?.screen;
   const locationScreenData = location.state?.screenData;
@@ -229,42 +242,60 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
 
   const normalizePhoneLookup = (value) => String(value || '').replace(/\D/g, '').slice(0, 15);
 
-  const openPhoneLookup = () => {
-    setPhoneLookupOpen(true);
+  const formatLookupDate = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const lookupInitials = (name) => {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    return `${parts[0][0] || ''}${parts.length > 1 ? parts[parts.length - 1][0] || '' : ''}`.toUpperCase();
+  };
+
+  const resetPhoneLookup = () => {
+    setPhoneLookupValue('');
+    setPhoneLookupCountryCode('+91');
+    setPhoneLookupResults([]);
     setPhoneLookupError('');
-    setPhoneLookupMessage('');
+    setPhoneLookupSearched(false);
+    setPhoneLookupLoading(false);
+  };
+
+  const openPhoneLookup = () => {
+    resetPhoneLookup();
+    setPhoneLookupOpen(true);
   };
 
   const closePhoneLookup = () => {
     setPhoneLookupOpen(false);
-    setPhoneLookupLoading(false);
-    setPhoneLookupError('');
-    setPhoneLookupMessage('');
+    resetPhoneLookup();
   };
 
   const handlePhoneLookup = async (event) => {
     event.preventDefault();
-    const phone = normalizePhoneLookup(phoneLookupValue);
+    const phone = sanitizePhoneNumberInput(phoneLookupValue);
 
     if (phone.length < 7) {
       setPhoneLookupError('Enter at least 7 digits.');
       setPhoneLookupResults([]);
+      setPhoneLookupSearched(false);
       return;
     }
 
     setPhoneLookupLoading(true);
     setPhoneLookupError('');
-    setPhoneLookupMessage('');
 
     try {
       const response = await leadWorkflowApi.searchLeadByPhone(phone);
       const rows = Array.isArray(response) ? response : response?.data || [];
       setPhoneLookupResults(rows);
-      setPhoneLookupMessage(rows.length > 0
-        ? `${rows.length} lead${rows.length === 1 ? '' : 's'} found for this phone.`
-        : 'No lead found for this phone. You can create a new lead.');
+      setPhoneLookupSearched(true);
     } catch (error) {
       setPhoneLookupResults([]);
+      setPhoneLookupSearched(false);
       setPhoneLookupError(error?.response?.data?.message || 'Unable to check this phone number.');
     } finally {
       setPhoneLookupLoading(false);
@@ -280,7 +311,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     const phone = normalizePhoneLookup(phoneLookupValue);
     if (!phone) return;
     closePhoneLookup();
-    handleNavigate('addlead', { prefillPhone: phone });
+    handleNavigate('leads-addnew', { prefillPhone: phone });
   };
 
   return (
@@ -446,8 +477,8 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
             <div className="portal-phone-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
               <div className="portal-phone-modal__header">
                 <div>
-                  <h3>Phone Lookup</h3>
-                  <p>Check whether this number already exists in the CRM.</p>
+                  <h3>Phone number lookup</h3>
+                  <p>Check if a number exists in the CRM and who owns it</p>
                 </div>
                 <button type="button" className="portal-phone-modal__close" onClick={closePhoneLookup} aria-label="Close lookup">
                   <XMarkIcon style={{ width: 18, height: 18 }} />
@@ -456,22 +487,32 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
 
               <form className="portal-phone-modal__form" onSubmit={handlePhoneLookup}>
                 <label className="portal-phone-modal__label" htmlFor="portal-phone-lookup">
-                  Phone number
+                  Enter phone number
                 </label>
                 <div className="portal-phone-modal__input-row">
-                  <input
-                    id="portal-phone-lookup"
-                    type="tel"
-                    className="portal-phone-modal__input"
-                    value={phoneLookupValue}
-                    onChange={(e) => setPhoneLookupValue(normalizePhoneLookup(e.target.value))}
-                    placeholder="Enter phone number"
-                    inputMode="numeric"
-                    autoComplete="off"
+                  <PhoneInput
+                    country="in"
+                    enableSearch
+                    countryCodeEditable={false}
+                    value={`${sanitizeCountryCodeDigits(phoneLookupCountryCode)}${phoneLookupValue}`}
+                    onChange={(value, data) => {
+                      const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
+                      const raw = String(value || '');
+                      const localPart = data?.dialCode && raw.startsWith(data.dialCode)
+                        ? raw.slice(data.dialCode.length)
+                        : raw;
+                      setPhoneLookupCountryCode(dialCode);
+                      setPhoneLookupValue(sanitizePhoneNumberInput(localPart));
+                    }}
+                    inputProps={{ id: 'portal-phone-lookup', name: 'phone', placeholder: 'Phone number' }}
+                    containerClass="portal-phone-lookup-input"
+                    inputClass="portal-phone-lookup-input__control"
+                    buttonClass="portal-phone-lookup-input__button"
+                    dropdownClass="portal-phone-lookup-input__dropdown"
                   />
                   <button type="submit" className="portal-phone-modal__check-btn" disabled={phoneLookupLoading}>
                     <MagnifyingGlassIcon style={{ width: 16, height: 16 }} />
-                    {phoneLookupLoading ? 'Checking…' : 'Check'}
+                    {phoneLookupLoading ? 'Searching…' : 'Search'}
                   </button>
                 </div>
               </form>
@@ -483,53 +524,87 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                 </div>
               )}
 
-              {phoneLookupMessage && !phoneLookupError && (
-                <div className="portal-phone-modal__notice">
-                  {phoneLookupMessage}
-                </div>
-              )}
-
-              <div className="portal-phone-modal__results">
-                {phoneLookupResults.length === 0 ? (
-                  <div className="portal-phone-modal__empty">
-                    No results yet. Run a phone check to see current status and owner.
+              <div className="portal-phone-modal__body">
+                {!phoneLookupSearched && !phoneLookupError && (
+                  <div className="portal-phone-modal__empty-state">
+                    <PhoneXMarkIcon className="portal-phone-modal__empty-icon" />
+                    <p>Enter a number above to check its status and assigned owner</p>
                   </div>
-                ) : (
-                  phoneLookupResults.map((lead) => (
-                    <div key={lead.id} className="portal-phone-modal__result-card">
-                      <div className="portal-phone-modal__result-top">
-                        <div>
-                          <strong>{lead.fullName || lead.leadNumber || 'Unnamed lead'}</strong>
-                          <div className="portal-phone-modal__muted">{lead.leadNumber || 'No lead number'}</div>
-                        </div>
-                        <span className={`portal-phone-modal__status ${lead.isClosed ? 'is-closed' : 'is-open'}`}>
-                          {lead.currentStatus || lead.statusLabel || 'Unknown status'}
-                        </span>
-                      </div>
+                )}
 
-                      <div className="portal-phone-modal__meta">
-                        <div><span>Held by:</span> {lead.currentHeldBy || 'Unassigned'}</div>
-                        <div><span>Role:</span> {lead.assignedToRoleName || lead.assignedToRole || 'N/A'}</div>
-                      </div>
+                {phoneLookupSearched && phoneLookupResults.length === 0 && (
+                  <div className="portal-phone-modal__notfound">
+                    <PhoneXMarkIcon className="portal-phone-modal__empty-icon" />
+                    <p>No lead found for this number.</p>
+                    {roleName === 'Telecaller' && (
+                      <button type="button" className="portal-phone-modal__primary" onClick={handleCreateLeadFromLookup}>
+                        <PlusIcon style={{ width: 16, height: 16 }} />
+                        Create new lead with this number
+                      </button>
+                    )}
+                  </div>
+                )}
 
-                      <div className="portal-phone-modal__actions">
-                        <button type="button" className="portal-phone-modal__secondary" onClick={() => handleOpenLeadFromLookup(lead.id)}>
-                          Open Lead
-                        </button>
-                       
-                      </div>
+                {phoneLookupSearched && phoneLookupResults.length > 0 && (
+                  <>
+                    <div className="portal-phone-modal__found">
+                      <CheckCircleIcon style={{ width: 18, height: 18 }} />
+                      <span>Number found in CRM</span>
                     </div>
-                  ))
+
+                    {phoneLookupResults.map((lead) => (
+                      <div key={lead.id} className="portal-phone-modal__result-card">
+                        <div className="portal-phone-modal__row">
+                          <span className="portal-phone-modal__row-label">
+                            <UserIcon style={{ width: 16, height: 16 }} /> Lead name
+                          </span>
+                          <span className="portal-phone-modal__row-value">
+                            {lead.fullName || lead.leadNumber || 'Unnamed lead'}
+                          </span>
+                        </div>
+
+                        <div className="portal-phone-modal__row">
+                          <span className="portal-phone-modal__row-label">
+                            <TagIcon style={{ width: 16, height: 16 }} /> Status
+                          </span>
+                          <span className="portal-phone-modal__row-value">
+                            <span className={`portal-phone-modal__badge ${lead.isClosed ? 'is-closed' : 'is-open'}`}>
+                              {lead.currentStatus || lead.statusLabel || 'Unknown'}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="portal-phone-modal__divider" />
+
+                        <div className="portal-phone-modal__row">
+                          <span className="portal-phone-modal__row-label">
+                            <UserPlusIcon style={{ width: 16, height: 16 }} /> Assigned to
+                          </span>
+                          <span className="portal-phone-modal__row-value portal-phone-modal__assignee">
+                            <span className="portal-phone-modal__avatar">{lookupInitials(lead.assignedToName)}</span>
+                            {lead.assignedToName || 'Unassigned'}
+                          </span>
+                        </div>
+
+                        <div className="portal-phone-modal__row">
+                          <span className="portal-phone-modal__row-label">
+                            <CalendarDaysIcon style={{ width: 16, height: 16 }} /> Next follow-up
+                          </span>
+                          <span className="portal-phone-modal__row-value">
+                            {formatLookupDate(lead.nextFollowUpDate)}
+                          </span>
+                        </div>
+
+                        <div className="portal-phone-modal__actions">
+                          <button type="button" className="portal-phone-modal__secondary" onClick={() => handleOpenLeadFromLookup(lead.id)}>
+                            Open Lead
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
                 )}
               </div>
-
-              {phoneLookupResults.length === 0 && roleName === 'Telecaller' && phoneLookupMessage && !phoneLookupError && (
-                <div className="portal-phone-modal__footer">
-                  <button type="button" className="portal-phone-modal__primary" onClick={handleCreateLeadFromLookup}>
-                    Create Lead With This Number
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         )}

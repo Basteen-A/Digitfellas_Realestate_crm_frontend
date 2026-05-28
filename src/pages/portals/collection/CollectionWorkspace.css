@@ -874,6 +874,7 @@
 .col-btn:active { transform: translateY(0); }
 .col-btn-primary { background: var(--accent-blue, #5b4fcf); color: white; }
 .col-btn-success { background: var(--accent-green, #10b981); color: white; }
+.col-btn-success-soft { background: rgba(16, 185, 129, 0.13); color: var(--accent-green, #10b981); }
 .col-btn-danger { background: var(--accent-red, #ef4444); color: white; }
 .col-btn-warning { background: #f59e0b; color: #1a1a1a; }
 .col-btn-ghost {
@@ -920,6 +921,7 @@
 .col-stat-card-new.warning::before { background: #f59e0b; }
 .col-stat-card-new.danger::before  { background: var(--accent-red, #ef4444); }
 .col-stat-card-new.info::before    { background: #3b82f6; }
+.col-stat-card-new.purple::before  { background: #8b5cf6; }
 
 .col-stat-label-new {
   font-size: 11px;
