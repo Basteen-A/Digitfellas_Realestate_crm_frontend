@@ -82,7 +82,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const firstName = user?.first_name || user?.firstName || 'User';
-  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  // const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
   const kpiCards = [
     { label: 'New Leads', value: stats?.newLeadsToday ?? 0, sub: 'unclaimed today', icon: UserPlusIcon, variant: 'info' },
