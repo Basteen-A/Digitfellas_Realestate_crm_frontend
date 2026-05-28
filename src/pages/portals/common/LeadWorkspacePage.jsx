@@ -3360,7 +3360,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             {lead.statusLabel}
                           </span>
                           {lead.nextFollowUpAt && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#64748b', fontSize: 11, fontWeight: 500 }}>
+                            <div  className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#64748b', fontSize: 11, fontWeight: 500 }}>
                               <CalendarDaysIcon style={{ width: 12, height: 12, color: '#64748b' }} />
                               <span>{formatDate(lead.nextFollowUpAt)}</span>
                             </div>
