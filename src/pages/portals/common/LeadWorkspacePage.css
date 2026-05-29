@@ -5037,6 +5037,27 @@ textarea.crm-form-input {
   align-items: flex-start;
 }
 
+.create-lead-phone-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Dial code shown inside the flag box (just right of the flag). */
+.create-lead-phone-wrap::before {
+  content: attr(data-dial);
+  position: absolute;
+  left: 38px;
+  top: 1px;
+  bottom: 1px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 3;
+}
+
 .create-lead-phone-input {
   width: 100%;
 }
@@ -5049,7 +5070,7 @@ textarea.crm-form-input {
   font-size: 13px !important;
   color: var(--text-primary) !important;
   background: var(--bg-card, #fff) !important;
-  padding-left: 52px !important;
+  padding-left: 82px !important;
   box-shadow: none !important;
 }
 
@@ -5060,7 +5081,13 @@ textarea.crm-form-input {
 }
 
 .create-lead-phone-input .selected-flag {
+  width: 70px !important;
   padding: 0 0 0 11px !important;
+}
+
+/* Hide the default caret; the whole flag box stays clickable to open the list. */
+.create-lead-phone-input .selected-flag .arrow {
+  display: none !important;
 }
 
 .create-lead-phone-input .country-list {

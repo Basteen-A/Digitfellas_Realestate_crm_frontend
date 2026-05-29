@@ -14,11 +14,12 @@ import {
   XCircleIcon,
   InboxArrowDownIcon,
 } from '@heroicons/react/24/outline';
-import { StatusChip, leadName } from '../common/dashWidgets';
+import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import '../collection/CollectionWorkspace.css';
 
 const SalesManagerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [stats, setStats] = useState(null);
   const [incomingPendingCount, setIncomingPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -106,6 +107,13 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
     );
   }
 
+  // On mobile, tapping a lead row dials the lead instead of opening the detail page.
+  const handleLeadRowClick = (lead) => {
+    const phone = leadPhone(lead);
+    if (isMobile && phone) { callLead(phone); return; }
+    if (lead?.id) navigate(`/portal/lead/${lead.id}`);
+  };
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const firstName = user?.first_name || user?.firstName || '';
@@ -132,9 +140,9 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
       </thead>
       <tbody>
         {rows.slice(0, 10).map((lead) => {
-          const due = lead.next_follow_up_date || lead.scheduled_at || lead.updated_at;
+          const due = lead.nextFollowUpDate || lead.nextFollowUpAt || lead.next_follow_up_date || lead.scheduled_at || lead.updated_at;
           return (
-            <tr key={lead.id} className="col-clickable-row" onClick={() => navigate(`/portal/lead/${lead.id}`)}>
+            <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadRowClick(lead)}>
               <td>
                 <div className="col-cell-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {leadName(lead)} <StatusChip name={lead.statusName} color={lead.statusColor} />
@@ -224,7 +232,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
                 <PhoneIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
                 <span>No follow-ups scheduled for today</span>
               </div>
-            ) : renderFollowUpTable(todayFollowUps, { dueLabel: 'Due', overdue: false })}
+            ) : renderFollowUpTable(todayFollowUps, { dueLabel: 'Follow-up Date', overdue: false })}
           </div>
         </div>
 
@@ -248,7 +256,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
                 <XCircleIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
                 <span>No missed follow-ups. Great work!</span>
               </div>
-            ) : renderFollowUpTable(missedFollowUps, { dueLabel: 'Overdue Since', overdue: true })}
+            ) : renderFollowUpTable(missedFollowUps, { dueLabel: 'Follow-up Date', overdue: true })}
           </div>
         </div>
       </div>

@@ -11,13 +11,21 @@ import {
   ExclamationTriangleIcon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
-import { StatusChip, leadName } from '../common/dashWidgets';
+import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // On mobile, tapping a lead row dials the lead instead of opening the detail page.
+  const handleLeadRowClick = (lead) => {
+    const phone = leadPhone(lead);
+    if (isMobile && phone) { callLead(phone); return; }
+    if (lead?.id) navigate(`/portal/lead/${lead.id}`);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,7 +131,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                 </thead>
                 <tbody>
                   {negotiationLeads.slice(0, 10).map((lead) => (
-                    <tr key={lead.id} className="col-clickable-row" onClick={() => lead?.id && navigate(`/portal/lead/${lead.id}`)}>
+                    <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadRowClick(lead)}>
                       <td>
                         <div className="col-cell-primary">{leadName(lead)}</div>
                         {lead.lead_number && <div className="col-cell-secondary col-cell-mono">{lead.lead_number}</div>}

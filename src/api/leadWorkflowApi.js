@@ -115,8 +115,8 @@ const leadWorkflowApi = {
 
   // ── Pull Request System ──
 
-  searchLeadByPhone: async (phone) => {
-    const { data } = await api.get('/leads/search-by-phone', { params: { phone } });
+  searchLeadByPhone: async (phone, countryCode) => {
+    const { data } = await api.get('/leads/search-by-phone', { params: { phone, countryCode } });
     return data;
   },
 

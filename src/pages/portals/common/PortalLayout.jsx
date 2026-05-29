@@ -37,7 +37,6 @@ const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'm
 
 // Phone helpers — mirror the new-lead creation form so the lookup input behaves identically.
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
-const sanitizeCountryCodeDigits = (value) => String(value || '').replace(/\D/g, '').slice(0, 4);
 
 const SCREEN_TITLES = {
   dashboard: 'Dashboard',
@@ -289,7 +288,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     setPhoneLookupError('');
 
     try {
-      const response = await leadWorkflowApi.searchLeadByPhone(phone);
+      const response = await leadWorkflowApi.searchLeadByPhone(phone, phoneLookupCountryCode);
       const rows = Array.isArray(response) ? response : response?.data || [];
       setPhoneLookupResults(rows);
       setPhoneLookupSearched(true);
@@ -485,26 +484,26 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                   Enter phone number
                 </label>
                 <div className="portal-phone-modal__input-row">
-                  <PhoneInput
-                    country="in"
-                    enableSearch
-                    countryCodeEditable={false}
-                    value={`${sanitizeCountryCodeDigits(phoneLookupCountryCode)}${phoneLookupValue}`}
-                    onChange={(value, data) => {
-                      const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
-                      const raw = String(value || '');
-                      const localPart = data?.dialCode && raw.startsWith(data.dialCode)
-                        ? raw.slice(data.dialCode.length)
-                        : raw;
-                      setPhoneLookupCountryCode(dialCode);
-                      setPhoneLookupValue(sanitizePhoneNumberInput(localPart));
-                    }}
-                    inputProps={{ id: 'portal-phone-lookup', name: 'phone', placeholder: 'Phone number' }}
-                    containerClass="portal-phone-lookup-input"
-                    inputClass="portal-phone-lookup-input__control"
-                    buttonClass="portal-phone-lookup-input__button"
-                    dropdownClass="portal-phone-lookup-input__dropdown"
-                  />
+                  <div className="portal-phone-lookup-wrap" data-dial={phoneLookupCountryCode}>
+                    <PhoneInput
+                      country="in"
+                      enableSearch
+                      disableCountryCode
+                      disableCountryGuess
+                      value={phoneLookupValue}
+                      onChange={(value, data) => {
+                        // disableCountryCode → value is the national number only.
+                        const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
+                        setPhoneLookupCountryCode(dialCode);
+                        setPhoneLookupValue(sanitizePhoneNumberInput(value));
+                      }}
+                      inputProps={{ id: 'portal-phone-lookup', name: 'phone', placeholder: 'Phone number' }}
+                      containerClass="portal-phone-lookup-input"
+                      inputClass="portal-phone-lookup-input__control"
+                      buttonClass="portal-phone-lookup-input__button"
+                      dropdownClass="portal-phone-lookup-input__dropdown"
+                    />
+                  </div>
                   <button type="submit" className="portal-phone-modal__check-btn" disabled={phoneLookupLoading}>
                     <MagnifyingGlassIcon style={{ width: 16, height: 16 }} />
                     {phoneLookupLoading ? 'Searching…' : 'Search'}

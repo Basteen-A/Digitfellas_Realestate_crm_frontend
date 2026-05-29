@@ -21,8 +21,9 @@
 }
 
 .auth-card__logo {
-  height: 60px;
+  height: 76px;
   width: auto;
+  max-width: 100%;
   object-fit: contain;
 }
 

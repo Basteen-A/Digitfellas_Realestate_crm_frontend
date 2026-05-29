@@ -5,10 +5,25 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
-import { HomeModernIcon, MapPinIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  HomeModernIcon, MapPinIcon, ArrowPathIcon, CheckCircleIcon, CalendarDaysIcon,
+  PhoneIcon, HandRaisedIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
 import CalendarPicker from '../../../components/common/CalendarPicker';
+import '../common/LeadWorkspacePage.css';
+
+// Map a workflow action code to the drawer status-button icon + accent class
+// (shared visual language with the Incoming-accept and Quick Action drawers).
+const getActionVisual = (code = '') => {
+  if (code.includes('SITE_VISIT') || code.includes('SV_DONE')) return { Icon: CheckCircleIcon, selClass: 'sel-sv-done' };
+  if (code.includes('REVISIT') || code.includes('SCHEDULE')) return { Icon: CalendarDaysIcon, selClass: 'sel-sv-scheduled' };
+  if (code.includes('FOLLOW_UP')) return { Icon: PhoneIcon, selClass: 'sel-follow-up' };
+  if (code.includes('NEGOTIATION')) return { Icon: HandRaisedIcon, selClass: 'sel-negotiation' };
+  if (code.includes('LOST') || code.includes('JUNK') || code.includes('SPAM')) return { Icon: ExclamationTriangleIcon, selClass: 'sel-junk' };
+  return { Icon: ClipboardDocumentListIcon, selClass: 'sel-default' };
+};
 
 // Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
 const FOLLOW_UP_SHORTCUTS = [
@@ -97,13 +112,12 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     if (!createForm.motivation_type) return false;
     if (!createForm.customer_requirement?.trim()) return false;
     if (!createForm.time_spent) return false;
+    if (!createForm.sales_head_id) return false;
 
     if (svFieldsRequired) {
       if (!createForm.project_id) return false;
       if (!createForm.scheduled_date) return false;
     }
-
-    if (selectedAction?.needsAssignee && !createForm.sales_head_id) return false;
     if (selectedAction?.needsFollowUp && !createForm.next_follow_up_at) return false;
     if (selectedAction?.needsReason && !createForm.closure_reason_id) return false;
     if (selectedAction?.needsRemark && !createForm.remarks?.trim()) return false;
@@ -353,11 +367,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
     if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
     if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
-
-    if (selectedAction.needsAssignee && !createForm.sales_head_id) {
-      toast.error('Assignee is required for selected action');
-      return;
-    }
+    if (!createForm.sales_head_id) { toast.error('Sales Head is required'); return; }
     if (selectedAction.needsFollowUp && !createForm.next_follow_up_at) {
       toast.error('Next follow up date is required for selected action');
       return;
@@ -380,6 +390,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       await leadWorkflowApi.transitionLead(createForm.lead_id, createForm.action_code, {
         note: createForm.remarks || `Action updated via ${selectedAction.label}`,
         assignToUserId: selectedAction.needsAssignee ? (createForm.sales_head_id || undefined) : undefined,
+        salesHeadUserId: createForm.sales_head_id || undefined,
         // Always send site-visit data if filled, regardless of action
         svDate: createForm.scheduled_date ? new Date(createForm.scheduled_date).toISOString() : undefined,
         svProjectId: createForm.project_id || undefined,
@@ -634,197 +645,171 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   </div>
                 )}
 
-                {/* ── Action Selection ── */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={fieldLabelStyle}>Action *</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
-                      {siteVisitActionOptions.map((action) => {
-                        const isActive = createForm.action_code === action.code;
-                        return (
-                          <button
-                            key={action.code}
-                            type="button"
-                            onClick={() => setCreateForm((p) => ({
-                              ...p,
-                              action_code: action.code,
-                              next_follow_up_at: '',
-                              closure_reason_id: '',
-                              reason_note: '',
-                              call_status: '',
-                              sales_head_id: '',
-                            }))}
-                            style={{
-                              border: isActive ? '1px solid var(--accent-blue)' : '1px solid var(--border-primary)',
-                              background: isActive ? 'var(--accent-blue-bg)' : 'var(--bg-card, #fff)',
-                              color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                              borderRadius: 8,
-                              padding: '10px 12px',
-                              textAlign: 'left',
-                              fontSize: 12,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {action.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {!createForm.action_code && (
-                      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-                        Select one action to continue.
-                      </div>
-                    )}
-                  </div>
+                {/* ── Update status (action grid) ── */}
+                <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Update status *</div>
+                <div className="qa-drawer-status-grid">
+                  {siteVisitActionOptions.map((action) => {
+                    const { Icon, selClass } = getActionVisual(action.code);
+                    const isActive = createForm.action_code === action.code;
+                    return (
+                      <button
+                        key={action.code}
+                        type="button"
+                        className={`qa-drawer-st-btn ${isActive ? selClass : ''}`}
+                        onClick={() => setCreateForm((p) => ({
+                          ...p,
+                          action_code: action.code,
+                          next_follow_up_at: '',
+                          closure_reason_id: '',
+                          reason_note: '',
+                          call_status: '',
+                        }))}
+                      >
+                        <div className="qa-drawer-st-icon"><Icon style={{ width: 18, height: 18 }} /></div>
+                        <div className="qa-drawer-st-label">{action.label}</div>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {/* ── Site Visit Details Section ── */}
-                <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Site Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={fieldLabelStyle}>Visit Date {svFieldsRequired ? '*' : ''}</label>
-                      <CalendarPicker
-                        type="date"
-                        value={createForm.scheduled_date}
-                        onChange={(val) => setCreateForm(p => ({ ...p, scheduled_date: val }))}
-                        placeholder="Select visit date..."
-                      />
-                    </div>
-                    <div>
-                      <label style={fieldLabelStyle}>Project {svFieldsRequired ? '*' : ''}</label>
-                      <select value={createForm.project_id} onChange={(e) => setCreateForm(p => ({ ...p, project_id: e.target.value }))} style={fieldInputStyle} required={svFieldsRequired}>
-                        <option value="">Select project...</option>
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.project_name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={fieldLabelStyle}>Time Slot</label>
-                      <input type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm(p => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10AM-12PM" style={fieldInputStyle} />
-                    </div>
-                  </div>
-
-                {selectedAction?.needsFollowUp && (
-                  <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Action Details (Required)</div>
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={fieldLabelStyle}>Next Follow Up Date *</label>
-                      <CalendarPicker
-                        type="date"
-                        value={createForm.next_follow_up_at}
-                        onChange={(val) => setCreateForm((p) => ({ ...p, next_follow_up_at: val }))}
-                        placeholder="Select follow-up date..."
-                        minDate={new Date().toISOString()}
-                      />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                        {FOLLOW_UP_SHORTCUTS.map((shortcut) => {
-                          const value = buildFollowUpShortcutValue(shortcut);
-                          return (
-                            <button
-                              key={shortcut.label}
-                              type="button"
-                              className="crm-btn crm-btn-ghost crm-btn-sm"
-                              onClick={() => setCreateForm((p) => ({ ...p, next_follow_up_at: value }))}
-                            >
-                              {shortcut.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                {!createForm.action_code && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>Select one action to continue.</div>
                 )}
 
-                {selectedAction?.needsReason && (
-                  <div style={{ marginBottom: 20, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>Action Details (Required)</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                      <div>
-                        <label style={fieldLabelStyle}>Closure Reason *</label>
+                {selectedAction && (
+                  <div style={{ animation: 'qa-fade-in 0.3s ease' }}>
+                    {/* Next follow-up date */}
+                    {selectedAction.needsFollowUp && (
+                      <div className="qa-drawer-ctx-block">
+                        <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date *</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                          {FOLLOW_UP_SHORTCUTS.map((shortcut) => {
+                            const value = buildFollowUpShortcutValue(shortcut);
+                            return (
+                              <button
+                                key={shortcut.label}
+                                type="button"
+                                className="qa-drawer-rchip"
+                                onClick={() => setCreateForm((p) => ({ ...p, next_follow_up_at: value }))}
+                              >
+                                {shortcut.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <CalendarPicker
+                          type="date"
+                          value={createForm.next_follow_up_at}
+                          onChange={(val) => setCreateForm((p) => ({ ...p, next_follow_up_at: val }))}
+                          placeholder="Select follow-up date..."
+                          minDate={new Date().toISOString()}
+                        />
+                      </div>
+                    )}
+
+                    {/* Closure reason */}
+                    {selectedAction.needsReason && (
+                      <div className="qa-drawer-ctx-block">
+                        <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Reason *</div>
                         <select
+                          className="qa-drawer-field-select"
+                          style={{ width: '100%', marginBottom: 8 }}
                           value={createForm.closure_reason_id}
                           onChange={(e) => setCreateForm((p) => ({ ...p, closure_reason_id: e.target.value }))}
-                          style={fieldInputStyle}
-                          required
                         >
                           <option value="">Select reason...</option>
                           {closureReasons.map((r) => (
                             <option key={r.id} value={r.id}>{r.reason_name || r.reason_text || r.reason}</option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label style={fieldLabelStyle}>Reason Notes</label>
                         <textarea
-                          value={createForm.reason_note}
-                          onChange={(e) => setCreateForm((p) => ({ ...p, reason_note: e.target.value }))}
+                          className="qa-drawer-field-input"
                           rows={2}
                           placeholder="Optional details..."
-                          style={fieldInputStyle}
+                          value={createForm.reason_note}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, reason_note: e.target.value }))}
                         />
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={fieldLabelStyle}>Customer Type *</label>
-                      <select value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm(p => ({ ...p, customer_type_id: e.target.value }))} style={fieldInputStyle} required>
-                        <option value="">Select...</option>
-                        {customerTypeOptions.map(ct => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={fieldLabelStyle}>Motivation *</label>
-                      <select value={createForm.motivation_type || ''} onChange={(e) => setCreateForm(p => ({ ...p, motivation_type: e.target.value }))} style={fieldInputStyle} required>
-                        <option value="">Select...</option>
-                        {motivationOptions.map(m => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={fieldLabelStyle}>Customer Requirement *</label>
-                      <input value={createForm.customer_requirement} onChange={(e) => setCreateForm(p => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" style={fieldInputStyle} required />
-                    </div>
-                    <div>
-                      <label style={fieldLabelStyle}>Time Spent (mins) *</label>
-                      <input type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm(p => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" style={fieldInputStyle} required />
-                    </div>
-                    {selectedAction?.needsAssignee && (
+                    <div className="qa-drawer-divider" />
+
+                    {/* ── Site Visit Details ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Site Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</div>
+                    <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
-                        <label style={fieldLabelStyle}>Sales Head (Assignee) *</label>
-                        <select value={createForm.sales_head_id} onChange={(e) => setCreateForm(p => ({ ...p, sales_head_id: e.target.value }))} style={fieldInputStyle} required>
+                        <label className="qa-drawer-field-label">Visit Date {svFieldsRequired ? '*' : ''}</label>
+                        <CalendarPicker
+                          type="date"
+                          value={createForm.scheduled_date}
+                          onChange={(val) => setCreateForm((p) => ({ ...p, scheduled_date: val }))}
+                          placeholder="Select visit date..."
+                        />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Project {svFieldsRequired ? '*' : ''}</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.project_id} onChange={(e) => setCreateForm((p) => ({ ...p, project_id: e.target.value }))} required={svFieldsRequired}>
+                          <option value="">Select project...</option>
+                          {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Time Slot</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm((p) => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10AM-12PM" />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Customer Type *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm((p) => ({ ...p, customer_type_id: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Motivation *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.motivation_type || ''} onChange={(e) => setCreateForm((p) => ({ ...p, motivation_type: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Customer Requirement *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.customer_requirement} onChange={(e) => setCreateForm((p) => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Time Spent (mins) *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm((p) => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Sales Head *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.sales_head_id} onChange={(e) => setCreateForm((p) => ({ ...p, sales_head_id: e.target.value }))} required>
                           <option value="">Select Sales Head...</option>
-                          {salesHeads.map(sh => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
+                          {salesHeads.map((sh) => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Remarks */}
+                    <div className="qa-drawer-remark-wrap">
+                      <label className="qa-drawer-field-label">Remarks {selectedAction.needsRemark ? '*' : ''}</label>
+                      <textarea className="qa-drawer-remark-ta" rows={2} value={createForm.remarks} onChange={(e) => setCreateForm((p) => ({ ...p, remarks: e.target.value }))} placeholder="What was discussed? What's the next step?" />
+                    </div>
+
+                    {/* Call status */}
+                    {selectedAction.needsCallStatus && (
+                      <div style={{ marginTop: 12 }}>
+                        <label className="qa-drawer-field-label">Call Status *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.call_status} onChange={(e) => setCreateForm((p) => ({ ...p, call_status: e.target.value }))} required>
+                          <option value="">Select call status...</option>
+                          <option value="answered">Answered</option>
+                          <option value="no_answer">No Answer</option>
+                          <option value="switched_off">Switched Off</option>
+                          <option value="busy">Busy</option>
+                          <option value="not_reachable">Not Reachable</option>
+                          <option value="invalid_number">Invalid Number</option>
                         </select>
                       </div>
                     )}
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={fieldLabelStyle}>Remarks {selectedAction?.needsRemark ? '*' : ''}</label>
-                      <textarea value={createForm.remarks} onChange={(e) => setCreateForm(p => ({ ...p, remarks: e.target.value }))} rows={2} placeholder="Additional remarks..." style={fieldInputStyle} required={selectedAction?.needsRemark} />
-                    </div>
-                  </div>
-
-                  {selectedAction?.needsCallStatus && (
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={fieldLabelStyle}>Call Status *</label>
-                      <select value={createForm.call_status} onChange={(e) => setCreateForm(p => ({ ...p, call_status: e.target.value }))} style={fieldInputStyle} required>
-                        <option value="">Select call status...</option>
-                        <option value="answered">Answered</option>
-                        <option value="no_answer">No Answer</option>
-                        <option value="switched_off">Switched Off</option>
-                        <option value="busy">Busy</option>
-                        <option value="not_reachable">Not Reachable</option>
-                        <option value="invalid_number">Invalid Number</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
+                )}
 
               </div>
               <div className="col-modal-footer">

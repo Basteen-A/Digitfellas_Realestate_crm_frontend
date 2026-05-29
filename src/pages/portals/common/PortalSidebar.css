@@ -93,6 +93,12 @@
     display: block;
   }
 
+  /* Mobile drawer shows the full logo, so restore the full-width logo area. */
+  .portal-sidebar.mobile-open.collapsed .portal-sidebar__brand-icon {
+    width: 100%;
+    height: 48px;
+  }
+
   .portal-sidebar.mobile-open.collapsed .portal-sidebar__link {
     justify-content: flex-start;
     padding: 8px 16px;
@@ -135,17 +141,47 @@
 }
 
 .portal-sidebar__brand-icon {
-  width: 120px; height: 48px; /* Increased width since text is gone */
+  width: 100%;
+  height: 48px;
   background: transparent;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
+  transition: width 0.2s ease, height 0.2s ease;
 }
 
+/* Collapsed rail: show just the square favicon mark, sized to fit the 70px width. */
+.portal-sidebar.collapsed .portal-sidebar__brand-icon {
+  width: 40px;
+  height: 40px;
+}
+
+/* Hover-expand restores the full-width logo area. */
+.portal-sidebar.collapsed:hover .portal-sidebar__brand-icon {
+  width: 100%;
+  height: 48px;
+}
+
+/* Image always scales to fit inside its box (no clipping, no distortion). */
 .sidebar-logo {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
+
+/* Expanded sidebar: full logo only. */
+.sidebar-logo--mark { display: none; }
+.sidebar-logo--full { display: block; }
+
+/* Collapsed rail: swap to the square favicon mark. */
+.portal-sidebar.collapsed .sidebar-logo--full { display: none; }
+.portal-sidebar.collapsed .sidebar-logo--mark { display: block; }
+
+/* Hover-expand (and mobile-open) brings back the full logo. */
+.portal-sidebar.collapsed:hover .sidebar-logo--full,
+.portal-sidebar.mobile-open.collapsed .sidebar-logo--full { display: block; }
+.portal-sidebar.collapsed:hover .sidebar-logo--mark,
+.portal-sidebar.mobile-open.collapsed .sidebar-logo--mark { display: none; }
 
 .portal-sidebar__brand-text {
   font-size: 16px; font-weight: 700; color: var(--text-primary);
@@ -527,9 +563,30 @@
 }
 
 /* Phone lookup input (react-phone-input-2) — mirrors the new-lead creation field */
-.portal-phone-lookup-input {
+.portal-phone-lookup-wrap {
+  position: relative;
   flex: 1;
   min-width: 0;
+}
+
+/* Dial code shown inside the flag box (just right of the flag). */
+.portal-phone-lookup-wrap::before {
+  content: attr(data-dial);
+  position: absolute;
+  left: 38px;
+  top: 1px;
+  bottom: 1px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.portal-phone-lookup-input {
+  width: 100%;
 }
 
 .portal-phone-lookup-input .form-control {
@@ -541,7 +598,7 @@
   color: var(--text-primary) !important;
   font-family: inherit !important;
   font-size: 14px !important;
-  padding-left: 52px !important;
+  padding-left: 82px !important;
   box-shadow: none !important;
 }
 
@@ -556,7 +613,13 @@
 }
 
 .portal-phone-lookup-input .selected-flag {
+  width: 70px !important;
   padding: 0 0 0 11px !important;
+}
+
+/* Hide the default caret; the whole flag box stays clickable to open the list. */
+.portal-phone-lookup-input .selected-flag .arrow {
+  display: none !important;
 }
 
 .portal-phone-lookup-input .country-list {
@@ -704,7 +767,7 @@
 
 .portal-phone-modal__badge.is-open {
   background: rgba(34, 197, 94, 0.14);
-  color: #16a34a;
+  color: #15803d;
 }
 
 .portal-phone-modal__badge.is-closed {
@@ -1042,8 +1105,8 @@
   }
 
   .portal-sidebar__brand-icon {
-    width: 100px;
-    height: 40px;
+    width: 100%;
+    height: 48px;
   }
 
   .portal-topbar__user-dropdown {

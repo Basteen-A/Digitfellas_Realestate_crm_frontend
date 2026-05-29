@@ -27,6 +27,14 @@ const dedupePipeText = (value) => {
   return unique.join(' | ');
 };
 
+// Site-visit and booked statuses render in a readable dark green rather than
+// the lighter tint stored in the DB color.
+const statusChipColor = (statusName, fallbackColor) => {
+  const lc = String(statusName || '').toLowerCase();
+  if (lc.includes('site visit') || lc.includes('book')) return '#15803d';
+  return fallbackColor || '#6B7280';
+};
+
 const isLostHandoffRow = (row) => {
   const statusCode = String(row?.statusCode || row?.status_code || '').trim().toUpperCase();
   const statusName = String(row?.statusName || row?.status_name || '').trim().toUpperCase();
@@ -143,8 +151,9 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               {showStage && <th>Stage</th>}
               {isTC ? (
                 <>
+                <th>Acceptance</th>
                   <th className="hide-tablet">Assigned</th>
-                  <th>Acceptance</th>
+                  
                   <th>Status</th>
                 </>
               ) : (
@@ -204,17 +213,18 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 )}
                 {isTC ? (
                   <>
-                    <td className="hide-tablet">
-                      <div>{row.currentAssigneeName || '-'}</div>
-                      <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
-                    </td>
-                    <td>
+                   <td>
                       <span className={`handoff-chip ${row.pendingAcceptance ? 'handoff-accept--pending' : 'handoff-accept--accepted'}`}>
                         {row.pendingAcceptance ? 'Pending' : 'Accepted'}
                       </span>
                     </td>
+                    <td className="hide-tablet">
+                      <div>{row.currentAssigneeName || '-'}</div>
+                      <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
+                    </td>
+                   
                     <td>
-                      <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
+                      <span className="handoff-chip" style={{ backgroundColor: `${statusChipColor(row.statusName, row.statusColor)}22`, color: statusChipColor(row.statusName, row.statusColor), borderColor: `${statusChipColor(row.statusName, row.statusColor)}66` }}>
                         {row.statusName || '-'}
                       </span>
                     </td>
@@ -222,7 +232,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 ) : (
                   <>
                     <td>
-                      <span className="handoff-chip" style={{ backgroundColor: `${row.statusColor}22`, color: row.statusColor, borderColor: `${row.statusColor}66` }}>
+                      <span className="handoff-chip" style={{ backgroundColor: `${statusChipColor(row.statusName, row.statusColor)}22`, color: statusChipColor(row.statusName, row.statusColor), borderColor: `${statusChipColor(row.statusName, row.statusColor)}66` }}>
                         {row.statusName || '-'}
                       </span>
                     </td>

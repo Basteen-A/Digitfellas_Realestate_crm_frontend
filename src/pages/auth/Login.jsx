@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { clearAuthState, login } from '../../redux/slices/authSlice';
+import logoFull from '../../assets/images/Sujatha_N.png';
 import './Login.css';
 
 const Login = () => {
@@ -36,7 +37,7 @@ const Login = () => {
     <section className="auth-card">
       <header className="auth-card__header">
         <div className="auth-card__logo-container">
-          <img src="/sujatha.png" alt="PropCRM Logo" className="auth-card__logo" />
+          <img src={logoFull} alt="PropCRM Logo" className="auth-card__logo" />
         </div>
         <h1>Sign in</h1>
         <p>Access your CRM workspace</p>

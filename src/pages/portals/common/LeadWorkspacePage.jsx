@@ -3310,7 +3310,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <th className="hide-mobile" style={{ width: 150 }}>Project/Location</th>
                   <th className="hide-tablet" style={{ width: 120 }}>Assigned</th>
                   <th className="hide-tablet" style={{ width: 150 }}>Remarks</th>
-                  <th className="lead-col-followup" style={{ textAlign: 'center' }}>Follow up</th>
+                  <th className="lead-col-followup" style={{ textAlign: 'center' }}>Follow-up</th>
                 </tr>
               </thead>
               <tbody>
@@ -3332,6 +3332,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         .filter(Boolean)
                     )).join(' | ')
                     : '-';
+
+                  // Site-visit and booked statuses render in a readable dark green
+                  // rather than the lighter tint stored in the DB color.
+                  const statusLabelLc = (lead.statusLabel || '').toLowerCase();
+                  const statusChipColor = statusLabelLc.includes('site visit') || statusLabelLc.includes('book')
+                    ? '#15803d'
+                    : lead.statusColor;
 
                   return (
                     <React.Fragment key={lead.id}>
@@ -3364,20 +3371,22 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         <td className="lead-col-status">
                           <span
                             className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
-                            style={{ 
-                              backgroundColor: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d22' : lead.statusColor + '22'), 
-                              color: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.statusColor), 
-                              borderColor: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.statusColor) 
+                            style={{
+                              backgroundColor: `${statusChipColor}22`,
+                              color: statusChipColor,
+                              borderColor: statusChipColor
                             }}
                           >
                             {lead.statusLabel}
                           </span>
-                          {lead.nextFollowUpAt && (
-                            <div  className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#64748b', fontSize: 11, fontWeight: 500 }}>
-                              <CalendarDaysIcon style={{ width: 12, height: 12, color: '#64748b' }} />
-                              <span>{formatDate(lead.nextFollowUpAt)}</span>
-                            </div>
-                          )}
+                          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: lead.nextFollowUpAt && isFollowUpMissedByDate(lead.nextFollowUpAt) && !lead.isClosed ? '#dc2626' : '#64748b' }}>
+                            {lead.nextFollowUpAt ? (
+                              <>
+                                <CalendarDaysIcon style={{ width: 12, height: 12 }} />
+                                <span>{formatDate(lead.nextFollowUpAt)}</span>
+                              </>
+                            ) : <span>—</span>}
+                          </div>
                         </td>
                         {workspaceRole !== 'SH' && (
                           <td className="hide-mobile">
@@ -4218,29 +4227,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       <label className="create-lead-field__label">
                         Phone <span className="create-lead-field__required">*</span>
                       </label>
-                      <PhoneInput
-                        country="in"
-                        enableSearch
-                        countryCodeEditable={false}
-                        value={`${sanitizeCountryCodeDigits(newLeadForm.phone_country_code)}${newLeadForm.phone}`}
-                        onChange={(value, data) => {
-                          const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
-                          const raw = String(value || '');
-                          const localPart = data?.dialCode && raw.startsWith(data.dialCode)
-                            ? raw.slice(data.dialCode.length)
-                            : raw;
-                          setNewLeadForm((p) => ({
-                            ...p,
-                            phone_country_code: dialCode,
-                            phone: sanitizePhoneNumberInput(localPart),
-                          }));
-                        }}
-                        inputProps={{ required: true, name: 'phone', placeholder: 'Phone number' }}
-                        containerClass={`create-lead-phone-input ${phoneCheck.status === 'exists' ? 'create-lead-phone-input--error' : phoneCheck.status === 'valid' ? 'create-lead-phone-input--success' : ''}`}
-                        inputClass="create-lead-phone-input__control"
-                        buttonClass="create-lead-phone-input__button"
-                        dropdownClass="create-lead-phone-input__dropdown"
-                      />
+                      <div className="create-lead-phone-wrap" data-dial={newLeadForm.phone_country_code}>
+                        <PhoneInput
+                          country="in"
+                          enableSearch
+                          disableCountryCode
+                          disableCountryGuess
+                          value={newLeadForm.phone}
+                          onChange={(value, data) => {
+                            // disableCountryCode → value is the national number only.
+                            const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
+                            setNewLeadForm((p) => ({
+                              ...p,
+                              phone_country_code: dialCode,
+                              phone: sanitizePhoneNumberInput(value),
+                            }));
+                          }}
+                          inputProps={{ required: true, name: 'phone', placeholder: 'Phone number' }}
+                          containerClass={`create-lead-phone-input ${phoneCheck.status === 'exists' ? 'create-lead-phone-input--error' : phoneCheck.status === 'valid' ? 'create-lead-phone-input--success' : ''}`}
+                          inputClass="create-lead-phone-input__control"
+                          buttonClass="create-lead-phone-input__button"
+                          dropdownClass="create-lead-phone-input__dropdown"
+                        />
+                      </div>
                       <div className="create-lead-phone-status">
                         <div>
                           {newLeadForm.phone && !isValidPhoneForCountry(newLeadForm.phone_country_code, newLeadForm.phone)
@@ -4303,29 +4312,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       <label className="create-lead-field__label">
                         Alternate Phone <span className="create-lead-field__optional">(Optional)</span>
                       </label>
-                      <PhoneInput
-                        country="in"
-                        enableSearch
-                        countryCodeEditable={false}
-                        value={`${sanitizeCountryCodeDigits(newLeadForm.alternate_phone_country_code)}${newLeadForm.alternate_phone}`}
-                        onChange={(value, data) => {
-                          const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
-                          const raw = String(value || '');
-                          const localPart = data?.dialCode && raw.startsWith(data.dialCode)
-                            ? raw.slice(data.dialCode.length)
-                            : raw;
-                          setNewLeadForm((p) => ({
-                            ...p,
-                            alternate_phone_country_code: dialCode,
-                            alternate_phone: sanitizePhoneNumberInput(localPart),
-                          }));
-                        }}
-                        inputProps={{ name: 'alternate_phone', placeholder: 'Secondary phone number' }}
-                        containerClass={`create-lead-phone-input ${altPhoneCheck.status === 'exists' ? 'create-lead-phone-input--error' : altPhoneCheck.status === 'valid' ? 'create-lead-phone-input--success' : ''}`}
-                        inputClass="create-lead-phone-input__control"
-                        buttonClass="create-lead-phone-input__button"
-                        dropdownClass="create-lead-phone-input__dropdown"
-                      />
+                      <div className="create-lead-phone-wrap" data-dial={newLeadForm.alternate_phone_country_code}>
+                        <PhoneInput
+                          country="in"
+                          enableSearch
+                          disableCountryCode
+                          disableCountryGuess
+                          value={newLeadForm.alternate_phone}
+                          onChange={(value, data) => {
+                            // disableCountryCode → value is the national number only.
+                            const dialCode = data?.dialCode ? `+${data.dialCode}` : '+91';
+                            setNewLeadForm((p) => ({
+                              ...p,
+                              alternate_phone_country_code: dialCode,
+                              alternate_phone: sanitizePhoneNumberInput(value),
+                            }));
+                          }}
+                          inputProps={{ name: 'alternate_phone', placeholder: 'Secondary phone number' }}
+                          containerClass={`create-lead-phone-input ${altPhoneCheck.status === 'exists' ? 'create-lead-phone-input--error' : altPhoneCheck.status === 'valid' ? 'create-lead-phone-input--success' : ''}`}
+                          inputClass="create-lead-phone-input__control"
+                          buttonClass="create-lead-phone-input__button"
+                          dropdownClass="create-lead-phone-input__dropdown"
+                        />
+                      </div>
                       <div className="create-lead-phone-status">
                         <div>
                           {newLeadForm.alternate_phone && !isValidPhoneForCountry(newLeadForm.alternate_phone_country_code, newLeadForm.alternate_phone)

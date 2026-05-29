@@ -5,7 +5,8 @@ import { getSidebarMenuForRole, ROLE_LABELS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
 import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import './Sidebar.css';
-import logoS from '../../../assets/images/logo S.png';
+import logoFull from '../../../assets/images/Sujatha_N.png';
+import logoFavico from '../../../assets/images/Sujatha-Favico.png';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -95,7 +96,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       {/* Brand */}
       <div className="app-sidebar__brand">
         <div className="app-sidebar__logo">
-          {isCollapsed ? 'RC' : <img src={logoS} alt="Logo" />}
+          {isCollapsed ? <img src={logoFavico} alt="Logo" /> : <img src={logoFull} alt="Logo" />}
         </div>
         {!isCollapsed && <span className="app-sidebar__name">RealEstate CRM</span>}
       </div>

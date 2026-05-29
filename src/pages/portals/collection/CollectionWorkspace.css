@@ -1360,6 +1360,12 @@
   .col-card-header-new { padding: 12px 14px; }
   .col-table-new th { padding: 8px 10px; font-size: 10px; }
   .col-table-new td { padding: 10px; font-size: 12px; }
+  /* Let the Lead column wrap instead of overflowing on narrow screens. */
+  .col-table-new .col-cell-primary {
+    max-width: 160px;
+    white-space: normal;
+    word-break: break-word;
+  }
   .acct-recon-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .acct-verify-layout.with-sidebar { grid-template-columns: 1fr; }
   .acct-verify-sidebar { position: static; }
