@@ -1702,7 +1702,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     else setAltPhoneCheck({ status: 'checking', leadInfo: null, duplicateLead: null });
 
     try {
-      const resp = await leadWorkflowApi.searchLeadByPhone(digits);
+      const resp = await leadWorkflowApi.searchLeadByPhone(digits, countryCode);
       const results = resp.data || [];
       const exactMatch = results.find((l) => {
         const candidatePhones = [
