@@ -6,6 +6,7 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
+import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue } from './siteVisitFields';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
@@ -941,7 +942,9 @@ const LeadDetailsPage = () => {
       note: quickActionForm.note.trim() || undefined,
       callResult: undefined,
       statusRemarkText: quickActionForm.statusRemarkText.trim() || undefined,
-      statusRemarkResponseType: quickRemarkAnsNonAns || quickActionForm.callResult || undefined,
+      statusRemarkResponseType: quickSelectedAction.code === 'SH_BOOKING'
+        ? undefined
+        : (quickRemarkAnsNonAns || quickActionForm.callResult || undefined),
       nextFollowUpAt: quickActionForm.nextFollowUpAt ? new Date(quickActionForm.nextFollowUpAt).toISOString() : undefined,
       assignToUserId: quickActionForm.assignToUserId || undefined,
       closureReasonId: quickActionForm.closureReasonId || undefined,
@@ -1700,7 +1703,7 @@ const LeadDetailsPage = () => {
                         </div>
 
                         {/* Call Result Selection for Tab Action */}
-                        {selectedAction && selectedAction.code !== 'TC_SV_DONE' && selectedAction.code !== 'SM_SITE_VISIT' && (
+                        {selectedAction && selectedAction.code !== 'TC_SV_DONE' && selectedAction.code !== 'SM_SITE_VISIT' && selectedAction.code !== 'SH_BOOKING' && (
                           <div className="call-result-wrap" style={{ marginTop: 14 }}>
                             <div className="call-result-label">Call Result</div>
                             <div className="call-result-toggle">
@@ -1880,24 +1883,41 @@ const LeadDetailsPage = () => {
                             const remarks = sv.remarks || '-';
 
                             return (
-                              <tr key={sv.id}>
-                                <td>{sv.visit_number || '-'}</td>
-                                <td>{sv.project?.project_name || 'Unknown Project'}</td>
-                                <td>
-                                  <span className="status-chip" style={{ backgroundColor: `${sv.statusColor || '#64748b'}22`, color: sv.statusColor || '#334155' }}>
-                                    {sv.status || '-'}
-                                  </span>
-                                </td>
-                                <td>{sv.scheduled_date ? formatDateTime(sv.scheduled_date) : '-'}</td>
-                                <td>{sv.actual_visit_date ? formatDateTime(sv.actual_visit_date) : '-'}</td>
-                                <td>{sv.scheduled_time_slot || '-'}</td>
-                                <td>{timeSpent ?? '-'}</td>
-                                <td>{attendedBy || '-'}</td>
-                                <td>{customerType}</td>
-                                <td>{motivation}</td>
-                                <td>{requirement}</td>
-                                <td>{remarks}</td>
-                              </tr>
+                              <React.Fragment key={sv.id}>
+                                <tr>
+                                  <td>{sv.visit_number || '-'}</td>
+                                  <td>{sv.project?.project_name || 'Unknown Project'}</td>
+                                  <td>
+                                    <span className="status-chip" style={{ backgroundColor: `${sv.statusColor || '#64748b'}22`, color: sv.statusColor || '#334155' }}>
+                                      {sv.status || '-'}
+                                    </span>
+                                  </td>
+                                  <td>{sv.scheduled_date ? formatDateTime(sv.scheduled_date) : '-'}</td>
+                                  <td>{sv.actual_visit_date ? formatDateTime(sv.actual_visit_date) : '-'}</td>
+                                  <td>{sv.scheduled_time_slot || '-'}</td>
+                                  <td>{timeSpent ?? '-'}</td>
+                                  <td>{attendedBy || '-'}</td>
+                                  <td>{customerType}</td>
+                                  <td>{motivation}</td>
+                                  <td>{requirement}</td>
+                                  <td>{remarks}</td>
+                                </tr>
+                                {sv.visit_details && (
+                                  <tr>
+                                    <td colSpan={12} style={{ padding: '8px 14px 14px', background: 'var(--bg-tertiary)' }}>
+                                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>Visit Details</div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                                        {VISIT_DETAIL_KEYS.map((k) => (
+                                          <div key={k}>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
+                                            <div style={{ fontSize: 12, fontWeight: 600 }}>{displayVisitDetailValue(k, sv.visit_details[k])}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             );
                           })}
                         </tbody>
@@ -2552,7 +2572,7 @@ const LeadDetailsPage = () => {
                       </div>
 
                       {/* ── Ans/Non-Ans Toggle (if needed) ── */}
-                      {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
+                      {quickSelectedAction?.code !== 'SH_BOOKING' && quickStatusRemarks.some(r => r.has_ans_non_ans) && (
                         <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>call status</span>
                           <div style={{ display: 'flex', gap: 6 }}>

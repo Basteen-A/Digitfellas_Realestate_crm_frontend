@@ -13,6 +13,11 @@ import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import '../common/LeadWorkspacePage.css';
+import {
+  FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
+  TIMELINE_OPTIONS, EMPTY_VISIT_DETAILS, VISIT_DETAIL_LABELS, VISIT_DETAIL_KEYS,
+  isVisitDetailsComplete, pickVisitDetails, displayVisitDetailValue,
+} from '../common/siteVisitFields';
 
 // Map a workflow action code to the drawer status-button icon + accent class
 // (shared visual language with the Incoming-accept and Quick Action drawers).
@@ -78,6 +83,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     closure_reason_id: '',
     reason_note: '',
     call_status: '',
+    ...EMPTY_VISIT_DETAILS,
   });
   const [projects, setProjects] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -113,6 +119,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     if (!createForm.customer_requirement?.trim()) return false;
     if (!createForm.time_spent) return false;
     if (!createForm.sales_head_id) return false;
+    if (!isVisitDetailsComplete(createForm)) return false;
 
     if (svFieldsRequired) {
       if (!createForm.project_id) return false;
@@ -368,6 +375,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
     if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
     if (!createForm.sales_head_id) { toast.error('Sales Head is required'); return; }
+    if (!isVisitDetailsComplete(createForm)) { toast.error('All site visit detail fields are required'); return; }
     if (selectedAction.needsFollowUp && !createForm.next_follow_up_at) {
       toast.error('Next follow up date is required for selected action');
       return;
@@ -403,6 +411,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         time_spent: createForm.time_spent ? Number(createForm.time_spent) : undefined,
         remarks: createForm.remarks || undefined,
         callStatus: createForm.call_status || undefined,
+        ...pickVisitDetails(createForm),
       });
       toast.success('Site visit recorded and lead updated successfully');
       setShowCreateModal(false);
@@ -413,6 +422,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         customer_requirement: '', customer_type_id: '', motivation_type: '', time_spent: '', sales_head_id: '',
         action_code: '',
         next_follow_up_at: '', closure_reason_id: '', reason_note: '', call_status: '',
+        ...EMPTY_VISIT_DETAILS,
       });
       setSelectedLeadInfo(null);
       setPhoneSearch('');
@@ -566,6 +576,19 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                 <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Requirement Details</div>
                   <div style={{ fontSize: 13 }}>{selectedVisit.requirement_details}</div>
+                </div>
+              )}
+              {selectedVisit.visit_details && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    {VISIT_DETAIL_KEYS.map((k) => (
+                      <div key={k}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisit.visit_details[k])}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {selectedVisit.geo_lat && (
@@ -784,6 +807,57 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                           <option value="">Select Sales Head...</option>
                           {salesHeads.map((sh) => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
                         </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Secondary Contact *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.secondaryContact} onChange={(e) => setCreateForm((p) => ({ ...p, secondaryContact: e.target.value }))} placeholder="Secondary phone" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Budget *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.budget} onChange={(e) => setCreateForm((p) => ({ ...p, budget: e.target.value }))} placeholder="e.g. 60L" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Preferred Facing *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.preferredFacing} onChange={(e) => setCreateForm((p) => ({ ...p, preferredFacing: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Payment Type *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.paymentType} onChange={(e) => setCreateForm((p) => ({ ...p, paymentType: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.timelineToBuy} onChange={(e) => setCreateForm((p) => ({ ...p, timelineToBuy: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Decision Maker Present *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.decisionMaker} onChange={(e) => setCreateForm((p) => ({ ...p, decisionMaker: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Age Bracket *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.ageBracket} onChange={(e) => setCreateForm((p) => ({ ...p, ageBracket: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label className="qa-drawer-field-label">Address *</label>
+                        <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={createForm.address} onChange={(e) => setCreateForm((p) => ({ ...p, address: e.target.value }))} placeholder="Customer address" required />
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label className="qa-drawer-field-label">Specific Concerns *</label>
+                        <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={createForm.specificConcerns} onChange={(e) => setCreateForm((p) => ({ ...p, specificConcerns: e.target.value }))} placeholder="Customer concerns" required />
                       </div>
                     </div>
 

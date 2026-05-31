@@ -99,7 +99,10 @@ const CollectionOverdue = ({ user, onSelectBooking }) => {
 
         <div className="col-table-scroll" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--col-text-secondary)' }}>Loading...</div>
+            <div className="simple-loader">
+              <div className="simple-spinner" />
+              <p>Loading...</p>
+            </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--col-text-secondary)' }}>
               No overdue payments! Great work.

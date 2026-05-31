@@ -49,6 +49,18 @@ const bookingApi = {
 
   // Payment form master data
   getPaymentFormMasters: () => api.get('/bookings/payments/form-masters'),
+
+  // Collection workflow — booking status actions
+  registerBooking: (id, formData) => api.patch(`/bookings/${id}/register`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateToEMI: (id, data) => api.patch(`/bookings/${id}/emi`, data),
+  requestToCancel: (id, data) => api.patch(`/bookings/${id}/request-cancel`, data),
+  approveCancellation: (id, data) => api.patch(`/bookings/${id}/approve-cancel`, data),
+  rejectCancellation: (id, data) => api.patch(`/bookings/${id}/reject-cancel`, data),
+  confirmCancel: (id, data) => api.patch(`/bookings/${id}/confirm-cancel`, data || {}),
+  processRefund: (id, data) => api.post(`/bookings/${id}/refunds`, data),
+  getCancellationRequests: (params) => api.get('/bookings/cancellation-requests', { params }),
 };
 
 export default bookingApi;

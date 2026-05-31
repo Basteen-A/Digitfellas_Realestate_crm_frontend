@@ -10,6 +10,7 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
   ClipboardDocumentListIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import '../collection/CollectionWorkspace.css';
@@ -96,6 +97,30 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
           );
         })}
       </div>
+
+      {/* Cancel Requests Banner */}
+      {(stats?.pendingApprovals ?? 0) > 0 && (
+        <div
+          onClick={() => onNavigate?.('cancellations')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
+            background: 'linear-gradient(135deg, #FEF2F2 0%, #FFF7ED 100%)',
+            border: '1px solid #FECACA', borderRadius: 12, cursor: 'pointer',
+            marginBottom: 4, transition: 'box-shadow 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(239,68,68,0.15)'}
+          onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EF444418', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <XCircleIcon style={{ width: 22, height: 22, color: '#EF4444' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#991B1B' }}>{stats.pendingApprovals} Cancellation Request{stats.pendingApprovals !== 1 ? 's' : ''}</div>
+            <div style={{ fontSize: 12, color: '#B91C1C', marginTop: 2 }}>Bookings awaiting your review — click to manage</div>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>Review →</span>
+        </div>
+      )}
 
       {/* Two Column Layout */}
       <div className="col-two-col-new">

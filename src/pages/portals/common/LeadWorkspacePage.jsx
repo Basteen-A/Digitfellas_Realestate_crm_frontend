@@ -11,6 +11,7 @@ import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
+import projectPhaseApi from '../../../api/projectPhaseApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 // userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
 // customerTypeApi removed — Customer Type field removed from TC lead creation
@@ -969,9 +970,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
     current_address: '', current_city: '', current_state: '', current_pincode: '',
     assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
-    bookingProjectId: '', bookingLocationId: '',
+    bookingProjectId: '', bookingLocationId: '', bookingPhaseId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [availablePhases, setAvailablePhases] = useState([]);
   const [paymentPlans, setPaymentPlans] = useState([]);
 
   // ── Assignment ──
@@ -2873,7 +2875,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         const payload = {
           note: f.note.trim() || undefined,
           statusRemarkText: f.statusRemarkText?.trim() || undefined,
-          statusRemarkResponseType: quickRemarkAnsNonAns || f.callResult || undefined,
+          statusRemarkResponseType: quickWorkflowAction.code === 'SH_BOOKING'
+            ? undefined
+            : (quickRemarkAnsNonAns || f.callResult || undefined),
           nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : undefined,
           assignToUserId: f.assignToUserId || undefined,
           closureReasonId: f.closureReasonId || undefined,
@@ -2962,6 +2966,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           payload.payment_plan_id = pF.paymentPlanId || undefined;
           payload.bookingLocationId = pF.bookingLocationId || undefined;
           payload.bookingProjectId = pF.bookingProjectId || undefined;
+          payload.phase_id = pF.bookingPhaseId || undefined;
           payload.location_id = pF.bookingLocationId || undefined;
           payload.project_id = pF.bookingProjectId || undefined;
         }
@@ -5170,7 +5175,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 </label>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   Project
-                  <select value={customerProfileForm.bookingProjectId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingProjectId: e.target.value, inventoryUnitId: '' })); if (e.target.value) { inventoryUnitApi.getDropdown({ project_id: e.target.value }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } else { setAvailableUnits([]); } }} style={{ width: '100%', marginTop: 4 }}>
+                  <select value={customerProfileForm.bookingProjectId} onChange={(e) => {
+                    const pid = e.target.value;
+                    setCustomerProfileForm(p => ({ ...p, bookingProjectId: pid, bookingPhaseId: '', inventoryUnitId: '' }));
+                    if (pid) {
+                      projectPhaseApi.dropdown(pid).then(resp => setAvailablePhases(resp.data?.data || resp.data || [])).catch(() => setAvailablePhases([]));
+                      inventoryUnitApi.getDropdown({ project_id: pid }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([]));
+                    } else { setAvailablePhases([]); setAvailableUnits([]); }
+                  }} style={{ width: '100%', marginTop: 4 }}>
                     <option value="">— Select Project —</option>
                     {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
                       <option key={proj.id} value={proj.id}>{proj.project_name}</option>
@@ -5179,13 +5191,33 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 </label>
               </div>
 
+              {customerProfileForm.bookingProjectId && availablePhases.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Phase
+                    <select value={customerProfileForm.bookingPhaseId} onChange={(e) => {
+                      const phId = e.target.value;
+                      setCustomerProfileForm(p => ({ ...p, bookingPhaseId: phId, inventoryUnitId: '' }));
+                      inventoryUnitApi.getDropdown({ project_id: customerProfileForm.bookingProjectId, phase_id: phId || undefined })
+                        .then(resp => setAvailableUnits(resp.data || []))
+                        .catch(() => setAvailableUnits([]));
+                    }} style={{ width: '100%', marginTop: 4 }}>
+                      <option value="">— All phases —</option>
+                      {availablePhases.map(ph => (
+                        <option key={ph.id} value={ph.id}>{ph.phase_name}{ph.phase_code ? ` (${ph.phase_code})` : ''}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+
               {availableUnits.length > 0 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                     Available Unit / Plot
                     <select value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
                       <option value="">— Select Unit / Plot —</option>
-                      {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
+                      {availableUnits.filter(u => u.unit_status === 'Available' && (!customerProfileForm.bookingPhaseId || u.phase_id === customerProfileForm.bookingPhaseId)).map(unit => (
                         <option key={unit.id} value={unit.id}>
                           {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
                         </option>
@@ -5805,7 +5837,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         </div>
                         <div>
                           <label className="qa-drawer-field-label">Project</label>
-                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingProjectId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingProjectId: e.target.value, inventoryUnitId: '' })); if (e.target.value) { inventoryUnitApi.getDropdown({ project_id: e.target.value }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } else { setAvailableUnits([]); } }}>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingProjectId} onChange={(e) => {
+                            const pid = e.target.value;
+                            setCustomerProfileForm(p => ({ ...p, bookingProjectId: pid, bookingPhaseId: '', inventoryUnitId: '' }));
+                            if (pid) {
+                              projectPhaseApi.dropdown(pid).then(resp => setAvailablePhases(resp.data?.data || resp.data || [])).catch(() => setAvailablePhases([]));
+                              inventoryUnitApi.getDropdown({ project_id: pid }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([]));
+                            } else { setAvailablePhases([]); setAvailableUnits([]); }
+                          }}>
                             <option value="">— Select Project —</option>
                             {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
                               <option key={proj.id} value={proj.id}>{proj.project_name}</option>
@@ -5813,6 +5852,25 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           </select>
                         </div>
                       </div>
+
+                      {/* ── Phase selection ── */}
+                      {customerProfileForm.bookingProjectId && availablePhases.length > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                          <label className="qa-drawer-field-label">Phase</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingPhaseId} onChange={(e) => {
+                            const phId = e.target.value;
+                            setCustomerProfileForm(p => ({ ...p, bookingPhaseId: phId, inventoryUnitId: '' }));
+                            inventoryUnitApi.getDropdown({ project_id: customerProfileForm.bookingProjectId, phase_id: phId || undefined })
+                              .then(resp => setAvailableUnits(resp.data || []))
+                              .catch(() => setAvailableUnits([]));
+                          }}>
+                            <option value="">— All phases —</option>
+                            {availablePhases.map(ph => (
+                              <option key={ph.id} value={ph.id}>{ph.phase_name}{ph.phase_code ? ` (${ph.phase_code})` : ''}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
                       {/* ── Inventory Unit Selection ── */}
                       {availableUnits.length > 0 && (
@@ -5822,7 +5880,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             <label className="qa-drawer-field-label">Available Unit</label>
                             <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))}>
                               <option value="">— Select Unit / Plot —</option>
-                              {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
+                              {availableUnits.filter(u => u.unit_status === 'Available' && (!customerProfileForm.bookingPhaseId || u.phase_id === customerProfileForm.bookingPhaseId)).map(unit => (
                                 <option key={unit.id} value={unit.id}>
                                   {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
                                 </option>
@@ -5960,7 +6018,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       </div>
 
                       {/* ── Ans/Non-Ans Toggle (if needed) ── */}
-                      {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
+                      {quickWorkflowAction?.code !== 'SH_BOOKING' && quickStatusRemarks.some(r => r.has_ans_non_ans) && (
                         <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Call Status</span>
                           <div style={{ display: 'flex', gap: 6 }}>

@@ -12,6 +12,10 @@ import { getActionsForRole } from '../common/workflowConfig';
 import { getRoleCode } from '../../../utils/permissions';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import {
+  FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
+  TIMELINE_OPTIONS, isVisitDetailsComplete, pickVisitDetails,
+} from '../common/siteVisitFields';
+import {
   ChevronDownIcon,
   ChevronUpIcon,
   CheckCircleIcon,
@@ -274,6 +278,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
     if (!form.customerRequirement?.trim()) { toast.error('Customer Requirement is required.'); return; }
     if (!form.timeSpent) { toast.error('Time Spent is required.'); return; }
     if (!form.salesHeadUserId) { toast.error('Sales Head selection is required.'); return; }
+    if (!isVisitDetailsComplete(form)) { toast.error('All site visit detail fields are required.'); return; }
 
     setProcessingId(handoff.id);
     try {
@@ -287,6 +292,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
         customerTypeId: form.customerTypeId,
         motivationType: form.motivationType,
         salesHeadUserId: form.salesHeadUserId,
+        ...pickVisitDetails(form),
       });
 
       // Step 2: Transition with selected action
@@ -605,6 +611,57 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                                 <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>
                               ))}
                             </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Secondary Contact *</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone" />
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Budget *</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.budget || ''} onChange={(e) => updateAcceptForm(handoff.id, { budget: e.target.value })} placeholder="e.g. 60L" />
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Preferred Facing *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.preferredFacing || ''} onChange={(e) => updateAcceptForm(handoff.id, { preferredFacing: e.target.value })}>
+                              <option value="">Select...</option>
+                              {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Payment Type *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.paymentType || ''} onChange={(e) => updateAcceptForm(handoff.id, { paymentType: e.target.value })}>
+                              <option value="">Select...</option>
+                              {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.timelineToBuy || ''} onChange={(e) => updateAcceptForm(handoff.id, { timelineToBuy: e.target.value })}>
+                              <option value="">Select...</option>
+                              {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Decision Maker Present *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.decisionMaker || ''} onChange={(e) => updateAcceptForm(handoff.id, { decisionMaker: e.target.value })}>
+                              <option value="">Select...</option>
+                              {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Age Bracket *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.ageBracket || ''} onChange={(e) => updateAcceptForm(handoff.id, { ageBracket: e.target.value })}>
+                              <option value="">Select...</option>
+                              {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label className="qa-drawer-field-label">Address *</label>
+                            <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.address || ''} onChange={(e) => updateAcceptForm(handoff.id, { address: e.target.value })} placeholder="Customer address" />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label className="qa-drawer-field-label">Specific Concerns *</label>
+                            <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.specificConcerns || ''} onChange={(e) => updateAcceptForm(handoff.id, { specificConcerns: e.target.value })} placeholder="Customer concerns" />
                           </div>
                         </div>
                       </div>

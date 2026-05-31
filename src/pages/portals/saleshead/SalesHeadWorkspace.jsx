@@ -5,6 +5,7 @@ import SalesHeadDashboard from './SalesHeadDashboard';
 import SalesHeadBookings from './SalesHeadBookings';
 import SalesHeadBookingSummary from './SalesHeadBookingSummary';
 import SalesHeadApprovals from './SalesHeadApprovals';
+import SalesHeadCancellationRequests from './SalesHeadCancellationRequests';
 import SalesHeadTeamLeads from './SalesHeadTeamLeads';
 import SalesHeadTeamPerformance from './SalesHeadTeamPerformance';
 import SalesHeadSiteVisits from './SalesHeadSiteVisits';
@@ -31,6 +32,7 @@ const SalesHeadWorkspace = () => {
           {activeScreen === 'bookings' && <SalesHeadBookings user={user} />}
           {activeScreen === 'bookingsummary' && <SalesHeadBookingSummary />}
           {activeScreen === 'approvals' && <SalesHeadApprovals user={user} />}
+          {activeScreen === 'cancellations' && <SalesHeadCancellationRequests user={user} />}
           {activeScreen === 'sitevisits' && <SalesHeadSiteVisits user={user} />}
           {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SH" defaultType="outgoing" />}
           {activeScreen === 'allleads' && <LeadWorkspacePage user={user} workspaceRole="SH" />}

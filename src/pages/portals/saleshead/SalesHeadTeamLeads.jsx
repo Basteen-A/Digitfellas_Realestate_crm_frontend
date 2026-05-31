@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue } from '../common/siteVisitFields';
 import {
   UserIcon,
   ClipboardDocumentListIcon,
@@ -412,6 +413,19 @@ const SalesHeadTeamLeads = () => {
                 <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Remarks</div>
                   <div style={{ fontSize: 13 }}>{selectedVisit.remarks_long}</div>
+                </div>
+              )}
+              {selectedVisit.visit_details && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    {VISIT_DETAIL_KEYS.map((k) => (
+                      <div key={k}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisit.visit_details[k])}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {selectedVisit.geo_lat && (

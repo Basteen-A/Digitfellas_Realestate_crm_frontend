@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import locationApi from '../../../api/locationApi';
 import projectApi from '../../../api/projectApi';
+import projectPhaseApi from '../../../api/projectPhaseApi';
 import './InventoryUnitList.css';
 
 const formatCurrency = (val) => {
@@ -25,6 +26,7 @@ const statusClass = (status) => {
 
 const EMPTY_FORM = {
   project_id: '',
+  phase_id: '',
   unit_number: '',
   unit_area: '',
   area_unit: 'sq.ft.',
@@ -53,7 +55,8 @@ const InventoryUnitList = () => {
 
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [query, setQuery] = useState({ page: 1, limit: 50, search: '', unit_status: '' });
+  const [phaseFilter, setPhaseFilter] = useState('');
+  const [query, setQuery] = useState({ page: 1, limit: 50, search: '', unit_status: '', phase_id: '' });
 
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [formValues, setFormValues] = useState({ ...EMPTY_FORM });
@@ -63,10 +66,31 @@ const InventoryUnitList = () => {
   const [allProjects, setAllProjects] = useState([]);
   const [selectedLocationId, setSelectedLocationId] = useState('');
 
+  // Phase data — keyed by project_id
+  const [phasesByProject, setPhasesByProject] = useState({});
+  const [phaseModal, setPhaseModal] = useState({ open: false, mode: 'create', row: null, project_id: '' });
+  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+  const [phaseSaving, setPhaseSaving] = useState(false);
+
   const filteredProjects = useMemo(() => {
     if (!selectedLocationId) return allProjects;
     return allProjects.filter((p) => p.location_id === selectedLocationId);
   }, [selectedLocationId, allProjects]);
+
+  // Fetch phases for a given project (cached) ──
+  const ensurePhasesLoaded = useCallback(async (projId, force = false) => {
+    if (!projId) return [];
+    if (!force && phasesByProject[projId]) return phasesByProject[projId];
+    try {
+      const resp = await projectPhaseApi.list({ project_id: projId });
+      const list = resp.data?.data || resp.data || [];
+      setPhasesByProject((prev) => ({ ...prev, [projId]: list }));
+      return list;
+    } catch (err) {
+      console.error('Failed to load phases', err);
+      return [];
+    }
+  }, [phasesByProject]);
 
   // Load locations & projects for dropdowns
   const loadDropdowns = useCallback(async () => {
@@ -124,6 +148,11 @@ const InventoryUnitList = () => {
     loadDropdowns();
   }, [loadDropdowns]);
 
+  // Whenever the route-scoped project changes, prefetch its phases
+  useEffect(() => {
+    if (projectId) ensurePhasesLoaded(projectId);
+  }, [projectId, ensurePhasesLoaded]);
+
   // ── Form helpers ──
   const openCreate = () => {
     const initial = { ...EMPTY_FORM };
@@ -147,6 +176,7 @@ const InventoryUnitList = () => {
     if (row.project?.location_id) {
       setSelectedLocationId(row.project.location_id);
     }
+    if (row.project_id) ensurePhasesLoaded(row.project_id);
     setFormValues(initial);
     setModal({ open: true, mode: 'edit', row });
   };
@@ -167,6 +197,11 @@ const InventoryUnitList = () => {
           next.total_price = (area * gv).toFixed(2);
         }
       }
+      // When project changes, clear phase + fetch phase list
+      if (name === 'project_id') {
+        next.phase_id = '';
+        if (value) ensurePhasesLoaded(value);
+      }
       return next;
     });
   };
@@ -182,6 +217,7 @@ const InventoryUnitList = () => {
         payload[f] = payload[f] === '' ? null : Number(payload[f]);
       });
       payload.is_active = Boolean(payload.is_active);
+      if (!payload.phase_id) payload.phase_id = null;
 
       if (modal.mode === 'create') {
         await inventoryUnitApi.create(payload);
@@ -214,7 +250,74 @@ const InventoryUnitList = () => {
   };
 
   const handleSearch = () => {
-    setQuery((prev) => ({ ...prev, page: 1, search: searchInput.trim(), unit_status: statusFilter }));
+    setQuery((prev) => ({ ...prev, page: 1, search: searchInput.trim(), unit_status: statusFilter, phase_id: phaseFilter }));
+  };
+
+  // ── Phase CRUD ──
+  const openPhaseManager = async (projId) => {
+    const useProjId = projId || projectId;
+    if (!useProjId) {
+      toast.error('Pick a project first to manage its phases');
+      return;
+    }
+    await ensurePhasesLoaded(useProjId, true);
+    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+    setPhaseModal({ open: true, mode: 'create', row: null, project_id: useProjId });
+  };
+  const closePhaseManager = () => setPhaseModal({ open: false, mode: 'create', row: null, project_id: '' });
+
+  const startEditPhase = (phase) => {
+    setPhaseForm({
+      phase_name: phase.phase_name || '',
+      phase_code: phase.phase_code || '',
+      description: phase.description || '',
+      sort_order: phase.sort_order ?? 0,
+    });
+    setPhaseModal((prev) => ({ ...prev, mode: 'edit', row: phase }));
+  };
+
+  const submitPhase = async (e) => {
+    e?.preventDefault?.();
+    if (!phaseForm.phase_name.trim()) { toast.error('Phase name is required'); return; }
+    setPhaseSaving(true);
+    try {
+      if (phaseModal.mode === 'edit' && phaseModal.row) {
+        await projectPhaseApi.update(phaseModal.row.id, {
+          phase_name: phaseForm.phase_name,
+          phase_code: phaseForm.phase_code || null,
+          description: phaseForm.description || null,
+          sort_order: Number(phaseForm.sort_order) || 0,
+        });
+        toast.success('Phase updated');
+      } else {
+        await projectPhaseApi.create({
+          project_id: phaseModal.project_id,
+          phase_name: phaseForm.phase_name,
+          phase_code: phaseForm.phase_code || null,
+          description: phaseForm.description || null,
+          sort_order: Number(phaseForm.sort_order) || 0,
+        });
+        toast.success('Phase created');
+      }
+      await ensurePhasesLoaded(phaseModal.project_id, true);
+      setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+      setPhaseModal((prev) => ({ ...prev, mode: 'create', row: null }));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save phase');
+    } finally {
+      setPhaseSaving(false);
+    }
+  };
+
+  const removePhase = async (phase) => {
+    if (!window.confirm(`Delete phase "${phase.phase_name}"?`)) return;
+    try {
+      await projectPhaseApi.remove(phase.id);
+      toast.success('Phase deleted');
+      await ensurePhasesLoaded(phaseModal.project_id, true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Cannot delete phase');
+    }
   };
 
   return (
@@ -228,6 +331,11 @@ const InventoryUnitList = () => {
           <h1>{projectInfo ? `${projectInfo.project_name} — Units` : 'All Inventory Units'}</h1>
         </div>
         <div className="inv-unit-page__actions">
+          {projectId && (
+            <button className="inv-btn inv-btn--secondary" onClick={() => openPhaseManager(projectId)}>
+              Manage Phases
+            </button>
+          )}
           <button className="inv-btn inv-btn--primary" onClick={openCreate}>
             + Add Unit
           </button>
@@ -298,6 +406,18 @@ const InventoryUnitList = () => {
           <option value="Booked">Booked</option>
           <option value="Sold">Sold</option>
         </select>
+        {projectId && (
+          <select
+            className="inv-toolbar__filter"
+            value={phaseFilter}
+            onChange={(e) => setPhaseFilter(e.target.value)}
+          >
+            <option value="">All Phases</option>
+            {(phasesByProject[projectId] || []).map((p) => (
+              <option key={p.id} value={p.id}>{p.phase_name}</option>
+            ))}
+          </select>
+        )}
         <button className="inv-btn inv-btn--secondary" onClick={handleSearch}>
           Search
         </button>
@@ -310,6 +430,7 @@ const InventoryUnitList = () => {
             <tr>
               <th>Unit #</th>
               {!projectId && <th>Project</th>}
+              <th>Phase</th>
               <th>Config</th>
               <th>Area</th>
               <th>Guided Value / sqft</th>
@@ -323,12 +444,12 @@ const InventoryUnitList = () => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={projectId ? 9 : 10} className="inv-table__empty">Loading...</td>
+                <td colSpan={projectId ? 10 : 11} className="inv-table__empty">Loading...</td>
               </tr>
             )}
             {!loading && units.length === 0 && (
               <tr>
-                <td colSpan={projectId ? 9 : 10} className="inv-table__empty">No units found</td>
+                <td colSpan={projectId ? 10 : 11} className="inv-table__empty">No units found</td>
               </tr>
             )}
             {!loading && units.map((unit) => (
@@ -337,6 +458,7 @@ const InventoryUnitList = () => {
                 {!projectId && (
                   <td>{unit.project?.project_name || '-'}</td>
                 )}
+                <td>{unit.phase?.phase_name || <span style={{ color: '#94a3b8' }}>—</span>}</td>
                 <td>{unit.configuration || '-'}</td>
                 <td>{unit.unit_area ? `${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : '-'}</td>
                 <td>{unit.guided_value ? `₹${parseFloat(unit.guided_value).toLocaleString('en-IN')}` : '-'}</td>
@@ -433,6 +555,28 @@ const InventoryUnitList = () => {
                     </div>
                   </>
                 )}
+
+                <div className="inv-form__field">
+                  <label>
+                    Phase
+                    {formValues.project_id && (
+                      <button type="button" className="inv-link-btn" style={{ marginLeft: 8, fontSize: 11 }}
+                        onClick={() => openPhaseManager(formValues.project_id)}>
+                        + Manage
+                      </button>
+                    )}
+                  </label>
+                  <select
+                    value={formValues.phase_id || ''}
+                    onChange={(e) => handleFieldChange('phase_id', e.target.value)}
+                    disabled={!formValues.project_id}
+                  >
+                    <option value="">{formValues.project_id ? '— No phase —' : 'Select project first'}</option>
+                    {(phasesByProject[formValues.project_id] || []).map((p) => (
+                      <option key={p.id} value={p.id}>{p.phase_name}</option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="inv-form__field">
                   <label>Unit Number <span className="required">*</span></label>
@@ -593,6 +737,91 @@ const InventoryUnitList = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Phase Manager Modal ── */}
+      {phaseModal.open && (
+        <div className="inv-modal" role="dialog" aria-modal="true">
+          <div className="inv-modal__panel" style={{ maxWidth: 640 }}>
+            <header className="inv-modal__header">
+              <h2>Manage Phases</h2>
+              <button onClick={closePhaseManager}>✕</button>
+            </header>
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>
+                Phases let you split a project (e.g. Phase 1, Phase 2). Unit numbers are unique <strong>within each phase</strong> — so Phase 1 / Plot 1 and Phase 2 / Plot 1 can both exist.
+              </div>
+
+              {/* Existing phases */}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Existing phases</div>
+                {(phasesByProject[phaseModal.project_id] || []).length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)' }}>No phases yet.</div>
+                ) : (
+                  <table className="inv-table" style={{ width: '100%' }}>
+                    <thead>
+                      <tr><th>Phase</th><th>Code</th><th>Units</th><th>Available</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {(phasesByProject[phaseModal.project_id] || []).map((p) => (
+                        <tr key={p.id}>
+                          <td><strong>{p.phase_name}</strong></td>
+                          <td>{p.phase_code || '-'}</td>
+                          <td>{p.unit_count ?? 0}</td>
+                          <td>{p.available_count ?? 0}</td>
+                          <td>
+                            <button className="inv-link-btn" onClick={() => startEditPhase(p)}>Edit</button>
+                            <button className="inv-link-btn" style={{ color: '#dc2626', marginLeft: 8 }} onClick={() => removePhase(p)}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Create/Edit phase form */}
+              <form onSubmit={submitPhase} style={{ borderTop: '1px solid var(--border-primary, #e5e7eb)', paddingTop: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+                  {phaseModal.mode === 'edit' ? `Edit phase: ${phaseModal.row?.phase_name}` : 'Add new phase'}
+                </div>
+                <div className="inv-form__grid">
+                  <div className="inv-form__field">
+                    <label>Phase Name <span className="required">*</span></label>
+                    <input value={phaseForm.phase_name} required placeholder="e.g. Phase 1"
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, phase_name: e.target.value }))} />
+                  </div>
+                  <div className="inv-form__field">
+                    <label>Phase Code</label>
+                    <input value={phaseForm.phase_code} placeholder="e.g. P1"
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, phase_code: e.target.value }))} />
+                  </div>
+                  <div className="inv-form__field" style={{ gridColumn: '1 / -1' }}>
+                    <label>Description</label>
+                    <input value={phaseForm.description} placeholder="Optional"
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, description: e.target.value }))} />
+                  </div>
+                  <div className="inv-form__field">
+                    <label>Sort Order</label>
+                    <input type="number" value={phaseForm.sort_order}
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, sort_order: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="inv-form__footer" style={{ marginTop: 12 }}>
+                  {phaseModal.mode === 'edit' && (
+                    <button type="button" className="inv-btn inv-btn--secondary"
+                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 }); }}>
+                      Cancel edit
+                    </button>
+                  )}
+                  <button type="submit" className="inv-btn inv-btn--primary" disabled={phaseSaving}>
+                    {phaseSaving ? 'Saving...' : (phaseModal.mode === 'edit' ? 'Update Phase' : '+ Add Phase')}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

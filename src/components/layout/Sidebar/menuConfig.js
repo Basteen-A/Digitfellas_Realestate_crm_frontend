@@ -187,6 +187,7 @@ export const salesHeadMenu = [
   { label: 'Negotiation Leads', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
   { label: 'My Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
   { label: 'Bookings Analytics', key: 'bookingsummary', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'Cancel Requests', key: 'cancellations', icon: XCircleIcon, badgeColor: 'red' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
   // { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
