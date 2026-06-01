@@ -292,6 +292,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
         customerTypeId: form.customerTypeId,
         motivationType: form.motivationType,
         salesHeadUserId: form.salesHeadUserId,
+        scheduled_time_slot: form.scheduledTimeSlot || undefined,
         ...pickVisitDetails(form),
       });
 
@@ -567,41 +568,19 @@ const SalesManagerIncoming = ({ onNavigate }) => {
 
                       <div className="qa-drawer-section">Site Visit Details (All * fields are mandatory)</div>
                       <div style={{ padding: '0 20px 10px' }}>
-                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        {/* 📅 Visit Details */}
+                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}>📅 Visit Details</div>
+                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
                           <div>
-                            <label className="qa-drawer-field-label">SV Date *</label>
+                            <label className="qa-drawer-field-label">Visit Date *</label>
                             <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.svDate || ''} onChange={(e) => updateAcceptForm(handoff.id, { svDate: e.target.value })} />
                           </div>
                           <div>
-                            <label className="qa-drawer-field-label">Visited Project *</label>
+                            <label className="qa-drawer-field-label">Project *</label>
                             <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.svProjectId || handoff.leadProjectId || ''} onChange={(e) => updateAcceptForm(handoff.id, { svProjectId: e.target.value })}>
                               <option value="">Select...</option>
                               {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
                             </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Customer Type *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.customerTypeId || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerTypeId: e.target.value })}>
-                              <option value="">Select...</option>
-                              {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="qa-drawer-field-label">Motivation *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.motivationType || ''} onChange={(e) => updateAcceptForm(handoff.id, { motivationType: e.target.value })}>
-                              <option value="">Select...</option>
-                              {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="qa-drawer-field-label">Customer Requirement *</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.customerRequirement || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerRequirement: e.target.value })} placeholder="e.g. 2BHK near school" />
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Time Spent (mins) *</label>
-                            <input type="number" min="0" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.timeSpent || ''} onChange={(e) => updateAcceptForm(handoff.id, { timeSpent: e.target.value })} placeholder="e.g. 30" />
                           </div>
                           <div>
                             <label className="qa-drawer-field-label">Sales Head *</label>
@@ -613,32 +592,30 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                             </select>
                           </div>
                           <div>
-                            <label className="qa-drawer-field-label">Secondary Contact *</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone" />
+                            <label className="qa-drawer-field-label">Time Slot</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={form.scheduledTimeSlot || ''} onChange={(e) => updateAcceptForm(handoff.id, { scheduledTimeSlot: e.target.value })} placeholder="e.g. 10 AM - 12 PM" />
                           </div>
                           <div>
-                            <label className="qa-drawer-field-label">Budget *</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.budget || ''} onChange={(e) => updateAcceptForm(handoff.id, { budget: e.target.value })} placeholder="e.g. 60L" />
+                            <label className="qa-drawer-field-label">Time Spent (mins) *</label>
+                            <input type="number" min="0" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.timeSpent || ''} onChange={(e) => updateAcceptForm(handoff.id, { timeSpent: e.target.value })} placeholder="e.g. 30" />
                           </div>
+                        </div>
+
+                        {/* 👤 Customer Profile */}
+                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}>👤 Customer Profile</div>
+                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
                           <div>
-                            <label className="qa-drawer-field-label">Preferred Facing *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.preferredFacing || ''} onChange={(e) => updateAcceptForm(handoff.id, { preferredFacing: e.target.value })}>
+                            <label className="qa-drawer-field-label">Buyer Profile *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.customerTypeId || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerTypeId: e.target.value })}>
                               <option value="">Select...</option>
-                              {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label className="qa-drawer-field-label">Payment Type *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.paymentType || ''} onChange={(e) => updateAcceptForm(handoff.id, { paymentType: e.target.value })}>
+                            <label className="qa-drawer-field-label">Age Bracket *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.ageBracket || ''} onChange={(e) => updateAcceptForm(handoff.id, { ageBracket: e.target.value })}>
                               <option value="">Select...</option>
-                              {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Timeline to Buy *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.timelineToBuy || ''} onChange={(e) => updateAcceptForm(handoff.id, { timelineToBuy: e.target.value })}>
-                              <option value="">Select...</option>
-                              {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                             </select>
                           </div>
                           <div>
@@ -649,10 +626,34 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                             </select>
                           </div>
                           <div>
-                            <label className="qa-drawer-field-label">Age Bracket *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.ageBracket || ''} onChange={(e) => updateAcceptForm(handoff.id, { ageBracket: e.target.value })}>
+                            <label className="qa-drawer-field-label">Secondary Contact *</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone" />
+                          </div>
+                        </div>
+
+                        {/* 🏠 Property Requirement */}
+                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}>🏠 Property Requirement</div>
+                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                          <div>
+                            <label className="qa-drawer-field-label">Customer Requirement *</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.customerRequirement || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerRequirement: e.target.value })} placeholder="e.g. 2BHK near school" />
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Budget *</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.budget || ''} onChange={(e) => updateAcceptForm(handoff.id, { budget: e.target.value })} placeholder="e.g. 60L" />
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.timelineToBuy || ''} onChange={(e) => updateAcceptForm(handoff.id, { timelineToBuy: e.target.value })}>
                               <option value="">Select...</option>
-                              {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Preferred Facing *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.preferredFacing || ''} onChange={(e) => updateAcceptForm(handoff.id, { preferredFacing: e.target.value })}>
+                              <option value="">Select...</option>
+                              {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                             </select>
                           </div>
                           <div style={{ gridColumn: '1 / -1' }}>
@@ -662,6 +663,25 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                           <div style={{ gridColumn: '1 / -1' }}>
                             <label className="qa-drawer-field-label">Specific Concerns *</label>
                             <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.specificConcerns || ''} onChange={(e) => updateAcceptForm(handoff.id, { specificConcerns: e.target.value })} placeholder="Customer concerns" />
+                          </div>
+                        </div>
+
+                        {/* 💰 Purchase Intent */}
+                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}>💰 Purchase Intent</div>
+                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                          <div>
+                            <label className="qa-drawer-field-label">Purpose Of Purchase *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.motivationType || ''} onChange={(e) => updateAcceptForm(handoff.id, { motivationType: e.target.value })}>
+                              <option value="">Select...</option>
+                              {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Payment Type *</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.paymentType || ''} onChange={(e) => updateAcceptForm(handoff.id, { paymentType: e.target.value })}>
+                              <option value="">Select...</option>
+                              {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
                           </div>
                         </div>
                       </div>

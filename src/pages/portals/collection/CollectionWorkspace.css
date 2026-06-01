@@ -689,7 +689,7 @@
 
 /* ── Payment row highlight ── */
 .col-payment-verified {
-  background: var(--accent-green-bg) !important;
+  background: transparent !important;
 }
 
 .col-payment-bounced {
@@ -1042,6 +1042,8 @@
 }
 .col-badge-verified { background: #d1fae5; color: #065f46; }
 .col-badge-verified::before { background: #15803d; }
+.col-badge-neutral { background: #f3f4f6; color: #374151; }
+.col-badge-neutral::before { background: #9ca3af; }
 .col-badge-unverified { background: #fef3c7; color: #92400e; }
 .col-badge-unverified::before { background: #f59e0b; }
 .col-badge-rejected { background: #fee2e2; color: #991b1b; }
@@ -1093,8 +1095,10 @@
 .col-table-scroll-y .col-table-new thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
-  background: #625afa1f;
+  z-index: 2;
+  /* Opaque sidebar-active purple so scrolling rows don't bleed through the header. */
+  background: var(--sidebar-active-bg-solid);
+  border-bottom: 1px solid var(--border-primary);
 }
 @media (max-width: 768px) {
   .col-table-scroll-y { max-height: 300px; }
@@ -1914,6 +1918,8 @@
 .bkd-badge::before { content:''; width:5px; height:5px; border-radius:50%; }
 .bkd-badge-success { background:#d1fae5; color:#065f46; }
 .bkd-badge-success::before { background:#15803d; }
+.bkd-badge-neutral { background:#f3f4f6; color:#374151; }
+.bkd-badge-neutral::before { background:#9ca3af; }
 .bkd-badge-warning { background:#fef3c7; color:#92400e; }
 .bkd-badge-warning::before { background:#f59e0b; }
 .bkd-badge-danger { background:#fee2e2; color:#991b1b; }

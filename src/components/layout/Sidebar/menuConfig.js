@@ -188,7 +188,7 @@ export const salesHeadMenu = [
   { group: 'Sales' },
   { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
   { label: 'Negotiation Leads', key: 'negotiations', icon: HandRaisedIcon, badgeColor: 'purple' },
-  { label: 'My Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
+  { label: 'Bookings', key: 'handoffs', icon: ArrowsRightLeftIcon, badgeColor: 'blue' },
   { label: 'Bookings Analytics', key: 'bookingsummary', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { label: 'Cancel Requests', key: 'cancellations', icon: XCircleIcon, badgeColor: 'red' },
   { group: 'Overview' },

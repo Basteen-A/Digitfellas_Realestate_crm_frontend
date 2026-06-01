@@ -6,7 +6,13 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
-import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue } from './siteVisitFields';
+import customerTypeApi from '../../../api/customerTypeApi';
+import motivationApi from '../../../api/motivationApi';
+import {
+  VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue,
+  FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
+  TIMELINE_OPTIONS, EMPTY_VISIT_DETAILS, isVisitDetailsComplete, pickVisitDetails,
+} from './siteVisitFields';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
@@ -327,6 +333,10 @@ const actionInitialState = {
   primaryRequirement: '',
   secondaryRequirement: '',
   timeSpent: '',
+  scheduledTimeSlot: '',
+  customerTypeId: '',
+  customerRequirement: '',
+  ...EMPTY_VISIT_DETAILS,
   callResult: 'Answered',
 };
 
@@ -340,6 +350,8 @@ const LeadDetailsPage = () => {
   const [lead, setLead] = useState(null);
   const [projectOptions, setProjectOptions] = useState([]);
   const [locationOptions, setLocationOptions] = useState([]);
+  const [customerTypeOptions, setCustomerTypeOptions] = useState([]);
+  const [motivationOptions, setMotivationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('followups');
   const [siteVisits, setSiteVisits] = useState([]);
@@ -538,7 +550,7 @@ const LeadDetailsPage = () => {
     setLoading(true);
 
     try {
-      const [leadResp, projResp, locResp, wfResp, svResp, followUpAssignedResp] = await Promise.all([
+      const [leadResp, projResp, locResp, wfResp, svResp, followUpAssignedResp, ctResp, motResp] = await Promise.all([
         leadWorkflowApi.getLeadById(id),
         projectApi.getDropdown(),
         locationApi.getDropdown(),
@@ -547,12 +559,16 @@ const LeadDetailsPage = () => {
         MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)
           ? leadWorkflowApi.getLeads({ roleCode, assignedToMe: true, followUpFilter: 'missed', page: 1, limit: 1 }).catch(() => ({ data: [] }))
           : Promise.resolve({ data: [] }),
+        customerTypeApi.getDropdown().catch(() => ({ data: [] })),
+        motivationApi.getDropdown().catch(() => ({ data: [] })),
       ]);
 
       const leadData = leadResp.data;
       setLead(leadData);
       setProjectOptions(projResp.data || []);
       setLocationOptions(locResp.data || []);
+      setCustomerTypeOptions(ctResp.data || []);
+      setMotivationOptions(motResp.data || []);
       setWorkflowConfig(wfResp.data || null);
       const siteVisitRows = svResp?.data?.rows || svResp?.data?.data || svResp?.data || [];
       setSiteVisits(Array.isArray(siteVisitRows) ? siteVisitRows : []);
@@ -692,6 +708,8 @@ const LeadDetailsPage = () => {
       ...actionInitialState,
       budgetMin: lead?.budgetMin ?? '',
       budgetMax: lead?.budgetMax ?? '',
+      customerTypeId: lead?.customerTypeId ?? '',
+      customerRequirement: lead?.primaryRequirement ?? '',
       callResult: action?.targetStatusCode === 'RNR' || action?.code.includes('RNR') ? 'Not Answered' : 'Answered',
     }));
     setAssignableUsers([]);
@@ -772,27 +790,32 @@ const LeadDetailsPage = () => {
         toast.error('Project visited is required');
         return;
       }
-      if (selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE') {
-        if ((actionForm.budgetMin !== '' || actionForm.budgetMax !== '') && (actionForm.budgetMin === '' || actionForm.budgetMax === '')) {
-          toast.error('Budget Min and Budget Max must both be provided when entering budget details');
-          return;
-        }
-        if (actionForm.budgetMin !== '' && actionForm.budgetMax !== '' && Number(actionForm.budgetMax) < Number(actionForm.budgetMin)) {
-          toast.error('Budget Max must be greater than or equal to Budget Min');
-          return;
-        }
+      if (selectedAction.code === 'SM_SITE_VISIT') {
+        if (!actionForm.customerTypeId) { toast.error('Customer Type is required'); return; }
+        if (!actionForm.motivationType) { toast.error('Motivation is required'); return; }
+        if (!actionForm.customerRequirement?.trim()) { toast.error('Customer Requirement is required'); return; }
+        if (!actionForm.timeSpent) { toast.error('Time Spent is required'); return; }
+        if (!isVisitDetailsComplete(actionForm)) { toast.error('All site visit detail fields are required'); return; }
       }
       payload.assignToUserId = actionForm.assignToUserId || payload.assignToUserId;
       if (actionForm.svDate) {
         payload.svDate = new Date(actionForm.svDate).toISOString();
       }
       payload.svProjectId = actionForm.svProjectId;
-      payload.budgetMin = selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && actionForm.budgetMin !== '' ? Number(actionForm.budgetMin) : undefined;
-      payload.budgetMax = selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && actionForm.budgetMax !== '' ? Number(actionForm.budgetMax) : undefined;
       payload.motivationType = actionForm.motivationType || undefined;
-      payload.primaryRequirement = actionForm.primaryRequirement || undefined;
-      payload.secondaryRequirement = actionForm.secondaryRequirement || undefined;
       payload.time_spent = actionForm.timeSpent ? Number(actionForm.timeSpent) : undefined;
+
+      // SM "Record Site Visit" — full capture matching the Add Site Visit modal.
+      // Record the Sales Head as negotiator rather than reassigning the lead.
+      if (selectedAction.code === 'SM_SITE_VISIT') {
+        payload.salesHeadUserId = actionForm.assignToUserId || undefined;
+        payload.assignToUserId = undefined;
+        payload.customerTypeId = actionForm.customerTypeId || undefined;
+        payload.customerRequirement = actionForm.customerRequirement?.trim() || undefined;
+        payload.primaryRequirement = actionForm.customerRequirement?.trim() || undefined;
+        payload.scheduled_time_slot = actionForm.scheduledTimeSlot?.trim() || undefined;
+        Object.assign(payload, pickVisitDetails(actionForm));
+      }
     }
 
     setActionSaving(true);
@@ -829,6 +852,8 @@ const LeadDetailsPage = () => {
       ...actionInitialState,
       budgetMin: lead?.budgetMin ?? '',
       budgetMax: lead?.budgetMax ?? '',
+      customerTypeId: lead?.customerTypeId ?? '',
+      customerRequirement: lead?.primaryRequirement ?? '',
       callResult: action.targetStatusCode === 'RNR' || action.code.includes('RNR') ? 'Not Answered' : 'Answered',
       // Prefill from the same-day previous update so it can be edited (rewritten).
       ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
@@ -959,6 +984,18 @@ const LeadDetailsPage = () => {
       time_spent: quickActionForm.timeSpent ? Number(quickActionForm.timeSpent) : undefined,
     };
 
+    // SM "Record Site Visit" — full capture matching the Add Site Visit modal.
+    // Record the Sales Head as negotiator rather than reassigning the lead.
+    if (quickSelectedAction.code === 'SM_SITE_VISIT') {
+      payload.salesHeadUserId = quickActionForm.assignToUserId || undefined;
+      payload.assignToUserId = undefined;
+      payload.customerTypeId = quickActionForm.customerTypeId || undefined;
+      payload.customerRequirement = quickActionForm.customerRequirement?.trim() || undefined;
+      payload.primaryRequirement = quickActionForm.customerRequirement?.trim() || undefined;
+      payload.scheduled_time_slot = quickActionForm.scheduledTimeSlot?.trim() || undefined;
+      Object.assign(payload, pickVisitDetails(quickActionForm));
+    }
+
     if (quickMissingLocationId) {
       payload.location_id = quickMissingLocationId;
       payload.location_ids = [quickMissingLocationId];
@@ -1034,15 +1071,12 @@ const LeadDetailsPage = () => {
         toast.error('Project visited is required');
         return;
       }
-      if (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE') {
-        if ((quickActionForm.budgetMin !== '' || quickActionForm.budgetMax !== '') && (quickActionForm.budgetMin === '' || quickActionForm.budgetMax === '')) {
-          toast.error('Budget Min and Budget Max must both be provided when entering budget details');
-          return;
-        }
-        if (quickActionForm.budgetMin !== '' && quickActionForm.budgetMax !== '' && Number(quickActionForm.budgetMax) < Number(quickActionForm.budgetMin)) {
-          toast.error('Budget Max must be greater than or equal to Budget Min');
-          return;
-        }
+      if (quickSelectedAction.code === 'SM_SITE_VISIT') {
+        if (!quickActionForm.customerTypeId) { toast.error('Customer Type is required'); return; }
+        if (!quickActionForm.motivationType) { toast.error('Motivation is required'); return; }
+        if (!quickActionForm.customerRequirement?.trim()) { toast.error('Customer Requirement is required'); return; }
+        if (!quickActionForm.timeSpent) { toast.error('Time Spent is required'); return; }
+        if (!isVisitDetailsComplete(quickActionForm)) { toast.error('All site visit detail fields are required'); return; }
       }
     }
 
@@ -1531,7 +1565,7 @@ const LeadDetailsPage = () => {
                           </label>
                         )}
 
-                        {(selectedAction.needsSvDetails || selectedAction.code === 'TC_SV_DONE') && (
+                        {selectedAction.code === 'TC_SV_DONE' && (
                           <div className="lead-actions-grid">
                             <label className="lead-actions-label">
                               Site Visit Date
@@ -1558,28 +1592,187 @@ const LeadDetailsPage = () => {
                         )}
 
                         {selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && (
-                          <div className="lead-actions-grid">
+                          <>
+                            {/* 📅 Visit Details */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 6, marginBottom: 4 }}>📅 Visit Details</div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Visit Date *
+                                <input
+                                  type="date"
+                                  value={actionForm.svDate}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, svDate: e.target.value }))}
+                                />
+                              </label>
+                              <label className="lead-actions-label">
+                                Project *
+                                <select
+                                  value={actionForm.svProjectId}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, svProjectId: e.target.value }))}
+                                >
+                                  <option value="">Select project...</option>
+                                  {projectOptions.map((project) => (
+                                    <option key={project.id} value={project.id}>{project.project_name}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Time Slot
+                                <input
+                                  value={actionForm.scheduledTimeSlot}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, scheduledTimeSlot: e.target.value }))}
+                                  placeholder="e.g. 10 AM - 12 PM"
+                                />
+                              </label>
+                              <label className="lead-actions-label">
+                                Time Spent (mins) *
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={actionForm.timeSpent}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
+                                  placeholder="30"
+                                />
+                              </label>
+                            </div>
+
+                            {/* 👤 Customer Profile */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>👤 Customer Profile</div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Buyer Profile *
+                                <select
+                                  value={actionForm.customerTypeId}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, customerTypeId: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {customerTypeOptions.map((ct) => (
+                                    <option key={ct.id} value={ct.id}>{ct.type_name}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="lead-actions-label">
+                                Age Bracket *
+                                <select
+                                  value={actionForm.ageBracket}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, ageBracket: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              </label>
+                            </div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Decision Maker Present *
+                                <select
+                                  value={actionForm.decisionMaker}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, decisionMaker: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              </label>
+                              <label className="lead-actions-label">
+                                Secondary Contact *
+                                <input
+                                  value={actionForm.secondaryContact}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, secondaryContact: e.target.value }))}
+                                  placeholder="Secondary phone"
+                                />
+                              </label>
+                            </div>
+
+                            {/* 🏠 Property Requirement */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>🏠 Property Requirement</div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Customer Requirement *
+                                <input
+                                  value={actionForm.customerRequirement}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, customerRequirement: e.target.value }))}
+                                  placeholder="e.g. 2BHK near school"
+                                />
+                              </label>
+                              <label className="lead-actions-label">
+                                Budget *
+                                <input
+                                  value={actionForm.budget}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, budget: e.target.value }))}
+                                  placeholder="e.g. 60L"
+                                />
+                              </label>
+                            </div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Timeline to Buy *
+                                <select
+                                  value={actionForm.timelineToBuy}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, timelineToBuy: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </select>
+                              </label>
+                              <label className="lead-actions-label">
+                                Preferred Facing *
+                                <select
+                                  value={actionForm.preferredFacing}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, preferredFacing: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              </label>
+                            </div>
                             <label className="lead-actions-label">
-                              Budget Min *
-                              <input
-                                type="number"
-                                min="0"
-                                value={actionForm.budgetMin}
-                                onChange={(e) => setActionForm((p) => ({ ...p, budgetMin: e.target.value }))}
-                                placeholder="5000000"
+                              Address *
+                              <textarea
+                                rows={2}
+                                value={actionForm.address}
+                                onChange={(e) => setActionForm((p) => ({ ...p, address: e.target.value }))}
+                                placeholder="Customer address"
                               />
                             </label>
                             <label className="lead-actions-label">
-                              Budget Max *
-                              <input
-                                type="number"
-                                min="0"
-                                value={actionForm.budgetMax}
-                                onChange={(e) => setActionForm((p) => ({ ...p, budgetMax: e.target.value }))}
-                                placeholder="8000000"
+                              Specific Concerns *
+                              <textarea
+                                rows={2}
+                                value={actionForm.specificConcerns}
+                                onChange={(e) => setActionForm((p) => ({ ...p, specificConcerns: e.target.value }))}
+                                placeholder="Customer concerns"
                               />
                             </label>
-                          </div>
+
+                            {/* 💰 Purchase Intent */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>💰 Purchase Intent</div>
+                            <div className="lead-actions-grid">
+                              <label className="lead-actions-label">
+                                Purpose Of Purchase *
+                                <select
+                                  value={actionForm.motivationType}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, motivationType: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {motivationOptions.map((m) => (
+                                    <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="lead-actions-label">
+                                Payment Type *
+                                <select
+                                  value={actionForm.paymentType}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, paymentType: e.target.value }))}
+                                >
+                                  <option value="">Select...</option>
+                                  {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              </label>
+                            </div>
+                          </>
                         )}
 
                         <div style={{ marginBottom: '16px' }}>
@@ -1611,29 +1804,6 @@ const LeadDetailsPage = () => {
                             })}
                           </div>
                         </div>
-
-                        {selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && (
-                          <div className="lead-actions-grid">
-                            <label className="lead-actions-label">
-                              Motivation
-                              <input
-                                value={actionForm.motivationType}
-                                onChange={(e) => setActionForm((p) => ({ ...p, motivationType: e.target.value }))}
-                                placeholder="Necessity / Comfort / Emotional"
-                              />
-                            </label>
-                            <label className="lead-actions-label">
-                              Time Spent (mins)
-                              <input
-                                type="number"
-                                min="0"
-                                value={actionForm.timeSpent}
-                                onChange={(e) => setActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
-                                placeholder="30"
-                              />
-                            </label>
-                          </div>
-                        )}
 
                         {selectedAction.needsReason && (
                           <>
@@ -2251,7 +2421,8 @@ const LeadDetailsPage = () => {
                   {/* ── Contextual: Site Visit Details ── */}
                   {(quickSelectedAction?.needsSvDetails && quickSelectedAction?.code !== 'TC_SV_DONE') && (
                     <div className="qa-drawer-ctx-block">
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
+                      {/* 📅 Visit Details */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>📅 Visit Details</div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Visit Date *</label>
@@ -2281,89 +2452,193 @@ const LeadDetailsPage = () => {
 
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
-                          <label className="qa-drawer-field-label">Budget Min *</label>
+                          <label className="qa-drawer-field-label">Time Slot</label>
                           <input
-                            type="number"
-                            min="0"
+                            type="text"
                             className="qa-drawer-field-input"
-                            placeholder="Minimum budget"
-                            value={quickActionForm.budgetMin}
-                            onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                            placeholder="e.g. 10 AM - 12 PM"
+                            value={quickActionForm.scheduledTimeSlot}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, scheduledTimeSlot: e.target.value }))}
                             style={{ width: '100%' }}
                           />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label className="qa-drawer-field-label">Budget Max *</label>
+                          <label className="qa-drawer-field-label">Time Spent (mins) *</label>
                           <input
                             type="number"
                             min="0"
                             className="qa-drawer-field-input"
-                            placeholder="Maximum budget"
-                            value={quickActionForm.budgetMax}
-                            onChange={(e) => setQuickActionForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                            placeholder="e.g. 30"
+                            value={quickActionForm.timeSpent}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
                             style={{ width: '100%' }}
                           />
                         </div>
                       </div>
 
-                      {quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && (
-                        <>
-                          <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
-                            <div style={{ flex: 1 }}>
-                              <label className="qa-drawer-field-label">Motivation</label>
-                              <select
-                                className="qa-drawer-field-select"
-                                value={quickActionForm.motivationType}
-                                onChange={(e) => setQuickActionForm((p) => ({ ...p, motivationType: e.target.value }))}
-                                style={{ width: '100%' }}
-                              >
-                                <option value="">Select...</option>
-                                <option value="End Use">End Use</option>
-                                <option value="Investment">Investment</option>
-                                <option value="Rental">Rental</option>
-                                <option value="Expansion">Expansion</option>
-                                <option value="Gift">Gift</option>
-                              </select>
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <label className="qa-drawer-field-label">Time Spent (min)</label>
-                              <input
-                                type="number"
-                                className="qa-drawer-field-input"
-                                placeholder="e.g. 45"
-                                value={quickActionForm.timeSpent}
-                                onChange={(e) => setQuickActionForm((p) => ({ ...p, timeSpent: e.target.value }))}
-                                style={{ width: '100%' }}
-                              />
-                            </div>
-                          </div>
+                      {/* 👤 Customer Profile */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>👤 Customer Profile</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Buyer Profile *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.customerTypeId}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, customerTypeId: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {customerTypeOptions.map((ct) => (
+                              <option key={ct.id} value={ct.id}>{ct.type_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Age Bracket *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.ageBracket}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, ageBracket: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      </div>
 
-                          <div style={{ marginBottom: 10 }}>
-                            <label className="qa-drawer-field-label">Requirement (Primary)</label>
-                            <input
-                              type="text"
-                              className="qa-drawer-field-input"
-                              placeholder="e.g. 3BHK, East facing"
-                              value={quickActionForm.primaryRequirement}
-                              onChange={(e) => setQuickActionForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
-                              style={{ width: '100%' }}
-                            />
-                          </div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Decision Maker Present *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.decisionMaker}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, decisionMaker: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Secondary Contact *</label>
+                          <input
+                            type="text"
+                            className="qa-drawer-field-input"
+                            placeholder="Secondary phone"
+                            value={quickActionForm.secondaryContact}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, secondaryContact: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
 
-                          <div style={{ marginBottom: 10 }}>
-                            <label className="qa-drawer-field-label">Requirements / Remarks</label>
-                            <textarea
-                              className="qa-drawer-remark-ta"
-                              rows={2}
-                              placeholder="Specific preferences, configuration, budget notes..."
-                              value={quickActionForm.secondaryRequirement}
-                              onChange={(e) => setQuickActionForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
-                            />
-                          </div>
+                      {/* 🏠 Property Requirement */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>🏠 Property Requirement</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Customer Requirement *</label>
+                          <input
+                            type="text"
+                            className="qa-drawer-field-input"
+                            placeholder="e.g. 2BHK near school"
+                            value={quickActionForm.customerRequirement}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, customerRequirement: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Budget *</label>
+                          <input
+                            type="text"
+                            className="qa-drawer-field-input"
+                            placeholder="e.g. 60L"
+                            value={quickActionForm.budget}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, budget: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
 
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.timelineToBuy}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, timelineToBuy: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Preferred Facing *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.preferredFacing}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, preferredFacing: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      </div>
 
-                        </>
-                      )}
+                      <div style={{ marginBottom: 10 }}>
+                        <label className="qa-drawer-field-label">Address *</label>
+                        <textarea
+                          className="qa-drawer-remark-ta"
+                          rows={2}
+                          placeholder="Customer address"
+                          value={quickActionForm.address}
+                          onChange={(e) => setQuickActionForm((p) => ({ ...p, address: e.target.value }))}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: 10 }}>
+                        <label className="qa-drawer-field-label">Specific Concerns *</label>
+                        <textarea
+                          className="qa-drawer-remark-ta"
+                          rows={2}
+                          placeholder="Customer concerns"
+                          value={quickActionForm.specificConcerns}
+                          onChange={(e) => setQuickActionForm((p) => ({ ...p, specificConcerns: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* 💰 Purchase Intent */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>💰 Purchase Intent</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Purpose Of Purchase *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.motivationType}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, motivationType: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {motivationOptions.map((m) => (
+                              <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Payment Type *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickActionForm.paymentType}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, paymentType: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   )}
 

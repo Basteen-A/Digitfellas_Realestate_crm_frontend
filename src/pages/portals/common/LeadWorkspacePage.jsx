@@ -25,6 +25,10 @@ import {
   getActionsForRole,
   ROLE_LABELS,
 } from './workflowConfig';
+import {
+  FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
+  TIMELINE_OPTIONS, EMPTY_VISIT_DETAILS, isVisitDetailsComplete, pickVisitDetails,
+} from './siteVisitFields';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import {
   PlusCircleIcon,
@@ -2590,6 +2594,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       primaryRequirement: '',
       secondaryRequirement: '',
       timeSpent: '',
+      scheduled_time_slot: '',
+      customerTypeId: '',
+      customerRequirement: '',
+      ...EMPTY_VISIT_DETAILS,
     });
   }, []);
 
@@ -2667,6 +2675,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       primaryRequirement: quickActionLead?.primaryRequirement || '',
       secondaryRequirement: quickActionLead?.secondaryRequirement || '',
       timeSpent: '',
+      scheduled_time_slot: '',
+      customerTypeId: quickActionLead?.customerTypeId || '',
+      customerRequirement: quickActionLead?.primaryRequirement || '',
+      ...EMPTY_VISIT_DETAILS,
       callResult: action.targetStatusCode === 'RNR' ? 'Not Answered' : 'Answered',
       locationId: quickActionLead?.interestedLocations?.[0]
         ? String(quickActionLead.interestedLocations[0])
@@ -2827,16 +2839,38 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && (f.budgetMin === '' || f.budgetMax === '')) {
-          toast.error('Please enter Budget Min and Budget Max');
-          setQuickActionLoading(false);
-          return;
-        }
-
-        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && Number(f.budgetMax) < Number(f.budgetMin)) {
-          toast.error('Budget Max must be greater than or equal to Budget Min');
-          setQuickActionLoading(false);
-          return;
+        // Full site-visit capture parity for SM "Record Site Visit"
+        if (quickWorkflowAction.code === 'SM_SITE_VISIT') {
+          if (!f.assignToUserId) {
+            toast.error('Please select a Sales Head');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!f.customerTypeId) {
+            toast.error('Please select a Customer Type');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!f.motivationType) {
+            toast.error('Please select a Motivation');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!f.customerRequirement?.trim()) {
+            toast.error('Please enter the Customer Requirement');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!f.timeSpent) {
+            toast.error('Please enter Time Spent (mins)');
+            setQuickActionLoading(false);
+            return;
+          }
+          if (!isVisitDetailsComplete(f)) {
+            toast.error('Please fill all the site visit detail fields');
+            setQuickActionLoading(false);
+            return;
+          }
         }
 
         // Validation: Customer Profile for specific actions
@@ -2897,6 +2931,20 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           // server expects `time_spent`; keep camel-case for compatibility elsewhere
           time_spent: f.timeSpent ? Number(f.timeSpent) : undefined,
         };
+
+        // SM "Record Site Visit" — full capture matching the Add Site Visit modal.
+        // The Sales Head is recorded as negotiator (read-only visibility) rather than
+        // reassigning the lead, so send salesHeadUserId and clear assignToUserId.
+        if (quickWorkflowAction.code === 'SM_SITE_VISIT') {
+          payload.salesHeadUserId = f.assignToUserId || undefined;
+          payload.assignToUserId = undefined;
+          payload.customerTypeId = f.customerTypeId || undefined;
+          payload.customerRequirement = f.customerRequirement?.trim() || undefined;
+          payload.primaryRequirement = f.customerRequirement?.trim() || undefined;
+          payload.scheduled_time_slot = f.scheduled_time_slot?.trim() || undefined;
+          payload.remarks = f.note?.trim() || undefined;
+          Object.assign(payload, pickVisitDetails(f));
+        }
 
         // ── ALWAYS include location/project IDs from form state, quickMissing state, OR existing lead data ──
         const intLocs = (quickActionLead?.interestedLocations || []).filter(id => id && String(id).trim() !== '');
@@ -5700,10 +5748,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                     </div>
                   )}
 
-                  {/* ── Contextual: Site Visit Details ── */}
+                  {/* ── Contextual: Site Visit Details (full capture, matches Add Site Visit) ── */}
                   {(quickWorkflowAction?.needsSvDetails && quickWorkflowAction?.code !== 'TC_SV_DONE') && (
                     <div className="qa-drawer-ctx-block">
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
+                      {/* 📅 Visit Details */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>📅 Visit Details</div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Visit Date *</label>
@@ -5733,89 +5782,194 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
-                          <label className="qa-drawer-field-label">Budget Min *</label>
+                          <label className="qa-drawer-field-label">Time Slot</label>
                           <input
-                            type="number"
-                            min="0"
+                            type="text"
                             className="qa-drawer-field-input"
-                            placeholder="Minimum budget"
-                            value={quickWorkflowForm.budgetMin}
-                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, budgetMin: e.target.value }))}
+                            placeholder="e.g. 10 AM - 12 PM"
+                            value={quickWorkflowForm.scheduled_time_slot}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, scheduled_time_slot: e.target.value }))}
                             style={{ width: '100%' }}
                           />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label className="qa-drawer-field-label">Budget Max *</label>
+                          <label className="qa-drawer-field-label">Time Spent (mins) *</label>
                           <input
                             type="number"
                             min="0"
                             className="qa-drawer-field-input"
-                            placeholder="Maximum budget"
-                            value={quickWorkflowForm.budgetMax}
-                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, budgetMax: e.target.value }))}
+                            placeholder="e.g. 30"
+                            value={quickWorkflowForm.timeSpent}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, timeSpent: e.target.value }))}
                             style={{ width: '100%' }}
                           />
                         </div>
                       </div>
 
-                      {quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && (
-                        <>
-                          <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
-                            <div style={{ flex: 1 }}>
-                              <label className="qa-drawer-field-label">Motivation</label>
-                              <select
-                                className="qa-drawer-field-select"
-                                value={quickWorkflowForm.motivationType}
-                                onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, motivationType: e.target.value }))}
-                                style={{ width: '100%' }}
-                              >
-                                <option value="">Select...</option>
-                                <option value="End Use">End Use</option>
-                                <option value="Investment">Investment</option>
-                                <option value="Rental">Rental</option>
-                                <option value="Expansion">Expansion</option>
-                                <option value="Gift">Gift</option>
-                              </select>
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <label className="qa-drawer-field-label">Time Spent (min)</label>
-                              <input
-                                type="number"
-                                className="qa-drawer-field-input"
-                                placeholder="e.g. 45"
-                                value={quickWorkflowForm.timeSpent}
-                                onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, timeSpent: e.target.value }))}
-                                style={{ width: '100%' }}
-                              />
-                            </div>
-                          </div>
+                      {/* 👤 Customer Profile */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>👤 Customer Profile</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Buyer Profile *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.customerTypeId}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, customerTypeId: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {customerTypeOptions.map((ct) => (
+                              <option key={ct.id} value={ct.id}>{ct.type_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Age Bracket *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.ageBracket}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, ageBracket: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      </div>
 
-                          <div style={{ marginBottom: 10 }}>
-                            <label className="qa-drawer-field-label">Requirement (Primary)</label>
-                            <input
-                              type="text"
-                              className="qa-drawer-field-input"
-                              placeholder="e.g. 3BHK, East facing"
-                              value={quickWorkflowForm.primaryRequirement}
-                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, primaryRequirement: e.target.value }))}
-                              style={{ width: '100%' }}
-                            />
-                          </div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Decision Maker Present *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.decisionMaker}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, decisionMaker: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Secondary Contact *</label>
+                          <input
+                            type="text"
+                            className="qa-drawer-field-input"
+                            placeholder="Secondary phone"
+                            value={quickWorkflowForm.secondaryContact}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, secondaryContact: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
 
-                          <div style={{ marginBottom: 10 }}>
-                            <label className="qa-drawer-field-label">Requirements / Remarks</label>
-                            <textarea
-                              className="qa-drawer-remark-ta"
-                              rows={2}
-                              placeholder="Specific preferences, configuration, budget notes..."
-                              value={quickWorkflowForm.secondaryRequirement}
-                              onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, secondaryRequirement: e.target.value }))}
-                            />
-                          </div>
+                      {/* 🏠 Property Requirement */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>🏠 Property Requirement</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Customer Requirement *</label>
+                          <input
+                            type="text"
+                            className="qa-drawer-field-input"
+                            placeholder="e.g. 2BHK near school"
+                            value={quickWorkflowForm.customerRequirement}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, customerRequirement: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Budget *</label>
+                          <input
+                            type="text"
+                            className="qa-drawer-field-input"
+                            placeholder="e.g. 60L"
+                            value={quickWorkflowForm.budget}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, budget: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
 
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.timelineToBuy}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, timelineToBuy: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Preferred Facing *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.preferredFacing}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, preferredFacing: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      </div>
 
-                        </>
-                      )}
+                      <div style={{ marginBottom: 10 }}>
+                        <label className="qa-drawer-field-label">Address *</label>
+                        <textarea
+                          className="qa-drawer-remark-ta"
+                          rows={2}
+                          placeholder="Customer address"
+                          value={quickWorkflowForm.address}
+                          onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, address: e.target.value }))}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: 10 }}>
+                        <label className="qa-drawer-field-label">Specific Concerns *</label>
+                        <textarea
+                          className="qa-drawer-remark-ta"
+                          rows={2}
+                          placeholder="Customer concerns"
+                          value={quickWorkflowForm.specificConcerns}
+                          onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, specificConcerns: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* 💰 Purchase Intent */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>💰 Purchase Intent</div>
+                      <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Purpose Of Purchase *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.motivationType}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, motivationType: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {motivationOptions.map((m) => (
+                              <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Payment Type *</label>
+                          <select
+                            className="qa-drawer-field-select"
+                            value={quickWorkflowForm.paymentType}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, paymentType: e.target.value }))}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select...</option>
+                            {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      </div>
+
                     </div>
                   )}
 

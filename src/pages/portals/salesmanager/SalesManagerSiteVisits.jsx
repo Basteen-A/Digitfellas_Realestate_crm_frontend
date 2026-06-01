@@ -756,8 +756,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
                     <div className="qa-drawer-divider" />
 
-                    {/* ── Site Visit Details ── */}
-                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Site Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</div>
+                    {/* ── 📅 Visit Details ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>📅 Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</div>
                     <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
                         <label className="qa-drawer-field-label">Visit Date {svFieldsRequired ? '*' : ''}</label>
@@ -776,32 +776,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         </select>
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Time Slot</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm((p) => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10AM-12PM" />
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Customer Type *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm((p) => ({ ...p, customer_type_id: e.target.value }))} required>
-                          <option value="">Select...</option>
-                          {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Motivation *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.motivation_type || ''} onChange={(e) => setCreateForm((p) => ({ ...p, motivation_type: e.target.value }))} required>
-                          <option value="">Select...</option>
-                          {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Customer Requirement *</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.customer_requirement} onChange={(e) => setCreateForm((p) => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" required />
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Time Spent (mins) *</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm((p) => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" required />
-                      </div>
-                      <div>
                         <label className="qa-drawer-field-label">Sales Head *</label>
                         <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.sales_head_id} onChange={(e) => setCreateForm((p) => ({ ...p, sales_head_id: e.target.value }))} required>
                           <option value="">Select Sales Head...</option>
@@ -809,32 +783,30 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         </select>
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Secondary Contact *</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.secondaryContact} onChange={(e) => setCreateForm((p) => ({ ...p, secondaryContact: e.target.value }))} placeholder="Secondary phone" required />
+                        <label className="qa-drawer-field-label">Time Slot</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm((p) => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10 AM - 12 PM" />
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Budget *</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.budget} onChange={(e) => setCreateForm((p) => ({ ...p, budget: e.target.value }))} placeholder="e.g. 60L" required />
+                        <label className="qa-drawer-field-label">Time Spent (mins) *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="number" min="0" value={createForm.time_spent} onChange={(e) => setCreateForm((p) => ({ ...p, time_spent: e.target.value }))} placeholder="e.g. 30" required />
                       </div>
+                    </div>
+
+                    {/* ── 👤 Customer Profile ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>👤 Customer Profile</div>
+                    <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
-                        <label className="qa-drawer-field-label">Preferred Facing *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.preferredFacing} onChange={(e) => setCreateForm((p) => ({ ...p, preferredFacing: e.target.value }))} required>
+                        <label className="qa-drawer-field-label">Buyer Profile *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.customer_type_id || ''} onChange={(e) => setCreateForm((p) => ({ ...p, customer_type_id: e.target.value }))} required>
                           <option value="">Select...</option>
-                          {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Payment Type *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.paymentType} onChange={(e) => setCreateForm((p) => ({ ...p, paymentType: e.target.value }))} required>
+                        <label className="qa-drawer-field-label">Age Bracket *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.ageBracket} onChange={(e) => setCreateForm((p) => ({ ...p, ageBracket: e.target.value }))} required>
                           <option value="">Select...</option>
-                          {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Timeline to Buy *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.timelineToBuy} onChange={(e) => setCreateForm((p) => ({ ...p, timelineToBuy: e.target.value }))} required>
-                          <option value="">Select...</option>
-                          {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </div>
                       <div>
@@ -845,10 +817,34 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         </select>
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Age Bracket *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.ageBracket} onChange={(e) => setCreateForm((p) => ({ ...p, ageBracket: e.target.value }))} required>
+                        <label className="qa-drawer-field-label">Secondary Contact *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.secondaryContact} onChange={(e) => setCreateForm((p) => ({ ...p, secondaryContact: e.target.value }))} placeholder="Secondary phone" required />
+                      </div>
+                    </div>
+
+                    {/* ── 🏠 Property Requirement ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>🏠 Property Requirement</div>
+                    <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+                      <div>
+                        <label className="qa-drawer-field-label">Customer Requirement *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.customer_requirement} onChange={(e) => setCreateForm((p) => ({ ...p, customer_requirement: e.target.value }))} placeholder="e.g. 2BHK near school" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Budget *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.budget} onChange={(e) => setCreateForm((p) => ({ ...p, budget: e.target.value }))} placeholder="e.g. 60L" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.timelineToBuy} onChange={(e) => setCreateForm((p) => ({ ...p, timelineToBuy: e.target.value }))} required>
                           <option value="">Select...</option>
-                          {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Preferred Facing *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.preferredFacing} onChange={(e) => setCreateForm((p) => ({ ...p, preferredFacing: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </div>
                       <div style={{ gridColumn: '1 / -1' }}>
@@ -858,6 +854,25 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                       <div style={{ gridColumn: '1 / -1' }}>
                         <label className="qa-drawer-field-label">Specific Concerns *</label>
                         <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={createForm.specificConcerns} onChange={(e) => setCreateForm((p) => ({ ...p, specificConcerns: e.target.value }))} placeholder="Customer concerns" required />
+                      </div>
+                    </div>
+
+                    {/* ── 💰 Purchase Intent ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>💰 Purchase Intent</div>
+                    <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+                      <div>
+                        <label className="qa-drawer-field-label">Purpose Of Purchase *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.motivation_type || ''} onChange={(e) => setCreateForm((p) => ({ ...p, motivation_type: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Payment Type *</label>
+                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.paymentType} onChange={(e) => setCreateForm((p) => ({ ...p, paymentType: e.target.value }))} required>
+                          <option value="">Select...</option>
+                          {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
                       </div>
                     </div>
 

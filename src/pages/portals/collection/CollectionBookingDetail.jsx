@@ -598,13 +598,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
         <div className="bkd-header-actions">
           {/* Workflow action buttons */}
-          {['BOOKED','TOKEN_RECEIVED','FORM_SUBMITTED','AGREEMENT_DRAFT','AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
-            <>
-              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#22C55E',color:'#22C55E'}} onClick={() => setWorkflowMode('register')}><DocumentTextIcon style={{width:14,height:14}}/> Register</button>
-              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#F59E0B',color:'#F59E0B'}} onClick={() => setWorkflowMode('emi')}><BanknotesIcon style={{width:14,height:14}}/> EMI</button>
-              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Request Cancel</button>
-            </>
-          )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'EMI' && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Request Cancel</button>
           )}
@@ -931,7 +924,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   ? { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }
                   : (CATEGORY_COLORS[catKey] || CATEGORY_COLORS.Other);
                 return (
-                <tr key={p.id} className={p.is_bounced?'bkd-row-bounced':p.is_verified?'bkd-row-verified':''}>
+                <tr key={p.id} className={p.is_bounced ? 'bkd-row-bounced' : ''}>
                   <td>{fmtD(p.payment_date)}</td>
                   <td>
                     <span style={{
@@ -949,7 +942,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <td style={{fontSize:12}}>{p.payment_type}</td>
                   <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
                     : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
-                    : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
+                    : p.is_verified ? <span className="bkd-badge bkd-badge-neutral">Verified</span>
                     : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
                   <td>—</td>
                 </tr>

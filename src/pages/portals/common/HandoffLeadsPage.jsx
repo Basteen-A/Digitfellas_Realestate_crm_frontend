@@ -66,6 +66,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
   const visibleRows = useMemo(() => rows.filter((row) => !isLostHandoffRow(row)), [rows]);
 
   const isTC = workspaceRole === 'TC';
+  const isSH = workspaceRole === 'SH';
 
   const loadHandoffs = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
@@ -98,7 +99,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
     <div className="handoff-leads">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>{workspaceRole === 'TC' ? 'SV Leads' : (workspaceRole === 'SM' ? 'Negotiations' : 'My Bookings')}</h1>
+          <h1>{workspaceRole === 'TC' ? 'SV Leads' : (workspaceRole === 'SM' ? 'Negotiations' : 'Bookings')}</h1>
           <p>{workspaceRole === 'TC' ? 'Leads you have handed off to Sales Managers.' : (workspaceRole === 'SM' ? 'Leads currently in negotiation phase.' : '')}</p>
         </div>
         <div className="page-header-right">
@@ -135,7 +136,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
         <table className="handoff-leads__table">
           <thead>
             <tr>
-              {isTC ? (
+              {(isTC || isSH) ? (
                 <>
                   <th>Lead</th>
                   <th>When</th>
@@ -147,7 +148,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                   <th className="hide-tablet">From</th>
                 </>
               )}
-              <th>To</th>
+              {!isSH && <th>To</th>}
               {showStage && <th>Stage</th>}
               {isTC ? (
                 <>
@@ -179,7 +180,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
             )}
             {!loading && visibleRows.map((row) => (
               <tr key={row.id} className={row.pendingAcceptance ? 'handoff-row-pending' : ''}>
-                {isTC ? (
+                {(isTC || isSH) ? (
                   <>
                     <td>
                       <div className="handoff-lead-name">{row.leadName || '-'}</div>
@@ -200,10 +201,12 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                     </td>
                   </>
                 )}
-                <td>
-                  <div>{row.toUserName || '-'}</div>
-                  <small>{ROLE_LABELS[row.toUserRole] || row.toUserRoleName || '-'}</small>
-                </td>
+                {!isSH && (
+                  <td>
+                    <div>{row.toUserName || '-'}</div>
+                    <small>{ROLE_LABELS[row.toUserRole] || row.toUserRoleName || '-'}</small>
+                  </td>
+                )}
                 {showStage && (
                   <td>
                     <span className="handoff-chip" style={{ backgroundColor: `${row.stageColor || '#6B7280'}22`, color: 'var(--text-primary)', borderColor: `${row.stageColor || '#6B7280'}66` }}>

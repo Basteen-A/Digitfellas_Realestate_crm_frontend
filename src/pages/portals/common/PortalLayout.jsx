@@ -6,6 +6,7 @@ import { useThemeContext } from '../../../contexts/ThemeContext';
 import { logout } from '../../../redux/slices/authSlice';
 import notificationApi from '../../../api/notificationApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import { getRoleCode } from '../../../utils/permissions';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import PortalSidebar from './PortalSidebar';
 import PhoneInput from 'react-phone-input-2';
@@ -70,6 +71,8 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const navigate = useNavigate();
   const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
+  const roleCode = getRoleCode(user);
+  const canUsePhoneLookup = !['COL', 'ACCT'].includes(roleCode);
   
   const [activeScreen, setActiveScreen] = useState(() => location.state?.screen || defaultScreen || 'dashboard');
   const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
@@ -103,7 +106,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     }
   }, [locationScreen, locationScreenData, location.pathname, navigate]);
 
-  const handleNavigate = (key, context = null) => {
+  const handleNavigate = useCallback((key, context = null) => {
     if (onNavigateOverride) {
       onNavigateOverride(key, context);
     } else {
@@ -114,7 +117,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     if (window.innerWidth >= 1024) {
       setSidebarCollapsed(true);
     }
-  };
+  }, [onNavigateOverride]);
 
   const initials = useMemo(() => {
     const first = user?.firstName?.[0] || user?.first_name?.[0] || '';
@@ -254,27 +257,29 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     return `${parts[0][0] || ''}${parts.length > 1 ? parts[parts.length - 1][0] || '' : ''}`.toUpperCase();
   };
 
-  const resetPhoneLookup = () => {
+  const resetPhoneLookup = useCallback(() => {
     setPhoneLookupValue('');
     setPhoneLookupCountryCode('+91');
     setPhoneLookupResults([]);
     setPhoneLookupError('');
     setPhoneLookupSearched(false);
     setPhoneLookupLoading(false);
-  };
+  }, []);
 
-  const openPhoneLookup = () => {
+  const openPhoneLookup = useCallback(() => {
+    if (!canUsePhoneLookup) return;
     resetPhoneLookup();
     setPhoneLookupOpen(true);
-  };
+  }, [canUsePhoneLookup, resetPhoneLookup]);
 
-  const closePhoneLookup = () => {
+  const closePhoneLookup = useCallback(() => {
     setPhoneLookupOpen(false);
     resetPhoneLookup();
-  };
+  }, [resetPhoneLookup]);
 
-  const handlePhoneLookup = async (event) => {
+  const handlePhoneLookup = useCallback(async (event) => {
     event.preventDefault();
+    if (!canUsePhoneLookup) return;
     const phone = sanitizePhoneNumberInput(phoneLookupValue);
 
     if (phone.length < 7) {
@@ -299,14 +304,20 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     } finally {
       setPhoneLookupLoading(false);
     }
-  };
+  }, [canUsePhoneLookup, phoneLookupCountryCode, phoneLookupValue]);
 
-  const handleCreateLeadFromLookup = () => {
+  const handleCreateLeadFromLookup = useCallback(() => {
     const phone = normalizePhoneLookup(phoneLookupValue);
     if (!phone) return;
     closePhoneLookup();
     handleNavigate('leads-addnew', { prefillPhone: phone });
-  };
+  }, [closePhoneLookup, handleNavigate, phoneLookupValue]);
+
+  useEffect(() => {
+    if (!canUsePhoneLookup && phoneLookupOpen) {
+      closePhoneLookup();
+    }
+  }, [canUsePhoneLookup, phoneLookupOpen, closePhoneLookup]);
 
   return (
     <div className="portal-layout">
@@ -368,15 +379,17 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                 : <MoonIcon style={{ width: 20, height: 20 }} />
               }
             </button>
-            <button
-              type="button"
-              className={`portal-topbar-btn ${phoneLookupOpen ? 'is-notif-pulse' : ''}`}
-              onClick={openPhoneLookup}
-              title="Check phone number"
-              aria-label="Check phone number"
-            >
-              <DocumentMagnifyingGlassIcon style={{ width: 20, height: 20 }} />
-            </button>
+            {canUsePhoneLookup && (
+              <button
+                type="button"
+                className={`portal-topbar-btn ${phoneLookupOpen ? 'is-notif-pulse' : ''}`}
+                onClick={openPhoneLookup}
+                title="Check phone number"
+                aria-label="Check phone number"
+              >
+                <DocumentMagnifyingGlassIcon style={{ width: 20, height: 20 }} />
+              </button>
+            )}
             <div className="portal-topbar__notif-menu" ref={notifMenuRef}>
               <button
                 type="button"
@@ -466,7 +479,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
             </div>
           </div>
         </div>
-        {phoneLookupOpen && (
+        {canUsePhoneLookup && phoneLookupOpen && (
           <div className="portal-phone-modal-overlay" onClick={closePhoneLookup} role="presentation">
             <div className="portal-phone-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
               <div className="portal-phone-modal__header">

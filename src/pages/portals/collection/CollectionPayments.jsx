@@ -105,7 +105,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
               </thead>
               <tbody>
                 {filtered.map(p => (
-                  <tr key={p.id} className={p.is_verified ? 'col-payment-verified' : p.is_bounced ? 'col-payment-bounced' : ''}>
+                  <tr key={p.id} className={p.is_bounced ? 'col-payment-bounced' : ''}>
                     <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
                     <td style={{ color: 'var(--accent-blue)', fontWeight: 600, cursor: onSelectBooking ? 'pointer' : undefined, textDecoration: onSelectBooking ? 'underline' : undefined }} onClick={() => onSelectBooking && onSelectBooking(p.booking_id)}>{p.booking_number}</td>
                     <td>{p.customer_name}</td>
@@ -114,7 +114,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                     <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(p.payment_date)}</td>
                     <td>
-                      {p.is_verified ? <span className="col-badge" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>Verified</span>
+                      {p.is_verified ? <span className="col-badge col-badge-neutral">Verified</span>
                         : p.is_bounced ? <span className="col-badge" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>Bounced</span>
                         : <span className="col-badge" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>Pending</span>}
                     </td>
