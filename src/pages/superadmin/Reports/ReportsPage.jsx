@@ -6,7 +6,7 @@ import locationApi from '../../../api/locationApi';
 import { formatCurrency } from '../../../utils/formatters';
 import {
   ChartBarIcon, UsersIcon, BuildingOffice2Icon, ArrowPathIcon,
-  ArrowLeftIcon, PhoneIcon, ClipboardDocumentListIcon, CreditCardIcon,
+  ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 
 const PERIODS = [
