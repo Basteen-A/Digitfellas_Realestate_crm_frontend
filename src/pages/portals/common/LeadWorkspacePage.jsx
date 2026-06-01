@@ -864,7 +864,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   const [quickLocationDropdownOpen, setQuickLocationDropdownOpen] = useState(false);
   const [quickProjectDropdownOpen, setQuickProjectDropdownOpen] = useState(false);
   const [closureReasons, setClosureReasons] = useState([]);
-  const [activeTab, setActiveTab] = useState(initialTab || 'today'); // 'all' | 'new' | 'today' | 'missed' | 'sh_leads' | 'sm_leads'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialTab) return initialTab;
+    if (workspaceRole === 'SH') return 'all';
+    return 'today';
+  }); // 'all' | 'new' | 'today' | 'missed' | 'sh_leads' | 'sm_leads'
   const [qaActiveTab, setQaActiveTab] = useState('history'); // 'activity' | 'history'
 
   // ── Create lead ──
@@ -3270,7 +3274,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <span className="show-mobile">Missed</span>
                 </button>
               )}
-              {workspaceRole === 'SM' && (
+              {(workspaceRole === 'SM' || workspaceRole === 'SH') && (
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`filter-tab ${activeTab === 'all' ? 'active' : ''}`}

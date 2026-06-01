@@ -62,6 +62,9 @@ const adminSidebar = [
   // Lead Management – full CRM lead overview for admin
   { label: 'Lead Management', path: '/super-admin/lead-management', icon: ClipboardDocumentListIcon },
 
+  // Reports – user activity + inventory cost reports
+  { label: 'Reports', path: '/super-admin/reports', icon: ChartBarIcon },
+
   // Inventory group
   {
     label: 'PROPERTIES',

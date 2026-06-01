@@ -25,17 +25,17 @@ const SalesHeadWorkspace = () => {
       defaultScreen="dashboard"
       searchPlaceholder="Search leads, bookings..."
     >
-      {({ activeScreen, setActiveScreen }) => (
+      {({ activeScreen, setActiveScreen, screenContext }) => (
         <>
           {activeScreen === 'dashboard' && <SalesHeadDashboard user={user} onNavigate={setActiveScreen} />}
-          {activeScreen === 'negotiations' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
+          {activeScreen === 'negotiations' && <LeadWorkspacePage user={user} workspaceRole="SH" initialTab={screenContext?.tab} />}
           {activeScreen === 'bookings' && <SalesHeadBookings user={user} />}
           {activeScreen === 'bookingsummary' && <SalesHeadBookingSummary />}
           {activeScreen === 'approvals' && <SalesHeadApprovals user={user} />}
           {activeScreen === 'cancellations' && <SalesHeadCancellationRequests user={user} />}
           {activeScreen === 'sitevisits' && <SalesHeadSiteVisits user={user} />}
           {activeScreen === 'handoffs' && <HandoffLeadsPage workspaceRole="SH" defaultType="outgoing" />}
-          {activeScreen === 'allleads' && <LeadWorkspacePage user={user} workspaceRole="SH" />}
+          {activeScreen === 'allleads' && <LeadWorkspacePage user={user} workspaceRole="SH" initialTab={screenContext?.tab} />}
           {activeScreen === 'smteam' && <SalesHeadTeamLeads user={user} />}
           {activeScreen === 'team' && <SalesHeadTeamPerformance />}
           {activeScreen === 'revenue' && (

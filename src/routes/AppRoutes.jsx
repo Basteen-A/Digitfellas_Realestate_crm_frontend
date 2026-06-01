@@ -44,6 +44,7 @@ import PaymentModes from '../pages/superadmin/PaymentModes';
 import Banks from '../pages/superadmin/Banks';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
+import Reports from '../pages/superadmin/Reports';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
@@ -160,6 +161,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/units" element={<InventoryUnitList />} />
             <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
             <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
+            <Route path="/super-admin/reports" element={<Reports />} />
             <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
             <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
             <Route path="/super-admin/payment-modes" element={<PaymentModes />} />

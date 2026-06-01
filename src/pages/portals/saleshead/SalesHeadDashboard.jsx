@@ -134,7 +134,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                 <div className="col-card-subtitle-new">Latest leads in negotiation</div>
               </div>
             </div>
-            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('negotiations')}>
+            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('negotiations', { tab: 'sm_leads' })}>
               View All →
             </button>
           </div>
@@ -208,7 +208,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                 </thead>
                 <tbody>
                   {latestBookings.slice(0, 10).map((booking) => (
-                    <tr key={booking.id} className="col-clickable-row" onClick={() => onNavigate('BOOKINGS', { selectedId: booking.id })}>
+                    <tr key={booking.id} className="col-clickable-row" onClick={() => onNavigate?.('bookings', { selectedId: booking.id })}>
                       <td>
                         <div className="col-cell-primary">{booking.customer_name}</div>
                         {booking.booking_number && <div className="col-cell-secondary col-cell-mono">{booking.booking_number}</div>}
@@ -216,7 +216,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                       <td>{booking.project_name || '—'}</td>
                       <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(booking.net_amount)}</td>
                       <td>
-                        <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); onNavigate('BOOKINGS', { selectedId: booking.id }); }}>
+                        <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); onNavigate?.('bookings', { selectedId: booking.id }); }}>
                           Details
                         </button>
                       </td>
