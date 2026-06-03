@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { EyeIcon } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
 import './TaskManagement.css';
@@ -105,19 +106,19 @@ const TaskListPage = () => {
         <table className="tm-table">
           <thead>
             <tr>
-              <th>Task</th><th>Status</th><th>Assignees</th><th>Department</th><th>Remarks</th><th>Expected Date</th>
+              <th>Task</th><th>Status</th><th>Assignees</th><th>Department</th><th>Remarks</th><th>Expected Date</th><th>Follow-up</th><th></th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={6} className="tm-table__empty">Loading…</td></tr>}
-            {!loading && rows.length === 0 && <tr><td colSpan={6} className="tm-table__empty">No tasks found</td></tr>}
+            {loading && <tr><td colSpan={8} className="tm-table__empty">Loading…</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan={8} className="tm-table__empty">No tasks found</td></tr>}
             {!loading && rows.map((task) => (
               <tr key={task.id} onClick={() => openView(task.id)}>
                 <td>
                   <div className="tm-task-title">{task.title}</div>
-                  <div className="tm-task-sub">
-                    <span className={`tm-prio tm-prio--${task.priority}`}>{task.priority}</span>
-                    {task.creator && ` · ${task.creator.first_name} ${task.creator.last_name || ''}`}
+                  <div className="tm-task-sub" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span className={`tm-prio-badge tm-prio-badge--${task.priority}`}>{task.priority}</span>
+                    {task.creator && <span>· {task.creator.first_name} {task.creator.last_name || ''}</span>}
                   </div>
                 </td>
                 <td>
@@ -131,9 +132,18 @@ const TaskListPage = () => {
                     ))}
                   </span>
                 </td>
-                <td>{task.department?.name || '—'}</td>
+                <td>
+                  <div>{task.department?.name || '—'}</div>
+                  {task.subDepartment?.name && <span className="tm-subtag">{task.subDepartment.name}</span>}
+                </td>
                 <td>{latestRemark(task)}</td>
                 <td>{fmtDate(task.end_date)}</td>
+                <td>{fmtDate(task.follow_up_date)}</td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  <button type="button" className="tm-icon-btn" title="View / Update" onClick={() => openView(task.id)}>
+                    <EyeIcon style={{ width: 16, height: 16 }} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,0 +1,1602 @@
+{
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\.eslintrc.json": {
+    "mtime": 1774935872.490734,
+    "ast_hash": "da013a511498abcb8119bf90bffdf460",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\jsconfig.json": {
+    "mtime": 1774935861.5117822,
+    "ast_hash": "879e4774eeb27d7f92577e9ad2bdff77",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\package.json": {
+    "mtime": 1779779265.1739736,
+    "ast_hash": "aad51d1d5c22be29efba2939dd92fefe",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\postcss.config.js": {
+    "mtime": 1775638035.722152,
+    "ast_hash": "854b38759e7a8b4b82306ae2d9a3a833",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\tailwind.config.js": {
+    "mtime": 1775635802.4556382,
+    "ast_hash": "269db054e3076b7314f041d47e21e307",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\public\\manifest.json": {
+    "mtime": 1774935923.460247,
+    "ast_hash": "9b5cd8cef3aea46104c82acfa5bc3e5f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\App.jsx": {
+    "mtime": 1779449499.1352098,
+    "ast_hash": "529603cc476dd6348c79ccc52b9a7156",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\index.js": {
+    "mtime": 1775913833.2687736,
+    "ast_hash": "2136b3d087182f958b9cfd14cf910554",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\authApi.js": {
+    "mtime": 1778550343.8797276,
+    "ast_hash": "15f1d7c70498faaac205b0f647cbd7a9",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\axiosInstance.js": {
+    "mtime": 1777028121.2011912,
+    "ast_hash": "28878026b3f93fe9f17ceef1f69a6d6b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\bankApi.js": {
+    "mtime": 1779433508.3132956,
+    "ast_hash": "de63028522c04c12a2ce2e2806fb8bef",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\bookingApi.js": {
+    "mtime": 1780170999.4989612,
+    "ast_hash": "c2b174f4105da039202c7d2870a3d4a7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\bookingCancelReasonApi.js": {
+    "mtime": 1774936197.438134,
+    "ast_hash": "5871f7d78443c53c122cf2ac319ce109",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\bookingStatusApi.js": {
+    "mtime": 1774936168.288152,
+    "ast_hash": "cf823dfe1c849e4e3b92ddd9c99b90a0",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\closedLostReasonApi.js": {
+    "mtime": 1774936188.6696029,
+    "ast_hash": "2e7fb2d4d2bb41398a952aa5d267561d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\customerTypeApi.js": {
+    "mtime": 1774936128.5703907,
+    "ast_hash": "086fa6cfc8e8cfdcda6107ea3f48eceb",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\dashboardApi.js": {
+    "mtime": 1779448521.4201882,
+    "ast_hash": "fa5d3bc3afb422d635896805af869680",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\departmentApi.js": {
+    "mtime": 1780399953.1345205,
+    "ast_hash": "ffb0974653f5d0004c6b6288483403cb",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\followUpApi.js": {
+    "mtime": 1774963640.9774137,
+    "ast_hash": "616bc501c96cfea85e2de8b4e9689706",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\inventoryUnitApi.js": {
+    "mtime": 1776497348.7861402,
+    "ast_hash": "262f90b3f69f22fdef43e02b882cf614",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\leadSourceApi.js": {
+    "mtime": 1774936109.8602872,
+    "ast_hash": "712fe786cb72eefbac7e68ab2ff5ef29",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\leadStageApi.js": {
+    "mtime": 1774936178.5945823,
+    "ast_hash": "5c14cccc2dbe90661bf48b221ea6c9c6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\leadStatusApi.js": {
+    "mtime": 1774936158.8600593,
+    "ast_hash": "dfc887dd54a43528a2bb00753170fdd6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\leadSubSourceApi.js": {
+    "mtime": 1774936118.8287358,
+    "ast_hash": "c9b6497fcc7e0de02df4ec9642d722c5",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\leadTypeApi.js": {
+    "mtime": 1774936095.0199132,
+    "ast_hash": "36a3140e55dc7116e2f5ebbe0a773f6a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\leadWorkflowApi.js": {
+    "mtime": 1780041219.4600265,
+    "ast_hash": "a5c0a94174905f9c423941fc027507d7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\locationApi.js": {
+    "mtime": 1774936060.0668004,
+    "ast_hash": "8141d82d8653882874b5ae23762b2855",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\motivationApi.js": {
+    "mtime": 1776430398.0191221,
+    "ast_hash": "73f21b5e38b71fda10f5e7a2269cee2d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\notificationApi.js": {
+    "mtime": 1774963648.4320793,
+    "ast_hash": "c20cbd5dd98fccd0d274ea4e8fa7f8b6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\paymentModeApi.js": {
+    "mtime": 1779433508.3132956,
+    "ast_hash": "cca3f9204d2adc27fddc554be03cb27c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\paymentPlanApi.js": {
+    "mtime": 1777445041.453596,
+    "ast_hash": "0add4fc35ea89f73784cd7e5689b2b9e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\paymentTypeApi.js": {
+    "mtime": 1777445039.4368322,
+    "ast_hash": "dc134135c35cfcdc830853c6711d7fec",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\projectApi.js": {
+    "mtime": 1774936081.9094846,
+    "ast_hash": "78d46da2bbe63f431891afe8dded985d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\projectPhaseApi.js": {
+    "mtime": 1780145234.5973516,
+    "ast_hash": "ed059d86c1ffce9e9b646b9c1626be01",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\projectTypeApi.js": {
+    "mtime": 1774936072.6077645,
+    "ast_hash": "25af39c7940e433cb50b8ef2d3db424f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\reportApi.js": {
+    "mtime": 1780235365.5553007,
+    "ast_hash": "3df9bc951f928c7c5e47fbb7d8d6c67a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\scoreMasterApi.js": {
+    "mtime": 1774936143.593862,
+    "ast_hash": "8ce7fa21c215cefc3b9decfc42451bf4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\siteVisitApi.js": {
+    "mtime": 1775542543.5831897,
+    "ast_hash": "752246ca8bbe1ed29d5819435b706c98",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\statusRemarkApi.js": {
+    "mtime": 1776182923.7853718,
+    "ast_hash": "d7786958466c1dd836f8add3adfcb8c7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\subDepartmentApi.js": {
+    "mtime": 1780399958.2837484,
+    "ast_hash": "140d67abd9cf2b5703ca12c099a8546e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\taskApi.js": {
+    "mtime": 1780404184.0783107,
+    "ast_hash": "51ab63a5edfe515e643a6e658a3a52d2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\userApi.js": {
+    "mtime": 1774936048.1398103,
+    "ast_hash": "0a768d8391029755d04b603a6883d8a7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\userTypeApi.js": {
+    "mtime": 1774936036.7106488,
+    "ast_hash": "1cf6e6b1760456b3a2649fdedbee4c73",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\api\\_baseApi.js": {
+    "mtime": 1776100034.0900595,
+    "ast_hash": "1b420e7ef985a08abaaecb3888e96096",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\icons\\index.js": {
+    "mtime": 1774876325.9761143,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\CalendarPicker.jsx": {
+    "mtime": 1779975536.9478333,
+    "ast_hash": "43eb70f37650c15f269fe01c3222f714",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\HeroIcon.jsx": {
+    "mtime": 1776367528.3249328,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Avatar\\Avatar.jsx": {
+    "mtime": 1774876326.7447531,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Avatar\\index.js": {
+    "mtime": 1774876326.7606704,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Breadcrumb\\Breadcrumb.jsx": {
+    "mtime": 1774876326.4815724,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Breadcrumb\\index.js": {
+    "mtime": 1774876326.4952004,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Button\\Button.jsx": {
+    "mtime": 1774876326.0072272,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Button\\index.js": {
+    "mtime": 1774876326.0182617,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Card\\Card.jsx": {
+    "mtime": 1774876326.361548,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Card\\index.js": {
+    "mtime": 1774876326.4621437,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Card\\StatsCard.jsx": {
+    "mtime": 1774876326.414031,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\DataTable\\DataTable.jsx": {
+    "mtime": 1774876326.036253,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\DataTable\\index.js": {
+    "mtime": 1774876326.0698261,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\DataTable\\TableHeader.jsx": {
+    "mtime": 1774876326.0491283,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\DataTable\\TablePagination.jsx": {
+    "mtime": 1774876326.0627189,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\DataTable\\TableRow.jsx": {
+    "mtime": 1774876326.0558057,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Dropdown\\Dropdown.jsx": {
+    "mtime": 1774876326.7129319,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Dropdown\\index.js": {
+    "mtime": 1774876326.7275567,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\EmptyState\\EmptyState.jsx": {
+    "mtime": 1774876326.6379807,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\EmptyState\\index.js": {
+    "mtime": 1774876326.6585457,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\ErrorBoundary\\ErrorBoundary.jsx": {
+    "mtime": 1774876326.7779772,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\ErrorBoundary\\index.js": {
+    "mtime": 1774876326.785167,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\CheckboxInput.jsx": {
+    "mtime": 1774876326.1542456,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\ColorPicker.jsx": {
+    "mtime": 1774876326.1879575,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\DatePicker.jsx": {
+    "mtime": 1774876326.167708,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\FileUpload.jsx": {
+    "mtime": 1774876326.1734142,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\FormGroup.jsx": {
+    "mtime": 1774876326.193095,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\index.js": {
+    "mtime": 1774876326.205083,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\RadioInput.jsx": {
+    "mtime": 1774876326.1606212,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\SearchInput.jsx": {
+    "mtime": 1774876326.18238,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\SelectInput.jsx": {
+    "mtime": 1774876326.1404321,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\TextArea.jsx": {
+    "mtime": 1774876326.1466866,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\FormElements\\TextInput.jsx": {
+    "mtime": 1774876326.1328855,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Loader\\ButtonLoader.jsx": {
+    "mtime": 1774876326.2375188,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Loader\\index.js": {
+    "mtime": 1774876326.255702,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Loader\\Loader.jsx": {
+    "mtime": 1774876326.2243788,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Loader\\PageLoader.jsx": {
+    "mtime": 1774876326.2305691,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Modal\\ConfirmModal.jsx": {
+    "mtime": 1774876326.100107,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Modal\\DeleteModal.jsx": {
+    "mtime": 1774876326.107877,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Modal\\index.js": {
+    "mtime": 1774876326.1144226,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Modal\\Modal.jsx": {
+    "mtime": 1774876326.0875757,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\PageHeader\\index.js": {
+    "mtime": 1774876326.6094985,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\PageHeader\\PageHeader.jsx": {
+    "mtime": 1774876326.5860946,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\StatusBadge\\index.js": {
+    "mtime": 1774876326.2950408,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\StatusBadge\\StatusBadge.jsx": {
+    "mtime": 1774876326.275982,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Toast\\index.js": {
+    "mtime": 1774876326.341569,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Toast\\Toast.jsx": {
+    "mtime": 1774876326.3206365,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Toast\\ToastContainer.jsx": {
+    "mtime": 1774876326.326056,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Tooltip\\index.js": {
+    "mtime": 1774876326.6964684,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\common\\Tooltip\\Tooltip.jsx": {
+    "mtime": 1774876326.6789258,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\BookingCancelReasonForm.jsx": {
+    "mtime": 1774876327.1400054,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\BookingStatusForm.jsx": {
+    "mtime": 1774876327.1215007,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\ClosedLostReasonForm.jsx": {
+    "mtime": 1774876327.1339023,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\CustomerTypeForm.jsx": {
+    "mtime": 1774876327.1017535,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\LeadSourceForm.jsx": {
+    "mtime": 1774876327.072819,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\LeadStageForm.jsx": {
+    "mtime": 1774876327.1262844,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\LeadStatusForm.jsx": {
+    "mtime": 1774876327.115181,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\LeadSubSourceForm.jsx": {
+    "mtime": 1774876327.0779207,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\LeadTypeForm.jsx": {
+    "mtime": 1774876327.066142,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\LocationForm.jsx": {
+    "mtime": 1774876327.0436568,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\ProjectForm.jsx": {
+    "mtime": 1774876327.0505183,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\ProjectTypeForm.jsx": {
+    "mtime": 1774876327.0585763,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\ScoreMasterForm.jsx": {
+    "mtime": 1774876327.1077678,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\UserForm.jsx": {
+    "mtime": 1774876327.0854309,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\forms\\UserTypeForm.jsx": {
+    "mtime": 1774876327.092708,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\PortalLayoutRoute.jsx": {
+    "mtime": 1775024840.9764614,
+    "ast_hash": "4b99285800345a358643b1ae52f3d704",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\AuthLayout\\AuthLayout.jsx": {
+    "mtime": 1774938582.561539,
+    "ast_hash": "74e27484ea0d0ca119a095a32c557005",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\AuthLayout\\index.js": {
+    "mtime": 1774938597.5424275,
+    "ast_hash": "e59df9812acda4b31608af04e3c6aa98",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Footer\\Footer.jsx": {
+    "mtime": 1774938711.3036451,
+    "ast_hash": "74118b60ac49b97fa1445a126cd6d37b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Footer\\index.js": {
+    "mtime": 1774938719.3188133,
+    "ast_hash": "e2d601cccc6bedb5d9924634e7694485",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Header\\Header.jsx": {
+    "mtime": 1779792420.356001,
+    "ast_hash": "44ce0360ef2fff78a329414382e90d32",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Header\\index.js": {
+    "mtime": 1774938657.9822142,
+    "ast_hash": "648473a91362d49f8f85b3cff3659bae",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Header\\NotificationBell.jsx": {
+    "mtime": 1779792420.356001,
+    "ast_hash": "480e03b9199a027ee1dd6798efca0e50",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Header\\UserMenu.jsx": {
+    "mtime": 1776407052.1690025,
+    "ast_hash": "c930fb6bcc444af685033d6d9c8b428a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\MainLayout\\index.js": {
+    "mtime": 1774938736.589984,
+    "ast_hash": "5216b6570708a7f3484f32825f14df04",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\MainLayout\\MainLayout.jsx": {
+    "mtime": 1776837754.291313,
+    "ast_hash": "6d88b58e5986eff0ec094c50ab0124f4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Sidebar\\index.js": {
+    "mtime": 1774938706.5470858,
+    "ast_hash": "8fab1a1acd7cdb167fead5b9e1153936",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Sidebar\\menuConfig.js": {
+    "mtime": 1780463548.2490861,
+    "ast_hash": "869f2356cf11db28779cb3362e4be925",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Sidebar\\Sidebar.jsx": {
+    "mtime": 1780463621.7317855,
+    "ast_hash": "1334698053dd1ca520dc7f14ee9e8fa3",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Sidebar\\SidebarMenu.jsx": {
+    "mtime": 1774876326.8273163,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Sidebar\\SidebarMenuItem.jsx": {
+    "mtime": 1774876326.8388047,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\components\\layout\\Sidebar\\SidebarSubmenu.jsx": {
+    "mtime": 1774876326.856248,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\contexts\\AuthContext.jsx": {
+    "mtime": 1774944423.965057,
+    "ast_hash": "bddab85d81910497b543c05c658661b5",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\contexts\\SidebarContext.jsx": {
+    "mtime": 1775041815.7012036,
+    "ast_hash": "5b1f95b7f69909ca8c0674240b64680e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\contexts\\ThemeContext.jsx": {
+    "mtime": 1775481444.8832128,
+    "ast_hash": "bb371aa644e34fc538682b5c5af174c5",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useApi.js": {
+    "mtime": 1774876327.1991014,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useAuth.js": {
+    "mtime": 1774876327.1920197,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useClickOutside.js": {
+    "mtime": 1774876327.2444098,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useDebounce.js": {
+    "mtime": 1774876327.203103,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useForm.js": {
+    "mtime": 1774876327.2355652,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useLocalStorage.js": {
+    "mtime": 1774876327.2530172,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useModal.js": {
+    "mtime": 1774876327.221039,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\usePagination.js": {
+    "mtime": 1774876327.21194,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useToast.js": {
+    "mtime": 1774876327.2275372,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\hooks\\useWebSocket.js": {
+    "mtime": 1779788870.0809684,
+    "ast_hash": "2b7a181e489af05c9cb9fe8f5ca01e8c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\auth\\ForgotPassword.jsx": {
+    "mtime": 1774938778.5601995,
+    "ast_hash": "197fdf3df010b97cb43fc37c28b26e3f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\auth\\Login.jsx": {
+    "mtime": 1780042345.284113,
+    "ast_hash": "c3ab62c39cf09d13d1c84771174a1b8d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\auth\\ResetPassword.jsx": {
+    "mtime": 1774938801.9589417,
+    "ast_hash": "92341d671c41303e4ee7a3f3bb93d047",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\Dashboard.jsx": {
+    "mtime": 1778846948.288845,
+    "ast_hash": "a0b8c967b0a4a00891f12dd52de08fb1",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\index.js": {
+    "mtime": 1774938839.821251,
+    "ast_hash": "dac849ff9dad2d2d02cba45ec2f445b8",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\BookingStatsWidget.jsx": {
+    "mtime": 1774876327.3856373,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\LeadsBySourceChart.jsx": {
+    "mtime": 1774876327.4054296,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\LeadsByStageChart.jsx": {
+    "mtime": 1774876327.411678,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\LeadStatsWidget.jsx": {
+    "mtime": 1774876327.3776212,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\RecentLeadsWidget.jsx": {
+    "mtime": 1774876327.3979886,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\RevenueWidget.jsx": {
+    "mtime": 1774876327.390046,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\dashboard\\widgets\\TeamPerformanceWidget.jsx": {
+    "mtime": 1774876327.4192214,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\NotFound\\index.js": {
+    "mtime": 1774938855.5055902,
+    "ast_hash": "ffaa302288904d3044af532cc1f46471",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\NotFound\\NotFound.jsx": {
+    "mtime": 1774938845.708902,
+    "ast_hash": "bcda85508fcd5f3484a195aca5c6250b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\accounts\\AccountsDashboard.jsx": {
+    "mtime": 1780463810.1477666,
+    "ast_hash": "07f8ccc95f836d705d25a8c87e044737",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\accounts\\AccountsVerifyPayments.jsx": {
+    "mtime": 1779370131.2519834,
+    "ast_hash": "93fa7928deb0198aae16691674733931",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\accounts\\AccountsWorkspace.jsx": {
+    "mtime": 1780463696.8944688,
+    "ast_hash": "fa8312c7740cbeb82168a9ffad4111e6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\accounts\\index.js": {
+    "mtime": 1779196760.730162,
+    "ast_hash": "7128115e72474e05cf7a233be6e9e2be",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\AccountsDashboard.jsx": {
+    "mtime": 1779974080.578967,
+    "ast_hash": "fd6aea1e9bfc3a0aaceea1be86732b2e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\AccountsVerifyPayments.jsx": {
+    "mtime": 1779370131.258074,
+    "ast_hash": "a7f59fa949a4e4947cbe62fbcab45396",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\AccountsWorkspace.jsx": {
+    "mtime": 1779174416.5864475,
+    "ast_hash": "3a4a835ff996d768078ebc33ffb9b3c6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionBookingDetail.jsx": {
+    "mtime": 1780320133.266775,
+    "ast_hash": "ba64586ac2467eaa604a351ce6ba419f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionBookings.jsx": {
+    "mtime": 1780172479.156077,
+    "ast_hash": "a702b905f7c55ef062b0a5ab02407008",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionComponents.jsx": {
+    "mtime": 1778847118.0173779,
+    "ast_hash": "ee22285abacfa34f93423f6377f01c82",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionCustomerProfile.jsx": {
+    "mtime": 1778847144.7124746,
+    "ast_hash": "02235e3c49faa0e2ce6514fba291fa72",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionDashboard.jsx": {
+    "mtime": 1780463788.8081563,
+    "ast_hash": "33bb011aff6088e3b6b71a3aa62124f6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionDemandSchedule.jsx": {
+    "mtime": 1779259704.84807,
+    "ast_hash": "f2f1c37330f6ad688d51dd503cad1fa6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionOverdue.jsx": {
+    "mtime": 1780172502.5687358,
+    "ast_hash": "90c1946ab3c2cf8d7dd0676a89897fd7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionPayments.jsx": {
+    "mtime": 1780320133.258222,
+    "ast_hash": "054933be98918905110c4b89ab03fdd7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionReports.jsx": {
+    "mtime": 1779259720.115574,
+    "ast_hash": "daf070738e03da9460ef1338d4a6bfc4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\CollectionWorkspace.jsx": {
+    "mtime": 1780463684.9654386,
+    "ast_hash": "9a3e5e318579a6c8fbb4eefbaf41d065",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\collection\\index.js": {
+    "mtime": 1774951077.7306178,
+    "ast_hash": "426188464a25c049d27209576b308796",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\dashWidgets.jsx": {
+    "mtime": 1780042895.114813,
+    "ast_hash": "f848e48f7877413dc89e24aba65ebf17",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\HandoffLeadsPage.jsx": {
+    "mtime": 1780319588.2356825,
+    "ast_hash": "6c47d947f234a27c08016b0ae63b4c7c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\LeadDetailsPage.jsx": {
+    "mtime": 1780316601.8814588,
+    "ast_hash": "d9be8825299f6c8360b6a73df0c1b36b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\LeadWorkspacePage.jsx": {
+    "mtime": 1780316345.8057415,
+    "ast_hash": "38e672f0ced32d94dc9114d7aac5b9e2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\PortalLayout.jsx": {
+    "mtime": 1780465310.7875645,
+    "ast_hash": "2fe6ec4bc579e98b040078dd574df1df",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\PortalSidebar.jsx": {
+    "mtime": 1780463599.1212502,
+    "ast_hash": "5797303f39476c180ab0c6b490f48e12",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\PortalWorkspaceShell.jsx": {
+    "mtime": 1780465395.1129906,
+    "ast_hash": "50a7f7fb5995e7815a7e85576e066d8d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\siteVisitFields.js": {
+    "mtime": 1780059454.902385,
+    "ast_hash": "2df5823d23ddab4039d90b1fa99c86aa",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\common\\workflowConfig.js": {
+    "mtime": 1778845190.2888446,
+    "ast_hash": "0b9a9c85b36e6cb78660a044962c8fe8",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\index.js": {
+    "mtime": 1774964481.9307377,
+    "ast_hash": "c27e58298fa8043fcb5aa71e44c8936f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadApprovals.jsx": {
+    "mtime": 1778847162.1123774,
+    "ast_hash": "a8863b2e6b0a6478c446f3d3f89cc7ff",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadBookings.jsx": {
+    "mtime": 1779974112.781117,
+    "ast_hash": "a9d5fd20b89fc273e3ef824cf521f78b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadBookingSummary.jsx": {
+    "mtime": 1779974115.5357018,
+    "ast_hash": "21546fd2cfb723053013fda98ca46df0",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadCancellationRequests.jsx": {
+    "mtime": 1780137936.2255838,
+    "ast_hash": "75e77e96d511d22a1872f7e102c1a8bf",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadDashboard.jsx": {
+    "mtime": 1780463757.8428903,
+    "ast_hash": "058e62e30433d905107582a51d3581a6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadPayments.jsx": {
+    "mtime": 1779974185.621926,
+    "ast_hash": "0df1f70e9d267db50522ef3e82169457",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadSiteVisits.jsx": {
+    "mtime": 1780123643.285441,
+    "ast_hash": "449de4d551be0c9b622e760bd1a3b43c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadTeamLeads.jsx": {
+    "mtime": 1780123734.7967007,
+    "ast_hash": "2ee4a38915db63b45a42e14fdaf83ace",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadTeamPerformance.jsx": {
+    "mtime": 1779974166.6359012,
+    "ast_hash": "15fb37a9506d521aa23b49cc8bc0bd97",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\saleshead\\SalesHeadWorkspace.jsx": {
+    "mtime": 1780463668.8438883,
+    "ast_hash": "7c6c571176cc346030c82b0ae7de70e2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\index.js": {
+    "mtime": 1774964479.914028,
+    "ast_hash": "3dff1c506c5c9e4e458c888d3d59eb18",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerDashboard.jsx": {
+    "mtime": 1780463729.3625333,
+    "ast_hash": "6972f7731dd0a17632bd98527d2730f1",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerIncoming.jsx": {
+    "mtime": 1780316851.6951332,
+    "ast_hash": "7a0689340058fd866bf1851c20a7acae",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerPullLead.jsx": {
+    "mtime": 1778154809.8110929,
+    "ast_hash": "0e0c0a654f2f7c707760a2ab2c454b13",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerPushLeads.jsx": {
+    "mtime": 1779974125.010308,
+    "ast_hash": "21524d98ac1e9b2f45184896e427a6d4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerSiteVisits.jsx": {
+    "mtime": 1780463865.3664575,
+    "ast_hash": "e32d4cf4f5753161cd5dc7e928135466",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerVisits.jsx": {
+    "mtime": 1779974179.350657,
+    "ast_hash": "148ea5ae26ae3caae13915b4e1c98c52",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\salesmanager\\SalesManagerWorkspace.jsx": {
+    "mtime": 1780463654.7395163,
+    "ast_hash": "c3d90151e6b5b3b232e95337cc069e2e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\index.js": {
+    "mtime": 1774964477.8912933,
+    "ast_hash": "e662fa0b53117fdbec29e24d7c781321",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\TelecallerAddLead.jsx": {
+    "mtime": 1779789941.8397567,
+    "ast_hash": "562bc9448639e52493eb9186cc238fda",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\TelecallerCallLog.jsx": {
+    "mtime": 1775636167.7835274,
+    "ast_hash": "9c8c0f2743ea80616f2a6181eb1dcb33",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\TelecallerDashboard.jsx": {
+    "mtime": 1780463711.0580866,
+    "ast_hash": "971e431d6ba7dff9a77a652a70106490",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\TelecallerPipeline.jsx": {
+    "mtime": 1779974232.256052,
+    "ast_hash": "67ef6e260f217027499ad66c418a284f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\TelecallerPullRequests.jsx": {
+    "mtime": 1779974129.7824013,
+    "ast_hash": "3b280d96c2e5f1b58abe0b6237c06f36",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\portals\\telecaller\\TelecallerWorkspace.jsx": {
+    "mtime": 1780463641.8027937,
+    "ast_hash": "bb173cb4fb30844a7764ee155beeace1",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\profile\\ChangePassword.jsx": {
+    "mtime": 1775639123.2832513,
+    "ast_hash": "930402b156d29fe47fbf690294c5ae37",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\profile\\index.js": {
+    "mtime": 1774938900.2876234,
+    "ast_hash": "2c6435412c5b677197113ff295797bc1",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\profile\\Profile.jsx": {
+    "mtime": 1777364093.1200283,
+    "ast_hash": "0ca0052e4183201a699523e9a757e556",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Banks\\BankList.jsx": {
+    "mtime": 1779433508.3132956,
+    "ast_hash": "43d2417fab5b1795300524128b82913e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Banks\\index.js": {
+    "mtime": 1779433508.3132956,
+    "ast_hash": "be4c5b97c5b272439a9d4a600b13c071",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\BookingCancelReasons\\BookingCancelReasonList.jsx": {
+    "mtime": 1774939281.5314112,
+    "ast_hash": "68d8eeaa4415b30189d260c37440810e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\BookingCancelReasons\\index.js": {
+    "mtime": 1774939290.1310565,
+    "ast_hash": "7a5aece9be02850eceab55cfa3149b1b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\BookingStatuses\\BookingStatusList.jsx": {
+    "mtime": 1774939253.947197,
+    "ast_hash": "db9f34c74c52b093061533686dede0ba",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\BookingStatuses\\index.js": {
+    "mtime": 1774939257.6401424,
+    "ast_hash": "87c4733d34a2033cf9116c515440cd2a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\ClosedLostReasons\\ClosedLostReasonList.jsx": {
+    "mtime": 1774939271.9599638,
+    "ast_hash": "fab6f69d59c6a93d95a69d21c32408bd",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\ClosedLostReasons\\index.js": {
+    "mtime": 1774939276.8370707,
+    "ast_hash": "d6d88656e44e1d19787c42ec9834df7a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\common\\masterConfigs.js": {
+    "mtime": 1780403729.5134153,
+    "ast_hash": "ada2bb24fdb527ea8a420118ba955ad1",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\common\\MasterCrudPage.jsx": {
+    "mtime": 1780403718.8990092,
+    "ast_hash": "d55e987b22e0be4c390ec185a3f579e4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\CustomerTypes\\CustomerTypeList.jsx": {
+    "mtime": 1774939224.424316,
+    "ast_hash": "d4b9850de99301b053a14dc7044eb208",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\CustomerTypes\\index.js": {
+    "mtime": 1774939227.9901128,
+    "ast_hash": "8e2e89294fa62182f2c329c6e39ec20b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Inventory\\index.js": {
+    "mtime": 1776497539.053415,
+    "ast_hash": "024d1af5cf75e6a0ff01ec40fe69cdf7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Inventory\\InventoryDashboard.jsx": {
+    "mtime": 1780169076.360374,
+    "ast_hash": "a3056ee34e890ee176a42a08e6ba5b0b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Inventory\\InventoryUnitList.jsx": {
+    "mtime": 1780145421.6294134,
+    "ast_hash": "304b3cca85ea7a47efa0b3262eb038ae",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadManagement\\AdminLeadManagement.jsx": {
+    "mtime": 1777087220.733933,
+    "ast_hash": "9e6ca53b30f493573185b0d5c43eec01",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadManagement\\index.js": {
+    "mtime": 1777086912.4757597,
+    "ast_hash": "6584356792225a37996ddac7dbac2045",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadSources\\index.js": {
+    "mtime": 1774939189.4199872,
+    "ast_hash": "87da0348ff4a235842543c7b9cb4b9ad",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadSources\\LeadSourceList.jsx": {
+    "mtime": 1774939185.8899777,
+    "ast_hash": "734e7d698430c70166cefb443f1b7d1b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadStages\\index.js": {
+    "mtime": 1774939265.2933743,
+    "ast_hash": "3f53a5eeb93ec53567b6777baa09b079",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadStages\\LeadStageList.jsx": {
+    "mtime": 1774939262.1741655,
+    "ast_hash": "fd1a66f61d78151c826be488d457c36c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadStatuses\\index.js": {
+    "mtime": 1774939247.7363782,
+    "ast_hash": "a7f861ebbce873efae445c933666ff5d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadStatuses\\LeadStatusList.jsx": {
+    "mtime": 1774939243.961514,
+    "ast_hash": "0bc674a453987c5484bbe20f1bf7ba28",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadSubSources\\index.js": {
+    "mtime": 1774939199.2753155,
+    "ast_hash": "0f467d37e3280efadec062667817acc3",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadSubSources\\LeadSubSourceList.jsx": {
+    "mtime": 1774939195.204944,
+    "ast_hash": "295a8bfab62c7fd542141e746e207406",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadTypes\\index.js": {
+    "mtime": 1774939180.5352259,
+    "ast_hash": "c8c3d2ad22b113b10764d82fbe1fa0f1",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\LeadTypes\\LeadTypeList.jsx": {
+    "mtime": 1774939177.0844755,
+    "ast_hash": "2bec80bb9c8b37c9ca3a277f42caa489",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Locations\\index.js": {
+    "mtime": 1774939153.0741277,
+    "ast_hash": "1274e9c186fead6517448dc45334fe73",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Locations\\LocationList.jsx": {
+    "mtime": 1774939149.0428874,
+    "ast_hash": "90e04d751df9ecaf90d7bc854e8177ac",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Motivations\\index.js": {
+    "mtime": 1776430712.442214,
+    "ast_hash": "e1a9df64c943a1ce269a7d6923d0eb8f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Motivations\\MotivationList.jsx": {
+    "mtime": 1776430471.6357327,
+    "ast_hash": "d89ee0e11bef87830c84ccea17176677",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\PaymentModes\\index.js": {
+    "mtime": 1779433508.3132956,
+    "ast_hash": "d1dba4b9e45389bfed2d252a7583ad34",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\PaymentModes\\PaymentModeList.jsx": {
+    "mtime": 1779433508.3132956,
+    "ast_hash": "3a376dc07bb0e7f19091daed1e0e8f77",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\PaymentPlans\\index.js": {
+    "mtime": 1777445050.4914837,
+    "ast_hash": "b219fcab7f0bc910bee151d233393442",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\PaymentPlans\\PaymentPlanList.jsx": {
+    "mtime": 1777445052.5043511,
+    "ast_hash": "510a750a22464ef00d04cd0081436066",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\PaymentTypes\\index.js": {
+    "mtime": 1777445044.0446699,
+    "ast_hash": "8ddcd7c5f469b3624d37f6b53dec2837",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\PaymentTypes\\PaymentTypeList.jsx": {
+    "mtime": 1777445048.0182078,
+    "ast_hash": "5f1d4f97d577795d94c3876817c73d53",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Projects\\index.js": {
+    "mtime": 1774939162.3899605,
+    "ast_hash": "2ca417900f67dedef0bf92a525c9dbc7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Projects\\ProjectList.jsx": {
+    "mtime": 1774939157.9086628,
+    "ast_hash": "dd03eac3c6f5f64200e3b3084897b0e3",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\ProjectTypes\\index.js": {
+    "mtime": 1774939172.2748518,
+    "ast_hash": "21a6d414461fa44752aa5eb63529e7fd",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\ProjectTypes\\ProjectTypeList.jsx": {
+    "mtime": 1774939169.0349455,
+    "ast_hash": "0347e8231bf1f91c34bf32f926501b2f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Reports\\index.js": {
+    "mtime": 1780235458.891137,
+    "ast_hash": "a56cf68b3d2c5fd4312b9e5a20dbf8ff",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Reports\\ReportsPage.jsx": {
+    "mtime": 1780322207.0786014,
+    "ast_hash": "c4dfb72af62f86def526ea257c0a682c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\ScoreMaster\\index.js": {
+    "mtime": 1774939238.1112611,
+    "ast_hash": "e07000518f13392b9faf88fd05e418c0",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\ScoreMaster\\ScoreMasterList.jsx": {
+    "mtime": 1774939234.1933284,
+    "ast_hash": "4cea8a8c136df85c7959381e5421ad30",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\StatusRemarks\\index.js": {
+    "mtime": 1776182923.7853718,
+    "ast_hash": "bae0e3314fbc2d299d8ca21bf73b5c7f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\StatusRemarks\\StatusRemarkList.jsx": {
+    "mtime": 1776182923.7853718,
+    "ast_hash": "132fed2267cfec1598d083a3996eb132",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Users\\index.js": {
+    "mtime": 1774939209.8401701,
+    "ast_hash": "eaf59438cecfbd1d94217efed91c86fd",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\Users\\UserList.jsx": {
+    "mtime": 1774939203.7747843,
+    "ast_hash": "a4170384a666b7231958822c9cbb53c2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\UserTypes\\index.js": {
+    "mtime": 1774939219.8331487,
+    "ast_hash": "45a978d863a02310eb6d5aabd1278ad9",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\UserTypes\\UserTypeList.jsx": {
+    "mtime": 1774939216.4292881,
+    "ast_hash": "c9982e256b2279d02a82553d25f239b2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\superadmin\\WorkflowActions\\WorkflowActionList.jsx": {
+    "mtime": 1775757251.037259,
+    "ast_hash": "9cb20a3daca55ea77689feed242c2f8b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\Departments.jsx": {
+    "mtime": 1780400277.1272674,
+    "ast_hash": "ed2a93f2e5bf1d06c7bd55a825840865",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\index.js": {
+    "mtime": 1780465350.664863,
+    "ast_hash": "affa7ceaa8095c91db7557345ab553c2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\SubDepartments.jsx": {
+    "mtime": 1780400284.0474792,
+    "ast_hash": "5a1c95714ae08b073f27bfb2cb44a176",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\TaskDashboard.jsx": {
+    "mtime": 1780465343.950955,
+    "ast_hash": "2963a2da07b1d6d4a52e49458dd5c9e7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\TaskDashboardWidget.jsx": {
+    "mtime": 1780463531.9348776,
+    "ast_hash": "9244bf131f12c477836431f02563fdc0",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\TaskListPage.jsx": {
+    "mtime": 1780475864.9927914,
+    "ast_hash": "321326a8563df521e3da6f5db8eb6c5e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\TaskModal.jsx": {
+    "mtime": 1780475581.994825,
+    "ast_hash": "fc773850816907cae6e06d0cb82c7c3c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\TaskPortalLayout.jsx": {
+    "mtime": 1780401588.8822086,
+    "ast_hash": "89c9ace6c2f0ac09c5291fce6dd62a32",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\pages\\tasks\\TaskWorkspace.jsx": {
+    "mtime": 1780465324.9311244,
+    "ast_hash": "dafe409b214de64cb184990510935d22",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\rootReducer.js": {
+    "mtime": 1774938471.9551685,
+    "ast_hash": "287f803214371ac4868b5d176d45bc5a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\store.js": {
+    "mtime": 1774938478.4930918,
+    "ast_hash": "84668c3954c9fc6d268a68a79640925a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\authSlice.js": {
+    "mtime": 1774944472.5672953,
+    "ast_hash": "72478496b425939bc8bfaa458f0378c5",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\bookingCancelReasonSlice.js": {
+    "mtime": 1774876328.242499,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\bookingStatusSlice.js": {
+    "mtime": 1774876328.2130208,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\closedLostReasonSlice.js": {
+    "mtime": 1774876328.231406,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\customerTypeSlice.js": {
+    "mtime": 1774876328.1843998,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\dashboardSlice.js": {
+    "mtime": 1774876328.1003935,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\leadSourceSlice.js": {
+    "mtime": 1774876328.1464646,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\leadStageSlice.js": {
+    "mtime": 1774876328.2232847,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\leadStatusSlice.js": {
+    "mtime": 1774876328.2037516,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\leadSubSourceSlice.js": {
+    "mtime": 1774876328.1553018,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\leadTypeSlice.js": {
+    "mtime": 1774876328.1390138,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\locationSlice.js": {
+    "mtime": 1774876328.109031,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\projectSlice.js": {
+    "mtime": 1774876328.1181872,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\projectTypeSlice.js": {
+    "mtime": 1774876328.1257267,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\scoreMasterSlice.js": {
+    "mtime": 1774876328.193559,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\uiSlice.js": {
+    "mtime": 1776837753.925289,
+    "ast_hash": "09200ca164b636a5c0f5767765bf7ca7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\userSlice.js": {
+    "mtime": 1774876328.1629148,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\redux\\slices\\userTypeSlice.js": {
+    "mtime": 1774876328.173406,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\routes\\AppRoutes.jsx": {
+    "mtime": 1780465375.6541965,
+    "ast_hash": "0191d2cf8d54ac4e8bc10391a08bebe0",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\routes\\PrivateRoute.jsx": {
+    "mtime": 1774938536.1329317,
+    "ast_hash": "baa350a41222de97b9b5f113615dcae6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\routes\\PublicRoute.jsx": {
+    "mtime": 1774951290.662474,
+    "ast_hash": "365bcc5b3b1fae6a6181f9340d88e81c",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\routes\\RoleRoute.jsx": {
+    "mtime": 1774951225.0563812,
+    "ast_hash": "6316bcec05fe6ac335ef8a7849d087bc",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\routes\\routeConfig.js": {
+    "mtime": 1776182923.7853718,
+    "ast_hash": "bf0419f065f55629c711cec802e358b4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\routes\\TaskAccessRoute.jsx": {
+    "mtime": 1780400082.2710268,
+    "ast_hash": "b9277a77c0b1537f064b01c8d2c2eb3e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\constants.js": {
+    "mtime": 1779173557.425141,
+    "ast_hash": "a96f4941215241001c856f15058a62b2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\exportUtils.js": {
+    "mtime": 1774944412.786004,
+    "ast_hash": "775c644d0335ee76fc122e2629875b59",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\formatters.js": {
+    "mtime": 1779193663.7544904,
+    "ast_hash": "b07012a7b3085d2a86873246973209ed",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\helpers.js": {
+    "mtime": 1776367528.5630288,
+    "ast_hash": "97c119d551b97962f819590cacde9dfb",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\permissions.js": {
+    "mtime": 1780402029.1349895,
+    "ast_hash": "a5f156e6f25f49eb7eafb335cb05cb61",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\storage.js": {
+    "mtime": 1774944364.1279325,
+    "ast_hash": "9cdd8040d6c625b48a4c61429859dbb7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\utils\\validators.js": {
+    "mtime": 1774944341.9642482,
+    "ast_hash": "81be5b63c7f39d0ccaa4e00394031a9d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\build_output.txt": {
+    "mtime": 1775042124.3000376,
+    "ast_hash": "b10de9ce14d41c0328fbbc5c15d5397e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\build_output_utf8.txt": {
+    "mtime": 1775042531.3452067,
+    "ast_hash": "9bf6b727b348e1548cc07322537132fe",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\.github\\workflows\\deploy.yml": {
+    "mtime": 1778551430.7748835,
+    "ast_hash": "5d01c297ce89fc2cb12913c8c8baf4ae",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\public\\index.html": {
+    "mtime": 1780042364.0977333,
+    "ast_hash": "db5f1340f23a4d2f9f8a1412b07f5c46",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\public\\logo_s.png": {
+    "mtime": 1776419361.215371,
+    "ast_hash": "e207570a1238146ccf7f3863268f7247",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\public\\Sujatha-Favico.png": {
+    "mtime": 1780042352.5779183,
+    "ast_hash": "a533cbf2e4d99de371ee46379ce1bf53",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\public\\sujatha.png": {
+    "mtime": 1775481879.806007,
+    "ast_hash": "5e2dac113eda22e898063720a4b74242",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\avatar-placeholder.png": {
+    "mtime": 1774876325.9640465,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\empty-state.svg": {
+    "mtime": 1774876325.9707923,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\login-bg.jpg": {
+    "mtime": 1774876325.957841,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\logo S.png": {
+    "mtime": 1776419361.215371,
+    "ast_hash": "e207570a1238146ccf7f3863268f7247",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\logo-white.png": {
+    "mtime": 1774876325.9511988,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\logo.png": {
+    "mtime": 1774876325.943141,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\Sujatha-Favico.png": {
+    "mtime": 1780041976.0150678,
+    "ast_hash": "a533cbf2e4d99de371ee46379ce1bf53",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\sujatha.png": {
+    "mtime": 1775481879.806007,
+    "ast_hash": "5e2dac113eda22e898063720a4b74242",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\dfuser\\Desktop\\real-estate-crm\\client\\src\\assets\\images\\Sujatha_N.png": {
+    "mtime": 1780046880.4943888,
+    "ast_hash": "724e90ff2e68c4dd3a137a62f04a8522",
+    "semantic_hash": ""
+  }
+}

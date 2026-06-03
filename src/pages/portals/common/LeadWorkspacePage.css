@@ -3768,16 +3768,21 @@ textarea.crm-form-input {
 
 .qa-drawer-save-btn {
   flex: 1;
-  padding: 13px;
-  border-radius: 12px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
   border: none;
   background: #0F7B5C;
   color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .qa-drawer-save-btn:hover {
@@ -3795,8 +3800,9 @@ textarea.crm-form-input {
 }
 
 .qa-drawer-skip-btn {
-  padding: 13px 18px;
-  border-radius: 12px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
   border: 1.5px solid var(--border-primary, #e2e8f0);
   background: var(--bg-secondary, #f8fafc);
   font-size: 13px;
