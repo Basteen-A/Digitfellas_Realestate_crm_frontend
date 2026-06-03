@@ -63,6 +63,8 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
 
   // Status / remark form (Quick-Action style update)
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
+  // Mandatory initial remark when creating a task
+  const [createRemark, setCreateRemark] = useState('');
 
   const isCreate = mode === 'create';
 
@@ -173,7 +175,10 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)));
 
   // ── Save core (create / edit) ──
-  const canSaveCore = !!form.title.trim();
+  // On create, Title + Description + Follow-up Date + Remarks are all required.
+  const canSaveCore = isCreate
+    ? !!(form.title.trim() && form.description.trim() && form.follow_up_date && createRemark.trim())
+    : !!form.title.trim();
 
   // "Save Changes" is enabled only when an editable field actually differs from
   // the loaded task (assignees persist on their own, so they're excluded here).
@@ -201,6 +206,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
         end_date: form.end_date || null,
         follow_up_date: form.follow_up_date || null,
         assignee_ids: form.assignee_ids,
+        ...(isCreate && { remark: createRemark.trim() }),
       };
       if (isCreate) {
         await taskApi.create(payload);
@@ -222,9 +228,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const statusTarget = statusForm.new_status || task?.status;
   const canApply = useMemo(() => {
     if (!statusTarget) return false;
-    if (statusTarget === 'completed') return true; // completion needs no remark
-    if (!statusForm.content.trim() || !statusForm.follow_up_date) return false;
+    if (!statusForm.content.trim()) return false; // a remark is required on every update
     if (statusTarget === 'cancelled' && !statusForm.cancellation_reason.trim()) return false;
+    if (statusTarget !== 'completed' && !statusForm.follow_up_date) return false; // follow-up except Completed
     return true;
   }, [statusTarget, statusForm]);
 
@@ -237,9 +243,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
       if (!canManageClosure) { toast.error('Only the task creator can close the task.'); return; }
       if (task.status !== 'completed') { toast.error('Task must be Completed before it can be Closed.'); return; }
     }
-    if (target !== 'completed') {
-      if (!statusForm.content.trim()) { toast.error('A remark is required.'); return; }
-      if (!statusForm.follow_up_date) { toast.error('A follow-up date is required.'); return; }
+    if (!statusForm.content.trim()) { toast.error('A remark is required.'); return; }
+    if (target !== 'completed' && !statusForm.follow_up_date) {
+      toast.error('A follow-up date is required.'); return;
     }
 
     setSaving(true);
@@ -294,7 +300,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
             onChange={(e) => setField('title', e.target.value)} placeholder="Task title…" />
         </div>
         <div style={{ marginBottom: 10 }}>
-          <label className="tmq-field-label">Description</label>
+          <label className="tmq-field-label">Description {isCreate && '*'}</label>
           <textarea className="tmq-textarea" value={form.description} disabled={disabled}
             onChange={(e) => setField('description', e.target.value)} placeholder="Add details…" />
         </div>
@@ -356,13 +362,13 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
             <input type="date" className="tmq-input" value={form.end_date || ''} disabled={disabled}
               onChange={(e) => setField('end_date', e.target.value)} />
           </div>
-          {!isCreate && (
-            <div>
-              <label className="tmq-field-label">Follow-up Date</label>
-              {/* Driven by status updates — always read-only here */}
-              <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled readOnly />
-            </div>
-          )}
+          <div>
+            <label className="tmq-field-label">Follow-up Date {isCreate && '*'}</label>
+            {/* Editable when creating; on an existing task it's driven by status updates */}
+            <input type="date" className="tmq-input" value={form.follow_up_date || ''}
+              disabled={!isCreate} readOnly={!isCreate}
+              onChange={isCreate ? (e) => setField('follow_up_date', e.target.value) : undefined} />
+          </div>
         </div>
 
         <div>
@@ -431,7 +437,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
 
           {!loading && (
             <>
-              {/* Status update (Quick-Action grid) */}
+              {/* ── Status buttons first (update model) ── */}
               {!isCreate && (
                 <>
                   <div className="tmq-section">Update Status</div>
@@ -455,7 +461,28 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                       );
                     })}
                   </div>
+                  <div className="tmq-divider" />
+                </>
+              )}
 
+              {/* ── Task details form (after the status buttons) ── */}
+              {!isCreate && <div className="tmq-section">Task Details</div>}
+              {renderFields(!canEditCore)}
+
+              {/* ── Create: mandatory initial remark at the end ── */}
+              {isCreate && (
+                <div className="tmq-block">
+                  <label className="tmq-field-label">Remarks *</label>
+                  <textarea className="tmq-textarea" value={createRemark}
+                    onChange={(e) => setCreateRemark(e.target.value)} placeholder="Add an initial remark…" />
+                </div>
+              )}
+
+              {/* ── Update: remark & follow-up at the END of the form ── */}
+              {!isCreate && (
+                <>
+                  <div className="tmq-divider" />
+                  <div className="tmq-section">Remark &amp; Follow-up</div>
                   {statusForm.new_status === 'cancelled' && (
                     <div className="tmq-block">
                       <label className="tmq-field-label">Cancellation Reason *</label>
@@ -464,11 +491,10 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                         placeholder="Why is this task being cancelled?" />
                     </div>
                   )}
-
                   <div className="tmq-block">
                     <div className="tmq-grid2">
                       <div>
-                        <label className="tmq-field-label">Remark {statusTarget !== 'completed' && '*'}</label>
+                        <label className="tmq-field-label">Remark *</label>
                         <textarea className="tmq-textarea" value={statusForm.content}
                           onChange={(e) => setStatusForm((p) => ({ ...p, content: e.target.value }))}
                           placeholder="Add a remark…" />
@@ -480,18 +506,8 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                       </div>
                     </div>
                   </div>
-                  <div className="tmq-hint">Follow-up date &amp; remark are required on every update — except when marking Completed.</div>
-                  <div className="tmq-divider" />
-                </>
-              )}
+                  <div className="tmq-hint">A remark is required on every update. Follow-up date is required except when marking Completed.</div>
 
-              {/* Task details */}
-              {!isCreate && <div className="tmq-section">Task Details</div>}
-              {renderFields(!canEditCore)}
-
-              {/* Activity history */}
-              {!isCreate && (
-                <>
                   <div className="tmq-divider" />
                   <div className="tmq-section">Activity {remarks.length ? `(${remarks.length})` : ''}</div>
                   <div className="tmq-history">
