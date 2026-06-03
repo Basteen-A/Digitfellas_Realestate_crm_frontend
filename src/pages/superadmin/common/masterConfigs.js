@@ -19,6 +19,8 @@ import paymentTypeApi from '../../../api/paymentTypeApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 import paymentModeApi from '../../../api/paymentModeApi';
 import bankApi from '../../../api/bankApi';
+import departmentApi from '../../../api/departmentApi';
+import subDepartmentApi from '../../../api/subDepartmentApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -61,6 +63,16 @@ const loadLeadStatusOptions = async () => {
 const loadLeadStatusIdOptions = async () => {
   const response = await leadStatusApi.getDropdown();
   return asOptions(response.data, (item) => `${item.status_name} (${item.status_code})`);
+};
+
+const loadProjectOptions = async () => {
+  const response = await projectApi.getDropdown();
+  return asOptions(response.data, (item) => item.project_name);
+};
+
+const loadDepartmentOptions = async () => {
+  const response = await departmentApi.getDropdown();
+  return asOptions(response.data, (item) => item.name);
 };
 
 const commonSimpleColumns = [
@@ -295,6 +307,66 @@ export const masterConfigs = {
       { name: 'city', label: 'City' },
       { name: 'state', label: 'State' },
       { name: 'pincode', label: 'Pincode' },
+      {
+        name: 'task_portal_access',
+        label: 'Task Management Access (Standard Executive portal)',
+        type: 'checkbox',
+        defaultValue: false,
+        getInitialValue: (row) =>
+          row?.task_portal_access === true || row?.taskPortalAccess === true,
+      },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  departments: {
+    title: 'Departments',
+    api: departmentApi,
+    columns: [
+      { header: 'Name', path: 'name' },
+      { header: 'Description', path: 'description' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'name', label: 'Department Name', required: true },
+      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  subDepartments: {
+    title: 'Sub-Departments',
+    api: subDepartmentApi,
+    columns: [
+      { header: 'Name', path: 'name' },
+      { header: 'Department', path: 'department.name' },
+      { header: 'Project', path: 'project.project_name' },
+      { header: 'Location', path: 'location.location_name' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'name', label: 'Sub-Department Name', required: true },
+      {
+        name: 'department_id',
+        label: 'Department',
+        type: 'select',
+        required: true,
+        loadOptions: loadDepartmentOptions,
+      },
+      { name: 'location_id', label: 'Location', type: 'select', loadOptions: loadLocationOptions },
+      {
+        name: 'project_id',
+        label: 'Project',
+        type: 'select',
+        loadOptions: loadProjectOptions,
+        placeholder: 'Select location first',
+        // Show only the projects that belong to the selected location.
+        filterOptions: (options, formValues) => {
+          if (!formValues.location_id) return [];
+          return options.filter((o) => String(o.raw?.location_id) === String(formValues.location_id));
+        },
+      },
+      { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },

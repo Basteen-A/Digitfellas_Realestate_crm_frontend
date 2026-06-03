@@ -160,6 +160,23 @@ const accountsSidebar = [
   { label: 'Verify Payments', path: '/accounts/verify', icon: MagnifyingGlassIcon },
 ];
 
+// ── Task Management (Standard Executive portal) ──
+// Single entry that opens the standalone Standard Executive portal.
+export const getTaskMenuItem = () => ({
+  label: 'Task Management',
+  path: '/task-portal/dashboard',
+  icon: ClipboardDocumentListIcon,
+});
+
+// Key-based Tasks item, appended to a role portal's own sidebar menu when the
+// user has Standard Executive (task) access. Renders the embedded Tasks screen
+// inside the portal instead of routing out to the standalone /task-portal.
+export const portalTaskMenuItem = {
+  label: 'Tasks',
+  key: 'tasks',
+  icon: ClipboardDocumentListIcon,
+};
+
 // Legacy export for backward compatibility
 export const sidebarMenu = adminSidebar;
 

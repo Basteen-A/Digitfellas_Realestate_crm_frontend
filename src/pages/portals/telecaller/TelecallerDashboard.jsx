@@ -14,6 +14,8 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
+import { hasTaskPortalAccess } from '../../../utils/permissions';
+import { TaskDashboardWidget } from '../../tasks';
 import '../collection/CollectionWorkspace.css';
 
 const TelecallerDashboard = ({ user, onNavigate }) => {
@@ -352,6 +354,10 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
           </div>
         </div>
       </div>
+
+      {hasTaskPortalAccess(user) && (
+        <TaskDashboardWidget onOpenTasks={() => onNavigate?.('tasks')} />
+      )}
     </div>
   );
 };

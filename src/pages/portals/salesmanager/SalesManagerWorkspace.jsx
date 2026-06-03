@@ -9,6 +9,7 @@ import SalesManagerPullLead from './SalesManagerPullLead';
 import SalesManagerPushLeads from './SalesManagerPushLeads';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
 import HandoffLeadsPage from '../common/HandoffLeadsPage';
+import { TaskListPage } from '../../tasks';
 import { salesManagerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const SalesManagerWorkspace = () => {
@@ -32,6 +33,7 @@ const SalesManagerWorkspace = () => {
           {activeScreen === 'pull' && <SalesManagerPullLead user={user} onNavigate={setActiveScreen} />}
           {activeScreen === 'push' && <SalesManagerPushLeads onNavigate={setActiveScreen} />}
           {activeScreen === 'sitevisits' && <SalesManagerSiteVisits onNavigate={setActiveScreen} />}
+          {activeScreen === 'tasks' && <TaskListPage />}
         </>
       )}
     </PortalLayout>

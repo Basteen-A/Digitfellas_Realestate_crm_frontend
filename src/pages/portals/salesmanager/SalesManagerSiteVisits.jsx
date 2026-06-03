@@ -222,7 +222,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     try {
       const [projResp, leadsResp, incomingResp, ctResp, motResp, shResp, wfResp] = await Promise.all([
         projectApi.getDropdown(),
-        leadWorkflowApi.getLeads({ roleCode: 'SM', limit: 200 }),
+        // allSm: include every sales manager's leads so an SM can record a site
+        // visit against any SM lead, not only their own / incoming handoffs.
+        leadWorkflowApi.getLeads({ roleCode: 'SM', allSm: true, limit: 200 }),
         leadWorkflowApi.getHandoffs({
           type: 'incoming',
           stageCode: 'SITE_VISIT',
@@ -302,7 +304,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
           // Fallback: search via API (all SM leads)
           try {
             const [ownResp, incomingResp] = await Promise.all([
-              leadWorkflowApi.getLeads({ roleCode: 'SM', search: value, limit: 10 }),
+              leadWorkflowApi.getLeads({ roleCode: 'SM', allSm: true, search: value, limit: 10 }),
               leadWorkflowApi.getHandoffs({
                 type: 'incoming',
                 stageCode: 'SITE_VISIT',

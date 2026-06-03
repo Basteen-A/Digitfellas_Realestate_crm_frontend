@@ -14,12 +14,25 @@ export const getRoleCode = (user) =>
     if (['ACCT', 'ACCOUNTS', 'ACCOUNTS_EXEC', 'ACCOUNTS_EXECUTIVE'].includes(normalized)) {
       return ROLE_CODES.ACCOUNTS_EXEC;
     }
+    if (['SE', 'STANDARD_EXECUTIVE', 'STANDARD_EXEC'].includes(normalized)) return 'SE';
     return normalized;
   })();
 
 export const hasRole = (user, roleCode) => getRoleCode(user) === roleCode;
 
 export const hasAnyRole = (user, roleCodes = []) => roleCodes.includes(getRoleCode(user));
+
+// Task Management portal access: Super Admin / Admin always, plus users
+// explicitly granted via the user edit page. Handles both the login payload
+// (taskPortalAccess) and the /auth/me payload (task_portal_access).
+export const hasTaskPortalAccess = (user) => {
+  if (!user) return false;
+  const code = getRoleCode(user);
+  if (code === 'SA' || code === 'ADM' || code === 'SE') return true;
+  return user.taskPortalAccess === true || user.task_portal_access === true;
+};
+
+export const isTaskAdmin = (user) => ['SA', 'ADM'].includes(getRoleCode(user));
 
 export const isAdminLevel = (user) => hasAnyRole(user, ROLE_GROUPS.ADMIN_LEVEL);
 

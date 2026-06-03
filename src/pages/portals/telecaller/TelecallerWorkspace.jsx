@@ -8,6 +8,7 @@ import TelecallerCallLog from './TelecallerCallLog';
 import TelecallerPullRequests from './TelecallerPullRequests';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
 import HandoffLeadsPage from '../common/HandoffLeadsPage';
+import { TaskListPage } from '../../tasks';
 import { telecallerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const TelecallerWorkspace = () => {
@@ -77,6 +78,9 @@ const TelecallerWorkspace = () => {
             )}
             {activeScreen === 'handoffs' && (
               <HandoffLeadsPage workspaceRole="TC" defaultType="outgoing" showStage={false} />
+            )}
+            {activeScreen === 'tasks' && (
+              <TaskListPage />
             )}
           </>
         );

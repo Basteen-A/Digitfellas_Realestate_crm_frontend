@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { getSidebarMenuForRole, ROLE_LABELS } from './menuConfig';
+import { getSidebarMenuForRole, getTaskMenuItem, ROLE_LABELS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
 import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import './Sidebar.css';
@@ -22,11 +22,21 @@ const MenuIcon = ({ icon, className = 'sidebar-icon' }) => {
 
 const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const { sidebarCollapsed } = useSelector((state) => state.ui);
-  const roleCode = useSelector((state) => getRoleCode(state.auth.user));
+  const user = useSelector((state) => state.auth.user);
+  const roleCode = getRoleCode(user);
   const location = useLocation();
 
   // Determine which group contains the current path so it auto-opens
-  const menu = getSidebarMenuForRole(roleCode);
+  const menu = React.useMemo(() => {
+    const base = getSidebarMenuForRole(roleCode);
+    // Admin / Super Admin and pure Standard Executive users use the standalone
+    // /task-portal. Cross-role users granted task access get the Tasks screen
+    // embedded inside their own portal instead, so no external link here.
+    if (['SA', 'ADM', 'SE'].includes(roleCode)) {
+      return [...base, getTaskMenuItem(roleCode)];
+    }
+    return base;
+  }, [roleCode]);
 
   const getInitialOpenGroups = useCallback(() => {
     const initial = {};

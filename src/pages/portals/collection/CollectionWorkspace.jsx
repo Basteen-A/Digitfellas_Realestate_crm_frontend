@@ -8,6 +8,7 @@ import CollectionBookingDetail from './CollectionBookingDetail';
 import CollectionDemandSchedule from './CollectionDemandSchedule';
 import CollectionOverdue from './CollectionOverdue';
 import CollectionReports from './CollectionReports';
+import { TaskListPage } from '../../tasks';
 import { collectionMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelectedBookingId, user, setActiveScreen }) => {
@@ -66,6 +67,9 @@ const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelect
       )}
       {activeScreen === 'reports' && (
         <CollectionReports user={user} />
+      )}
+      {activeScreen === 'tasks' && (
+        <TaskListPage />
       )}
     </>
   );

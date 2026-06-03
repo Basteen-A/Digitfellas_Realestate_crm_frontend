@@ -15,7 +15,7 @@ const MenuIcon = ({ icon, className = 'portal-sidebar__hero-icon' }) => {
   return <span className={className}>{icon}</span>;
 };
 
-const PortalSidebar = ({ menuItems, activeScreen, onNavigate, user, roleName, collapsed, mobileOpen, onMobileClose }) => {
+const PortalSidebar = ({ menuItems, activeScreen, onNavigate, roleName, collapsed, mobileOpen, onMobileClose }) => {
   return (
     <aside className={`portal-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {mobileOpen && (

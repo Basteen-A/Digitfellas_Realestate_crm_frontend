@@ -250,6 +250,10 @@ const MasterCrudPage = ({ config }) => {
     }
 
     if (field.type === 'select') {
+      const baseOptions = fieldOptions[field.name] || [];
+      const selectOptions = typeof field.filterOptions === 'function'
+        ? field.filterOptions(baseOptions, formValues)
+        : baseOptions;
       return (
         <label className="master-form__field" key={field.name}>
           <span>{field.label}</span>
@@ -258,8 +262,8 @@ const MasterCrudPage = ({ config }) => {
             required={isRequired}
             onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
           >
-            <option value="">Select</option>
-            {(fieldOptions[field.name] || []).map((option) => (
+            <option value="">{field.placeholder || 'Select'}</option>
+            {selectOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

@@ -22,6 +22,12 @@ const collectionMenu = [
   { label: 'Customer Profiles', key: 'customers', icon: UserCircleIcon, badge: null },
 ];
 
+const taskMenu = [
+  { group: 'Menu' },
+  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon, badge: null },
+  { label: 'Tasks', key: 'tasks', icon: ClipboardDocumentListIcon, badge: null },
+];
+
 const roleConfigByCode = {
   TC: { roleName: 'Telecaller', menuItems: telecallerMenu, defaultScreen: 'leads', basePath: '/telecaller/leads' },
   SM: { roleName: 'Sales Manager', menuItems: salesManagerMenu, defaultScreen: 'leads', basePath: '/sales-manager/leads' },
@@ -29,6 +35,7 @@ const roleConfigByCode = {
   COL: { roleName: 'Collection Manager', menuItems: collectionMenu, defaultScreen: 'leads', basePath: '/collection/leads' },
   SA: { roleName: 'Super Admin', menuItems: telecallerMenu, defaultScreen: 'leads', basePath: '/telecaller/leads' },
   ADM: { roleName: 'Admin', menuItems: telecallerMenu, defaultScreen: 'leads', basePath: '/telecaller/leads' },
+  SE: { roleName: 'Standard Executive', menuItems: taskMenu, defaultScreen: 'dashboard', basePath: '/task-portal/dashboard' },
 };
 
 const PortalWorkspaceShell = ({ children, defaultScreen = null }) => {

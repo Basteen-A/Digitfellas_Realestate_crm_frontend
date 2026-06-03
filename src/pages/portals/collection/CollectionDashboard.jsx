@@ -13,6 +13,8 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
+import { hasTaskPortalAccess } from '../../../utils/permissions';
+import { TaskDashboardWidget } from '../../tasks';
 import './CollectionWorkspace.css';
 
 const DATE_PRESETS = [
@@ -312,7 +314,10 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
       </div>
 
       {/* Upcoming Demand Schedule */}
-      
+
+      {hasTaskPortalAccess(user) && (
+        <TaskDashboardWidget onOpenTasks={() => onNavigate?.('tasks')} />
+      )}
     </div>
   );
 };

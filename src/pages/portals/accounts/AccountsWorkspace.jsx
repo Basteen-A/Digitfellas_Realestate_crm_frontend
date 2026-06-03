@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
 import AccountsDashboard from './AccountsDashboard';
 import AccountsVerifyPayments from './AccountsVerifyPayments';
+import { TaskListPage } from '../../tasks';
 import { accountsMenu } from '../../../components/layout/Sidebar/menuConfig';
 import '../collection/CollectionWorkspace.css';
 
@@ -36,6 +37,9 @@ const AccountsWorkspace = () => {
           )}
           {activeScreen === 'reports' && (
             <AccountsVerifyPayments user={user} initialFilter="all" />
+          )}
+          {activeScreen === 'tasks' && (
+            <TaskListPage />
           )}
         </>
       )}

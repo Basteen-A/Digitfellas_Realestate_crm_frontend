@@ -13,6 +13,8 @@ import {
   LinkIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { hasTaskPortalAccess } from '../../../utils/permissions';
+import { TaskDashboardWidget } from '../../tasks';
 import '../collection/CollectionWorkspace.css';
 
 export const AccountsDashboard = ({ user, onNavigate }) => {
@@ -257,6 +259,10 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
           </div>
         </div>
       </div>
+
+      {hasTaskPortalAccess(user) && (
+        <TaskDashboardWidget onOpenTasks={() => onNavigate?.('tasks')} />
+      )}
     </div>
   );
 };

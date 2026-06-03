@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 import RoleRoute from './RoleRoute';
+import TaskAccessRoute from './TaskAccessRoute';
 import { getRoleCode } from '../utils/permissions';
 
 import AuthLayout from '../components/layout/AuthLayout/AuthLayout';
@@ -45,6 +46,7 @@ import Banks from '../pages/superadmin/Banks';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
+import { TaskWorkspace } from '../pages/tasks';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
@@ -55,6 +57,7 @@ const RoleHomeRedirect = () => {
   const user = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(user);
 
+  if (roleCode === 'SE') return <Navigate to="/task-portal/dashboard" replace />;
   if (roleCode === 'TC') return <Navigate to="/telecaller/leads" replace />;
   if (roleCode === 'SM') return <Navigate to="/sales-manager/leads" replace />;
   if (roleCode === 'SH') return <Navigate to="/sales-head/leads" replace />;
@@ -78,6 +81,18 @@ const AppRoutes = () => {
       {/* Portal routes — no app sidebar, portals have their own sidebar */}
       <Route element={<PrivateRoute />}>
         <Route element={<PortalLayoutRoute />}>
+          {/* Standard Executive task portal — now uses the shared PortalLayout
+              shell so it matches the look of every other role portal. */}
+          <Route element={<TaskAccessRoute />}>
+            <Route path="/task-portal" element={<Navigate to="/task-portal/dashboard" replace />} />
+            <Route path="/task-portal/dashboard" element={<TaskWorkspace defaultScreen="dashboard" />} />
+            <Route path="/task-portal/tasks" element={<TaskWorkspace defaultScreen="tasks" />} />
+            <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
+              <Route path="/task-portal/departments" element={<TaskWorkspace defaultScreen="departments" />} />
+              <Route path="/task-portal/sub-departments" element={<TaskWorkspace defaultScreen="sub-departments" />} />
+            </Route>
+          </Route>
+
           <Route element={<RoleRoute allowedRoles={['TC', 'SA', 'ADM']} />}>
             <Route path="/telecaller/leads" element={<TelecallerWorkspace />} />
           </Route>
@@ -98,7 +113,7 @@ const AppRoutes = () => {
             <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
           </Route>
 
-          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'SA', 'ADM']} />}>
+          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'SA', 'ADM', 'SE']} />}>
             <Route
               path="/portal/lead/:id"
               element={(
@@ -136,6 +151,11 @@ const AppRoutes = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/change-password" element={<ChangePassword />} />
           <Route path="/lead/:id" element={<LeadDetailsPage />} />
+
+          {/* Legacy task paths now live in the standalone Standard Executive portal */}
+          <Route path="/tasks" element={<Navigate to="/task-portal/tasks" replace />} />
+          <Route path="/tasks/departments" element={<Navigate to="/task-portal/departments" replace />} />
+          <Route path="/tasks/sub-departments" element={<Navigate to="/task-portal/sub-departments" replace />} />
 
           <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
             <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />

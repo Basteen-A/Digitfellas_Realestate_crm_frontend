@@ -6,7 +6,8 @@ import { useThemeContext } from '../../../contexts/ThemeContext';
 import { logout } from '../../../redux/slices/authSlice';
 import notificationApi from '../../../api/notificationApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
-import { getRoleCode } from '../../../utils/permissions';
+import { getRoleCode, hasTaskPortalAccess } from '../../../utils/permissions';
+import { portalTaskMenuItem } from '../../../components/layout/Sidebar/menuConfig';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import PortalSidebar from './PortalSidebar';
 import PhoneInput from 'react-phone-input-2';
@@ -51,6 +52,9 @@ const SCREEN_TITLES = {
   visits: '',
   sitevisits: '',
   incoming: '',
+  tasks: '',
+  departments: '',
+  'sub-departments': '',
   push: 'Push to Sales Head',
   negotiations: '',
   bookings: '',
@@ -72,7 +76,16 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
   const roleCode = getRoleCode(user);
-  const canUsePhoneLookup = !['COL', 'ACCT'].includes(roleCode);
+  const canUsePhoneLookup = !['COL', 'ACCT', 'SE'].includes(roleCode);
+  const isAdmin = ['SA', 'ADM'].includes(roleCode);
+
+  // Append the embedded Tasks screen to this portal's own sidebar when the user
+  // has Standard Executive (task) access, replacing the old external link.
+  const resolvedMenuItems = useMemo(() => {
+    if (!hasTaskPortalAccess(user)) return menuItems;
+    if (menuItems?.some((item) => item.key === 'tasks')) return menuItems;
+    return [...(menuItems || []), portalTaskMenuItem];
+  }, [menuItems, user]);
   
   const [activeScreen, setActiveScreen] = useState(() => location.state?.screen || defaultScreen || 'dashboard');
   const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
@@ -325,7 +338,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
       <PortalSidebar
-        menuItems={menuItems}
+        menuItems={resolvedMenuItems}
         activeScreen={activeScreen}
         onNavigate={(key) => { handleNavigate(key); setMobileMenuOpen(false); }}
         user={user}
@@ -470,6 +483,11 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
                     <LockClosedIcon style={ICON_STYLE} /> Change Password
                   </button>
+                  {isAdmin && (
+                    <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/dashboard'); }}>
+                      <ChevronLeftIcon style={ICON_STYLE} /> Back to CRM
+                    </button>
+                  )}
                   <div className="portal-topbar__dropdown-divider" />
                   <button type="button" className="portal-topbar__dropdown-item portal-topbar__dropdown-item--danger" onClick={handleLogout}>
                     <ArrowRightOnRectangleIcon style={ICON_STYLE} /> Logout

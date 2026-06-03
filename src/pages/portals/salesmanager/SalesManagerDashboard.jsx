@@ -15,6 +15,8 @@ import {
   InboxArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
+import { hasTaskPortalAccess } from '../../../utils/permissions';
+import { TaskDashboardWidget } from '../../tasks';
 import '../collection/CollectionWorkspace.css';
 
 const SalesManagerDashboard = ({ user, onNavigate }) => {
@@ -260,6 +262,10 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
           </div>
         </div>
       </div>
+
+      {hasTaskPortalAccess(user) && (
+        <TaskDashboardWidget onOpenTasks={() => onNavigate?.('tasks')} />
+      )}
     </div>
   );
 };
