@@ -65,11 +65,6 @@ const loadLeadStatusIdOptions = async () => {
   return asOptions(response.data, (item) => `${item.status_name} (${item.status_code})`);
 };
 
-const loadProjectOptions = async () => {
-  const response = await projectApi.getDropdown();
-  return asOptions(response.data, (item) => item.project_name);
-};
-
 const loadDepartmentOptions = async () => {
   const response = await departmentApi.getDropdown();
   return asOptions(response.data, (item) => item.name);
@@ -340,8 +335,6 @@ export const masterConfigs = {
     columns: [
       { header: 'Name', path: 'name' },
       { header: 'Department', path: 'department.name' },
-      { header: 'Project', path: 'project.project_name' },
-      { header: 'Location', path: 'location.location_name' },
       { header: 'Active', path: 'is_active', type: 'boolean' },
     ],
     fields: [
@@ -352,19 +345,6 @@ export const masterConfigs = {
         type: 'select',
         required: true,
         loadOptions: loadDepartmentOptions,
-      },
-      { name: 'location_id', label: 'Location', type: 'select', loadOptions: loadLocationOptions },
-      {
-        name: 'project_id',
-        label: 'Project',
-        type: 'select',
-        loadOptions: loadProjectOptions,
-        placeholder: 'Select location first',
-        // Show only the projects that belong to the selected location.
-        filterOptions: (options, formValues) => {
-          if (!formValues.location_id) return [];
-          return options.filter((o) => String(o.raw?.location_id) === String(formValues.location_id));
-        },
       },
       { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },

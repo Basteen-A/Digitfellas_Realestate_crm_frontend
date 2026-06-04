@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import dashboardApi from '../../api/dashboardApi';
-import { getRoleCode } from '../../utils/permissions';
+import TaskDashboardWidget from '../tasks/TaskDashboardWidget';
+import { getRoleCode, hasTaskPortalAccess } from '../../utils/permissions';
 import { formatCurrency } from '../../utils/formatters';
 import {
   UsersIcon,
@@ -44,6 +45,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const user = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(user);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
@@ -297,6 +299,11 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Task Management — embedded for task-portal users (Super Admin etc.) */}
+      {hasTaskPortalAccess(user) && (
+        <TaskDashboardWidget onOpenTasks={() => navigate('/super-admin/tasks')} />
+      )}
     </section>
   );
 };

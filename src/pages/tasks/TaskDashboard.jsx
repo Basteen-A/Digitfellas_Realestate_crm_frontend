@@ -11,7 +11,7 @@ const STATUS_LABELS = {
   open: 'Open', pending: 'Pending', work_in_progress: 'Work in Progress',
   completed: 'Completed', closed: 'Closed', cancelled: 'Cancelled',
 };
-const BREAKDOWN_ORDER = ['open', 'pending', 'work_in_progress', 'completed', 'closed', 'cancelled'];
+const BREAKDOWN_ORDER = ['open', 'work_in_progress', 'completed', 'closed', 'cancelled'];
 
 const timeAgo = (d) => {
   if (!d) return '';
@@ -35,6 +35,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [openTaskId, setOpenTaskId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,53 +74,59 @@ const TaskDashboard = ({ onOpenTasks }) => {
         </div>
       )}
 
-      {stats && (
-        <div className="tm-card">
-          <div className="tm-card__title">STATUS BREAKDOWN</div>
-          <div className="tm-breakdown">
-            {BREAKDOWN_ORDER.map((k) => (
-              <div className="tm-breakdown__row" key={k}>
-                <span className="tm-breakdown__label">{STATUS_LABELS[k]}</span>
-                <span className="tm-breakdown__track">
-                  <span className={`tm-breakdown__fill s-${k}`} style={{ width: `${((stats[k] || 0) / maxBar) * 100}%` }} />
-                </span>
-                <span className="tm-breakdown__count">{stats[k] || 0}</span>
-              </div>
-            ))}
+      {/* Side-by-side: status breakdown | recent activity (point 10) */}
+      <div className="tm-dash-split">
+        {stats && (
+          <div className="tm-subcard">
+            <div className="tm-card__title" style={{ marginBottom: 12 }}>STATUS BREAKDOWN</div>
+            <div className="tm-breakdown">
+              {BREAKDOWN_ORDER.map((k) => (
+                <div className="tm-breakdown__row" key={k}>
+                  <span className="tm-breakdown__label">{STATUS_LABELS[k]}</span>
+                  <span className="tm-breakdown__track">
+                    <span className={`tm-breakdown__fill s-${k}`} style={{ width: `${((stats[k] || 0) / maxBar) * 100}%` }} />
+                  </span>
+                  <span className="tm-breakdown__count">{stats[k] || 0}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="tm-card">
-        <div className="tm-card__head">
-          <div className="tm-card__title" style={{ margin: 0 }}>Recent Activity</div>
-          <button type="button" className="tm-link" onClick={goTasks}>View all</button>
-        </div>
-        {loading && <p className="tm-hint">Loading…</p>}
-        {!loading && recent.length === 0 && <p className="tm-hint">No recent activity.</p>}
-        {!loading && recent.map((t) => {
-          const last = (t.remarks || [])[(t.remarks || []).length - 1];
-          const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
-          return (
-            <div className="tm-activity" key={t.id} onClick={goTasks}>
-              <div>
-                <div className="tm-activity__title">{t.title}</div>
-                <div className="tm-activity__sub">
-                  {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'} · {timeAgo(t.created_at)}
-                  {note && <> · {note}</>}
+        <div className="tm-subcard">
+          <div className="tm-card__head" style={{ marginBottom: 8 }}>
+            <div className="tm-card__title" style={{ margin: 0 }}>RECENT ACTIVITY</div>
+            <button type="button" className="tm-link" onClick={goTasks}>View all</button>
+          </div>
+          {loading && <p className="tm-hint">Loading…</p>}
+          {!loading && recent.length === 0 && <p className="tm-hint">No recent activity.</p>}
+          {!loading && recent.map((t) => {
+            const last = (t.remarks || [])[(t.remarks || []).length - 1];
+            const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
+            return (
+              <div className="tm-activity" key={t.id} onClick={() => setOpenTaskId(t.id)}>
+                <div>
+                  <div className="tm-activity__title">{t.title}</div>
+                  <div className="tm-activity__sub">
+                    {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'} · {timeAgo(t.created_at)}
+                    {note && <> · {note}</>}
+                  </div>
+                </div>
+                <div className="tm-activity__badges">
+                  <span className={`tm-prio tm-prio--${t.priority}`}>{t.priority}</span>
+                  <span className={`tm-badge tm-badge--${t.status}`}>{STATUS_LABELS[t.status]}</span>
                 </div>
               </div>
-              <div className="tm-activity__badges">
-                <span className={`tm-prio tm-prio--${t.priority}`}>{t.priority}</span>
-                <span className={`tm-badge tm-badge--${t.status}`}>{STATUS_LABELS[t.status]}</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {createOpen && (
         <TaskModal mode="create" onClose={() => setCreateOpen(false)} onSaved={load} />
+      )}
+      {openTaskId && (
+        <TaskModal mode="view" taskId={openTaskId} onClose={() => setOpenTaskId(null)} onSaved={load} />
       )}
     </section>
   );

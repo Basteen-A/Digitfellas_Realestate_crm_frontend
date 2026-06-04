@@ -46,7 +46,12 @@ import Banks from '../pages/superadmin/Banks';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
-import { TaskWorkspace } from '../pages/tasks';
+import {
+  TaskWorkspace,
+  TaskListPage,
+  Departments as TaskDepartments,
+  SubDepartments as TaskSubDepartments,
+} from '../pages/tasks';
 import TelecallerWorkspace from '../pages/portals/telecaller';
 import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
@@ -159,6 +164,10 @@ const AppRoutes = () => {
 
           <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
             <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />
+            {/* Task Management for Super Admin — pages live in the admin layout */}
+            <Route path="/super-admin/tasks" element={<TaskListPage />} />
+            <Route path="/super-admin/departments" element={<TaskDepartments />} />
+            <Route path="/super-admin/sub-departments" element={<TaskSubDepartments />} />
             <Route path="/super-admin/locations" element={<Locations />} />
             <Route path="/super-admin/projects" element={<Projects />} />
             <Route path="/super-admin/project-types" element={<ProjectTypes />} />

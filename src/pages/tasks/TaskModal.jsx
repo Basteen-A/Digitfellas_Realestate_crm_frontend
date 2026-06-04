@@ -59,12 +59,15 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState('');
   const addRef = useRef(null);
 
   // Status / remark form (Quick-Action style update)
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
   // Mandatory initial remark when creating a task
   const [createRemark, setCreateRemark] = useState('');
+  // Task Details accordion (collapsed by default in the update/view popup)
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const isCreate = mode === 'create';
 
@@ -171,13 +174,17 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     if (!isCreate && taskId) persistAssignees(next, prev);
   };
 
-  const selectedAssignees = users.filter((u) => form.assignee_ids.map(String).includes(String(u.id)));
-  const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)));
+  // The creator is auto-assigned on the backend, so never show them in the
+  // assignee list or the add-picker (it's redundant to pick yourself).
+  const creatorId = isCreate ? currentUser?.id : task?.creator_id;
+  const isCreatorId = (id) => String(id) === String(creatorId);
+  const selectedAssignees = users.filter((u) => form.assignee_ids.map(String).includes(String(u.id)) && !isCreatorId(u.id));
+  const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)) && !isCreatorId(u.id));
 
   // ── Save core (create / edit) ──
-  // On create, Title + Description + Follow-up Date + Remarks are all required.
+  // On create, Title + Description + Remarks are required (no follow-up at create).
   const canSaveCore = isCreate
-    ? !!(form.title.trim() && form.description.trim() && form.follow_up_date && createRemark.trim())
+    ? !!(form.title.trim() && form.description.trim() && createRemark.trim())
     : !!form.title.trim();
 
   // "Save Changes" is enabled only when an editable field actually differs from
@@ -230,7 +237,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     if (!statusTarget) return false;
     if (!statusForm.content.trim()) return false; // a remark is required on every update
     if (statusTarget === 'cancelled' && !statusForm.cancellation_reason.trim()) return false;
-    if (statusTarget !== 'completed' && !statusForm.follow_up_date) return false; // follow-up except Completed
+    if (statusTarget === 'work_in_progress' && !statusForm.follow_up_date) return false; // follow-up only for WIP
     return true;
   }, [statusTarget, statusForm]);
 
@@ -244,8 +251,8 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
       if (task.status !== 'completed') { toast.error('Task must be Completed before it can be Closed.'); return; }
     }
     if (!statusForm.content.trim()) { toast.error('A remark is required.'); return; }
-    if (target !== 'completed' && !statusForm.follow_up_date) {
-      toast.error('A follow-up date is required.'); return;
+    if (target === 'work_in_progress' && !statusForm.follow_up_date) {
+      toast.error('A follow-up date is required for Work in Progress.'); return;
     }
 
     setSaving(true);
@@ -291,7 +298,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
 
   // ── Task fields — same UI for everyone; `disabled` (non-creator) is read-only ──
   const renderFields = (disabled) => {
-    const displayedAssignees = disabled ? (task?.assignees || []) : selectedAssignees;
+    const displayedAssignees = disabled
+      ? (task?.assignees || []).filter((u) => !isCreatorId(u.id))
+      : selectedAssignees;
     return (
       <div className="tmq-block">
         <div style={{ marginBottom: 10 }}>
@@ -362,13 +371,13 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
             <input type="date" className="tmq-input" value={form.end_date || ''} disabled={disabled}
               onChange={(e) => setField('end_date', e.target.value)} />
           </div>
-          <div>
-            <label className="tmq-field-label">Follow-up Date {isCreate && '*'}</label>
-            {/* Editable when creating; on an existing task it's driven by status updates */}
-            <input type="date" className="tmq-input" value={form.follow_up_date || ''}
-              disabled={!isCreate} readOnly={!isCreate}
-              onChange={isCreate ? (e) => setField('follow_up_date', e.target.value) : undefined} />
-          </div>
+          {!isCreate && (
+            <div>
+              <label className="tmq-field-label">Follow-up Date</label>
+              {/* No follow-up at creation; on an existing task it's driven by status updates */}
+              <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled readOnly />
+            </div>
+          )}
         </div>
 
         <div>
@@ -385,20 +394,33 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
             ))}
             {!disabled && (
               <div className="tm-add-wrap" ref={addRef}>
-                <button type="button" className="tm-add-btn" onClick={() => setAddOpen((o) => !o)}>
+                <button type="button" className="tm-add-btn" onClick={() => { setAddOpen((o) => !o); setAssigneeSearch(''); }}>
                   <PlusIcon style={{ width: 14, height: 14 }} /> Add <ChevronDownIcon style={{ width: 12, height: 12 }} />
                 </button>
-                {addOpen && (
-                  <div className="tm-add-menu">
-                    {availableToAdd.length === 0 && <div className="tm-add-menu__empty">No more users</div>}
-                    {availableToAdd.map((u) => (
-                      <div className="tm-add-menu__item" key={u.id} onClick={() => { toggleAssignee(u.id); }}>
-                        <span className="tm-avatar" style={{ width: 22, height: 22, margin: 0, fontSize: 10, border: 'none' }}>{initials(u)}</span>
-                        {fullName(u)}{String(u.id) === String(currentUser?.id) ? ' (you)' : ''}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {addOpen && (() => {
+                  const q = assigneeSearch.trim().toLowerCase();
+                  const matches = availableToAdd.filter((u) =>
+                    !q || `${fullName(u)} ${u.email || ''}`.toLowerCase().includes(q));
+                  return (
+                    <div className="tm-add-menu">
+                      <input
+                        className="tm-add-search"
+                        type="text"
+                        autoFocus
+                        value={assigneeSearch}
+                        placeholder="Search users…"
+                        onChange={(e) => setAssigneeSearch(e.target.value)}
+                      />
+                      {matches.length === 0 && <div className="tm-add-menu__empty">No users found</div>}
+                      {matches.map((u) => (
+                        <div className="tm-add-menu__item" key={u.id} onClick={() => { toggleAssignee(u.id); setAssigneeSearch(''); }}>
+                          <span className="tm-avatar" style={{ width: 22, height: 22, margin: 0, fontSize: 10, border: 'none' }}>{initials(u)}</span>
+                          {fullName(u)}{String(u.id) === String(currentUser?.id) ? ' (you)' : ''}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
             {disabled && displayedAssignees.length === 0 && <span className="tm-hint">No assignees</span>}
@@ -462,26 +484,8 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                     })}
                   </div>
                   <div className="tmq-divider" />
-                </>
-              )}
 
-              {/* ── Task details form (after the status buttons) ── */}
-              {!isCreate && <div className="tmq-section">Task Details</div>}
-              {renderFields(!canEditCore)}
-
-              {/* ── Create: mandatory initial remark at the end ── */}
-              {isCreate && (
-                <div className="tmq-block">
-                  <label className="tmq-field-label">Remarks *</label>
-                  <textarea className="tmq-textarea" value={createRemark}
-                    onChange={(e) => setCreateRemark(e.target.value)} placeholder="Add an initial remark…" />
-                </div>
-              )}
-
-              {/* ── Update: remark & follow-up at the END of the form ── */}
-              {!isCreate && (
-                <>
-                  <div className="tmq-divider" />
+                  {/* ── Remark & Follow-up — above Task Details (update model) ── */}
                   <div className="tmq-section">Remark &amp; Follow-up</div>
                   {statusForm.new_status === 'cancelled' && (
                     <div className="tmq-block">
@@ -492,51 +496,74 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                     </div>
                   )}
                   <div className="tmq-block">
-                    <div className="tmq-grid2">
-                      <div>
-                        <label className="tmq-field-label">Remark *</label>
-                        <textarea className="tmq-textarea" value={statusForm.content}
-                          onChange={(e) => setStatusForm((p) => ({ ...p, content: e.target.value }))}
-                          placeholder="Add a remark…" />
-                      </div>
-                      <div>
-                        <label className="tmq-field-label">Follow-up Date {statusTarget !== 'completed' && '*'}</label>
+                    <label className="tmq-field-label">Remark *</label>
+                    <textarea className="tmq-textarea" value={statusForm.content}
+                      onChange={(e) => setStatusForm((p) => ({ ...p, content: e.target.value }))}
+                      placeholder="Add a remark…" />
+                    {statusForm.new_status === 'work_in_progress' && (
+                      <div style={{ marginTop: 10 }}>
+                        <label className="tmq-field-label">Follow-up Date *</label>
                         <input type="date" className="tmq-input" value={statusForm.follow_up_date || ''}
                           onChange={(e) => setStatusForm((p) => ({ ...p, follow_up_date: e.target.value }))} />
                       </div>
-                    </div>
+                    )}
                   </div>
-                  <div className="tmq-hint">A remark is required on every update. Follow-up date is required except when marking Completed.</div>
+                  <div className="tmq-hint">A remark is required on every update. A follow-up date is required only for Work in Progress.</div>
+                  <div className="tmq-divider" />
+                </>
+              )}
 
+              {/* ── Task details: plain form on create, accordion on view/update ── */}
+              {isCreate && renderFields(false)}
+              {!isCreate && (
+                <div className="tmq-accordion">
+                  <button type="button" className="tmq-acc-head" onClick={() => setDetailsOpen((o) => !o)}>
+                    <span>Task Details</span>
+                    <ChevronDownIcon style={{ width: 16, height: 16, transition: 'transform .15s', transform: detailsOpen ? 'rotate(180deg)' : 'none' }} />
+                  </button>
+                  {detailsOpen && <div className="tmq-acc-body">{renderFields(!canEditCore)}</div>}
+                </div>
+              )}
+
+              {/* ── Create: mandatory initial remark at the end ── */}
+              {isCreate && (
+                <div className="tmq-block">
+                  <label className="tmq-field-label">Remarks *</label>
+                  <textarea className="tmq-textarea" value={createRemark}
+                    onChange={(e) => setCreateRemark(e.target.value)} placeholder="Add an initial remark…" />
+                </div>
+              )}
+
+              {/* ── Activity history (table) ── */}
+              {!isCreate && (
+                <>
                   <div className="tmq-divider" />
                   <div className="tmq-section">Activity {remarks.length ? `(${remarks.length})` : ''}</div>
-                  <div className="tmq-history">
-                    {remarks.length === 0 && <div className="tmq-hint" style={{ padding: 0 }}>No activity yet.</div>}
-                    {remarks.map((r, i) => {
-                      const meta = STATUS_META[r.status_at_time];
-                      return (
-                        <div className="tmq-hist-item" key={r.id}>
-                          <div className="tmq-hist-col">
-                            <span className="tmq-hist-dot" style={{ borderColor: meta?.hex || 'var(--accent-blue)' }} />
-                            {i < remarks.length - 1 && <span className="tmq-hist-line" />}
-                          </div>
-                          <div className="tmq-hist-right">
-                            <div className="tmq-hist-header">
-                              <span className="tmq-hist-status" style={{ color: meta?.hex || 'var(--text-primary)' }}>
-                                {STATUS_LABELS[r.status_at_time] || 'Update'}
-                              </span>
-                              <span className="tmq-hist-date">{fmtDateTime(r.created_at)}</span>
-                            </div>
-                            {r.content && <div className="tmq-hist-remark">{r.content}</div>}
-                            <div className="tmq-hist-foot">
-                              <span className="tmq-hist-by">{r.user ? fullName(r.user) : 'System'}</span>
-                              {r.follow_up_date && <span className="tmq-hist-fu">Follow-up: {fmtDate(r.follow_up_date)}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {remarks.length === 0 ? (
+                    <div className="tmq-hint" style={{ padding: 0 }}>No activity yet.</div>
+                  ) : (
+                    <div className="tmq-act-tablewrap">
+                      <table className="tmq-act-table">
+                        <thead>
+                          <tr><th>Status</th><th>Remark</th><th>By</th><th>Date</th><th>Follow-up</th></tr>
+                        </thead>
+                        <tbody>
+                          {remarks.map((r) => {
+                            const meta = STATUS_META[r.status_at_time];
+                            return (
+                              <tr key={r.id}>
+                                <td><span style={{ color: meta?.hex || 'var(--text-primary)', fontWeight: 600 }}>{STATUS_LABELS[r.status_at_time] || 'Update'}</span></td>
+                                <td>{r.content || '—'}</td>
+                                <td>{r.user ? fullName(r.user) : 'System'}</td>
+                                <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
+                                <td style={{ whiteSpace: 'nowrap' }}>{r.follow_up_date ? fmtDate(r.follow_up_date) : '—'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </>
               )}
             </>

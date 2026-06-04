@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { EyeIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
 import './TaskManagement.css';
@@ -71,7 +71,12 @@ const TaskListPage = () => {
           <h1>Task Management</h1>
           <p>Your tasks — created by you or assigned to you.</p>
         </div>
-        <button type="button" className="tm-btn" onClick={openCreate}>+ New Task</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" className="tm-btn tm-btn--ghost" onClick={load} disabled={loading} title="Refresh">
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
+          </button>
+          <button type="button" className="tm-btn" onClick={openCreate}>+ New Task</button>
+        </div>
       </header>
 
       {stats && (
@@ -94,7 +99,7 @@ const TaskListPage = () => {
         />
         <select className="tm-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
-          {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          {Object.entries(STATUS_LABELS).filter(([v]) => v !== 'pending').map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
         <label className="tm-check">
           <input type="checkbox" checked={includeClosed} onChange={(e) => setIncludeClosed(e.target.checked)} />

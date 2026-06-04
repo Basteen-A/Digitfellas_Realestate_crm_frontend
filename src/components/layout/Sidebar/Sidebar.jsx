@@ -29,10 +29,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   // Determine which group contains the current path so it auto-opens
   const menu = React.useMemo(() => {
     const base = getSidebarMenuForRole(roleCode);
-    // Admin / Super Admin and pure Standard Executive users use the standalone
-    // /task-portal. Cross-role users granted task access get the Tasks screen
-    // embedded inside their own portal instead, so no external link here.
-    if (['SA', 'ADM', 'SE'].includes(roleCode)) {
+    // SA/ADM now have Tasks + Departments/Sub-Departments directly in their admin
+    // sidebar (and the task dashboard embedded on their main Dashboard), so no
+    // standalone-portal link for them. Standard Executive still uses /task-portal.
+    if (roleCode === 'SE') {
       return [...base, getTaskMenuItem(roleCode)];
     }
     return base;

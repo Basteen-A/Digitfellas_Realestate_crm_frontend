@@ -64,7 +64,7 @@ const adminSidebar = [
 
   // Reports – user activity + inventory cost reports
   { label: 'Reports', path: '/super-admin/reports', icon: ChartBarIcon },
-
+   { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
   // Inventory group
   {
     label: 'PROPERTIES',
@@ -78,6 +78,9 @@ const adminSidebar = [
     ],
   },
 
+  // Task Management — single page (list); dashboard lives on the main Dashboard
+ 
+
   // User Management group
   {
     label: 'User Management',
@@ -90,9 +93,11 @@ const adminSidebar = [
 
   // Lead Configuration group
   {
-    label: 'Lead Configuration',
+    label: 'Configuration',
     icon: AdjustmentsHorizontalIcon,
     children: [
+      { label: 'Departments', path: '/super-admin/departments' },
+      { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
       { label: 'Lead Types', path: '/super-admin/lead-types' },
       { label: 'Lead Sources', path: '/super-admin/lead-sources' },
       { label: 'Lead Sub-Sources', path: '/super-admin/lead-sub-sources' },

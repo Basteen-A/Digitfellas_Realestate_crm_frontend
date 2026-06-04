@@ -333,6 +333,42 @@
 .tm-breakdown__fill { display: block; height: 100%; border-radius: var(--border-radius-full); background: var(--accent-blue); min-width: 2px; }
 .tm-breakdown__count { text-align: right; font-weight: 700; color: var(--text-primary); font-size: 14px; }
 
+/* ── Assignee picker search ── */
+.tm-add-menu { max-height: 240px; overflow-y: auto; }
+.tm-add-search {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--border-input);
+  border-radius: var(--border-radius-sm); padding: 7px 10px; font-size: 13px;
+  color: var(--text-primary); background: var(--bg-input); margin-bottom: 6px; font-family: inherit;
+  position: sticky; top: 0;
+}
+.tm-add-search:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-blue-bg); }
+
+/* ── Task Details accordion (in the detail popup) ── */
+.tmq-accordion { border: 1px solid var(--border-secondary); border-radius: var(--border-radius-md); margin: 4px 0 14px; overflow: hidden; }
+.tmq-acc-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: var(--bg-secondary); border: 0; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--text-primary); font-family: inherit;
+}
+.tmq-acc-head:hover { background: var(--bg-card-hover); }
+.tmq-acc-body { padding: 14px; border-top: 1px solid var(--border-secondary); }
+
+/* ── Activity table (like the leads table) ── */
+.tmq-act-tablewrap { overflow-x: auto; border: 1px solid var(--border-secondary); border-radius: var(--border-radius-md); }
+.tmq-act-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tmq-act-table thead th {
+  text-align: left; padding: 9px 12px; background: var(--bg-table-header);
+  color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+  border-bottom: 1px solid var(--border-secondary); white-space: nowrap;
+}
+.tmq-act-table tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border-secondary); color: var(--text-secondary); vertical-align: top; }
+.tmq-act-table tbody tr:last-child td { border-bottom: 0; }
+.tmq-act-table tbody tr:nth-child(even) { background: var(--bg-table-row-stripe); }
+
+/* Side-by-side dashboard split: status breakdown | recent activity */
+.tm-dash-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.tm-subcard { background: var(--bg-secondary); border: 1px solid var(--border-secondary); border-radius: var(--border-radius-lg); padding: 16px; }
+
 .tm-activity { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid var(--border-secondary); cursor: pointer; }
 .tm-activity:first-of-type { border-top: none; }
 .tm-activity__title { font-weight: 600; color: var(--text-primary); font-size: 15px; }
