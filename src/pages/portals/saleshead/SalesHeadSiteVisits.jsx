@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue } from '../common/siteVisitFields';
+import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue, parseVisitDetailsValue, hasVisitDetailsData } from '../common/siteVisitFields';
 import {
   HomeModernIcon,
   ArrowPathIcon,
@@ -12,6 +12,41 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline';
+
+const getUserDisplayName = (user) => {
+  if (!user) return '';
+  return `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim() || user.fullName || '';
+};
+
+const getVisitDetails = (visit) => {
+  const directVisitDetails = parseVisitDetailsValue(
+    visit?.visit_details || visit?.visitDetails || visit?.site_details || visit?.siteDetails
+  );
+  if (hasVisitDetailsData(directVisitDetails)) return directVisitDetails;
+
+  const leadVisitDetails = parseVisitDetailsValue(
+    visit?.lead?.custom_fields?.last_visit_details || visit?.lead?.customFields?.last_visit_details
+  );
+  return hasVisitDetailsData(leadVisitDetails) ? leadVisitDetails : null;
+};
+
+const getRawVisitDetails = (visit) => (
+  visit?.visit_details
+  ?? visit?.visitDetails
+  ?? visit?.site_details
+  ?? visit?.siteDetails
+  ?? visit?.lead?.custom_fields?.last_visit_details
+  ?? visit?.lead?.customFields?.last_visit_details
+  ?? null
+);
+
+const getVisitTimeSpent = (visit) => (
+  visit?.time_spent
+  ?? visit?.timeSpent
+  ?? visit?.lead?.custom_fields?.time_spent
+  ?? visit?.lead?.customFields?.time_spent
+  ?? null
+);
 
 const SalesHeadSiteVisits = () => {
   const [team, setTeam] = useState([]);
@@ -82,6 +117,8 @@ const SalesHeadSiteVisits = () => {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+  const selectedVisitDetails = getVisitDetails(selectedVisit);
+  const rawSelectedVisitDetails = getRawVisitDetails(selectedVisit);
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -203,9 +240,9 @@ const SalesHeadSiteVisits = () => {
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || formatTime(selectedVisit.scheduled_date) || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{getUserDisplayName(selectedVisit.attendedBy) || getUserDisplayName(selectedVisit.scheduledBy) || '—'}</div>
                 {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{selectedVisit.rating}/5</span></div>}
-                {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
+                {getVisitTimeSpent(selectedVisit) != null && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{getVisitTimeSpent(selectedVisit)} mins</div>}
                 {selectedVisit.interested_after_visit !== null && selectedVisit.interested_after_visit !== undefined && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Interested After Visit</div>{selectedVisit.interested_after_visit ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircleIcon style={{ width: 13, height: 13 }} />Yes</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><XCircleIcon style={{ width: 13, height: 13 }} />No</span>}</div>}
               </div>
               {selectedVisit.feedback && (
@@ -226,17 +263,23 @@ const SalesHeadSiteVisits = () => {
                   <div style={{ fontSize: 13 }}>{selectedVisit.requirement_details}</div>
                 </div>
               )}
-              {selectedVisit.visit_details && (
+              {selectedVisitDetails && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     {VISIT_DETAIL_KEYS.map((k) => (
                       <div key={k}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisit.visit_details[k])}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisitDetails[k])}</div>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {!selectedVisitDetails && rawSelectedVisitDetails && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details (Raw)</div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.5 }}>{typeof rawSelectedVisitDetails === 'string' ? rawSelectedVisitDetails : JSON.stringify(rawSelectedVisitDetails, null, 2)}</pre>
                 </div>
               )}
               {selectedVisit.geo_lat && (

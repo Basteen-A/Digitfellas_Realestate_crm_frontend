@@ -17,6 +17,7 @@ import {
   FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
   TIMELINE_OPTIONS, EMPTY_VISIT_DETAILS, VISIT_DETAIL_LABELS, VISIT_DETAIL_KEYS,
   isVisitDetailsComplete, pickVisitDetails, displayVisitDetailValue,
+  parseVisitDetailsValue, hasVisitDetailsData,
 } from '../common/siteVisitFields';
 
 // Map a workflow action code to the drawer status-button icon + accent class
@@ -58,12 +59,68 @@ const buildFollowUpShortcutValue = (shortcut) => {
   return toDateOnlyValue(target);
 };
 
+const getUserDisplayName = (user) => {
+  if (!user) return '';
+  const fullName = `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim();
+  return fullName || user.fullName || '';
+};
+
+const getVisitDetails = (visit) => {
+  const directVisitDetails = parseVisitDetailsValue(
+    visit?.visit_details || visit?.visitDetails || visit?.site_details || visit?.siteDetails
+  );
+  if (hasVisitDetailsData(directVisitDetails)) return directVisitDetails;
+
+  const leadVisitDetails = parseVisitDetailsValue(
+    visit?.lead?.custom_fields?.last_visit_details || visit?.lead?.customFields?.last_visit_details
+  );
+  return hasVisitDetailsData(leadVisitDetails) ? leadVisitDetails : null;
+};
+
+const getRawVisitDetails = (visit) => (
+  visit?.visit_details
+  ?? visit?.visitDetails
+  ?? visit?.site_details
+  ?? visit?.siteDetails
+  ?? visit?.lead?.custom_fields?.last_visit_details
+  ?? visit?.lead?.customFields?.last_visit_details
+  ?? null
+);
+
+const getVisitTimeSpent = (visit) => (
+  visit?.time_spent
+  ?? visit?.timeSpent
+  ?? visit?.lead?.custom_fields?.time_spent
+  ?? visit?.lead?.customFields?.time_spent
+  ?? null
+);
+
+const getVisitSortTime = (visit) => {
+  const value = visit?.completed_at || visit?.completedAt || visit?.created_at || visit?.createdAt || visit?.scheduled_date;
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const getSiblingVisitWithDetails = (visit, allVisits = []) => {
+  const leadId = visit?.lead?.id || visit?.lead_id;
+  if (!leadId) return null;
+
+  return [...allVisits]
+    .filter((candidate) => (
+      candidate?.id !== visit?.id
+      && (candidate?.lead?.id || candidate?.lead_id) === leadId
+      && (getVisitDetails(candidate) || getRawVisitDetails(candidate))
+    ))
+    .sort((a, b) => getVisitSortTime(b) - getVisitSortTime(a))[0] || null;
+};
+
 const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [expandedLead, setExpandedLead] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const [selectedVisitLoading, setSelectedVisitLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
     lead_id: '',
@@ -179,8 +236,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   }, []);
 
   const filteredVisits = visits.filter(v => {
-    // Only show visits that have time_spent
-    if (!v.time_spent && v.time_spent !== 0) return false;
     if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
     if (filter === 'completed') return v.status === 'Completed';
     if (filter === 'cancelled') return v.status === 'Cancelled';
@@ -188,15 +243,26 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   });
 
   // Group visits by lead
-  const groupedByLead = {};
-  filteredVisits.forEach(v => {
-    const leadId = v.lead?.id || 'unknown';
-    if (!groupedByLead[leadId]) {
-      groupedByLead[leadId] = { lead: v.lead, visits: [] };
-    }
-    groupedByLead[leadId].visits.push(v);
-  });
-  const leadGroups = Object.values(groupedByLead);
+  const leadGroups = useMemo(() => {
+    const groupedByLead = {};
+    filteredVisits.forEach((v) => {
+      const leadId = v.lead?.id || v.lead_id || 'unknown';
+      if (!groupedByLead[leadId]) {
+        groupedByLead[leadId] = { lead: v.lead, visits: [] };
+      }
+      groupedByLead[leadId].visits.push(v);
+    });
+
+    return Object.values(groupedByLead).map((group) => ({
+      ...group,
+      visits: [...group.visits].sort((a, b) => getVisitSortTime(b) - getVisitSortTime(a)),
+    }));
+  }, [filteredVisits]);
+
+  const selectedVisitSiblingWithDetails = useMemo(() => getSiblingVisitWithDetails(selectedVisit, visits), [selectedVisit, visits]);
+  const selectedVisitDetails = useMemo(() => (
+    getVisitDetails(selectedVisit) || getVisitDetails(selectedVisitSiblingWithDetails)
+  ), [selectedVisit, selectedVisitSiblingWithDetails]);
 
   const getStatusBadge = (status) => {
     const colors = {
@@ -217,6 +283,25 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+
+  const handleOpenVisitDetails = async (visit) => {
+    setSelectedVisit(visit);
+    setSelectedVisitLoading(true);
+
+    try {
+      const resp = await siteVisitApi.getById(visit.id);
+      const detailedVisit = resp.data?.data || resp.data;
+      if (detailedVisit) {
+        setSelectedVisit((current) => (
+          current?.id === visit.id ? { ...current, ...detailedVisit } : current
+        ));
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to load full site visit details'));
+    } finally {
+      setSelectedVisitLoading(false);
+    }
+  };
 
   const loadCreateOptions = async () => {
     try {
@@ -513,30 +598,78 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                             <th>Project</th>
                             <th>Date</th>
                             <th>Time Slot</th>
+                            <th>Time Spent</th>
                             <th>Status</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {leadVisits.map(v => (
-                            <tr key={v.id}>
-                              <td style={{ fontWeight: 600 }}>{v.visit_number || '—'}</td>
-                              <td>{v.project?.project_name || 'N/A'}</td>
-                              <td>
-                                <div style={{ fontWeight: 600 }}>{formatDate(v.scheduled_date)}</div>
-                                {v.actual_visit_date && v.status === 'Completed' && (
-                                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Actual: {formatDate(v.actual_visit_date)}</div>
+                          {leadVisits.map(v => {
+                            const visitDetails = getVisitDetails(v);
+                            const rawVisitDetails = getRawVisitDetails(v);
+                            const timeSpent = getVisitTimeSpent(v);
+                            return (
+                              <React.Fragment key={v.id}>
+                                <tr>
+                                  <td style={{ fontWeight: 600 }}>{v.visit_number || '—'}</td>
+                                  <td>{v.project?.project_name || projects.find((project) => project.id === v.project_id)?.project_name || 'N/A'}</td>
+                                  <td>
+                                    <div style={{ fontWeight: 600 }}>{formatDate(v.scheduled_date)}</div>
+                                    {v.actual_visit_date && v.status === 'Completed' && (
+                                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Actual: {formatDate(v.actual_visit_date)}</div>
+                                    )}
+                                  </td>
+                                  <td>{v.scheduled_time_slot || formatTime(v.scheduled_date) || '—'}</td>
+                                  <td>{timeSpent != null ? `${timeSpent} mins` : '—'}</td>
+                                  <td>{getStatusBadge(v.status)}</td>
+                                  <td>
+                                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => handleOpenVisitDetails(v)}>
+                                      Details
+                                    </button>
+                                  </td>
+                                </tr>
+                                {(visitDetails || rawVisitDetails || v.requirement_details || v.remarks_long || v.feedback || v.remarks) && (
+                                  <tr>
+                                    <td colSpan={7} style={{ padding: '10px 14px 14px', background: 'var(--bg-tertiary)' }}>
+                                      <div style={{ display: 'grid', gap: 10 }}>
+                                        {v.requirement_details && (
+                                          <div>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>Requirement Details</div>
+                                            <div style={{ fontSize: 13 }}>{v.requirement_details}</div>
+                                          </div>
+                                        )}
+                                        {(v.remarks_long || v.feedback || v.remarks) && (
+                                          <div>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>Remarks</div>
+                                            <div style={{ fontSize: 13 }}>{v.remarks_long || v.feedback || v.remarks}</div>
+                                          </div>
+                                        )}
+                                        {visitDetails && (
+                                          <div>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Visit Details</div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                                              {VISIT_DETAIL_KEYS.map((k) => (
+                                                <div key={k}>
+                                                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
+                                                  <div style={{ fontSize: 12, fontWeight: 600 }}>{displayVisitDetailValue(k, visitDetails[k])}</div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {!visitDetails && rawVisitDetails && (
+                                          <div>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Visit Details (Raw)</div>
+                                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.5 }}>{typeof rawVisitDetails === 'string' ? rawVisitDetails : JSON.stringify(rawVisitDetails, null, 2)}</pre>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
                                 )}
-                              </td>
-                              <td>{v.scheduled_time_slot || formatTime(v.scheduled_date) || '—'}</td>
-                              <td>{getStatusBadge(v.status)}</td>
-                              <td>
-                                <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setSelectedVisit(v)}>
-                                  Details
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                              </React.Fragment>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -557,21 +690,28 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
               <button className="col-modal-close" onClick={() => setSelectedVisit(null)}>×</button>
             </div>
             <div className="col-modal-body">
+              {(() => {
+                const rawVisitDetails = getRawVisitDetails(selectedVisit) || getRawVisitDetails(selectedVisitSiblingWithDetails);
+                return (
+                  <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Number</div><div style={{ fontWeight: 700 }}>{selectedVisit.visit_number || '—'}</div></div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '—'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || projects.find((project) => project.id === selectedVisit.project_id)?.project_name || '—'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
-                {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{getUserDisplayName(selectedVisit.attendedBy) || getUserDisplayName(selectedVisit.scheduledBy) || '—'}</div>
+                {getVisitTimeSpent(selectedVisit) != null && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{getVisitTimeSpent(selectedVisit)} mins</div>}
               </div>
-              {selectedVisit.remarks && (
+              {selectedVisitLoading && (
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>Loading full visit details...</div>
+              )}
+              {(selectedVisit.remarks_long || selectedVisit.feedback || selectedVisit.remarks) && (
                 <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Remarks</div>
-                  <div style={{ fontSize: 13 }}>{selectedVisit.remarks}</div>
+                  <div style={{ fontSize: 13 }}>{selectedVisit.remarks_long || selectedVisit.feedback || selectedVisit.remarks}</div>
                 </div>
               )}
               {selectedVisit.requirement_details && (
@@ -580,17 +720,27 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   <div style={{ fontSize: 13 }}>{selectedVisit.requirement_details}</div>
                 </div>
               )}
-              {selectedVisit.visit_details && (
+              {selectedVisitDetails && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+                    {selectedVisitSiblingWithDetails && !getVisitDetails(selectedVisit)
+                      ? `Visit Details (from ${selectedVisitSiblingWithDetails.visit_number || 'latest visit'})`
+                      : 'Visit Details'}
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     {VISIT_DETAIL_KEYS.map((k) => (
                       <div key={k}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisit.visit_details[k])}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisitDetails[k])}</div>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {!selectedVisitDetails && rawVisitDetails && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details (Raw)</div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.5 }}>{typeof rawVisitDetails === 'string' ? rawVisitDetails : JSON.stringify(rawVisitDetails, null, 2)}</pre>
                 </div>
               )}
               {selectedVisit.geo_lat && (
@@ -598,6 +748,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                   <MapPinIcon style={{ width: 13, height: 13, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} /> Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
                 </div>
               )}
+                  </>
+                );
+              })()}
             </div>
             <div className="col-modal-footer">
               <button className="crm-btn crm-btn-ghost" onClick={() => setSelectedVisit(null)}>Close</button>

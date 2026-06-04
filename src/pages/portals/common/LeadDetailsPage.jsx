@@ -12,6 +12,7 @@ import {
   VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue,
   FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
   TIMELINE_OPTIONS, EMPTY_VISIT_DETAILS, isVisitDetailsComplete, pickVisitDetails,
+  parseVisitDetailsValue, hasVisitDetailsData,
 } from './siteVisitFields';
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
@@ -278,6 +279,12 @@ const parseAsUtcIfNeeded = (rawDateText) => {
   return direct;
 };
 
+const getUserDisplayName = (user) => {
+  if (!user) return '';
+  const fullName = `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim();
+  return fullName || user.fullName || '';
+};
+
 const formatActivityDescription = (description, activity) => {
   if (typeof description !== 'string') return '';
   const text = description.trim();
@@ -471,6 +478,16 @@ const LeadDetailsPage = () => {
     if (source && subSource) return `${source} / ${subSource}`;
     return source || subSource || '-';
   }, [lead?.source, lead?.subSource]);
+
+  const latestLeadVisitDetails = useMemo(() => {
+    const directVisitDetails = parseVisitDetailsValue(lead?.customFields?.last_visit_details);
+    if (hasVisitDetailsData(directVisitDetails)) return directVisitDetails;
+
+    const metadataVisitDetails = parseVisitDetailsValue(lead?.metadata?.last_visit_details);
+    if (hasVisitDetailsData(metadataVisitDetails)) return metadataVisitDetails;
+
+    return null;
+  }, [lead?.customFields, lead?.metadata]);
 
   const getTcLocationNames = useMemo(() => {
     if (!lead) return [];
@@ -1445,6 +1462,23 @@ const LeadDetailsPage = () => {
                     <span className="lead-details-value">{lead.timeSpent}</span>
                   </div>
                 )}
+                {latestLeadVisitDetails && (
+                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                    <span className="lead-details-label">Latest Site Visit Details</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 8 }}>
+                      {VISIT_DETAIL_KEYS.map((key) => (
+                        <div key={key}>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>
+                            {VISIT_DETAIL_LABELS[key]}
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>
+                            {displayVisitDetailValue(key, latestLeadVisitDetails[key])}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -2043,20 +2077,30 @@ const LeadDetailsPage = () => {
                         </thead>
                         <tbody>
                           {siteVisits.map((sv) => {
-                            const attendedBy = sv.attendedBy
-                              ? `${sv.attendedBy.first_name || ''} ${sv.attendedBy.last_name || ''}`.trim()
-                              : '-';
-                            const timeSpent = sv.time_spent ?? sv.timeSpent;
-                            const customerType = sv.customerType?.type_name || sv.customer_type_name || sv.customer_type || '-';
-                            const motivation = sv.motivationType?.motivation_name || sv.motivation_type || '-';
-                            const requirement = sv.requirement_details || sv.customer_requirement || sv.primary_requirement || '-';
-                            const remarks = sv.remarks || '-';
+                            const visitDetails = parseVisitDetailsValue(
+                              sv.visit_details || sv.visitDetails || sv.site_details || sv.siteDetails
+                            );
+                            const effectiveVisitDetails = hasVisitDetailsData(visitDetails)
+                              ? visitDetails
+                              : latestLeadVisitDetails;
+                            const attendedBy = getUserDisplayName(sv.attendedBy)
+                              || getUserDisplayName(sv.scheduledBy)
+                              || lead?.assignedToUserName
+                              || '-';
+                            const timeSpent = sv.time_spent ?? sv.timeSpent ?? lead?.timeSpent;
+                            const customerType = sv.customerType?.type_name || sv.customer_type_name || sv.customer_type || lead?.customerType || '-';
+                            const motivation = sv.motivationType?.motivation_name || sv.motivation_type || lead?.motivationType || '-';
+                            const requirement = sv.requirement_details || sv.customer_requirement || sv.primary_requirement || lead?.primaryRequirement || '-';
+                            const remarks = sv.remarks_long || sv.feedback || sv.remarks || lead?.secondaryRequirement || '-';
+                            const projectName = sv.project?.project_name
+                              || projectOptions.find((project) => project.id === sv.project_id)?.project_name
+                              || 'Unknown Project';
 
                             return (
                               <React.Fragment key={sv.id}>
                                 <tr>
                                   <td>{sv.visit_number || '-'}</td>
-                                  <td>{sv.project?.project_name || 'Unknown Project'}</td>
+                                  <td>{projectName}</td>
                                   <td>
                                     <span className="status-chip" style={{ backgroundColor: `${sv.statusColor || '#64748b'}22`, color: sv.statusColor || '#334155' }}>
                                       {sv.status || '-'}
@@ -2072,7 +2116,7 @@ const LeadDetailsPage = () => {
                                   <td>{requirement}</td>
                                   <td>{remarks}</td>
                                 </tr>
-                                {sv.visit_details && (
+                                {effectiveVisitDetails && (
                                   <tr>
                                     <td colSpan={12} style={{ padding: '8px 14px 14px', background: 'var(--bg-tertiary)' }}>
                                       <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>Visit Details</div>
@@ -2080,7 +2124,7 @@ const LeadDetailsPage = () => {
                                         {VISIT_DETAIL_KEYS.map((k) => (
                                           <div key={k}>
                                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
-                                            <div style={{ fontSize: 12, fontWeight: 600 }}>{displayVisitDetailValue(k, sv.visit_details[k])}</div>
+                                            <div style={{ fontSize: 12, fontWeight: 600 }}>{displayVisitDetailValue(k, effectiveVisitDetails[k])}</div>
                                           </div>
                                         ))}
                                       </div>

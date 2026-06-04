@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue } from '../common/siteVisitFields';
+import { VISIT_DETAIL_KEYS, VISIT_DETAIL_LABELS, displayVisitDetailValue, parseVisitDetailsValue, hasVisitDetailsData } from '../common/siteVisitFields';
 import {
   UserIcon,
   ClipboardDocumentListIcon,
@@ -12,6 +12,28 @@ import {
   HandRaisedIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline';
+
+const getVisitDetails = (visit) => {
+  const directVisitDetails = parseVisitDetailsValue(
+    visit?.visit_details || visit?.visitDetails || visit?.site_details || visit?.siteDetails
+  );
+  if (hasVisitDetailsData(directVisitDetails)) return directVisitDetails;
+
+  const leadVisitDetails = parseVisitDetailsValue(
+    visit?.lead?.custom_fields?.last_visit_details || visit?.lead?.customFields?.last_visit_details
+  );
+  return hasVisitDetailsData(leadVisitDetails) ? leadVisitDetails : null;
+};
+
+const getRawVisitDetails = (visit) => (
+  visit?.visit_details
+  ?? visit?.visitDetails
+  ?? visit?.site_details
+  ?? visit?.siteDetails
+  ?? visit?.lead?.custom_fields?.last_visit_details
+  ?? visit?.lead?.customFields?.last_visit_details
+  ?? null
+);
 
 const SalesHeadTeamLeads = () => {
   const [smTeam, setSMTeam] = useState([]);
@@ -57,9 +79,7 @@ const SalesHeadTeamLeads = () => {
       ]);
       setSMLeads(leadsResp.data || []);
       const vData = visitsResp.data?.data || visitsResp.data?.rows || visitsResp.data || [];
-      // Only show visits with time_spent
-      const validVisits = Array.isArray(vData) ? vData.filter(v => v.time_spent || v.time_spent === 0) : [];
-      setSMVisits(validVisits);
+      setSMVisits(Array.isArray(vData) ? vData : []);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load SM data'));
     } finally {
@@ -96,6 +116,8 @@ const SalesHeadTeamLeads = () => {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const formatDateTime = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  const selectedVisitDetails = getVisitDetails(selectedVisit);
+  const rawSelectedVisitDetails = getRawVisitDetails(selectedVisit);
 
   const getStatusBadge = (status) => {
     const colors = {
@@ -415,17 +437,23 @@ const SalesHeadTeamLeads = () => {
                   <div style={{ fontSize: 13 }}>{selectedVisit.remarks_long}</div>
                 </div>
               )}
-              {selectedVisit.visit_details && (
+              {selectedVisitDetails && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     {VISIT_DETAIL_KEYS.map((k) => (
                       <div key={k}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisit.visit_details[k])}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisitDetails[k])}</div>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {!selectedVisitDetails && rawSelectedVisitDetails && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details (Raw)</div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.5 }}>{typeof rawSelectedVisitDetails === 'string' ? rawSelectedVisitDetails : JSON.stringify(rawSelectedVisitDetails, null, 2)}</pre>
                 </div>
               )}
               {selectedVisit.geo_lat && (

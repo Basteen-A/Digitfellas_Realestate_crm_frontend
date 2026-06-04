@@ -52,6 +52,84 @@ export const VISIT_DETAIL_LABELS = {
   ageBracket: 'Age Bracket',
 };
 
+const VISIT_DETAIL_ALIASES = {
+  secondaryContact: 'secondaryContact',
+  secondary_contact: 'secondaryContact',
+  address: 'address',
+  budget: 'budget',
+  preferredFacing: 'preferredFacing',
+  preferred_facing: 'preferredFacing',
+  paymentType: 'paymentType',
+  payment_type: 'paymentType',
+  timelineToBuy: 'timelineToBuy',
+  timeline_to_buy: 'timelineToBuy',
+  specificConcerns: 'specificConcerns',
+  specific_concerns: 'specificConcerns',
+  decisionMaker: 'decisionMaker',
+  decision_maker: 'decisionMaker',
+  ageBracket: 'ageBracket',
+  age_bracket: 'ageBracket',
+};
+
+const normalizeVisitDetailsObject = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+
+  const nestedCandidate = value.visit_details || value.visitDetails || value.site_details || value.siteDetails;
+  if (nestedCandidate && nestedCandidate !== value) {
+    const nestedParsed = parseVisitDetailsValue(nestedCandidate);
+    if (nestedParsed) return nestedParsed;
+  }
+
+  const normalized = {};
+  Object.entries(value).forEach(([key, rawValue]) => {
+    const mappedKey = VISIT_DETAIL_ALIASES[key];
+    if (!mappedKey) return;
+    normalized[mappedKey] = rawValue;
+  });
+
+  return hasVisitDetailsData(normalized) ? normalized : null;
+};
+
+export const parseVisitDetailsValue = (value) => {
+  let current = value;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (!current) return null;
+    if (typeof current === 'object') return normalizeVisitDetailsObject(current);
+    if (typeof current !== 'string') return null;
+
+    const trimmed = current.trim();
+    if (!trimmed) return null;
+
+    const candidates = [trimmed];
+
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      candidates.push(trimmed.slice(1, -1));
+    }
+
+    if (trimmed.includes('""')) {
+      candidates.push(trimmed.replace(/""/g, '"'));
+    }
+
+    for (const candidate of candidates) {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (parsed && typeof parsed === 'object') return normalizeVisitDetailsObject(parsed);
+        if (typeof parsed === 'string' && parsed !== current) {
+          current = parsed;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return null;
+};
+
+export const hasVisitDetailsData = (value) => VISIT_DETAIL_KEYS.some((key) => String(value?.[key] ?? '').trim() !== '');
+
 export const displayVisitDetailValue = (key, value) => {
   if (value === null || value === undefined || value === '') return '—';
   if (key === 'timelineToBuy') return TIMELINE_LABEL[value] || value;

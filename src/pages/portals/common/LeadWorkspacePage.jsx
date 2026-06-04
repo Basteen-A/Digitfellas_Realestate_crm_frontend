@@ -3322,15 +3322,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <span className="show-mobile">Missed</span>
                 </button>
               )}
-              {(workspaceRole === 'SM' || workspaceRole === 'SH') && (
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`filter-tab ${activeTab === 'all' ? 'active' : ''}`}
-                >
-                  <span className="hide-mobile">All Leads</span>
-                  <span className="show-mobile">All</span>
-                </button>
-              )}
               {workspaceRole === 'TC' && (
                 <button
                   onClick={() => setActiveTab('new')}
