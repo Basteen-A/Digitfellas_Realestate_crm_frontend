@@ -972,8 +972,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         </select>
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Secondary Contact *</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.secondaryContact} onChange={(e) => setCreateForm((p) => ({ ...p, secondaryContact: e.target.value }))} placeholder="Secondary phone" required />
+                        <label className="qa-drawer-field-label">Secondary Contact</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.secondaryContact} onChange={(e) => setCreateForm((p) => ({ ...p, secondaryContact: e.target.value }))} placeholder="Secondary phone (optional)" />
                       </div>
                     </div>
 

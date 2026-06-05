@@ -31,9 +31,17 @@ export const EMPTY_VISIT_DETAILS = {
 };
 export const VISIT_DETAIL_KEYS = Object.keys(EMPTY_VISIT_DETAILS);
 
-// All nine fields are mandatory before a site visit can be submitted.
+// Optional visit-detail fields — captured/displayed but not required to submit.
+export const OPTIONAL_VISIT_DETAIL_KEYS = ['secondaryContact'];
+
+// Keys that must be filled before a site visit can be submitted.
+export const REQUIRED_VISIT_DETAIL_KEYS = VISIT_DETAIL_KEYS.filter(
+  (k) => !OPTIONAL_VISIT_DETAIL_KEYS.includes(k)
+);
+
+// All required fields must be present before a site visit can be submitted.
 export const isVisitDetailsComplete = (d = {}) =>
-  VISIT_DETAIL_KEYS.every((k) => String(d?.[k] ?? '').trim() !== '');
+  REQUIRED_VISIT_DETAIL_KEYS.every((k) => String(d?.[k] ?? '').trim() !== '');
 
 // Pull just the visit-detail keys out of a larger form object for the payload.
 export const pickVisitDetails = (src = {}) =>
