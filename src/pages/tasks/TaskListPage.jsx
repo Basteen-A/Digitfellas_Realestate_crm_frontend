@@ -21,6 +21,7 @@ const TaskListPage = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [includeClosed, setIncludeClosed] = useState(false);
+  const [followUpFilter, setFollowUpFilter] = useState(''); // '' | 'today' | 'missed'
   const [modal, setModal] = useState({ open: false, mode: 'view', taskId: null });
 
   const load = useCallback(async () => {
@@ -30,6 +31,7 @@ const TaskListPage = () => {
       if (search.trim()) params.search = search.trim();
       if (statusFilter) params.status = statusFilter;
       if (includeClosed) params.include_closed = true;
+      if (followUpFilter) params.followUpFilter = followUpFilter;
       const [list, st] = await Promise.all([taskApi.getAll(params), taskApi.getStats()]);
       setRows(list.data || []);
       setStats(st.data || null);
@@ -38,12 +40,18 @@ const TaskListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, includeClosed]);
+  }, [search, statusFilter, includeClosed, followUpFilter]);
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, includeClosed]);
+  }, [statusFilter, includeClosed, followUpFilter]);
+
+  const FOLLOW_UP_TABS = [
+    { value: '', label: 'All Tasks' },
+    { value: 'today', label: "Today's Follow-up" },
+    { value: 'missed', label: 'Missed Follow-up' },
+  ];
 
   const openView = (id) => setModal({ open: true, mode: 'view', taskId: id });
   const openCreate = () => setModal({ open: true, mode: 'create', taskId: null });
@@ -89,6 +97,19 @@ const TaskListPage = () => {
         </div>
       )}
 
+      <div className="tm-followup-tabs" style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        {FOLLOW_UP_TABS.map((t) => (
+          <button
+            key={t.value || 'all'}
+            type="button"
+            className={`tm-btn ${followUpFilter === t.value ? '' : 'tm-btn--ghost'}`}
+            onClick={() => setFollowUpFilter(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <div className="tm-toolbar">
         <input
           className="tm-search"
@@ -111,12 +132,12 @@ const TaskListPage = () => {
         <table className="tm-table">
           <thead>
             <tr>
-              <th>Task</th><th>Status</th><th>Assignees</th><th>Department</th><th>Remarks</th><th>Expected Date</th><th>Follow-up</th><th></th>
+              <th>Task</th><th>Status</th><th>Assignees</th><th>Department</th><th>Project / Phase</th><th>Remarks</th><th>Expected Date</th><th>Follow-up</th><th></th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={8} className="tm-table__empty">Loading…</td></tr>}
-            {!loading && rows.length === 0 && <tr><td colSpan={8} className="tm-table__empty">No tasks found</td></tr>}
+            {loading && <tr><td colSpan={9} className="tm-table__empty">Loading…</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan={9} className="tm-table__empty">No tasks found</td></tr>}
             {!loading && rows.map((task) => (
               <tr key={task.id} onClick={() => openView(task.id)}>
                 <td>
@@ -139,7 +160,31 @@ const TaskListPage = () => {
                 </td>
                 <td>
                   <div>{task.department?.name || '—'}</div>
-                  {task.subDepartment?.name && <span className="tm-subtag">{task.subDepartment.name}</span>}
+                  {task.subDepartment?.name && (
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary, #6b7280)', marginTop: 2 }}>{task.subDepartment.name}</div>
+                  )}
+                </td>
+                <td>
+                  {task.project?.project_name ? (
+                    <>
+                      <div>{task.project.project_name}</div>
+                      {task.phase?.phase_name && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary, #6b7280)' }}>{task.phase.phase_name}</span>
+                          <span
+                            style={{
+                              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                              border: `1px solid ${task.phase.is_approved === false ? '#FCA5A5' : '#A7F3D0'}`,
+                              background: task.phase.is_approved === false ? '#FEF2F2' : '#ECFDF5',
+                              color: task.phase.is_approved === false ? '#B91C1C' : '#047857',
+                            }}
+                          >
+                            {task.phase.is_approved === false ? 'Unapproved' : 'Approved'}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : '—'}
                 </td>
                 <td>{latestRemark(task)}</td>
                 <td>{fmtDate(task.end_date)}</td>

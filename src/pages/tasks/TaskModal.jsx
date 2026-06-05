@@ -45,7 +45,7 @@ const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '—');
 
 const emptyForm = {
   title: '', description: '', priority: 'medium',
-  department_id: '', sub_department_id: '', location_id: '', project_id: '',
+  department_id: '', sub_department_id: '', location_id: '', project_id: '', phase_id: '',
   start_date: '', end_date: '', follow_up_date: '',
   assignee_ids: [],
 };
@@ -59,6 +59,10 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [departments, setDepartments] = useState([]);
   const [subDepartments, setSubDepartments] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [phases, setPhases] = useState([]);
+  const [projectSearch, setProjectSearch] = useState('');
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const projectBoxRef = useRef(null);
   const [original, setOriginal] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,6 +114,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
         sub_department_id: t.sub_department_id || '',
         location_id: t.location_id || '',
         project_id: t.project_id || '',
+        phase_id: t.phase_id || '',
         start_date: t.start_date || '',
         end_date: t.end_date || '',
         follow_up_date: t.follow_up_date || '',
@@ -138,6 +143,39 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Close the project search dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (projectBoxRef.current && !projectBoxRef.current.contains(e.target)) setProjectDropdownOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Load phases whenever the selected project changes (task module shows all
+  // phases with their approved/unapproved status).
+  useEffect(() => {
+    if (!form.project_id) { setPhases([]); return; }
+    let active = true;
+    (async () => {
+      try {
+        const res = await taskApi.getPhases(form.project_id);
+        if (active) setPhases(res.data || []);
+      } catch {
+        if (active) setPhases([]);
+      }
+    })();
+    return () => { active = false; };
+  }, [form.project_id]);
+
+  // Label for the currently selected project (shown in the search box).
+  const selectedProjectName = useMemo(
+    () => projects.find((p) => String(p.id) === String(form.project_id))?.project_name || '',
+    [projects, form.project_id]
+  );
+  const filteredProjects = useMemo(() => {
+    const q = projectSearch.trim().toLowerCase();
+    return q ? projects.filter((p) => String(p.project_name || '').toLowerCase().includes(q)) : projects;
+  }, [projects, projectSearch]);
 
   // ── Permissions ──
   // Only the person who created the task may edit its fields, delete it, and
@@ -182,9 +220,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)) && !isCreatorId(u.id));
 
   // ── Save core (create / edit) ──
-  // On create, Title + Description are required (remarks removed; no follow-up at create).
+  // On create, Title + Description + Follow-up Date are required.
   const canSaveCore = isCreate
-    ? !!(form.title.trim() && form.description.trim())
+    ? !!(form.title.trim() && form.description.trim() && form.follow_up_date)
     : !!form.title.trim();
 
   // "Save Changes" is enabled only when an editable field actually differs from
@@ -196,7 +234,11 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
 
   const handleSaveCore = async () => {
     if (!canSaveCore) {
-      toast.error('Task title is required.');
+      if (isCreate && form.title.trim() && form.description.trim() && !form.follow_up_date) {
+        toast.error('Follow-up date is required.');
+      } else {
+        toast.error(isCreate ? 'Title, description and follow-up date are required.' : 'Task title is required.');
+      }
       return;
     }
     setSaving(true);
@@ -212,6 +254,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
         sub_department_id: form.sub_department_id || null,
         location_id: selectedProject?.location_id || null,
         project_id: form.project_id || null,
+        phase_id: form.phase_id || null,
         start_date: form.start_date || null,
         end_date: form.end_date || null,
         follow_up_date: form.follow_up_date || null,
@@ -367,13 +410,62 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
           </div>
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label className="tmq-field-label">Project</label>
-          <select className="tmq-select" value={form.project_id} disabled={disabled}
-            onChange={(e) => setField('project_id', e.target.value)}>
-            <option value="">Select project</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
-          </select>
+        <div className="tmq-grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          {/* Searchable project select */}
+          <div style={{ position: 'relative' }} ref={projectBoxRef}>
+            <label className="tmq-field-label">Project</label>
+            <input
+              type="text"
+              className="tmq-input"
+              disabled={disabled}
+              value={projectDropdownOpen ? projectSearch : selectedProjectName}
+              placeholder="Search & select project…"
+              onFocus={() => { if (!disabled) { setProjectDropdownOpen(true); setProjectSearch(''); } }}
+              onChange={(e) => { setProjectSearch(e.target.value); setProjectDropdownOpen(true); }}
+            />
+            {projectDropdownOpen && !disabled && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, marginTop: 4, maxHeight: 220, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+                <div
+                  style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, color: '#6b7280', borderBottom: '1px solid #f1f5f9' }}
+                  onClick={() => { setField('project_id', ''); setField('phase_id', ''); setProjectDropdownOpen(false); }}
+                >
+                  — None —
+                </div>
+                {filteredProjects.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, background: String(p.id) === String(form.project_id) ? '#eef2ff' : 'transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = String(p.id) === String(form.project_id) ? '#eef2ff' : 'transparent'; }}
+                    onClick={() => { setField('project_id', String(p.id)); setField('phase_id', ''); setProjectDropdownOpen(false); }}
+                  >
+                    {p.project_name}
+                  </div>
+                ))}
+                {filteredProjects.length === 0 && (
+                  <div style={{ padding: '10px 12px', fontSize: 13, color: '#9ca3af' }}>No projects found</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Phase select — shows each phase's approval status */}
+          <div>
+            <label className="tmq-field-label">Phase</label>
+            <select
+              className="tmq-select"
+              value={form.phase_id}
+              disabled={disabled || !form.project_id}
+              onChange={(e) => setField('phase_id', e.target.value)}
+            >
+              <option value="">{form.project_id ? 'Select phase' : 'Select project first'}</option>
+              {phases.map((ph) => (
+                <option key={ph.id} value={ph.id}>
+                  {ph.phase_name} — {ph.is_approved === false ? 'Unapproved' : 'Approved'}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="tmq-grid3" style={{ marginBottom: 10 }}>
@@ -387,13 +479,16 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
             <input type="date" className="tmq-input" value={form.end_date || ''} disabled={disabled}
               onChange={(e) => setField('end_date', e.target.value)} />
           </div>
-          {!isCreate && (
-            <div>
-              <label className="tmq-field-label">Follow-up Date</label>
-              {/* No follow-up at creation; on an existing task it's driven by status updates */}
+          <div>
+            <label className="tmq-field-label">Follow-up Date{isCreate ? ' *' : ''}</label>
+            {isCreate ? (
+              <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled={disabled}
+                onChange={(e) => setField('follow_up_date', e.target.value)} />
+            ) : (
+              /* On an existing task it's driven by status updates */
               <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled readOnly />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div>

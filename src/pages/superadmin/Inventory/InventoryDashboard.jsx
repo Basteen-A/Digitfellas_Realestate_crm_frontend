@@ -12,7 +12,7 @@ const InventoryDashboard = () => {
 
   // Phase manager state
   const [phaseModal, setPhaseModal] = useState({ open: false, mode: 'create', row: null, project_id: '', project_name: '' });
-  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
   const [phaseSaving, setPhaseSaving] = useState(false);
   const [phaseList, setPhaseList] = useState([]);
   const [phaseCountByProject, setPhaseCountByProject] = useState({});
@@ -62,13 +62,13 @@ const InventoryDashboard = () => {
 
   const openPhaseModal = async (e, project) => {
     e.stopPropagation();
-    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
     setPhaseModal({ open: true, mode: 'create', row: null, project_id: project.project_id, project_name: project.project_name });
     await refreshPhaseList(project.project_id);
   };
   const closePhaseModal = () => {
     setPhaseModal({ open: false, mode: 'create', row: null, project_id: '', project_name: '' });
-    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
     setPhaseList([]);
   };
 
@@ -78,6 +78,7 @@ const InventoryDashboard = () => {
       phase_code: phase.phase_code || '',
       description: phase.description || '',
       sort_order: phase.sort_order ?? 0,
+      is_approved: phase.is_approved !== false,
     });
     setPhaseModal((prev) => ({ ...prev, mode: 'edit', row: phase }));
   };
@@ -93,6 +94,7 @@ const InventoryDashboard = () => {
           phase_code: phaseForm.phase_code || null,
           description: phaseForm.description || null,
           sort_order: Number(phaseForm.sort_order) || 0,
+          is_approved: phaseForm.is_approved,
         });
         toast.success('Phase updated');
       } else {
@@ -102,10 +104,11 @@ const InventoryDashboard = () => {
           phase_code: phaseForm.phase_code || null,
           description: phaseForm.description || null,
           sort_order: Number(phaseForm.sort_order) || 0,
+          is_approved: phaseForm.is_approved,
         });
         toast.success('Phase created');
       }
-      setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+      setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
       setPhaseModal((prev) => ({ ...prev, mode: 'create', row: null }));
       await refreshPhaseList(phaseModal.project_id);
       loadPhaseCounts();
@@ -125,6 +128,16 @@ const InventoryDashboard = () => {
       loadPhaseCounts();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Cannot delete phase');
+    }
+  };
+
+  const togglePhaseApproval = async (phase) => {
+    try {
+      await projectPhaseApi.update(phase.id, { is_approved: !phase.is_approved });
+      toast.success(phase.is_approved ? 'Phase unapproved' : 'Phase approved');
+      await refreshPhaseList(phaseModal.project_id);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update approval');
     }
   };
 
@@ -325,6 +338,7 @@ const InventoryDashboard = () => {
                         <th style={{ padding: '6px 8px' }}>Code</th>
                         <th style={{ padding: '6px 8px' }}>Units</th>
                         <th style={{ padding: '6px 8px' }}>Available</th>
+                        <th style={{ padding: '6px 8px' }}>Approval</th>
                         <th style={{ padding: '6px 8px' }}>Actions</th>
                       </tr>
                     </thead>
@@ -335,6 +349,20 @@ const InventoryDashboard = () => {
                           <td style={{ padding: '6px 8px' }}>{p.phase_code || '—'}</td>
                           <td style={{ padding: '6px 8px' }}>{p.unit_count ?? 0}</td>
                           <td style={{ padding: '6px 8px' }}>{p.available_count ?? 0}</td>
+                          <td style={{ padding: '6px 8px' }}>
+                            <button
+                              onClick={() => togglePhaseApproval(p)}
+                              title="Click to toggle approval"
+                              style={{
+                                cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                                border: `1px solid ${p.is_approved === false ? '#FCA5A5' : '#A7F3D0'}`,
+                                background: p.is_approved === false ? '#FEF2F2' : '#ECFDF5',
+                                color: p.is_approved === false ? '#B91C1C' : '#047857',
+                              }}
+                            >
+                              {p.is_approved === false ? 'Unapproved' : 'Approved'}
+                            </button>
+                          </td>
                           <td style={{ padding: '6px 8px' }}>
                             <button onClick={() => startEditPhase(p)} style={{ background: 'none', border: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer' }}>Edit</button>
                             <button onClick={() => removePhase(p)} style={{ background: 'none', border: 'none', color: '#dc2626', fontWeight: 600, cursor: 'pointer', marginLeft: 8 }}>Delete</button>
@@ -383,12 +411,22 @@ const InventoryDashboard = () => {
                       style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
                     />
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'end', paddingBottom: 6 }}>
+                    <input
+                      id="phase-approved" type="checkbox" checked={phaseForm.is_approved}
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, is_approved: e.target.checked }))}
+                      style={{ width: 16, height: 16, cursor: 'pointer' }}
+                    />
+                    <label htmlFor="phase-approved" style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      Approved (shown in phase dropdowns)
+                    </label>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
                   {phaseModal.mode === 'edit' && (
                     <button
                       type="button"
-                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 }); }}
+                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true }); }}
                       style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
                     >
                       Cancel edit

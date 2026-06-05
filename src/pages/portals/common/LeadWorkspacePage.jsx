@@ -65,6 +65,19 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { isValidPhoneNumber } from 'libphonenumber-js/max';
 import './LeadWorkspacePage.css';
+
+const INDIAN_STATES_UTS = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu', 'Delhi',
+  'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+];
+
 const NEW_LEAD_REMARK_CHIPS = ['Hot lead', 'Requested call back', 'Needs brochure', 'Budget discussed', 'Location priority'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -976,7 +989,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     buyer_name: '',
     date_of_birth: '', pan_number: '', aadhar_number: '',
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
-    current_address: '', current_city: '', current_state: '', current_pincode: '',
+    current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
+    permanent_address: '', permanent_area: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+    sameAsCurrent: false,
     assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
     bookingProjectId: '', bookingLocationId: '', bookingPhaseId: '',
   });
@@ -2130,8 +2145,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         buyer_name: `${selectedLead.first_name || ''} ${selectedLead.last_name || ''}`.trim(),
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
-        current_address: '', current_city: '', current_state: '', current_pincode: '',
-        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_area: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
         sameAsCurrent: false,
         assignToUserId: '',
         note: actionState.note || '',
@@ -2139,14 +2154,22 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         paymentPlanId: '',
         bookingProjectId: selectedLead.projectId || '',
         bookingLocationId: selectedLead.locationId || '',
+        bookingPhaseId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
-      // Load available inventory units for the lead's project
+      // Load phases for the lead's project, then units
       if (selectedLead?.projectId) {
-        inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(resp => {
-          setAvailableUnits(resp.data || []);
-        }).catch(() => setAvailableUnits([]));
+        projectPhaseApi.dropdown(selectedLead.projectId).then(resp => {
+          const phases = resp.data?.data || resp.data || [];
+          setAvailablePhases(phases);
+          if (phases.length === 0) {
+            inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+          }
+        }).catch(() => {
+          setAvailablePhases([]);
+          inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+        });
       }
       // Load payment plans
       paymentPlanApi.getDropdown().then(resp => {
@@ -2330,6 +2353,49 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     }
   };
 
+  // ── Permanent Pincode Autofill ──
+  const handlePermanentPincodeChange = async (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setCustomerProfileForm(p => ({
+      ...p,
+      permanent_pincode: val,
+      ...(val.length < 6 ? { permanent_city: '', permanent_state: '' } : {}),
+    }));
+
+    if (val.length === 6) {
+      try {
+        const resp = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+        const data = await resp.json();
+        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+          const po = data[0].PostOffice[0];
+          const apiCity = po.District || po.Block || po.Name || '';
+          const apiState = po.State || '';
+          if (apiCity || apiState) {
+            setCustomerProfileForm(p => ({
+              ...p,
+              permanent_pincode: val,
+              permanent_city: apiCity,
+              permanent_state: apiState,
+            }));
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch pincode details', err);
+      }
+
+      const matchedLocation = locationOptions.find((location) => String(location.pincode || '').trim() === val);
+      if (matchedLocation) {
+        setCustomerProfileForm(p => ({
+          ...p,
+          permanent_pincode: val,
+          permanent_city: matchedLocation.city || '',
+          permanent_state: matchedLocation.state || '',
+        }));
+      }
+    }
+  };
+
   // ── Customer Profile Submit (SH Close Won) ──
   const handleCustomerProfileSubmit = async () => {
     if (!selectedLead) return;
@@ -2343,7 +2409,6 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
     setManualUpdateSaving(true);
     try {
-
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING', {
         assignToUserId: f.assignToUserId,
         note: f.note?.trim() || 'Booking approved by Sales Head',
@@ -2364,9 +2429,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           purchase_type: f.purchase_type,
           marital_status: f.marital_status,
           current_address: f.current_address,
+          current_area: f.current_area,
           current_city: f.current_city,
           current_state: f.current_state,
           current_pincode: f.current_pincode,
+          permanent_address: f.permanent_address,
+          permanent_area: f.permanent_area,
+          permanent_city: f.permanent_city,
+          permanent_state: f.permanent_state,
+          permanent_pincode: f.permanent_pincode,
         },
       });
       toast.success('Booking approved! Customer profile saved. Lead transferred to Collection Manager.');
@@ -2431,8 +2502,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         buyer_name: `${selectedLead.first_name || ''} ${selectedLead.last_name || ''}`.trim(),
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
-        current_address: '', current_city: '', current_state: '', current_pincode: '',
-        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_area: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
         sameAsCurrent: false,
         assignToUserId: '',
         note: stagePopupData.reason || actionState.note || '',
@@ -2440,14 +2511,22 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         paymentPlanId: '',
         bookingProjectId: selectedLead.projectId || '',
         bookingLocationId: selectedLead.locationId || '',
+        bookingPhaseId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
-      // Load inventory units
+      // Load phases then units
       if (selectedLead?.projectId) {
-        inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(resp => {
-          setAvailableUnits(resp.data || []);
-        }).catch(() => setAvailableUnits([]));
+        projectPhaseApi.dropdown(selectedLead.projectId).then(resp => {
+          const phases = resp.data?.data || resp.data || [];
+          setAvailablePhases(phases);
+          if (phases.length === 0) {
+            inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+          }
+        }).catch(() => {
+          setAvailablePhases([]);
+          inventoryUnitApi.getDropdown({ project_id: selectedLead.projectId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+        });
       }
       // Load payment plans
       paymentPlanApi.getDropdown().then(resp => {
@@ -2697,13 +2776,21 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     }
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
       loadAssignableUsers('COL');
-      // Load available inventory units for the lead's project or selected booking project
+      // Load phases for the project, then units
       const projectIdForUnits = customerProfileForm.bookingProjectId || quickActionLead?.projectId;
       if (projectIdForUnits) {
-        inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(resp => {
-          setAvailableUnits(resp.data || []);
-        }).catch(() => setAvailableUnits([]));
+        projectPhaseApi.dropdown(projectIdForUnits).then(resp => {
+          const phases = resp.data?.data || resp.data || [];
+          setAvailablePhases(phases);
+          if (phases.length === 0) {
+            inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+          }
+        }).catch(() => {
+          setAvailablePhases([]);
+          inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+        });
       } else {
+        setAvailablePhases([]);
         setAvailableUnits([]);
       }
       // Load payment plans
@@ -3007,9 +3094,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             purchase_type: pF.purchase_type,
             marital_status: pF.marital_status,
             current_address: pF.current_address,
+            current_area: pF.current_area,
             current_city: pF.current_city,
             current_state: pF.current_state,
             current_pincode: pF.current_pincode,
+            permanent_address: pF.permanent_address,
+            permanent_area: pF.permanent_area,
+            permanent_city: pF.permanent_city,
+            permanent_state: pF.permanent_state,
+            permanent_pincode: pF.permanent_pincode,
             assignToUserId: pF.assignToUserId,
             note: pF.note,
           };
@@ -5339,20 +5432,58 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon style={{ width: 14, height: 14 }} />Current Address *</div>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Address
-                <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address, locality..." style={{ width: '100%', marginTop: 4 }} />
+                <textarea rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." style={{ width: '100%', marginTop: 4 }} />
               </label>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Pincode
-                <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} style={{ width: '100%', marginTop: 4 }} />
+                Area / Locality
+                <input type="text" value={customerProfileForm.current_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" style={{ width: '100%', marginTop: 4 }} />
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   City
                   <input type="text" value={customerProfileForm.current_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_city: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
                 </label>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   State
-                  <input type="text" value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                  <select value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="">— Select State —</option>
+                    {INDIAN_STATES_UTS.map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Pincode
+                  <input type="text" maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} style={{ width: '120px', marginTop: 4 }} placeholder="6 digits" />
+                </label>
+              </div>
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon style={{ width: 14, height: 14 }} />Permanent Address</div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Address
+                <textarea rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} placeholder="Street address..." style={{ width: '100%', marginTop: 4 }} />
+              </label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Area / Locality
+                <input type="text" value={customerProfileForm.permanent_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" style={{ width: '100%', marginTop: 4 }} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  City
+                  <input type="text" value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} style={{ width: '100%', marginTop: 4 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  State
+                  <select value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="">— Select State —</option>
+                    {INDIAN_STATES_UTS.map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Pincode
+                  <input type="text" maxLength={6} value={customerProfileForm.permanent_pincode} onChange={handlePermanentPincodeChange} style={{ width: '120px', marginTop: 4 }} placeholder="6 digits" />
                 </label>
               </div>
 
@@ -6125,8 +6256,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
                       </div>
                       <div>
-                        <label className="qa-drawer-field-label">Pincode</label>
-                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} />
+                        <label className="qa-drawer-field-label">Area / Locality</label>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" />
                       </div>
                       <div className="qa-drawer-profile-grid-3">
                         <div>
@@ -6135,7 +6266,41 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         </div>
                         <div>
                           <label className="qa-drawer-field-label">State</label>
-                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} />
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))}>
+                            <option value="">— Select State —</option>
+                            {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ maxWidth: 120 }} maxLength={6} value={customerProfileForm.current_pincode} onChange={handlePincodeChange} placeholder="6 digits" />
+                        </div>
+                      </div>
+
+                      <div className="qa-drawer-profile-section"><HomeModernIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
+                      <div>
+                        <label className="qa-drawer-field-label">Address</label>
+                        <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Area / Locality</label>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" />
+                      </div>
+                      <div className="qa-drawer-profile-grid-3">
+                        <div>
+                          <label className="qa-drawer-field-label">City</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">State</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))}>
+                            <option value="">— Select State —</option>
+                            {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ maxWidth: 120 }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={handlePermanentPincodeChange} placeholder="6 digits" />
                         </div>
                       </div>
 

@@ -268,9 +268,177 @@
 .tmq-del-btn { margin-right: auto; height: 40px; padding: 0 18px; border-radius: 10px; border: 1.5px solid var(--accent-red); background: transparent; color: var(--accent-red); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.2s; }
 .tmq-del-btn:hover { background: var(--accent-red-bg); }
 
-@media (max-width: 560px) {
-  .tmq-status-grid { grid-template-columns: repeat(2, 1fr); }
+/* ============================================================
+   MOBILE RESPONSIVENESS — complete coverage
+   Breakpoints:
+     ≤ 1024px  — tablet / narrow desktop (sidebar shrinks)
+     ≤ 768px   — phone-landscape / large phone
+     ≤ 560px   — typical phone
+     ≤ 420px   — small phone
+   ============================================================ */
+
+/* ─────────── ≤ 1024px : tablet ─────────── */
+@media (max-width: 1024px) {
+  /* Shrink sidebar so content gets more room */
+  .tmp-sidebar { width: 200px; padding: 14px 10px; }
+  .tmp-brand__name { font-size: 15px; }
+  .tmp-nav__link { font-size: 13px; padding: 9px 10px; gap: 10px; }
+
+  /* Dashboard split stacks sooner on narrow tablets */
+  .tm-dash-split { grid-template-columns: 1fr; }
+}
+
+/* ─────────── ≤ 768px : phone-landscape / large phone ─────────── */
+@media (max-width: 768px) {
+  /* ── Portal shell: hide sidebar, make header mobile-friendly ── */
+  .tmp-sidebar { display: none; }
+  .tmp-header { justify-content: space-between; padding: 0 16px; }
+  .tmp-main { width: 100%; }
+
+  /* ── Page layout ── */
+  .tm-page { padding: 14px 12px; gap: 12px; }
+
+  /* ── Header: stack title row + action buttons ── */
+  .tm-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .tm-header > div:last-child { width: 100%; display: flex; }
+  .tm-header .tm-btn { flex: 1; justify-content: center; }
+
+  /* ── Stats: two cards per row ── */
+  .tm-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+  .tm-stat { padding: 12px 14px; }
+  .tm-stat__value { font-size: 22px; }
+
+  /* ── Follow-up tabs: equal-width, wrap to two rows if needed ── */
+  .tm-followup-tabs { gap: 6px; }
+  .tm-followup-tabs .tm-btn { flex: 1 1 auto; justify-content: center; font-size: 12px; padding: 8px 10px; }
+
+  /* ── Toolbar: stack each control full-width ── */
+  .tm-toolbar { flex-direction: column; align-items: stretch; }
+  .tm-toolbar .tm-search { flex: unset; max-width: 100%; width: 100%; }
+  .tm-toolbar .tm-select { width: 100%; }
+
+  /* ── Table wrap: touch scroll ── */
+  .tm-table-wrap { -webkit-overflow-scrolling: touch; }
+  .tm-table { min-width: 740px; }
+
+  /* ── Modal: near-full-screen on mobile ── */
+  .tm-modal-overlay { padding: 6px; }
+  .tm-modal { width: 100%; max-height: 96vh; border-radius: 12px; }
+  .tm-modal__header { padding: 12px 14px 10px; }
+  .tm-modal__body { padding: 12px 14px; }
+
+  /* Modal header row (quick-action style) */
+  .tmq-header { padding: 12px 14px 10px; gap: 10px; }
+  .tmq-header-left { gap: 10px; }
+  .tmq-avatar { width: 38px; height: 38px; border-radius: 10px; font-size: 14px; }
+  .tmq-name { font-size: 15px; }
+
+  /* Modal body sections tighter padding */
+  .tmq-section { padding: 12px 14px 6px; }
+  .tmq-block { padding: 0 14px 10px; }
+  .tmq-hint { padding: 0 14px 8px; }
+  .tmq-divider { margin: 4px 14px; }
+
+  /* Status grid: 2 columns on mobile */
+  .tmq-status-grid { padding: 0 14px 10px; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .tmq-st-btn { padding: 10px 4px; border-radius: 8px; }
+
+  /* Form grids collapse */
+  .tmq-grid2 { grid-template-columns: 1fr !important; }
   .tmq-grid3 { grid-template-columns: 1fr 1fr; }
+
+  /* History (timeline) tighter */
+  .tmq-history { padding: 4px 14px 10px; }
+
+  /* Accordion body */
+  .tmq-acc-body { padding: 10px; }
+
+  /* Activity table scroll container */
+  .tmq-act-tablewrap { margin: 0 -14px; border-radius: 0; border-left: 0; border-right: 0; }
+
+  /* ── Save row (modal footer): wrap buttons on narrow screens ── */
+  .tmq-save-row { padding: 10px 14px 14px; flex-wrap: wrap; gap: 8px; }
+  .tmq-del-btn { margin-right: 0; flex: 1 1 100%; order: 10; }
+  .tmq-skip-btn,
+  .tmq-save-btn { flex: 1; min-width: 0; padding: 0 14px; }
+
+  /* ── Dashboard cards ── */
+  .tm-card { padding: 14px 14px; }
+  .tm-card__head { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* Dashboard split always stacks */
+  .tm-dash-split { grid-template-columns: 1fr; }
+  .tm-subcard { padding: 12px; }
+
+  /* Breakdown rows: label narrower */
+  .tm-breakdown__row { grid-template-columns: 100px 1fr 28px; gap: 8px; }
+  .tm-breakdown__label { font-size: 12px; }
+
+  /* Activity items stack badges below title */
+  .tm-activity { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 0; }
+  .tm-activity__badges { align-self: flex-start; }
+  .tm-activity__title { font-size: 14px; }
+
+  /* Assignee chips wrap better */
+  .tm-chips { gap: 6px; }
+  .tm-chip-tag { font-size: 11px; padding: 2px 6px 2px 3px; }
+}
+
+/* ─────────── ≤ 560px : typical phone ─────────── */
+@media (max-width: 560px) {
+  /* Further tighten status grid */
+  .tmq-status-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* All form grids fully collapse to single column */
+  .tmq-grid2,
+  .tmq-grid3 { grid-template-columns: 1fr !important; }
+
+  /* Modal header: compact */
+  .tmq-avatar { width: 34px; height: 34px; font-size: 13px; }
+  .tmq-name { font-size: 14px; }
+  .tmq-meta { font-size: 11px; gap: 5px; }
+
+  /* Stat cards text */
+  .tm-stat__value { font-size: 20px; }
+  .tm-stat__label { font-size: 11px; }
+
+  /* Page title */
+  .tm-header h1 { font-size: 18px; }
+  .tm-header p { font-size: 12px; }
+
+  /* Buttons: slightly smaller */
+  .tm-btn { font-size: 12px; padding: 8px 12px; }
+
+  /* Save row: fully stack (delete full width on top) */
+  .tmq-save-row { flex-direction: column; }
+  .tmq-del-btn,
+  .tmq-skip-btn,
+  .tmq-save-btn { width: 100%; flex: unset; justify-content: center; }
+
+  /* Breakdown label shrinks more */
+  .tm-breakdown__row { grid-template-columns: 85px 1fr 26px; }
+  .tm-breakdown__label { font-size: 11px; }
+}
+
+/* ─────────── ≤ 420px : small phone ─────────── */
+@media (max-width: 420px) {
+  /* Stats single column on very small screens */
+  .tm-stats { grid-template-columns: 1fr !important; }
+
+  /* Even tighter page padding */
+  .tm-page { padding: 10px 8px; }
+
+  /* Modal: remove border-radius for truly full-screen feel */
+  .tm-modal { border-radius: 8px; }
+  .tm-modal-overlay { padding: 4px; }
+
+  /* Status grid collapses to 2 columns */
+  .tmq-status-grid { gap: 4px; }
+  .tmq-st-btn { padding: 8px 2px; gap: 3px; }
+  .tmq-st-label { font-size: 10px; }
+
+  /* Assignee avatars smaller */
+  .tm-avatar { width: 24px; height: 24px; font-size: 10px; }
 }
 
 .tm-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }

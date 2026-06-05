@@ -626,8 +626,8 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                             </select>
                           </div>
                           <div>
-                            <label className="qa-drawer-field-label">Secondary Contact *</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone" />
+                            <label className="qa-drawer-field-label">Secondary Contact</label>
+                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone (optional)" />
                           </div>
                         </div>
 

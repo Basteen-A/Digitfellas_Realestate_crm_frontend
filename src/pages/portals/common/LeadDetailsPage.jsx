@@ -17,6 +17,7 @@ import {
 import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
+import projectPhaseApi from '../../../api/projectPhaseApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
@@ -51,6 +52,18 @@ import './LeadDetailsPage.css';
 const QUICK_REMARKS = [
   'Interested', 'Shared Details', 'Callback Later', 'Busy', 
   'Not Reachable', 'RNR', 'Wrong Number', 'Follow-up Scheduled'
+];
+
+const INDIAN_STATES_UTS = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu', 'Delhi',
+  'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
 ];
 
 
@@ -410,15 +423,17 @@ const LeadDetailsPage = () => {
     date_of_birth: '', marital_status: '', purchase_type: '',
     occupation: '', current_post: '',
     pan_number: '', aadhar_number: '',
-    current_address: '', current_city: '', current_state: '', current_pincode: '',
+    current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
     sameAsCurrent: true,
-    permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+    permanent_address: '', permanent_area: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
     inventoryUnitId: '',
     paymentPlanId: '',
     bookingProjectId: '',
     bookingLocationId: '',
+    bookingPhaseId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [bookingPhases, setBookingPhases] = useState([]);
   const [paymentPlans, setPaymentPlans] = useState([]);
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
@@ -691,10 +706,20 @@ const LeadDetailsPage = () => {
       if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
         const projectIdForUnits = customerProfileForm.bookingProjectId || lead?.projectId;
         if (projectIdForUnits) {
-          inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(resp => {
-            setAvailableUnits(resp.data || []);
-          }).catch(() => setAvailableUnits([]));
+          // Load phases for the project first
+          projectPhaseApi.dropdown(projectIdForUnits).then(resp => {
+            const phases = resp.data?.data || resp.data || [];
+            setBookingPhases(phases);
+            // If no phases, load all units directly
+            if (phases.length === 0) {
+              inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+            }
+          }).catch(() => {
+            setBookingPhases([]);
+            inventoryUnitApi.getDropdown({ project_id: projectIdForUnits }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([]));
+          });
         } else {
+          setBookingPhases([]);
           setAvailableUnits([]);
         }
         // Load payment plans for booking
@@ -924,8 +949,8 @@ const LeadDetailsPage = () => {
         buyer_name: `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim(),
         date_of_birth: '', pan_number: '', aadhar_number: '',
         occupation: '', current_post: '', purchase_type: '', marital_status: '',
-        current_address: '', current_city: '', current_state: '', current_pincode: '',
-        permanent_address: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_area: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
         sameAsCurrent: false,
         assignToUserId: '',
         note: '',
@@ -933,6 +958,7 @@ const LeadDetailsPage = () => {
         paymentPlanId: '',
         bookingProjectId: lead?.projectId || '',
         bookingLocationId: lead?.locationId || '',
+        bookingPhaseId: '',
       });
     }
 
@@ -1063,17 +1089,6 @@ const LeadDetailsPage = () => {
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
       const pF = customerProfileForm;
-      const permAddr = pF.sameAsCurrent ? {
-        permanent_address: pF.current_address,
-        permanent_city: pF.current_city,
-        permanent_state: pF.current_state,
-        permanent_pincode: pF.current_pincode,
-      } : {
-        permanent_address: pF.permanent_address,
-        permanent_city: pF.permanent_city,
-        permanent_state: pF.permanent_state,
-        permanent_pincode: pF.permanent_pincode,
-      };
       payload.customerProfile = {
         buyer_name: pF.buyer_name || undefined,
         date_of_birth: pF.date_of_birth ? new Date(pF.date_of_birth).toISOString() : undefined,
@@ -1084,10 +1099,15 @@ const LeadDetailsPage = () => {
         purchase_type: pF.purchase_type,
         marital_status: pF.marital_status,
         current_address: pF.current_address,
+        current_area: pF.current_area,
         current_city: pF.current_city,
         current_state: pF.current_state,
         current_pincode: pF.current_pincode,
-        ...permAddr,
+        permanent_address: pF.permanent_address,
+        permanent_area: pF.permanent_area,
+        permanent_city: pF.permanent_city,
+        permanent_state: pF.permanent_state,
+        permanent_pincode: pF.permanent_pincode,
       };
       payload.buyer_name = pF.buyer_name || undefined;
       payload.inventoryUnitId = pF.inventoryUnitId || undefined;
@@ -2737,7 +2757,7 @@ const LeadDetailsPage = () => {
                       <div className="qa-drawer-profile-grid">
                         <div>
                           <label className="qa-drawer-field-label">Location</label>
-                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }}>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '', bookingPhaseId: '', inventoryUnitId: '' })); setBookingPhases([]); setAvailableUnits([]); }}>
                             <option value="">— Select Location —</option>
                             {locationOptions.filter(l => l.is_active !== false).map(loc => (
                               <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
@@ -2746,7 +2766,7 @@ const LeadDetailsPage = () => {
                         </div>
                         <div>
                           <label className="qa-drawer-field-label">Project</label>
-                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingProjectId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingProjectId: e.target.value, inventoryUnitId: '' })); if (e.target.value) { inventoryUnitApi.getDropdown({ project_id: e.target.value }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } else { setAvailableUnits([]); } }}>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingProjectId} onChange={(e) => { const projId = e.target.value; setCustomerProfileForm(p => ({ ...p, bookingProjectId: projId, bookingPhaseId: '', inventoryUnitId: '' })); setBookingPhases([]); setAvailableUnits([]); if (projId) { projectPhaseApi.dropdown(projId).then(resp => { const phases = resp.data?.data || resp.data || []; setBookingPhases(phases); if (phases.length === 0) { inventoryUnitApi.getDropdown({ project_id: projId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([])); } }).catch(() => { setBookingPhases([]); inventoryUnitApi.getDropdown({ project_id: projId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([])); }); } }}>
                             <option value="">— Select Project —</option>
                             {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
                               <option key={proj.id} value={proj.id}>{proj.project_name}</option>
@@ -2754,6 +2774,24 @@ const LeadDetailsPage = () => {
                           </select>
                         </div>
                       </div>
+
+                      {/* ── Phase Selection ── */}
+                      {bookingPhases.length > 0 && customerProfileForm.bookingProjectId && (
+                        <>
+                          <div className="qa-drawer-profile-section"><TableCellsIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Phase</div>
+                          <div>
+                            <label className="qa-drawer-field-label">Phase</label>
+                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingPhaseId} onChange={(e) => { const phaseId = e.target.value; setCustomerProfileForm(p => ({ ...p, bookingPhaseId: phaseId, inventoryUnitId: '' })); setAvailableUnits([]); if (phaseId) { inventoryUnitApi.getDropdown({ project_id: customerProfileForm.bookingProjectId, phase_id: phaseId }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } }}>
+                              <option value="">— Select Phase —</option>
+                              {bookingPhases.map(phase => (
+                                <option key={phase.id} value={phase.id}>
+                                  {phase.phase_name}{phase.phase_code ? ` (${phase.phase_code})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
 
                       {/* ── Inventory Unit Selection ── */}
                       {availableUnits.length > 0 && (
@@ -2858,6 +2896,10 @@ const LeadDetailsPage = () => {
                         <label className="qa-drawer-field-label">Address</label>
                         <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.current_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_address: e.target.value }))} placeholder="Street address..." />
                       </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Area / Locality</label>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" />
+                      </div>
                       <div className="qa-drawer-profile-grid-3">
                         <div>
                           <label className="qa-drawer-field-label">City</label>
@@ -2865,42 +2907,43 @@ const LeadDetailsPage = () => {
                         </div>
                         <div>
                           <label className="qa-drawer-field-label">State</label>
-                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} />
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))}>
+                            <option value="">— Select State —</option>
+                            {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
                         </div>
                         <div>
                           <label className="qa-drawer-field-label">Pincode</label>
-                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} />
+                          <input type="text" className="qa-drawer-field-input" style={{ maxWidth: 120 }} maxLength={6} value={customerProfileForm.current_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_pincode: e.target.value.replace(/\D/g, '') }))} placeholder="6 digits" />
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div className="qa-drawer-profile-section" style={{ flex: 1, marginBottom: 0 }}><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
-                        <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                          <input type="checkbox" checked={customerProfileForm.sameAsCurrent} onChange={(e) => setCustomerProfileForm(p => ({ ...p, sameAsCurrent: e.target.checked }))} /> Same as Current
-                        </label>
+                      <div className="qa-drawer-profile-section"><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
+                      <div>
+                        <label className="qa-drawer-field-label">Address</label>
+                        <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
                       </div>
-                      {!customerProfileForm.sameAsCurrent && (
-                        <>
-                          <div>
-                            <label className="qa-drawer-field-label">Address</label>
-                            <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
-                          </div>
-                          <div className="qa-drawer-profile-grid-3">
-                            <div>
-                              <label className="qa-drawer-field-label">City</label>
-                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
-                            </div>
-                            <div>
-                              <label className="qa-drawer-field-label">State</label>
-                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} />
-                            </div>
-                            <div>
-                              <label className="qa-drawer-field-label">Pincode</label>
-                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} />
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      <div>
+                        <label className="qa-drawer-field-label">Area / Locality</label>
+                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" />
+                      </div>
+                      <div className="qa-drawer-profile-grid-3">
+                        <div>
+                          <label className="qa-drawer-field-label">City</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">State</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))}>
+                            <option value="">— Select State —</option>
+                            {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ maxWidth: 120 }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} placeholder="6 digits" />
+                        </div>
+                      </div>
                     </div>
                   )}
 

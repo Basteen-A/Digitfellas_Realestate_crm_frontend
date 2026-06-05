@@ -23,6 +23,10 @@ const taskApi = {
     const { data } = await api.get(`${basePath}/projects`, { params: { _t: Date.now() } });
     return data;
   },
+  getPhases: async (projectId) => {
+    const { data } = await api.get(`${basePath}/phases`, { params: { project_id: projectId || undefined, _t: Date.now() } });
+    return data;
+  },
   getById: async (id) => {
     const { data } = await api.get(`${basePath}/${id}`);
     return data;
