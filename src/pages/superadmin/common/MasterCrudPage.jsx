@@ -97,11 +97,15 @@ const MasterCrudPage = ({ config }) => {
     setLoading(true);
     try {
       const response = await config.api.getAll(query);
-      
-      // Handle both response structures: { data: [...], meta: ... } and { success, data: [...], meta: ... }
+
+      // getAll returns the response body. Supports both:
+      //   { success, data: [...], meta: {...} }      (meta at top level)
+      //   { data: { data: [...], meta: {...} } }     (nested)
       const rows = response.data?.data || response.data || [];
-      const meta = response.data?.meta || { page: 1, limit: query.limit, total: 0, totalPages: 1 };
-      
+      const meta = response.meta
+        || response.data?.meta
+        || { page: query.page, limit: query.limit, total: rows.length, totalPages: 1, hasNextPage: false, hasPrevPage: query.page > 1 };
+
       setRows(rows);
       setMeta(meta);
     } catch (error) {

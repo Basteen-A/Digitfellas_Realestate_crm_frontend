@@ -70,6 +70,39 @@ const SCREEN_TITLES = {
   inventory: 'Inventory',
 };
 
+const getWorkspaceBasePath = (pathname = '') => {
+  if (pathname.startsWith('/telecaller/')) return '/telecaller/leads';
+  if (pathname.startsWith('/sales-manager/')) return '/sales-manager/leads';
+  if (pathname.startsWith('/sales-head/')) return '/sales-head/leads';
+  if (pathname.startsWith('/collection/')) return '/collection/leads';
+  if (pathname.startsWith('/accounts/')) return '/accounts/dashboard';
+  if (pathname.startsWith('/task-portal/')) return '/task-portal/dashboard';
+  return null;
+};
+
+const getWorkspaceScreenStorageKey = (pathname = '') => {
+  const basePath = getWorkspaceBasePath(pathname);
+  return basePath ? `portalActiveScreen:${basePath}` : null;
+};
+
+const getStoredScreen = (storageKey) => {
+  if (!storageKey || typeof window === 'undefined') return '';
+  try {
+    return window.sessionStorage.getItem(storageKey) || '';
+  } catch {
+    return '';
+  }
+};
+
+const setStoredScreen = (storageKey, screen) => {
+  if (!storageKey || !screen || typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(storageKey, screen);
+  } catch {
+    // ignore storage failures
+  }
+};
+
 const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, searchPlaceholder, onNavigateOverride }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -78,6 +111,10 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const roleCode = getRoleCode(user);
   const canUsePhoneLookup = !['COL', 'ACCT', 'SE'].includes(roleCode);
   const isAdmin = ['SA', 'ADM'].includes(roleCode);
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const queryScreen = searchParams.get('screen') || '';
+  const workspaceScreenStorageKey = useMemo(() => getWorkspaceScreenStorageKey(location.pathname), [location.pathname]);
+  const storedScreen = getStoredScreen(workspaceScreenStorageKey);
 
   // Append the embedded Tasks screen to this portal's own sidebar when the user
   // has Standard Executive (task) access, replacing the old external link.
@@ -87,7 +124,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     return [...(menuItems || []), portalTaskMenuItem];
   }, [menuItems, user]);
   
-  const [activeScreen, setActiveScreen] = useState(() => location.state?.screen || defaultScreen || 'dashboard');
+  const [activeScreen, setActiveScreen] = useState(() => queryScreen || location.state?.screen || storedScreen || defaultScreen || 'dashboard');
   const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -115,9 +152,27 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     if (locationScreen) {
       setActiveScreen(locationScreen);
       setScreenContext(locationScreenData || null);
-      navigate(location.pathname, { replace: true, state: {} });
+      navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: {} });
     }
-  }, [locationScreen, locationScreenData, location.pathname, navigate]);
+  }, [locationScreen, locationScreenData, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (!locationScreen && queryScreen) {
+      setActiveScreen(queryScreen);
+    }
+  }, [locationScreen, queryScreen]);
+
+  useEffect(() => {
+    if (!workspaceScreenStorageKey || !activeScreen) return;
+
+    setStoredScreen(workspaceScreenStorageKey, activeScreen);
+
+    if (queryScreen === activeScreen) return;
+
+    const nextSearchParams = new URLSearchParams(location.search);
+    nextSearchParams.set('screen', activeScreen);
+    navigate({ pathname: location.pathname, search: `?${nextSearchParams.toString()}` }, { replace: true });
+  }, [activeScreen, location.pathname, location.search, navigate, queryScreen, workspaceScreenStorageKey]);
 
   const handleNavigate = useCallback((key, context = null) => {
     if (onNavigateOverride) {

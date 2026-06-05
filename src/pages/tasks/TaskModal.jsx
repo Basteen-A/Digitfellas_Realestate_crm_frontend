@@ -31,6 +31,11 @@ const STATUS_META = {
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
+// Uploaded files are served by the backend at :5000/uploads (file_url is relative).
+const FILE_BASE = `http://${window.location.hostname}:5000`;
+const fileHref = (att) => (att?.file_url?.startsWith('http') ? att.file_url : `${FILE_BASE}${att?.file_url || ''}`);
+const humanSize = (b) => (!b && b !== 0 ? '' : b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`);
+
 const initials = (u) =>
   `${(u?.first_name || u?.firstName || '?')[0] || ''}${(u?.last_name || u?.lastName || '')[0] || ''}`.toUpperCase();
 const fullName = (u) => `${u?.first_name || u?.firstName || ''} ${u?.last_name || u?.lastName || ''}`.trim();
@@ -53,7 +58,6 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [subDepartments, setSubDepartments] = useState([]);
-  const [locations, setLocations] = useState([]);
   const [projects, setProjects] = useState([]);
   const [original, setOriginal] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,10 +66,13 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [assigneeSearch, setAssigneeSearch] = useState('');
   const addRef = useRef(null);
 
+  // Attachments (photos / PDFs): files picked before create, uploaded after.
+  const [pendingFiles, setPendingFiles] = useState([]); // create: File[] queued
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
   // Status / remark form (Quick-Action style update)
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
-  // Mandatory initial remark when creating a task
-  const [createRemark, setCreateRemark] = useState('');
   // Task Details accordion (collapsed by default in the update/view popup)
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -73,17 +80,15 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
 
   const loadOptions = async () => {
     try {
-      const [u, d, s, loc, proj] = await Promise.all([
+      const [u, d, s, proj] = await Promise.all([
         taskApi.getAssignableUsers(),
         departmentApi.getDropdown(),
         subDepartmentApi.getDropdown(),
-        taskApi.getLocations(),
         taskApi.getProjects(),
       ]);
       setUsers(u.data || []);
       setDepartments(d.data || []);
       setSubDepartments(s.data || []);
-      setLocations(loc.data || []);
       setProjects(proj.data || []);
     } catch {
       /* non-fatal */
@@ -147,11 +152,6 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     [subDepartments, form.department_id]
   );
 
-  const filteredProjects = useMemo(
-    () => (form.location_id ? projects.filter((p) => String(p.location_id) === String(form.location_id)) : []),
-    [projects, form.location_id]
-  );
-
   const setField = (name, value) => setForm((p) => ({ ...p, [name]: value }));
 
   // On an existing task, persist assignee add/remove immediately so a removed
@@ -182,14 +182,14 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)) && !isCreatorId(u.id));
 
   // ── Save core (create / edit) ──
-  // On create, Title + Description + Remarks are required (no follow-up at create).
+  // On create, Title + Description are required (remarks removed; no follow-up at create).
   const canSaveCore = isCreate
-    ? !!(form.title.trim() && form.description.trim() && createRemark.trim())
+    ? !!(form.title.trim() && form.description.trim())
     : !!form.title.trim();
 
   // "Save Changes" is enabled only when an editable field actually differs from
   // the loaded task (assignees persist on their own, so they're excluded here).
-  const DIRTY_KEYS = ['title', 'description', 'priority', 'department_id', 'sub_department_id', 'location_id', 'project_id', 'start_date', 'end_date'];
+  const DIRTY_KEYS = ['title', 'description', 'priority', 'department_id', 'sub_department_id', 'project_id', 'start_date', 'end_date'];
   const isDirty = !isCreate && original
     ? DIRTY_KEYS.some((k) => String(form[k] ?? '') !== String(original[k] ?? ''))
     : false;
@@ -201,22 +201,32 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     }
     setSaving(true);
     try {
+      // Location is no longer a task field — derive it from the chosen project so
+      // existing reporting that reads location_id still works.
+      const selectedProject = projects.find((p) => String(p.id) === String(form.project_id));
       const payload = {
         title: form.title.trim(),
         description: form.description || null,
         priority: form.priority,
         department_id: form.department_id || null,
         sub_department_id: form.sub_department_id || null,
-        location_id: form.location_id || null,
+        location_id: selectedProject?.location_id || null,
         project_id: form.project_id || null,
         start_date: form.start_date || null,
         end_date: form.end_date || null,
         follow_up_date: form.follow_up_date || null,
         assignee_ids: form.assignee_ids,
-        ...(isCreate && { remark: createRemark.trim() }),
       };
       if (isCreate) {
-        await taskApi.create(payload);
+        const res = await taskApi.create(payload);
+        const newId = res?.data?.id;
+        if (newId && pendingFiles.length > 0) {
+          try {
+            await taskApi.addAttachments(newId, pendingFiles);
+          } catch {
+            toast.error('Task created, but some files failed to upload.');
+          }
+        }
         toast.success('Task created');
       } else {
         await taskApi.update(taskId, payload);
@@ -228,6 +238,23 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
       toast.error(error.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Upload files to an existing task immediately (view/update mode).
+  const handleUploadToExisting = async (fileList) => {
+    if (!taskId || !fileList || fileList.length === 0) return;
+    setUploading(true);
+    try {
+      await taskApi.addAttachments(taskId, fileList);
+      toast.success('File(s) uploaded');
+      await loadTask();
+      onSaved?.();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -295,6 +322,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   }, [task, canManageClosure]);
 
   const remarks = task?.remarks || [];
+  const attachments = Array.isArray(task?.attachments) ? task.attachments : [];
 
   // ── Task fields — same UI for everyone; `disabled` (non-creator) is read-only ──
   const renderFields = (disabled) => {
@@ -339,25 +367,13 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
           </div>
         </div>
 
-        <div className="tmq-grid2" style={{ marginBottom: 10 }}>
-          <div>
-            <label className="tmq-field-label">Location</label>
-            <select className="tmq-select" value={form.location_id} disabled={disabled}
-              onChange={(e) => { setField('location_id', e.target.value); setField('project_id', ''); }}>
-              <option value="">Select location</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.location_name}{l.city ? `, ${l.city}` : ''}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="tmq-field-label">Project</label>
-            <select className="tmq-select" value={form.project_id} disabled={disabled || !form.location_id}
-              onChange={(e) => setField('project_id', e.target.value)}>
-              <option value="">{form.location_id ? 'Select project' : 'Select location first'}</option>
-              {filteredProjects.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
-            </select>
-          </div>
+        <div style={{ marginBottom: 10 }}>
+          <label className="tmq-field-label">Project</label>
+          <select className="tmq-select" value={form.project_id} disabled={disabled}
+            onChange={(e) => setField('project_id', e.target.value)}>
+            <option value="">Select project</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+          </select>
         </div>
 
         <div className="tmq-grid3" style={{ marginBottom: 10 }}>
@@ -525,13 +541,75 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                 </div>
               )}
 
-              {/* ── Create: mandatory initial remark at the end ── */}
+              {/* ── Create: attach photos / PDFs (uploaded after the task is created) ── */}
               {isCreate && (
                 <div className="tmq-block">
-                  <label className="tmq-field-label">Remarks *</label>
-                  <textarea className="tmq-textarea" value={createRemark}
-                    onChange={(e) => setCreateRemark(e.target.value)} placeholder="Add an initial remark…" />
+                  <label className="tmq-field-label">Attachments (photos / PDF)</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    className="tmq-input"
+                    onChange={(e) => setPendingFiles((prev) => [...prev, ...Array.from(e.target.files || [])])}
+                  />
+                  {pendingFiles.length > 0 && (
+                    <div className="tm-attach-list" style={{ marginTop: 8 }}>
+                      {pendingFiles.map((f, i) => (
+                        <div key={`${f.name}-${i}`} className="tm-attach-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '4px 0' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            📎 {f.name} <span className="tmq-hint" style={{ padding: 0 }}>({humanSize(f.size)})</span>
+                          </span>
+                          <button type="button" className="tm-chip-x" title="Remove"
+                            onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="tmq-hint" style={{ padding: 0 }}>Images and PDFs, up to 25MB each.</div>
                 </div>
+              )}
+
+              {/* ── Attachments (existing task): view + upload more ── */}
+              {!isCreate && (
+                <>
+                  <div className="tmq-divider" />
+                  <div className="tmq-section">Attachments {attachments.length ? `(${attachments.length})` : ''}</div>
+                  {attachments.length === 0 ? (
+                    <div className="tmq-hint" style={{ padding: 0 }}>No attachments yet.</div>
+                  ) : (
+                    <div className="tm-attach-list">
+                      {attachments.map((att, i) => {
+                        const isImg = (att.mime_type || '').startsWith('image/');
+                        return (
+                          <a key={att.id || i} href={fileHref(att)} target="_blank" rel="noreferrer"
+                            className="tm-attach-row"
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', textDecoration: 'none', color: 'inherit' }}>
+                            <span style={{ width: 34, height: 34, borderRadius: 6, background: '#f1f5f9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                              {isImg ? <img src={fileHref(att)} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{(att.mime_type || '').includes('pdf') ? '📄' : '📎'}</span>}
+                            </span>
+                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {att.file_name || 'File'} <span className="tmq-hint" style={{ padding: 0 }}>({humanSize(att.file_size)})</span>
+                            </span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {canEditCore && (
+                    <div style={{ marginTop: 8 }}>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept="image/*,application/pdf"
+                        className="tmq-input"
+                        disabled={uploading}
+                        onChange={(e) => handleUploadToExisting(e.target.files)}
+                      />
+                      <div className="tmq-hint" style={{ padding: 0 }}>{uploading ? 'Uploading…' : 'Add photos / PDF (up to 25MB each).'}</div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* ── Activity history (table) ── */}

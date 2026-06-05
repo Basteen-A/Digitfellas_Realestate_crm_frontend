@@ -108,7 +108,7 @@ export const masterConfigs = {
       { header: 'Code', path: 'project_code' },
       { header: 'Type', path: 'projectType.type_name' },
       { header: 'Location', path: 'location.location_name' },
-      { header: 'Featured', path: 'is_featured', type: 'boolean' },
+      { header: 'Approved', path: 'is_approved', type: 'boolean' },
       { header: 'Active', path: 'is_active', type: 'boolean' },
     ],
     fields: [
@@ -137,7 +137,7 @@ export const masterConfigs = {
       { name: 'configurations', label: 'Configurations', type: 'multitag', placeholder: 'e.g. 1BHK, 2BHK' },
       { name: 'amenities', label: 'Amenities', type: 'multitag', placeholder: 'e.g. Clubhouse, Security' },
       { name: 'description', label: 'Description', type: 'textarea' },
-      { name: 'is_featured', label: 'Featured', type: 'checkbox' },
+      { name: 'is_approved', label: 'Approved', type: 'checkbox', defaultValue: true },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },

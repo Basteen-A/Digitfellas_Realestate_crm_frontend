@@ -39,6 +39,15 @@ const taskApi = {
     const { data } = await api.post(`${basePath}/${id}/remarks`, payload);
     return data;
   },
+  // Upload photos / PDFs to a task. `files` is a FileList or File[].
+  addAttachments: async (id, files) => {
+    const fd = new FormData();
+    Array.from(files).forEach((f) => fd.append('documents', f));
+    const { data } = await api.post(`${basePath}/${id}/attachments`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
   delete: async (id) => {
     const { data } = await api.delete(`${basePath}/${id}`);
     return data;

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import userApi from '../../../api/userApi';
+import projectApi from '../../../api/projectApi';
+import locationApi from '../../../api/locationApi';
 import { formatDateTime } from '../../../utils/formatters';
 import {
   MagnifyingGlassIcon,
@@ -13,6 +15,8 @@ import {
   EyeIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  BuildingOffice2Icon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline';
 import './AdminLeadManagement.css';
 
@@ -53,8 +57,11 @@ const AdminLeadManagement = () => {
   const [dateTo, setDateTo] = useState(today);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [filterMode, setFilterMode] = useState('created'); // 'created' | 'assigned'
+  const [filterMode, setFilterMode] = useState('created'); // 'created' | 'assigned' | 'handoff'
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedRole, setSelectedRole] = useState(''); // narrows the user dropdown
+  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
@@ -64,19 +71,28 @@ const AdminLeadManagement = () => {
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [locations, setLocations] = useState([]);
 
-  // ── Load users for dropdown ──
+  // ── Load users / projects / locations for dropdowns ──
+  // Each loads independently so one failing request can't blank the others.
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const res = await userApi.getAll({ limit: 500 });
-        const list = res?.data?.data || res?.data || [];
-        setUsers(Array.isArray(list) ? list : []);
-      } catch {
-        setUsers([]);
-      }
+    const pick = (res) => {
+      const list = res?.data?.data || res?.data || [];
+      return Array.isArray(list) ? list : [];
     };
-    loadUsers();
+
+    userApi.getAll({ limit: 100 }) // 100 = server max; raising it 422s the request
+      .then((res) => setUsers(pick(res)))
+      .catch((err) => { console.error('Load users failed:', err); setUsers([]); });
+
+    projectApi.getDropdown()
+      .then((res) => setProjects(pick(res)))
+      .catch((err) => { console.error('Load projects failed:', err); setProjects([]); });
+
+    locationApi.getDropdown()
+      .then((res) => setLocations(pick(res)))
+      .catch((err) => { console.error('Load locations failed:', err); setLocations([]); });
   }, []);
 
   // ── Fetch leads ──
@@ -94,13 +110,17 @@ const AdminLeadManagement = () => {
       if (dateTo) params.dateTo = dateTo;
       if (search.trim()) params.search = search.trim();
       if (selectedStatus) params.statusCode = selectedStatus;
+      if (selectedProjectId) params.project_id = selectedProjectId;
+      if (selectedLocationId) params.location_id = selectedLocationId;
 
-      if (selectedUserId) {
-        if (filterMode === 'created') {
-          params.createdBy = selectedUserId;
-        } else {
-          params.userId = selectedUserId;
-        }
+      if (filterMode === 'created') {
+        if (selectedUserId) params.createdBy = selectedUserId;
+      } else if (filterMode === 'assigned') {
+        if (selectedUserId) params.userId = selectedUserId;
+      } else if (filterMode === 'handoff') {
+        // A specific user → leads they handed off; no user → every handoff lead
+        if (selectedUserId) params.handoffBy = selectedUserId;
+        else params.handoffOnly = 'true';
       }
 
       const res = await leadWorkflowApi.getAdminLeads(params);
@@ -114,7 +134,7 @@ const AdminLeadManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, dateFrom, dateTo, search, selectedUserId, filterMode, selectedStatus]);
+  }, [page, limit, dateFrom, dateTo, search, selectedUserId, filterMode, selectedStatus, selectedProjectId, selectedLocationId]);
 
   useEffect(() => {
     fetchLeads();
@@ -136,6 +156,9 @@ const AdminLeadManagement = () => {
     setSearch('');
     setSearchInput('');
     setSelectedUserId('');
+    setSelectedRole('');
+    setSelectedLocationId('');
+    setSelectedProjectId('');
     setSelectedStatus('');
     setFilterMode('created');
     setPage(1);
@@ -156,16 +179,60 @@ const AdminLeadManagement = () => {
     return Array.from(map.entries()).map(([code, label]) => ({ code, label }));
   }, [leads]);
 
-  const userOptions = useMemo(() => {
-    return users
-      .filter((u) => u.is_active !== false)
+  // Projects filtered by the selected location (project carries location_id).
+  const projectOptions = useMemo(() => {
+    return projects
+      .filter((p) => !selectedLocationId || String(p.location_id) === String(selectedLocationId))
+      .map((p) => ({ id: p.id, name: p.project_name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [projects, selectedLocationId]);
+
+  // Roles present in the user list, for the role narrowing dropdown.
+  const roleOptions = useMemo(() => {
+    const map = new Map();
+    users.forEach((u) => {
+      const code = (u.userType?.short_code || '').toUpperCase();
+      if (code && !map.has(code)) map.set(code, u.userType?.type_name || code);
+    });
+    return Array.from(map.entries()).map(([code, label]) => ({ code, label }));
+  }, [users]);
+
+  // Users narrowed by location mapping + role, grouped by role for the dropdown.
+  const userGroups = useMemo(() => {
+    const matchesLocation = (u) => {
+      if (!selectedLocationId) return true;
+      const maps = u.locationMappings || u.location_mappings || [];
+      // Users with no location mapping (e.g. SM/SH/admins) aren't location-restricted.
+      if (maps.length === 0) return true;
+      return maps.some((m) => String(m.location_id) === String(selectedLocationId));
+    };
+    const matchesRole = (u) => {
+      if (!selectedRole) return true;
+      return (u.userType?.short_code || '').toUpperCase() === selectedRole;
+    };
+
+    const groups = new Map();
+    users
+      .filter((u) => u.is_active !== false && matchesLocation(u) && matchesRole(u))
       .map((u) => ({
         id: u.id,
-        name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
-        role: u.userType?.type_name || u.userType?.short_code || '',
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Unknown',
+        roleCode: (u.userType?.short_code || '').toUpperCase() || 'OTHER',
+        roleLabel: u.userType?.type_name || u.userType?.short_code || 'Other',
       }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [users]);
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((u) => {
+        if (!groups.has(u.roleLabel)) groups.set(u.roleLabel, []);
+        groups.get(u.roleLabel).push(u);
+      });
+    return Array.from(groups.entries()).map(([label, list]) => ({ label, users: list }));
+  }, [users, selectedLocationId, selectedRole]);
+
+  // Flat lookup for the stats bar.
+  const selectedUserName = useMemo(() => {
+    const u = users.find((x) => x.id === selectedUserId);
+    return u ? (`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email) : '';
+  }, [users, selectedUserId]);
 
   return (
     <section className="admin-lead-mgmt">
@@ -222,7 +289,57 @@ const AdminLeadManagement = () => {
           />
         </div>
 
-        {/* User Filter */}
+        {/* Location Filter */}
+        <div className="alm-filter-group">
+          <MapPinIcon className="alm-filter-icon" />
+          <select
+            className="alm-select"
+            value={selectedLocationId}
+            onChange={(e) => {
+              setSelectedLocationId(e.target.value);
+              setSelectedProjectId(''); // project list depends on location
+              setSelectedUserId('');    // user list is narrowed by location
+              setPage(1);
+            }}
+          >
+            <option value="">All Locations</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>{l.location_name || l.city}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Project Filter */}
+        <div className="alm-filter-group">
+          <BuildingOffice2Icon className="alm-filter-icon" />
+          <select
+            className="alm-select"
+            value={selectedProjectId}
+            onChange={(e) => { setSelectedProjectId(e.target.value); setPage(1); }}
+          >
+            <option value="">All Projects</option>
+            {projectOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Role Filter (narrows the user dropdown) */}
+        <div className="alm-filter-group">
+          <FunnelIcon className="alm-filter-icon" />
+          <select
+            className="alm-select"
+            value={selectedRole}
+            onChange={(e) => { setSelectedRole(e.target.value); setSelectedUserId(''); setPage(1); }}
+          >
+            <option value="">All Roles</option>
+            {roleOptions.map((r) => (
+              <option key={r.code} value={r.code}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* User Filter (location- & role-aware, grouped by role) */}
         <div className="alm-filter-group">
           <UserIcon className="alm-filter-icon" />
           <select
@@ -231,8 +348,12 @@ const AdminLeadManagement = () => {
             onChange={(e) => { setSelectedUserId(e.target.value); setPage(1); }}
           >
             <option value="">All Users</option>
-            {userOptions.map((u) => (
-              <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+            {userGroups.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
@@ -253,6 +374,14 @@ const AdminLeadManagement = () => {
             onClick={() => { setFilterMode('assigned'); setPage(1); }}
           >
             Assigned To
+          </button>
+          <button
+            type="button"
+            className={`alm-toggle-btn ${filterMode === 'handoff' ? 'alm-toggle-btn--active' : ''}`}
+            onClick={() => { setFilterMode('handoff'); setPage(1); }}
+            title="Leads handed off by the selected user (or all handoffs if none selected)"
+          >
+            Handed Off By
           </button>
         </div>
 
@@ -279,9 +408,22 @@ const AdminLeadManagement = () => {
         {dateFrom === dateTo && dateFrom === today && (
           <span className="alm-stat alm-stat--highlight">Showing today's leads</span>
         )}
+        {filterMode === 'handoff' && !selectedUserId && (
+          <span className="alm-stat alm-stat--filter">Showing all handoff leads</span>
+        )}
         {selectedUserId && (
           <span className="alm-stat alm-stat--filter">
-            {filterMode === 'created' ? 'Created by' : 'Assigned to'}: {userOptions.find((u) => u.id === selectedUserId)?.name || 'Unknown'}
+            {filterMode === 'created' ? 'Created by' : filterMode === 'handoff' ? 'Handed off by' : 'Assigned to'}: {selectedUserName || 'Unknown'}
+          </span>
+        )}
+        {selectedLocationId && (
+          <span className="alm-stat alm-stat--filter">
+            Location: {locations.find((l) => l.id === selectedLocationId)?.location_name || locations.find((l) => l.id === selectedLocationId)?.city || '—'}
+          </span>
+        )}
+        {selectedProjectId && (
+          <span className="alm-stat alm-stat--filter">
+            Project: {projects.find((p) => p.id === selectedProjectId)?.project_name || '—'}
           </span>
         )}
       </div>

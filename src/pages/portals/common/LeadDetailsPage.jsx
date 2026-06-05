@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
@@ -285,6 +285,19 @@ const getUserDisplayName = (user) => {
   return fullName || user.fullName || '';
 };
 
+const ROLE_PORTAL_CONFIG = {
+  TC: { basePath: '/telecaller/leads', fallbackScreen: 'leads' },
+  SM: { basePath: '/sales-manager/leads', fallbackScreen: 'leads' },
+  SH: { basePath: '/sales-head/leads', fallbackScreen: 'negotiations' },
+  COL: { basePath: '/collection/leads', fallbackScreen: 'leads' },
+  ACCT: { basePath: '/accounts/dashboard', fallbackScreen: 'dashboard' },
+  SA: { basePath: '/telecaller/leads', fallbackScreen: 'leads' },
+  ADM: { basePath: '/telecaller/leads', fallbackScreen: 'leads' },
+  SE: { basePath: '/task-portal/dashboard', fallbackScreen: 'dashboard' },
+};
+
+const getPortalScreenStorageKey = (basePath) => (basePath ? `portalActiveScreen:${basePath}` : '');
+
 const formatActivityDescription = (description, activity) => {
   if (typeof description !== 'string') return '';
   const text = description.trim();
@@ -350,6 +363,7 @@ const actionInitialState = {
 const LeadDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const authUser = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(authUser);
 
@@ -409,6 +423,30 @@ const LeadDetailsPage = () => {
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
   const [savingName, setSavingName] = useState(false);
+
+  const handleBackToWorkspace = useCallback(() => {
+    const rolePortalConfig = ROLE_PORTAL_CONFIG[roleCode] || ROLE_PORTAL_CONFIG.TC;
+    const directReturnPath = location.state?.fromPath;
+
+    if (directReturnPath) {
+      navigate(directReturnPath);
+      return;
+    }
+
+    let targetScreen = rolePortalConfig.fallbackScreen;
+    if (typeof window !== 'undefined') {
+      try {
+        const savedScreen = window.sessionStorage.getItem(getPortalScreenStorageKey(rolePortalConfig.basePath));
+        if (savedScreen && savedScreen !== 'dashboard') {
+          targetScreen = savedScreen;
+        }
+      } catch {
+        // ignore storage failures
+      }
+    }
+
+    navigate(`${rolePortalConfig.basePath}?screen=${encodeURIComponent(targetScreen)}`);
+  }, [location.state, navigate, roleCode]);
 
   const handleSaveName = async () => {
     if (!editNameValue.trim() || !lead?.id) return;
@@ -614,11 +652,11 @@ const LeadDetailsPage = () => {
       }
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load lead'));
-      navigate(-1);
+      handleBackToWorkspace();
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, roleCode]);
+  }, [handleBackToWorkspace, id, roleCode]);
 
   useEffect(() => {
     loadLeadData();
@@ -1148,7 +1186,7 @@ const LeadDetailsPage = () => {
       <div className="lead-details-page">
         <div className="lead-details-error">
           <p>Lead not found</p>
-          <button onClick={() => navigate(-1)}>Go Back</button>
+          <button onClick={handleBackToWorkspace}>Go Back</button>
         </div>
       </div>
     );
@@ -1158,7 +1196,7 @@ const LeadDetailsPage = () => {
     <div className="lead-details-page">
       <header className="lead-details-header">
         <div className="lead-details-header-left">
-          <button className="lead-details-back" onClick={() => navigate(-1)}>« Back</button>
+          <button className="lead-details-back" onClick={handleBackToWorkspace}>« Back</button>
           <div>
             <h1>{lead.fullName}</h1>
             <p>{lead.phone}{lead.email ? ` · ${lead.email}` : ''}</p>
