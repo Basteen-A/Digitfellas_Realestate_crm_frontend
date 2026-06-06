@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   PlusIcon, ChevronDownIcon, ClipboardDocumentListIcon, ArrowPathIcon,
   CheckCircleIcon, LockClosedIcon, XCircleIcon, ClockIcon, MicrophoneIcon,
-  StopCircleIcon, TrashIcon,
+  StopCircleIcon, TrashIcon, DocumentIcon,
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
@@ -79,6 +79,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [pendingFiles, setPendingFiles] = useState([]); // create: File[] queued
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const createFileRef = useRef(null); // hidden input behind the "Choose files" button
 
   // Status / remark form (Quick-Action style update)
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
@@ -91,6 +92,10 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [voiceUrl, setVoiceUrl] = useState('');
   const [voiceDuration, setVoiceDuration] = useState(0);
   const [recError, setRecError] = useState('');
+  // Voice transcription (Gemini, via backend): chosen output language + state.
+  const [voiceLang, setVoiceLang] = useState('english'); // 'tamil' | 'english'
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribed, setTranscribed] = useState(false);
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
@@ -102,6 +107,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     setVoiceBlob(null);
     setVoiceUrl('');
     setVoiceDuration(0);
+    setTranscribed(false);
   };
 
   const startRecording = async () => {
@@ -139,6 +145,25 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') mediaRecRef.current.stop();
     if (timerRef.current) clearInterval(timerRef.current);
     setRecording(false);
+  };
+
+  // Send the recording to the backend (Gemini) to transcribe + translate into
+  // the chosen language, then drop the resulting text into the remark box.
+  const handleTranscribe = async () => {
+    if (!voiceBlob || transcribing) return;
+    setTranscribing(true);
+    try {
+      const res = await taskApi.transcribeVoice(voiceBlob, voiceLang);
+      const text = (res?.data?.text || '').trim();
+      if (!text) { toast.error('Could not transcribe the audio. Please record again.'); return; }
+      setStatusForm((p) => ({ ...p, content: p.content.trim() ? `${p.content.trim()}\n${text}` : text }));
+      setTranscribed(true);
+      toast.success('Voice transcribed');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Transcription failed');
+    } finally {
+      setTranscribing(false);
+    }
   };
 
   // Stop the stream / timer / object URL if the modal unmounts mid-record.
@@ -290,9 +315,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)) && !isCreatorId(u.id));
 
   // ── Save core (create / edit) ──
-  // On create, Title + Description + Follow-up Date are required.
+  // On create, Title + Description + Department + Follow-up Date are required.
   const canSaveCore = isCreate
-    ? !!(form.title.trim() && form.description.trim() && form.follow_up_date)
+    ? !!(form.title.trim() && form.description.trim() && form.department_id && form.follow_up_date)
     : !!form.title.trim();
 
   // "Save Changes" is enabled only when an editable field actually differs from
@@ -304,10 +329,12 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
 
   const handleSaveCore = async () => {
     if (!canSaveCore) {
-      if (isCreate && form.title.trim() && form.description.trim() && !form.follow_up_date) {
+      if (isCreate && form.title.trim() && form.description.trim() && !form.department_id) {
+        toast.error('Department is required.');
+      } else if (isCreate && form.title.trim() && form.description.trim() && form.department_id && !form.follow_up_date) {
         toast.error('Follow-up date is required.');
       } else {
-        toast.error(isCreate ? 'Title, description and follow-up date are required.' : 'Task title is required.');
+        toast.error(isCreate ? 'Title, description, department and follow-up date are required.' : 'Task title is required.');
       }
       return;
     }
@@ -468,7 +495,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
             </select>
           </div>
           <div>
-            <label className="tmq-field-label">Department</label>
+            <label className="tmq-field-label">Department{isCreate ? ' *' : ''}</label>
             <select className="tmq-select" value={form.department_id} disabled={disabled}
               onChange={(e) => { setField('department_id', e.target.value); setField('sub_department_id', ''); }}>
               <option value="">Select department</option>
@@ -544,16 +571,21 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
         </div>
 
         <div className="tmq-grid3" style={{ marginBottom: 10 }}>
-          <div>
-            <label className="tmq-field-label">Start Date</label>
-            <input type="date" className="tmq-input" value={form.start_date || ''} disabled={disabled}
-              onChange={(e) => setField('start_date', e.target.value)} />
-          </div>
-          <div>
-            <label className="tmq-field-label">Expected Date</label>
-            <input type="date" className="tmq-input" value={form.end_date || ''} disabled={disabled}
-              onChange={(e) => setField('end_date', e.target.value)} />
-          </div>
+          {/* Start / Expected dates are not collected at creation time. */}
+          {!isCreate && (
+            <div>
+              <label className="tmq-field-label">Start Date</label>
+              <input type="date" className="tmq-input" value={form.start_date || ''} disabled={disabled}
+                onChange={(e) => setField('start_date', e.target.value)} />
+            </div>
+          )}
+          {!isCreate && (
+            <div>
+              <label className="tmq-field-label">Expected Date</label>
+              <input type="date" className="tmq-input" value={form.end_date || ''} disabled={disabled}
+                onChange={(e) => setField('end_date', e.target.value)} />
+            </div>
+          )}
           <div>
             <label className="tmq-field-label">Follow-up Date{isCreate ? ' *' : ''}</label>
             {isCreate ? (
@@ -698,19 +730,39 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                           </button>
                         </div>
                       ) : voiceBlob ? (
-                        <div className="tmq-voice-rec">
-                          <audio className="tmq-voice-audio" src={voiceUrl} controls preload="metadata" />
-                          <span className="tmq-voice-time">{mmss(voiceDuration)}</span>
-                          <button type="button" className="tmq-voice-btn" onClick={startRecording} title="Re-record">
-                            <ArrowPathIcon style={{ width: 15, height: 15 }} /> Re-record
-                          </button>
-                          <button type="button" className="tmq-voice-btn tmq-voice-btn--del" onClick={clearVoice} title="Remove">
-                            <TrashIcon style={{ width: 15, height: 15 }} />
-                          </button>
+                        <div className="tmq-voice-card">
+                          <div className="tmq-voice-rec" style={{ border: 'none', background: 'transparent', padding: 0 }}>
+                            <audio className="tmq-voice-audio" src={voiceUrl} controls preload="metadata" />
+                            <span className="tmq-voice-time">{mmss(voiceDuration)}</span>
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {!transcribed && (
+                                <button type="button" className="tmq-voice-btn tmq-voice-btn--transcribe" disabled={transcribing} onClick={handleTranscribe}>
+                                  <CheckCircleIcon style={{ width: 15, height: 15 }} />
+                                  {transcribing ? 'Transcribing…' : 'Transcribe'}
+                                </button>
+                              )}
+                              <button type="button" className="tmq-voice-btn tmq-voice-btn--del" onClick={clearVoice} title="Remove">
+                                <TrashIcon style={{ width: 15, height: 15 }} />
+                              </button>
+                            </div>
+                          </div>
+                          {!transcribed ? (
+                            <div className="tmq-voice-lang">
+                              <span className="tmq-voice-lang-label">Demo voice language</span>
+                              <div className="tmq-lang-toggle">
+                                <button type="button" className={voiceLang === 'tamil' ? 'active' : ''} disabled={transcribing} onClick={() => setVoiceLang('tamil')}>Tamil</button>
+                                <button type="button" className={voiceLang === 'english' ? 'active' : ''} disabled={transcribing} onClick={() => setVoiceLang('english')}>English</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="tmq-voice-done">
+                              <CheckCircleIcon style={{ width: 15, height: 15 }} /> Transcribed — text added to the remark above
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <button type="button" className="tmq-voice-btn" onClick={startRecording}>
-                          <MicrophoneIcon style={{ width: 15, height: 15 }} /> Record voice note
+                          <MicrophoneIcon style={{ width: 15, height: 15 }} /> Voice note
                         </button>
                       )}
                       {recError && <div className="tmq-voice-err">{recError}</div>}
@@ -743,28 +795,37 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
               {/* ── Create: attach photos / PDFs (uploaded after the task is created) ── */}
               {isCreate && (
                 <div className="tmq-block">
-                  <label className="tmq-field-label">Attachments (photos / PDF)</label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf"
-                    className="tmq-input"
-                    onChange={(e) => setPendingFiles((prev) => [...prev, ...Array.from(e.target.files || [])])}
-                  />
+                  <label className="tmq-field-label">Attachments</label>
+                  <div className="tm-file-picker">
+                    <button type="button" className="tm-file-btn" onClick={() => createFileRef.current?.click()}>
+                      Choose files
+                    </button>
+                    <span className="tm-file-count">{pendingFiles.length} file(s)</span>
+                    <input
+                      ref={createFileRef}
+                      type="file"
+                      multiple
+                      accept="image/*,application/pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        setPendingFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
+                        if (createFileRef.current) createFileRef.current.value = ''; // allow re-picking same file
+                      }}
+                    />
+                  </div>
                   {pendingFiles.length > 0 && (
-                    <div className="tm-attach-list" style={{ marginTop: 8 }}>
+                    <div className="tm-file-chips">
                       {pendingFiles.map((f, i) => (
-                        <div key={`${f.name}-${i}`} className="tm-attach-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '4px 0' }}>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            📎 {f.name} <span className="tmq-hint" style={{ padding: 0 }}>({humanSize(f.size)})</span>
-                          </span>
+                        <span key={`${f.name}-${i}`} className="tm-file-chip" title={`${f.name} (${humanSize(f.size)})`}>
+                          <DocumentIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                          <span className="tm-file-chip-name">{f.name}</span>
                           <button type="button" className="tm-chip-x" title="Remove"
                             onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
-                        </div>
+                        </span>
                       ))}
                     </div>
                   )}
-                  <div className="tmq-hint" style={{ padding: 0 }}>Images and PDFs, up to 25MB each.</div>
+                  <div className="tmq-hint" style={{ padding: 0, marginTop: 8 }}>Images and PDFs, up to 25MB each.</div>
                 </div>
               )}
 
@@ -796,16 +857,21 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                   )}
                   {canEditCore && (
                     <div style={{ marginTop: 8 }}>
+                      <div className="tm-file-picker">
+                        <button type="button" className="tm-file-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                          {uploading ? 'Uploading…' : 'Choose files'}
+                        </button>
+                        <span className="tm-file-count">Add photos / PDF (up to 25MB each)</span>
+                      </div>
                       <input
                         ref={fileInputRef}
                         type="file"
                         multiple
                         accept="image/*,application/pdf"
-                        className="tmq-input"
+                        style={{ display: 'none' }}
                         disabled={uploading}
                         onChange={(e) => handleUploadToExisting(e.target.files)}
                       />
-                      <div className="tmq-hint" style={{ padding: 0 }}>{uploading ? 'Uploading…' : 'Add photos / PDF (up to 25MB each).'}</div>
                     </div>
                   )}
                 </>

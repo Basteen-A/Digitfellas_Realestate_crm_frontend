@@ -461,6 +461,29 @@
 .tmq-voice-play .tmq-voice-audio { height: 30px; max-width: 200px; }
 .tmq-voice-len { font-size: 11px; font-weight: 700; color: var(--text-muted); }
 
+/* ── Voice card with transcription (Gemini) ── */
+.tmq-voice-card { border: 1px solid var(--border-primary); background: var(--bg-secondary); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.tmq-voice-btn--transcribe { color: var(--accent-blue); }
+.tmq-voice-btn--transcribe:disabled { opacity: .6; cursor: default; }
+.tmq-voice-lang { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tmq-voice-lang-label { font-size: 12.5px; font-weight: 700; color: var(--text-secondary); }
+.tmq-lang-toggle { display: inline-flex; border: 1px solid var(--border-input); border-radius: 8px; overflow: hidden; }
+.tmq-lang-toggle button { border: 0; background: transparent; padding: 6px 16px; font-size: 12.5px; font-weight: 600; font-family: inherit; color: var(--text-secondary); cursor: pointer; transition: all .15s; }
+.tmq-lang-toggle button + button { border-left: 1px solid var(--border-input); }
+.tmq-lang-toggle button.active { background: var(--accent-blue); color: #fff; }
+.tmq-lang-toggle button:disabled { cursor: default; opacity: .7; }
+.tmq-voice-done { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--accent-green, #0f7b5c); }
+
+/* ── "Choose files" picker + selected-file chips ── */
+.tm-file-picker { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-input); border-radius: 10px; padding: 6px; background: var(--bg-input); }
+.tm-file-btn { border: 1px solid var(--border-input); background: var(--bg-card); border-radius: 8px; padding: 7px 16px; font-size: 12.5px; font-weight: 700; font-family: inherit; color: var(--text-primary); cursor: pointer; transition: all .15s; }
+.tm-file-btn:hover:not(:disabled) { border-color: var(--accent-blue); color: var(--accent-blue); }
+.tm-file-btn:disabled { opacity: .6; cursor: default; }
+.tm-file-count { font-size: 12.5px; color: var(--text-muted); }
+.tm-file-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tm-file-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: var(--border-radius-full); padding: 4px 6px 4px 10px; font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.tm-file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .tm-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 .tm-error { color: var(--accent-red); font-size: 13px; margin-top: 8px; }
 

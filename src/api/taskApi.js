@@ -58,6 +58,17 @@ const taskApi = {
     const { data } = await api.post(`${basePath}/${id}/remarks`, payload);
     return data;
   },
+  // Transcribe + translate a recorded voice clip via the backend (Gemini).
+  // `language` is 'tamil' | 'english' (the output language). Returns { text }.
+  transcribeVoice: async (blob, language = 'english') => {
+    const fd = new FormData();
+    fd.append('voice', blob, 'voice-note.webm');
+    fd.append('language', language);
+    const { data } = await api.post(`${basePath}/transcribe`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
   // Upload photos / PDFs to a task. `files` is a FileList or File[].
   addAttachments: async (id, files) => {
     const fd = new FormData();

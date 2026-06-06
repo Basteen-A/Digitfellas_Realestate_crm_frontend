@@ -7,6 +7,7 @@ import {
   ClipboardDocumentListIcon, CheckCircleIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
+import departmentApi from '../../api/departmentApi';
 import TaskModal from './TaskModal';
 // Reuse the lead workspace design system so this page is visually consistent
 // (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
@@ -107,6 +108,9 @@ const TaskListPage = () => {
   const [deptFilter, setDeptFilter] = useState('');
   const [assignFilter, setAssignFilter] = useState(''); // '' | 'by_me' | 'to_me'
   const [groupBy, setGroupBy] = useState('none');
+  const [departments, setDepartments] = useState([]); // full list for the filter
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
   const [expandedId, setExpandedId] = useState(null);
   const [details, setDetails] = useState({}); // id -> full task detail (lazy)
@@ -121,8 +125,22 @@ const TaskListPage = () => {
       if (statusFilter) params.status = statusFilter;
       if (includeClosed) params.include_closed = true;
       if (followUpFilter) params.followUpFilter = followUpFilter;
-      const [list, st] = await Promise.all([taskApi.getAll(params), taskApi.getStats()]);
-      setRows(list.data || []);
+      // The list filters, groups and paginates client-side over the full set, so
+      // page through the server (capped at 100/page) until every task is loaded.
+      const fetchAllTasks = async () => {
+        const acc = [];
+        let pg = 1;
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const resp = await taskApi.getAll({ ...params, page: pg, limit: 100 });
+          acc.push(...(resp.data || []));
+          if (!resp.meta?.hasNextPage) break;
+          pg += 1;
+        }
+        return acc;
+      };
+      const [allRows, st] = await Promise.all([fetchAllTasks(), taskApi.getStats()]);
+      setRows(allRows);
       setStats(st.data || null);
       setDetails({}); // drawer caches may be stale after a reload
     } catch (error) {
@@ -136,6 +154,19 @@ const TaskListPage = () => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, includeClosed, followUpFilter]);
+
+  // The department filter lists every department (not only those present in the
+  // currently loaded tasks), so it stays complete regardless of the result set.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await departmentApi.getDropdown();
+        setDepartments(res.data || []);
+      } catch {
+        /* filter falls back to departments seen in the loaded tasks */
+      }
+    })();
+  }, []);
 
   const FOLLOW_UP_TABS = [
     { value: '', label: 'All Tasks' },
@@ -179,10 +210,12 @@ const TaskListPage = () => {
     () => [...new Set(rows.map((t) => t.project?.project_name).filter(Boolean))].sort(),
     [rows]
   );
-  const deptOptions = useMemo(
-    () => [...new Set(rows.map((t) => t.department?.name).filter(Boolean))].sort(),
-    [rows]
-  );
+  const deptOptions = useMemo(() => {
+    // Prefer the full department list; fall back to whatever the loaded tasks show.
+    const fromApi = departments.map((d) => d.name).filter(Boolean);
+    const fromRows = rows.map((t) => t.department?.name).filter(Boolean);
+    return [...new Set([...fromApi, ...fromRows])].sort();
+  }, [departments, rows]);
 
   const myId = currentUser?.id;
   const visibleRows = useMemo(
@@ -207,6 +240,20 @@ const TaskListPage = () => {
     });
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [visibleRows, groupBy]);
+
+  // Reset to the first page whenever the filtered set changes (new search,
+  // filter, grouping, or a reload) so we never sit on an empty trailing page.
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, projectFilter, deptFilter, assignFilter, includeClosed, followUpFilter, groupBy]);
+
+  // Pagination applies to the flat (ungrouped) list — 20 rows per page.
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = useMemo(
+    () => visibleRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [visibleRows, safePage]
+  );
 
   const clearAll = () => {
     setSearch(''); setStatusFilter(''); setProjectFilter(''); setDeptFilter('');
@@ -235,7 +282,7 @@ const TaskListPage = () => {
     const recent = [...remarks].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
     return (
       <tr>
-        <td colSpan={7} style={{ padding: 0, maxWidth: 'none', whiteSpace: 'normal', background: 'var(--bg-primary, #f1f5f9)' }}>
+        <td colSpan={6} style={{ padding: 0, maxWidth: 'none', whiteSpace: 'normal', background: 'var(--bg-primary, #f1f5f9)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 24, padding: '16px 20px 18px 44px' }}>
             <div>
               <div style={labelStyle}>Description</div>
@@ -399,11 +446,6 @@ const TaskListPage = () => {
             ) : <small>—</small>}
           </td>
 
-          {/* Expected */}
-          <td>
-            <small style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtDate(task.end_date)}</small>
-          </td>
-
           {/* Action */}
           <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <div className="lead-workspace__actions-cell">
@@ -537,22 +579,21 @@ const TaskListPage = () => {
                   <th style={{ width: 'auto' }}>Task</th>
                   <th className="lead-col-status">Status</th>
                   <th style={{ width: 130 }}>Assignees</th>
-                  <th style={{ width: 170 }}>Project / Phase</th>
+                  <th style={{ width: 170 }}>Project / Department</th>
                   <th style={{ width: 140 }}>Follow-up</th>
-                  <th style={{ width: 120 }}>Expected</th>
                   <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={7} className="lead-workspace__empty">Loading tasks…</td></tr>
+                  <tr><td colSpan={6} className="lead-workspace__empty">Loading tasks…</td></tr>
                 )}
                 {!loading && records === 0 && (
-                  <tr><td colSpan={7} className="lead-workspace__empty">No tasks found for current filters</td></tr>
+                  <tr><td colSpan={6} className="lead-workspace__empty">No tasks found for current filters</td></tr>
                 )}
 
                 {/* Ungrouped */}
-                {!loading && groupBy === 'none' && visibleRows.map(renderRow)}
+                {!loading && groupBy === 'none' && pagedRows.map(renderRow)}
 
                 {/* Grouped */}
                 {!loading && groupBy !== 'none' && groups.map(([key, tasks]) => {
@@ -562,7 +603,7 @@ const TaskListPage = () => {
                   return (
                     <React.Fragment key={key}>
                       <tr onClick={() => toggleGroup(`${groupBy}:${key}`)} style={{ background: 'var(--bg-primary, #f1f5f9)', cursor: 'pointer' }}>
-                        <td colSpan={7} style={{ maxWidth: 'none', whiteSpace: 'normal' }}>
+                        <td colSpan={6} style={{ maxWidth: 'none', whiteSpace: 'normal' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <ChevronRightIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)', transform: collapsed ? 'none' : 'rotate(90deg)', transition: 'transform .15s' }} />
                             <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{key}</span>
@@ -580,6 +621,34 @@ const TaskListPage = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination — 20 per page; only for the flat (ungrouped) list */}
+          {!loading && groupBy === 'none' && records > PAGE_SIZE && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, padding: '12px 16px', borderTop: '1px solid var(--border-primary, #e2e8f0)' }}>
+              <small className="filter-tabs__records">
+                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, records)} of {records}
+              </small>
+              <button
+                type="button"
+                className="crm-btn crm-btn-sm"
+                style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '6px 12px' }}
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </button>
+              <small className="filter-tabs__records" style={{ margin: 0 }}>Page {safePage} of {totalPages}</small>
+              <button
+                type="button"
+                className="crm-btn crm-btn-sm"
+                style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '6px 12px' }}
+                disabled={safePage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
