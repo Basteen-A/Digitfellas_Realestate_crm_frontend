@@ -3,7 +3,8 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
   PlusIcon, ChevronDownIcon, ClipboardDocumentListIcon, ArrowPathIcon,
-  CheckCircleIcon, LockClosedIcon, XCircleIcon, ClockIcon,
+  CheckCircleIcon, LockClosedIcon, XCircleIcon, ClockIcon, MicrophoneIcon,
+  StopCircleIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
@@ -31,6 +32,9 @@ const STATUS_META = {
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
+// A follow-up date is required when moving a task into an active state.
+const needsFollowUp = (status) => status === 'open' || status === 'work_in_progress';
+
 // Uploaded files are served by the backend at :5000/uploads (file_url is relative).
 const FILE_BASE = `http://${window.location.hostname}:5000`;
 const fileHref = (att) => (att?.file_url?.startsWith('http') ? att.file_url : `${FILE_BASE}${att?.file_url || ''}`);
@@ -42,6 +46,7 @@ const fullName = (u) => `${u?.first_name || u?.firstName || ''} ${u?.last_name |
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '—');
+const mmss = (s) => { const n = Math.max(0, Math.round(Number(s) || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };
 
 const emptyForm = {
   title: '', description: '', priority: 'medium',
@@ -79,6 +84,71 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
   // Task Details accordion (collapsed by default in the update/view popup)
   const [detailsOpen, setDetailsOpen] = useState(false);
+
+  // ── Voice note recorder (attached to the status update) ──
+  const [recording, setRecording] = useState(false);
+  const [voiceBlob, setVoiceBlob] = useState(null);
+  const [voiceUrl, setVoiceUrl] = useState('');
+  const [voiceDuration, setVoiceDuration] = useState(0);
+  const [recError, setRecError] = useState('');
+  const mediaRecRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const startTsRef = useRef(0);
+  const streamRef = useRef(null);
+
+  const clearVoice = () => {
+    if (voiceUrl) URL.revokeObjectURL(voiceUrl);
+    setVoiceBlob(null);
+    setVoiceUrl('');
+    setVoiceDuration(0);
+  };
+
+  const startRecording = async () => {
+    setRecError('');
+    clearVoice();
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setRecError('Recording is not supported in this browser.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
+        setVoiceBlob(blob);
+        setVoiceUrl(URL.createObjectURL(blob));
+        (streamRef.current?.getTracks() || []).forEach((t) => t.stop());
+        streamRef.current = null;
+      };
+      mr.start();
+      mediaRecRef.current = mr;
+      startTsRef.current = Date.now();
+      setVoiceDuration(0);
+      timerRef.current = setInterval(() => setVoiceDuration(Math.round((Date.now() - startTsRef.current) / 1000)), 250);
+      setRecording(true);
+    } catch {
+      setRecError('Microphone access was denied or is unavailable.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') mediaRecRef.current.stop();
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRecording(false);
+  };
+
+  // Stop the stream / timer / object URL if the modal unmounts mid-record.
+  useEffect(() => () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') mediaRecRef.current.stop();
+    (streamRef.current?.getTracks() || []).forEach((t) => t.stop());
+    if (voiceUrl) URL.revokeObjectURL(voiceUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isCreate = mode === 'create';
 
@@ -307,7 +377,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
     if (!statusTarget) return false;
     if (!statusForm.content.trim()) return false; // a remark is required on every update
     if (statusTarget === 'cancelled' && !statusForm.cancellation_reason.trim()) return false;
-    if (statusTarget === 'work_in_progress' && !statusForm.follow_up_date) return false; // follow-up only for WIP
+    if (needsFollowUp(statusTarget) && !statusForm.follow_up_date) return false; // follow-up for Open / WIP
     return true;
   }, [statusTarget, statusForm]);
 
@@ -321,9 +391,11 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
       if (task.status !== 'completed') { toast.error('Task must be Completed before it can be Closed.'); return; }
     }
     if (!statusForm.content.trim()) { toast.error('A remark is required.'); return; }
-    if (target === 'work_in_progress' && !statusForm.follow_up_date) {
-      toast.error('A follow-up date is required for Work in Progress.'); return;
+    if (needsFollowUp(target) && !statusForm.follow_up_date) {
+      toast.error('A follow-up date is required for Open and Work in Progress.'); return;
     }
+
+    if (recording) { toast.error('Stop the voice recording before applying.'); return; }
 
     setSaving(true);
     try {
@@ -332,9 +404,12 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
         new_status: target,
         follow_up_date: statusForm.follow_up_date || null,
         cancellation_reason: statusForm.cancellation_reason || null,
+        voiceBlob: voiceBlob || undefined,
+        voice_duration: voiceBlob ? voiceDuration : undefined,
       });
       toast.success('Task updated');
       setStatusForm((p) => ({ ...p, content: '', cancellation_reason: '' }));
+      clearVoice();
       await loadTask();
       onSaved?.();
     } catch (error) {
@@ -611,7 +686,36 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                     <textarea className="tmq-textarea" value={statusForm.content}
                       onChange={(e) => setStatusForm((p) => ({ ...p, content: e.target.value }))}
                       placeholder="Add a remark…" />
-                    {statusForm.new_status === 'work_in_progress' && (
+                    {/* Voice note recorder — attaches an audio clip to this update. */}
+                    <div className="tmq-voice">
+                      {recording ? (
+                        <div className="tmq-voice-rec">
+                          <span className="tmq-voice-dot" />
+                          <span className="tmq-voice-time">{mmss(voiceDuration)}</span>
+                          <span className="tmq-voice-hint">Recording…</span>
+                          <button type="button" className="tmq-voice-btn tmq-voice-btn--stop" onClick={stopRecording}>
+                            <StopCircleIcon style={{ width: 16, height: 16 }} /> Stop
+                          </button>
+                        </div>
+                      ) : voiceBlob ? (
+                        <div className="tmq-voice-rec">
+                          <audio className="tmq-voice-audio" src={voiceUrl} controls preload="metadata" />
+                          <span className="tmq-voice-time">{mmss(voiceDuration)}</span>
+                          <button type="button" className="tmq-voice-btn" onClick={startRecording} title="Re-record">
+                            <ArrowPathIcon style={{ width: 15, height: 15 }} /> Re-record
+                          </button>
+                          <button type="button" className="tmq-voice-btn tmq-voice-btn--del" onClick={clearVoice} title="Remove">
+                            <TrashIcon style={{ width: 15, height: 15 }} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" className="tmq-voice-btn" onClick={startRecording}>
+                          <MicrophoneIcon style={{ width: 15, height: 15 }} /> Record voice note
+                        </button>
+                      )}
+                      {recError && <div className="tmq-voice-err">{recError}</div>}
+                    </div>
+                    {needsFollowUp(statusForm.new_status) && (
                       <div style={{ marginTop: 10 }}>
                         <label className="tmq-field-label">Follow-up Date *</label>
                         <input type="date" className="tmq-input" value={statusForm.follow_up_date || ''}
@@ -619,7 +723,7 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                       </div>
                     )}
                   </div>
-                  <div className="tmq-hint">A remark is required on every update. A follow-up date is required only for Work in Progress.</div>
+                  <div className="tmq-hint">A remark is required on every update. A follow-up date is required for Open and Work in Progress.</div>
                   <div className="tmq-divider" />
                 </>
               )}
@@ -726,7 +830,16 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                             return (
                               <tr key={r.id}>
                                 <td><span style={{ color: meta?.hex || 'var(--text-primary)', fontWeight: 600 }}>{STATUS_LABELS[r.status_at_time] || 'Update'}</span></td>
-                                <td>{r.content || '—'}</td>
+                                <td>
+                                  {r.content || '—'}
+                                  {r.voice?.file_url && (
+                                    <div className="tmq-voice-play">
+                                      <MicrophoneIcon style={{ width: 13, height: 13 }} />
+                                      <audio className="tmq-voice-audio" src={r.voice.file_url} controls preload="none" />
+                                      {r.voice.duration ? <span className="tmq-voice-len">{mmss(r.voice.duration)}</span> : null}
+                                    </div>
+                                  )}
+                                </td>
                                 <td>{r.user ? fullName(r.user) : 'System'}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{r.follow_up_date ? fmtDate(r.follow_up_date) : '—'}</td>

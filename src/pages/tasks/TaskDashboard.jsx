@@ -2,9 +2,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
+import {
+  ArrowPathIcon, PlusIcon, Squares2X2Icon, ClipboardDocumentListIcon,
+  CheckCircleIcon, ExclamationTriangleIcon, ClockIcon,
+} from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
 import { getRoleCode } from '../../utils/permissions';
+// Dashboard design system (stat cards, page header, cards, tables) shared with
+// the portal dashboards so this widget is visually consistent.
+import '../portals/collection/CollectionWorkspace.css';
 import './TaskManagement.css';
 
 const STATUS_LABELS = {
@@ -12,6 +19,16 @@ const STATUS_LABELS = {
   completed: 'Completed', closed: 'Closed', cancelled: 'Cancelled',
 };
 const BREAKDOWN_ORDER = ['open', 'work_in_progress', 'completed', 'closed', 'cancelled'];
+
+// KPI cards mirror the portal dashboards: colored top accent (variant), faint
+// icon, value + sub-label.
+const KPI_CARDS = [
+  { key: 'total', label: 'Total Tasks', sub: 'all tasks', icon: Squares2X2Icon, variant: '' },
+  { key: 'open', label: 'Open', sub: 'to start', icon: ClipboardDocumentListIcon, variant: 'info' },
+  { key: 'work_in_progress', label: 'In Progress', sub: 'being worked on', icon: ArrowPathIcon, variant: 'warning' },
+  { key: 'completed', label: 'Completed', sub: 'done', icon: CheckCircleIcon, variant: 'success' },
+  { key: 'overdue', label: 'Overdue', sub: 'past due', icon: ExclamationTriangleIcon, variant: 'danger' },
+];
 
 const timeAgo = (d) => {
   if (!d) return '';
@@ -42,7 +59,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
     try {
       const [st, list] = await Promise.all([taskApi.getStats(), taskApi.getAll({ include_closed: true })]);
       setStats(st.data || null);
-      setRecent((list.data || []).slice(0, 6));
+      setRecent((list.data || []).slice(0, 8));
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to load dashboard');
     } finally {
@@ -55,70 +72,117 @@ const TaskDashboard = ({ onOpenTasks }) => {
   const maxBar = stats ? Math.max(1, ...BREAKDOWN_ORDER.map((k) => stats[k] || 0)) : 1;
 
   return (
-    <section className="tm-page">
-      <header className="tm-header">
-        <div>
+    <div className="col-dashboard">
+      {/* ── Page header ── */}
+      <div className="col-page-header">
+        <div className="col-page-header-left">
           <h1>Dashboard</h1>
           <p>All tasks — {isAdmin ? 'Super Admin' : 'Standard Executive'} view</p>
         </div>
-        <button type="button" className="tm-btn" onClick={() => setCreateOpen(true)}>+ New Task</button>
-      </header>
+        <div className="col-page-header-actions">
+          <button type="button" className="crm-btn crm-btn-ghost" onClick={load} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button type="button" className="col-btn col-btn-primary" onClick={() => setCreateOpen(true)}>
+            <PlusIcon style={{ width: 16, height: 16 }} /> New Task
+          </button>
+        </div>
+      </div>
 
+      {/* ── Stat cards ── */}
       {stats && (
-        <div className="tm-stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-          <div className="tm-stat"><div className="tm-stat__label">Total</div><div className="tm-stat__value">{stats.total}</div></div>
-          <div className="tm-stat"><div className="tm-stat__label">Open</div><div className="tm-stat__value">{stats.open}</div></div>
-          <div className="tm-stat"><div className="tm-stat__label">In Progress</div><div className="tm-stat__value">{stats.work_in_progress}</div></div>
-          <div className="tm-stat"><div className="tm-stat__label">Completed</div><div className="tm-stat__value">{stats.completed}</div></div>
-          <div className="tm-stat tm-stat--overdue"><div className="tm-stat__label">Overdue</div><div className="tm-stat__value">{stats.overdue}</div></div>
+        <div className="col-stat-grid-new">
+          {KPI_CARDS.map(({ key, label, sub, icon: Icon, variant }) => (
+            <div className={`col-stat-card-new ${variant}`} key={key}>
+              <div className="col-stat-label-new">{label}</div>
+              <div className="col-stat-value-new">{stats[key] ?? 0}</div>
+              <div className="col-stat-sub-new">{sub}</div>
+              <div className="col-stat-icon-new"><Icon style={{ width: 24, height: 24 }} /></div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Side-by-side: status breakdown | recent activity (point 10) */}
-      <div className="tm-dash-split">
-        {stats && (
-          <div className="tm-subcard">
-            <div className="tm-card__title" style={{ marginBottom: 12 }}>STATUS BREAKDOWN</div>
-            <div className="tm-breakdown">
-              {BREAKDOWN_ORDER.map((k) => (
-                <div className="tm-breakdown__row" key={k}>
-                  <span className="tm-breakdown__label">{STATUS_LABELS[k]}</span>
-                  <span className="tm-breakdown__track">
-                    <span className={`tm-breakdown__fill s-${k}`} style={{ width: `${((stats[k] || 0) / maxBar) * 100}%` }} />
-                  </span>
-                  <span className="tm-breakdown__count">{stats[k] || 0}</span>
-                </div>
-              ))}
+      {/* ── Two-column: status breakdown | recent activity ── */}
+      <div className="col-two-col-new">
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Squares2X2Icon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
+              <div>
+                <div className="col-card-title-new">Status Breakdown</div>
+                <div className="col-card-subtitle-new">Tasks by current status</div>
+              </div>
             </div>
           </div>
-        )}
-
-        <div className="tm-subcard">
-          <div className="tm-card__head" style={{ marginBottom: 8 }}>
-            <div className="tm-card__title" style={{ margin: 0 }}>RECENT ACTIVITY</div>
-            <button type="button" className="tm-link" onClick={goTasks}>View all</button>
-          </div>
-          {loading && <p className="tm-hint">Loading…</p>}
-          {!loading && recent.length === 0 && <p className="tm-hint">No recent activity.</p>}
-          {!loading && recent.map((t) => {
-            const last = (t.remarks || [])[(t.remarks || []).length - 1];
-            const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
-            return (
-              <div className="tm-activity" key={t.id} onClick={() => setOpenTaskId(t.id)}>
-                <div>
-                  <div className="tm-activity__title">{t.title}</div>
-                  <div className="tm-activity__sub">
-                    {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'} · {timeAgo(t.created_at)}
-                    {note && <> · {note}</>}
+          <div className="col-card-body-new">
+            {!stats ? (
+              <p className="col-empty-mini">No data yet.</p>
+            ) : (
+              <div className="tm-breakdown">
+                {BREAKDOWN_ORDER.map((k) => (
+                  <div className="tm-breakdown__row" key={k}>
+                    <span className="tm-breakdown__label">{STATUS_LABELS[k]}</span>
+                    <span className="tm-breakdown__track">
+                      <span className={`tm-breakdown__fill s-${k}`} style={{ width: `${((stats[k] || 0) / maxBar) * 100}%` }} />
+                    </span>
+                    <span className="tm-breakdown__count">{stats[k] || 0}</span>
                   </div>
-                </div>
-                <div className="tm-activity__badges">
-                  <span className={`tm-prio tm-prio--${t.priority}`}>{t.priority}</span>
-                  <span className={`tm-badge tm-badge--${t.status}`}>{STATUS_LABELS[t.status]}</span>
-                </div>
+                ))}
               </div>
-            );
-          })}
+            )}
+          </div>
+        </div>
+
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ClockIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
+              <div>
+                <div className="col-card-title-new">Recent Activity</div>
+                <div className="col-card-subtitle-new">Latest updates across tasks</div>
+              </div>
+            </div>
+            <button type="button" className="col-btn col-btn-ghost col-btn-sm" onClick={goTasks}>View All →</button>
+          </div>
+          <div className="col-card-body-flush-new">
+            {loading ? (
+              <div className="col-empty-mini">Loading…</div>
+            ) : recent.length === 0 ? (
+              <div className="col-empty-mini">
+                <ClockIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No recent activity.</span>
+              </div>
+            ) : (
+              <div className="col-table-scroll-y">
+                <table className="col-table-new">
+                  <thead>
+                    <tr><th>Task</th><th>Status</th><th>Updated</th></tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((t) => {
+                      const last = (t.remarks || [])[(t.remarks || []).length - 1];
+                      const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
+                      return (
+                        <tr key={t.id} className="col-clickable-row" onClick={() => setOpenTaskId(t.id)}>
+                          <td>
+                            <div className="col-cell-primary">{t.title}</div>
+                            <div className="col-cell-secondary">
+                              <span className={`tm-prio tm-prio--${t.priority}`}>{t.priority}</span>
+                              {t.creator ? ` · ${t.creator.first_name} ${t.creator.last_name || ''}` : ''}
+                              {note && ` · ${note}`}
+                            </div>
+                          </td>
+                          <td><span className={`tm-badge tm-badge--${t.status}`}>{STATUS_LABELS[t.status]}</span></td>
+                          <td className="col-cell-secondary" style={{ whiteSpace: 'nowrap' }}>{timeAgo(t.created_at)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -128,7 +192,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
       {openTaskId && (
         <TaskModal mode="view" taskId={openTaskId} onClose={() => setOpenTaskId(null)} onSaved={load} />
       )}
-    </section>
+    </div>
   );
 };
 

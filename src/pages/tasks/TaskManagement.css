@@ -180,7 +180,7 @@
 .tm-add-wrap { position: relative; display: inline-block; }
 .tm-add-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px dashed var(--border-input); background: transparent; border-radius: var(--border-radius-full); padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; font-family: inherit; }
 .tm-add-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
-.tm-add-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 220px; max-height: 240px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: var(--border-radius-md); box-shadow: var(--shadow-modal); padding: 6px; }
+.tm-add-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 200; min-width: 220px; max-height: 240px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: var(--border-radius-md); box-shadow: var(--shadow-modal); padding: 6px; }
 .tm-add-menu__item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 13px; color: var(--text-secondary); }
 .tm-add-menu__item:hover { background: var(--bg-card-hover); }
 .tm-add-menu__empty { padding: 10px; font-size: 12px; color: var(--text-muted); text-align: center; }
@@ -441,6 +441,26 @@
   .tm-avatar { width: 24px; height: 24px; font-size: 10px; }
 }
 
+/* ── Voice-note recorder (status update) ── */
+.tmq-voice { margin-top: 10px; }
+.tmq-voice-btn { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid var(--border-primary); background: var(--bg-secondary); color: var(--accent-blue); border-radius: 10px; padding: 8px 13px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .15s; }
+.tmq-voice-btn:hover { border-color: var(--accent-blue); background: var(--accent-blue-bg); }
+.tmq-voice-btn--stop { color: var(--accent-red); }
+.tmq-voice-btn--stop:hover { border-color: var(--accent-red); background: var(--accent-red-bg); }
+.tmq-voice-btn--del { color: var(--text-muted); padding: 8px 10px; }
+.tmq-voice-btn--del:hover { border-color: var(--accent-red); color: var(--accent-red); background: var(--accent-red-bg); }
+.tmq-voice-rec { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid var(--border-primary); background: var(--bg-secondary); border-radius: 10px; padding: 8px 12px; }
+.tmq-voice-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent-red); flex: none; animation: tmq-pulse 1.1s infinite; }
+@keyframes tmq-pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(224, 50, 47, .4); } 50% { opacity: .6; box-shadow: 0 0 0 7px rgba(224, 50, 47, 0); } }
+.tmq-voice-time { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 13px; color: var(--text-primary); }
+.tmq-voice-hint { font-size: 12px; color: var(--text-muted); margin-right: auto; }
+.tmq-voice-audio { height: 34px; max-width: 230px; }
+.tmq-voice-err { margin-top: 6px; font-size: 12px; color: var(--accent-red); }
+/* Voice player in the activity history */
+.tmq-voice-play { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--accent-blue); }
+.tmq-voice-play .tmq-voice-audio { height: 30px; max-width: 200px; }
+.tmq-voice-len { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+
 .tm-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 .tm-error { color: var(--accent-red); font-size: 13px; margin-top: 8px; }
 
@@ -512,7 +532,11 @@
 .tm-add-search:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-blue-bg); }
 
 /* ── Task Details accordion (in the detail popup) ── */
-.tmq-accordion { border: 1px solid var(--border-secondary); border-radius: var(--border-radius-md); margin: 4px 0 14px; overflow: hidden; }
+/* overflow must stay visible so the "Add assignee" dropdown can escape the
+   accordion box instead of being clipped under the next field. */
+.tmq-accordion { border: 1px solid var(--border-secondary); border-radius: var(--border-radius-md); margin: 4px 0 14px; overflow: visible; }
+.tmq-acc-head { border-radius: var(--border-radius-md) var(--border-radius-md) 0 0; }
+.tmq-acc-body { overflow: visible; }
 .tmq-acc-head {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px; background: var(--bg-secondary); border: 0; cursor: pointer;

@@ -1,20 +1,101 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon, PlusCircleIcon, MagnifyingGlassIcon, ChevronRightIcon,
+  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, Squares2X2Icon,
+  ClipboardDocumentListIcon, CheckCircleIcon, ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
+// Reuse the lead workspace design system so this page is visually consistent
+// (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
+import '../portals/common/LeadWorkspacePage.css';
+// Stat cards share the portal-dashboard card style (colored top accent + sub-label).
+import '../portals/collection/CollectionWorkspace.css';
 import './TaskManagement.css';
 
 const STATUS_LABELS = {
-  open: 'Open', pending: 'Pending', work_in_progress: 'Work in Progress',
+  open: 'Open', pending: 'Pending', work_in_progress: 'In Progress',
   completed: 'Completed', closed: 'Closed', cancelled: 'Cancelled',
+};
+
+// Status / priority chip colours (rendered as .status-chip like the leads table).
+const STATUS_HEX = {
+  open: '#2563eb', pending: '#d97706', work_in_progress: '#7c3aed',
+  completed: '#16a34a', closed: '#64748b', cancelled: '#dc2626',
+};
+const PRIORITY_HEX = {
+  low: '#16a34a', medium: '#d97706', high: '#ea580c', urgent: '#dc2626',
+};
+
+// Stat cards (values pulled from the /stats response keyed by `key`) — colored
+// top accent (variant) + faint icon, matching the portal dashboards.
+const STAT_CARDS = [
+  { key: 'total', label: 'Total Tasks', sub: 'all tasks', icon: Squares2X2Icon, variant: '' },
+  { key: 'open', label: 'Open', sub: 'to start', icon: ClipboardDocumentListIcon, variant: 'info' },
+  { key: 'work_in_progress', label: 'In Progress', sub: 'being worked on', icon: ArrowPathIcon, variant: 'warning' },
+  { key: 'completed', label: 'Completed', sub: 'done', icon: CheckCircleIcon, variant: 'success' },
+  { key: 'overdue', label: 'Overdue', sub: 'past due', icon: ExclamationTriangleIcon, variant: 'danger' },
+];
+
+const GROUP_BY = [
+  { value: 'none', label: 'None' },
+  { value: 'project', label: 'Project' },
+  { value: 'department', label: 'Department' },
+  { value: 'status', label: 'Status' },
+];
+
+// Uploaded files are served by the backend at :5000/uploads (file_url is relative).
+const FILE_BASE = `http://${window.location.hostname}:5000`;
+const fileHref = (att) => (att?.file_url?.startsWith('http') ? att.file_url : `${FILE_BASE}${att?.file_url || ''}`);
+
+// Deterministic avatar colour from a user id so each person keeps one colour.
+const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
+const colorFor = (id) => {
+  const s = String(id ?? '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
 };
 
 const initials = (u) =>
   `${(u?.first_name || '?')[0] || ''}${(u?.last_name || '')[0] || ''}`.toUpperCase();
+const fullName = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim();
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+// Follow-up urgency for active tasks: 'missed' (past), 'today', or '' (future/none).
+const fuState = (task) => {
+  const active = task.status === 'open' || task.status === 'work_in_progress';
+  if (!task.follow_up_date || !active) return '';
+  const today = startOfDay(new Date());
+  const fu = startOfDay(task.follow_up_date);
+  if (fu < today) return 'missed';
+  if (fu.getTime() === today.getTime()) return 'today';
+  return '';
+};
+
+const groupKeyOf = (task, by) => {
+  if (by === 'project') return task.project?.project_name || 'No project';
+  if (by === 'department') return task.department?.name || 'No department';
+  if (by === 'status') return STATUS_LABELS[task.status] || task.status;
+  return '';
+};
+
+// A soft-tinted chip identical to the leads status-chip.
+const Chip = ({ hex, children }) => (
+  <span
+    className="status-chip"
+    style={{ backgroundColor: `${hex}22`, color: hex, borderColor: hex }}
+  >
+    {children}
+  </span>
+);
 
 const TaskListPage = () => {
+  const currentUser = useSelector((state) => state.auth.user);
   const [rows, setRows] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,6 +103,14 @@ const TaskListPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [includeClosed, setIncludeClosed] = useState(false);
   const [followUpFilter, setFollowUpFilter] = useState(''); // '' | 'today' | 'missed'
+  const [projectFilter, setProjectFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [assignFilter, setAssignFilter] = useState(''); // '' | 'by_me' | 'to_me'
+  const [groupBy, setGroupBy] = useState('none');
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const [expandedId, setExpandedId] = useState(null);
+  const [details, setDetails] = useState({}); // id -> full task detail (lazy)
+  const [detailLoading, setDetailLoading] = useState(null);
   const [modal, setModal] = useState({ open: false, mode: 'view', taskId: null });
 
   const load = useCallback(async () => {
@@ -35,6 +124,7 @@ const TaskListPage = () => {
       const [list, st] = await Promise.all([taskApi.getAll(params), taskApi.getStats()]);
       setRows(list.data || []);
       setStats(st.data || null);
+      setDetails({}); // drawer caches may be stale after a reload
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to load tasks');
     } finally {
@@ -57,147 +147,440 @@ const TaskListPage = () => {
   const openCreate = () => setModal({ open: true, mode: 'create', taskId: null });
   const closeModal = () => setModal({ open: false, mode: 'view', taskId: null });
 
-  // Show the most recent remark a user actually wrote on their last update —
-  // skip status-only updates with no text and the auto "Task created." note,
-  // and pick by timestamp so it's correct regardless of array order.
+  // Expand a row's inline drawer and lazily fetch its full detail (description,
+  // attachments, full activity with status + author) the first time it opens.
+  const toggleExpand = async (id) => {
+    if (expandedId === id) { setExpandedId(null); return; }
+    setExpandedId(id);
+    if (!details[id]) {
+      setDetailLoading(id);
+      try {
+        const res = await taskApi.getById(id);
+        setDetails((p) => ({ ...p, [id]: res.data }));
+      } catch {
+        /* drawer falls back to the list-row data */
+      } finally {
+        setDetailLoading(null);
+      }
+    }
+  };
+
+  const toggleGroup = (key) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  // Project / department options come from the loaded set (server-filtered by
+  // search / status / follow-up); project + department then filter client-side.
+  const projectOptions = useMemo(
+    () => [...new Set(rows.map((t) => t.project?.project_name).filter(Boolean))].sort(),
+    [rows]
+  );
+  const deptOptions = useMemo(
+    () => [...new Set(rows.map((t) => t.department?.name).filter(Boolean))].sort(),
+    [rows]
+  );
+
+  const myId = currentUser?.id;
+  const visibleRows = useMemo(
+    () => rows.filter((t) => {
+      if (projectFilter && (t.project?.project_name || '') !== projectFilter) return false;
+      if (deptFilter && (t.department?.name || '') !== deptFilter) return false;
+      // "Assigned by me" = I created it; "Assigned to me" = I'm an assignee.
+      if (assignFilter === 'by_me' && String(t.creator_id) !== String(myId)) return false;
+      if (assignFilter === 'to_me' && !(t.assignees || []).some((a) => String(a.id) === String(myId))) return false;
+      return true;
+    }),
+    [rows, projectFilter, deptFilter, assignFilter, myId]
+  );
+
+  const groups = useMemo(() => {
+    if (groupBy === 'none') return null;
+    const map = new Map();
+    visibleRows.forEach((t) => {
+      const k = groupKeyOf(t, groupBy);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(t);
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [visibleRows, groupBy]);
+
+  const clearAll = () => {
+    setSearch(''); setStatusFilter(''); setProjectFilter(''); setDeptFilter('');
+    setAssignFilter(''); setIncludeClosed(false); setFollowUpFilter('');
+  };
+
+  // Most recent user-written remark (skips status-only + auto "Task created.").
   const latestRemark = (task) => {
     const withText = (task.remarks || []).filter((r) => {
       const c = (r.content || '').trim();
       return c && c !== 'Task created.';
     });
-    if (!withText.length) return '—';
-    const last = withText.reduce((a, b) =>
-      (new Date(b.created_at) >= new Date(a.created_at) ? b : a));
-    const content = last.content.trim();
-    return content.length > 40 ? `${content.slice(0, 40)}…` : content;
+    if (!withText.length) return null;
+    return withText.reduce((a, b) => (new Date(b.created_at) >= new Date(a.created_at) ? b : a));
   };
 
+  const labelStyle = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--text-secondary)', marginBottom: 6 };
+
+  // ── Inline drawer (description / attachments / recent activity) ──
+  const renderDrawer = (task) => {
+    const detail = details[task.id];
+    const loadingDetail = detailLoading === task.id && !detail;
+    const description = (detail || task).description;
+    const attachments = Array.isArray((detail || task).attachments) ? (detail || task).attachments : [];
+    const remarks = (detail?.remarks || task.remarks || []);
+    const recent = [...remarks].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
+    return (
+      <tr>
+        <td colSpan={7} style={{ padding: 0, maxWidth: 'none', whiteSpace: 'normal', background: 'var(--bg-primary, #f1f5f9)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 24, padding: '16px 20px 18px 44px' }}>
+            <div>
+              <div style={labelStyle}>Description</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                {description || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No description.</span>}
+              </div>
+
+              <div style={{ ...labelStyle, marginTop: 16 }}>Attachments</div>
+              {loadingDetail ? (
+                <span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-secondary)' }}>Loading…</span>
+              ) : attachments.length === 0 ? (
+                <span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-secondary)' }}>No attachments.</span>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {attachments.map((att, i) => (
+                    <a
+                      key={att.id || i}
+                      href={fileHref(att)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border-primary, #e2e8f0)', background: 'var(--bg-card, #fff)', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontWeight: 500, color: 'var(--text-primary)', textDecoration: 'none' }}
+                    >
+                      <PaperClipIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)' }} />
+                      {att.file_name || 'File'}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: 14 }}>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn-primary crm-btn-sm"
+                  onClick={(e) => { e.stopPropagation(); openView(task.id); }}
+                >
+                  <BoltIcon style={{ width: 14, height: 14, marginRight: 4 }} /> Open &amp; update
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div style={labelStyle}>Recent activity</div>
+              {loadingDetail ? (
+                <span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-secondary)' }}>Loading…</span>
+              ) : recent.length === 0 ? (
+                <span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-secondary)' }}>No activity.</span>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {recent.map((r) => (
+                    <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                      {r.status_at_time && <Chip hex={STATUS_HEX[r.status_at_time] || '#64748b'}>{STATUS_LABELS[r.status_at_time] || 'Update'}</Chip>}
+                      <span style={{ minWidth: 0 }}>
+                        {r.content || 'Status update'}
+                        {r.user && <span> — {fullName(r.user)}</span>}
+                        {r.created_at && <span style={{ opacity: 0.7 }}> · {fmtDateTime(r.created_at)}</span>}
+                        {r.voice?.file_url && (
+                          <audio
+                            src={r.voice.file_url}
+                            controls
+                            preload="none"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ display: 'block', height: 30, marginTop: 6, maxWidth: 220 }}
+                          />
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  // ── A single task row (+ its drawer when expanded) ──
+  const renderRow = (task) => {
+    const fu = fuState(task);
+    const assignees = task.assignees || [];
+    const isOpen = expandedId === task.id;
+    const note = latestRemark(task);
+    return (
+      <React.Fragment key={task.id}>
+        <tr className={isOpen ? 'is-selected' : ''} onClick={() => toggleExpand(task.id)}>
+          {/* Task */}
+          <td style={{ maxWidth: 320 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <ChevronRightIcon style={{ width: 14, height: 14, marginTop: 3, flexShrink: 0, color: isOpen ? 'var(--accent-blue, #2563eb)' : 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
+              <div style={{ minWidth: 0 }}>
+                <p className="lead-title">{task.title}</p>
+                <small style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <span style={{ color: PRIORITY_HEX[task.priority] || '#64748b', fontWeight: 700, textTransform: 'capitalize' }}>{task.priority}</span>
+                  {task.creator && <span>· {fullName(task.creator)}</span>}
+                  {note && <span style={{ opacity: 0.85 }}>· “{note.content.length > 28 ? `${note.content.slice(0, 28)}…` : note.content}”</span>}
+                </small>
+              </div>
+            </div>
+          </td>
+
+          {/* Status */}
+          <td className="lead-col-status">
+            <Chip hex={STATUS_HEX[task.status] || '#64748b'}>{STATUS_LABELS[task.status] || task.status}</Chip>
+            {task.is_overdue && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#dc2626' }}>Overdue</div>
+            )}
+          </td>
+
+          {/* Assignees */}
+          <td>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {assignees.slice(0, 4).map((a, i) => (
+                <span
+                  key={a.id}
+                  className="cell-lead-avatar"
+                  title={fullName(a)}
+                  style={{ background: colorFor(a.id), color: '#fff', border: '2px solid var(--bg-card, #fff)', marginLeft: i === 0 ? 0 : -8 }}
+                >
+                  {initials(a)}
+                </span>
+              ))}
+              {assignees.length > 4 && (
+                <span className="cell-lead-avatar" style={{ background: '#e2e8f0', color: '#64748b', border: '2px solid var(--bg-card, #fff)', marginLeft: -8 }}>
+                  +{assignees.length - 4}
+                </span>
+              )}
+              {assignees.length === 0 && <small>—</small>}
+            </div>
+          </td>
+
+          {/* Project / Phase */}
+          <td>
+            {task.project?.project_name ? (
+              <>
+                <p className="lead-title">{task.project.project_name}</p>
+                {task.phase?.phase_name && (
+                  <small style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {task.phase.phase_name}
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '0 6px', borderRadius: 6, color: task.phase.is_approved === false ? '#b91c1c' : '#15803d', background: task.phase.is_approved === false ? '#fef2f2' : '#f0fdf4', border: `1px solid ${task.phase.is_approved === false ? '#fecaca' : '#bbf7d0'}` }}>
+                      {task.phase.is_approved === false ? 'Unapproved' : 'Approved'}
+                    </span>
+                  </small>
+                )}
+              </>
+            ) : <small>—</small>}
+            {task.department?.name && (
+              <small style={{ display: 'block', marginTop: 2 }}>{task.department.name}{task.subDepartment?.name ? ` · ${task.subDepartment.name}` : ''}</small>
+            )}
+          </td>
+
+          {/* Follow-up */}
+          <td>
+            {task.follow_up_date ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: fu === 'missed' ? '#dc2626' : fu === 'today' ? '#d97706' : 'var(--text-secondary)' }}>
+                <CalendarDaysIcon style={{ width: 12, height: 12 }} />
+                <span>{fmtDate(task.follow_up_date)}</span>
+                {fu === 'missed' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>· Missed</span>}
+                {fu === 'today' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>· Today</span>}
+              </div>
+            ) : <small>—</small>}
+          </td>
+
+          {/* Expected */}
+          <td>
+            <small style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtDate(task.end_date)}</small>
+          </td>
+
+          {/* Action */}
+          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <div className="lead-workspace__actions-cell">
+              <button
+                type="button"
+                className="crm-btn crm-btn-sm"
+                title="Open / Update"
+                style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '7px 9px' }}
+                onClick={() => openView(task.id)}
+              >
+                <PencilSquareIcon style={{ width: 16, height: 16 }} />
+              </button>
+            </div>
+          </td>
+        </tr>
+        {isOpen && renderDrawer(task)}
+      </React.Fragment>
+    );
+  };
+
+  const records = visibleRows.length;
+
   return (
-    <section className="tm-page">
-      <header className="tm-header">
+    <section className="lead-workspace" style={{ height: 'auto', overflow: 'visible', padding: '20px 24px' }}>
+      {/* ── Header ── */}
+      <header className="lead-workspace__header">
         <div>
           <h1>Task Management</h1>
           <p>Your tasks — created by you or assigned to you.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" className="tm-btn tm-btn--ghost" onClick={load} disabled={loading} title="Refresh">
-            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
+        <div className="lead-workspace__header-actions">
+          <button type="button" className="workspace-btn workspace-btn--ghost" onClick={load} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {loading ? 'Refreshing…' : 'Refresh'}
           </button>
-          <button type="button" className="tm-btn" onClick={openCreate}>+ New Task</button>
+          <button type="button" className="workspace-btn workspace-btn--primary" onClick={openCreate}>
+            <PlusCircleIcon style={{ width: 16, height: 16 }} /> New Task
+          </button>
         </div>
       </header>
 
+      {/* ── Stats ── */}
       {stats && (
-        <div className="tm-stats">
-          <div className="tm-stat"><div className="tm-stat__label">Total</div><div className="tm-stat__value">{stats.total}</div></div>
-          <div className="tm-stat"><div className="tm-stat__label">Open</div><div className="tm-stat__value">{stats.open}</div></div>
-          <div className="tm-stat"><div className="tm-stat__label">In Progress</div><div className="tm-stat__value">{stats.work_in_progress}</div></div>
-          <div className="tm-stat"><div className="tm-stat__label">Completed</div><div className="tm-stat__value">{stats.completed}</div></div>
-          <div className="tm-stat tm-stat--overdue"><div className="tm-stat__label">Overdue</div><div className="tm-stat__value">{stats.overdue}</div></div>
+        <div className="col-stat-grid-new" style={{ marginBottom: 16 }}>
+          {STAT_CARDS.map(({ key, label, sub, icon: Icon, variant }) => (
+            <div className={`col-stat-card-new ${variant}`} key={key}>
+              <div className="col-stat-label-new">{label}</div>
+              <div className="col-stat-value-new">{stats[key] ?? 0}</div>
+              <div className="col-stat-sub-new">{sub}</div>
+              <div className="col-stat-icon-new"><Icon style={{ width: 24, height: 24 }} /></div>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="tm-followup-tabs" style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        {FOLLOW_UP_TABS.map((t) => (
-          <button
-            key={t.value || 'all'}
-            type="button"
-            className={`tm-btn ${followUpFilter === t.value ? '' : 'tm-btn--ghost'}`}
-            onClick={() => setFollowUpFilter(t.value)}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* ── Toolbar (search + filters) ── */}
+      <div className="lead-workspace__toolbar">
+        <div className="lead-workspace__toolbar-search">
+          <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && load()}
+            placeholder="Search tasks by title or description"
+          />
+        </div>
+        <div className="lead-workspace__toolbar-filters">
+          <select value={assignFilter} onChange={(e) => setAssignFilter(e.target.value)} title="Who the task belongs to">
+            <option value="">All Tasks</option>
+            <option value="by_me">Assigned by me</option>
+            <option value="to_me">Assigned to me</option>
+          </select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">All Statuses</option>
+            {Object.entries(STATUS_LABELS).filter(([v]) => v !== 'pending').map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+            <option value="">All Projects</option>
+            {projectOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+            <option value="">All Departments</option>
+            {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <label className="filter-tab" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', border: '1px solid var(--border-primary, #e2e8f0)' }}>
+            <input type="checkbox" checked={includeClosed} onChange={(e) => setIncludeClosed(e.target.checked)} style={{ accentColor: 'var(--accent-blue, #2563eb)' }} />
+            Include Closed / Cancelled
+          </label>
+          <button type="button" className="lead-workspace__clear-filters" onClick={clearAll}>Clear All</button>
+        </div>
       </div>
 
-      <div className="tm-toolbar">
-        <input
-          className="tm-search"
-          value={search}
-          placeholder="Search tasks…"
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
-        />
-        <select className="tm-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All Statuses</option>
-          {Object.entries(STATUS_LABELS).filter(([v]) => v !== 'pending').map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
-        <label className="tm-check">
-          <input type="checkbox" checked={includeClosed} onChange={(e) => setIncludeClosed(e.target.checked)} />
-          Include Closed Tasks
-        </label>
-      </div>
-
-      <div className="tm-table-wrap">
-        <table className="tm-table">
-          <thead>
-            <tr>
-              <th>Task</th><th>Status</th><th>Assignees</th><th>Department</th><th>Project / Phase</th><th>Remarks</th><th>Expected Date</th><th>Follow-up</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && <tr><td colSpan={9} className="tm-table__empty">Loading…</td></tr>}
-            {!loading && rows.length === 0 && <tr><td colSpan={9} className="tm-table__empty">No tasks found</td></tr>}
-            {!loading && rows.map((task) => (
-              <tr key={task.id} onClick={() => openView(task.id)}>
-                <td>
-                  <div className="tm-task-title">{task.title}</div>
-                  <div className="tm-task-sub" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span className={`tm-prio-badge tm-prio-badge--${task.priority}`}>{task.priority}</span>
-                    {task.creator && <span>· {task.creator.first_name} {task.creator.last_name || ''}</span>}
-                  </div>
-                </td>
-                <td>
-                  <span className={`tm-badge tm-badge--${task.status}`}>{STATUS_LABELS[task.status]}</span>
-                  {task.is_overdue && <span className="tm-badge tm-badge--overdue">Overdue</span>}
-                </td>
-                <td>
-                  <span className="tm-avatars">
-                    {(task.assignees || []).slice(0, 4).map((a) => (
-                      <span className="tm-avatar" key={a.id} title={`${a.first_name} ${a.last_name || ''}`}>{initials(a)}</span>
-                    ))}
-                  </span>
-                </td>
-                <td>
-                  <div>{task.department?.name || '—'}</div>
-                  {task.subDepartment?.name && (
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary, #6b7280)', marginTop: 2 }}>{task.subDepartment.name}</div>
-                  )}
-                </td>
-                <td>
-                  {task.project?.project_name ? (
-                    <>
-                      <div>{task.project.project_name}</div>
-                      {task.phase?.phase_name && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-secondary, #6b7280)' }}>{task.phase.phase_name}</span>
-                          <span
-                            style={{
-                              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
-                              border: `1px solid ${task.phase.is_approved === false ? '#FCA5A5' : '#A7F3D0'}`,
-                              background: task.phase.is_approved === false ? '#FEF2F2' : '#ECFDF5',
-                              color: task.phase.is_approved === false ? '#B91C1C' : '#047857',
-                            }}
-                          >
-                            {task.phase.is_approved === false ? 'Unapproved' : 'Approved'}
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  ) : '—'}
-                </td>
-                <td>{latestRemark(task)}</td>
-                <td>{fmtDate(task.end_date)}</td>
-                <td>{fmtDate(task.follow_up_date)}</td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  <button type="button" className="tm-icon-btn" title="View / Update" onClick={() => openView(task.id)}>
-                    <EyeIcon style={{ width: 16, height: 16 }} />
+      {/* ── List card ── */}
+      <div className="lead-workspace__grid">
+        <div className="lead-workspace__list-card">
+          {/* Tabs + group-by + record count */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+            <div className="filter-tabs">
+              {FOLLOW_UP_TABS.map((t) => (
+                <button
+                  key={t.value || 'all'}
+                  type="button"
+                  className={`filter-tab ${followUpFilter === t.value ? 'active' : ''}`}
+                  onClick={() => setFollowUpFilter(t.value)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="filter-tabs__records" style={{ margin: 0, padding: 0 }}>Group by</span>
+              <div className="filter-tabs">
+                {GROUP_BY.map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    className={`filter-tab ${groupBy === g.value ? 'active' : ''}`}
+                    onClick={() => setGroupBy(g.value)}
+                  >
+                    {g.label}
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                ))}
+              </div>
+            </div>
+            <small className="filter-tabs__records">{records} record{records === 1 ? '' : 's'}</small>
+          </div>
+
+          <div className="lead-workspace__table-wrap">
+            <table className="lead-workspace__table">
+              <thead>
+                <tr>
+                  <th style={{ width: 'auto' }}>Task</th>
+                  <th className="lead-col-status">Status</th>
+                  <th style={{ width: 130 }}>Assignees</th>
+                  <th style={{ width: 170 }}>Project / Phase</th>
+                  <th style={{ width: 140 }}>Follow-up</th>
+                  <th style={{ width: 120 }}>Expected</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr><td colSpan={7} className="lead-workspace__empty">Loading tasks…</td></tr>
+                )}
+                {!loading && records === 0 && (
+                  <tr><td colSpan={7} className="lead-workspace__empty">No tasks found for current filters</td></tr>
+                )}
+
+                {/* Ungrouped */}
+                {!loading && groupBy === 'none' && visibleRows.map(renderRow)}
+
+                {/* Grouped */}
+                {!loading && groupBy !== 'none' && groups.map(([key, tasks]) => {
+                  const collapsed = collapsedGroups.has(`${groupBy}:${key}`);
+                  const done = tasks.filter((t) => t.status === 'completed' || t.status === 'closed').length;
+                  const over = tasks.filter((t) => t.is_overdue).length;
+                  return (
+                    <React.Fragment key={key}>
+                      <tr onClick={() => toggleGroup(`${groupBy}:${key}`)} style={{ background: 'var(--bg-primary, #f1f5f9)', cursor: 'pointer' }}>
+                        <td colSpan={7} style={{ maxWidth: 'none', whiteSpace: 'normal' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <ChevronRightIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)', transform: collapsed ? 'none' : 'rotate(90deg)', transition: 'transform .15s' }} />
+                            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{key}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-blue, #2563eb)', background: 'rgba(37,99,235,0.1)', borderRadius: 999, padding: '1px 8px' }}>{tasks.length}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {done}/{tasks.length} done{over > 0 && <span style={{ color: '#dc2626' }}> · {over} overdue</span>}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {!collapsed && tasks.map(renderRow)}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {modal.open && (
