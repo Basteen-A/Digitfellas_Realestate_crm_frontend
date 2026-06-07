@@ -589,3 +589,128 @@
 .tm-activity__title { font-weight: 600; color: var(--text-primary); font-size: 15px; }
 .tm-activity__sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 .tm-activity__badges { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* ============================================================
+   Task List page (lead-workspace based) — mobile responsiveness
+   Desktop: full table. 641–768px: trimmed table. ≤640px: the table
+   is replaced by a clean card list (.task-cards-mobile) and the
+   filters are restored as a stacked grid (the shared lead CSS hides
+   .lead-workspace__toolbar-filters at ≤640 in favour of a dropdown
+   the task page does not use). All scoped under .task-workspace so
+   the shared lead pages are never affected.
+   ============================================================ */
+.task-workspace { padding: 20px 24px; }
+
+/* Inline drawer body — two columns on desktop, one on mobile. */
+.task-drawer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 16px 20px 18px 44px; }
+
+/* The mobile card list is hidden until ≤640px. */
+.task-cards-mobile { display: none; }
+
+@media (max-width: 768px) {
+  .task-workspace { padding: 12px; }
+
+  /* Toolbar: search full width, filters wrap two-per-row. */
+  .task-workspace .lead-workspace__toolbar { flex-direction: column; gap: 8px; }
+  .task-workspace .lead-workspace__toolbar-search { width: 100%; min-width: 0; }
+  .task-workspace .lead-workspace__toolbar-filters { flex-wrap: wrap; gap: 8px; }
+  .task-workspace .lead-workspace__toolbar-filters > select,
+  .task-workspace .lead-workspace__toolbar-filters > label.filter-tab,
+  .task-workspace .lead-workspace__toolbar-filters > .lead-workspace__clear-filters {
+    flex: 1 1 46%;
+    min-width: 0;
+  }
+
+  /* Fixed table layout so the 4 kept columns fill the width (no scroll). */
+  .task-workspace .lead-workspace__table-wrap { overflow-x: hidden; width: 100%; }
+  .task-workspace .lead-workspace__table { table-layout: fixed; width: 100%; min-width: 100%; }
+  .task-workspace .lead-workspace__table th { padding: 8px 10px; font-size: 10px; }
+  .task-workspace .lead-workspace__table td { padding: 10px; font-size: 12px; max-width: none; white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+
+  .task-workspace .lead-workspace__table .task-col-task { width: 46%; }
+  .task-workspace .lead-workspace__table .lead-col-status { width: 22%; }
+  .task-workspace .lead-workspace__table .task-col-followup { width: 20%; }
+  .task-workspace .lead-workspace__table .task-col-action { width: 12%; text-align: right; }
+  .task-workspace .lead-workspace__table .task-col-action .crm-btn { padding: 5px 7px; }
+
+  /* Inline drawer stacks to a single column. */
+  .task-drawer-grid { grid-template-columns: 1fr; gap: 16px; padding: 14px 16px 16px; }
+}
+
+/* ─────────── ≤ 640px : phones — card list replaces the table ─────────── */
+@media (max-width: 640px) {
+  /* Restore the filters the shared lead CSS hides, as a clean grid. */
+  .task-workspace .lead-workspace__toolbar-filters {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .task-workspace .lead-workspace__toolbar-filters > select { width: 100%; min-width: 0; margin: 0; }
+  .task-workspace .lead-workspace__toolbar-filters > label.filter-tab,
+  .task-workspace .lead-workspace__toolbar-filters > .lead-workspace__clear-filters {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    justify-content: center;
+  }
+
+  /* Swap table → cards. */
+  .task-workspace .lead-workspace__table-wrap { display: none; }
+  .task-cards-mobile { display: block; padding: 10px; }
+
+  /* Group-by / tabs header: let each tab group take a full row. */
+  .task-workspace .lead-workspace__list-card > div:first-child { gap: 10px; padding: 10px 12px; }
+}
+
+/* ── Task card (mobile) ── */
+.task-card {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s;
+}
+.task-card:active { border-color: var(--accent-blue, #2563eb); box-shadow: 0 2px 10px rgba(37, 99, 235, 0.12); }
+.task-card__row1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.task-card__title { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.35; overflow-wrap: anywhere; }
+.task-card__row1 .status-chip { flex-shrink: 0; }
+.task-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; font-size: 12px; color: var(--text-secondary); }
+.task-card__prio { font-weight: 700; text-transform: capitalize; }
+.task-card__note { margin-top: 6px; font-size: 12.5px; color: var(--text-secondary); font-style: italic; overflow-wrap: anywhere; }
+.task-card__row2 { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.task-card__fu { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.task-card__fu--missed { color: #dc2626; }
+.task-card__fu--today { color: #d97706; }
+.task-card__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.task-card__avatars { display: flex; align-items: center; }
+.task-card__action { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-primary); padding: 6px 8px; }
+
+/* Group heading in the mobile card list. */
+.task-cards-group__head { display: flex; align-items: center; gap: 8px; padding: 8px 4px 6px; }
+.task-cards-group__name { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+.task-cards-group__count { font-size: 11px; font-weight: 700; color: var(--accent-blue, #2563eb); background: rgba(37, 99, 235, 0.1); border-radius: 999px; padding: 1px 8px; }
+.task-cards-group__stat { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.task-cards-msg { padding: 28px 12px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+/* ── Task dashboard (standalone /task-portal) — mobile polish ── */
+@media (max-width: 640px) {
+  .col-dashboard .col-page-header-actions { display: flex; gap: 8px; }
+  .col-dashboard .col-page-header-actions > button { flex: 1; justify-content: center; }
+  .col-dashboard .col-card-header-new { flex-wrap: wrap; gap: 8px; }
+  .col-dashboard .col-card-header-new .col-btn { margin-left: auto; }
+  /* Recent-activity table: let the Task cell wrap rather than overflow. */
+  .col-dashboard .col-table-new .col-cell-primary { white-space: normal; overflow-wrap: anywhere; }
+}
+
+/* ── Modal: keep the voice card tidy on narrow phones ── */
+@media (max-width: 560px) {
+  .tmq-voice-card .tmq-voice-audio { flex: 1 1 100%; max-width: 100%; width: 100%; }
+  .tmq-voice-card .tmq-voice-rec > div { margin-left: 0 !important; width: 100%; justify-content: flex-end; }
+  .tmq-voice-lang { justify-content: space-between; }
+  .tmq-lang-toggle button { padding: 6px 14px; }
+  .tm-file-picker { flex-wrap: wrap; }
+}

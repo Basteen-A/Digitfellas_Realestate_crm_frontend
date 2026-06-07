@@ -283,7 +283,7 @@ const TaskListPage = () => {
     return (
       <tr>
         <td colSpan={6} style={{ padding: 0, maxWidth: 'none', whiteSpace: 'normal', background: 'var(--bg-primary, #f1f5f9)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 24, padding: '16px 20px 18px 44px' }}>
+          <div className="task-drawer-grid">
             <div>
               <div style={labelStyle}>Description</div>
               <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
@@ -370,7 +370,7 @@ const TaskListPage = () => {
       <React.Fragment key={task.id}>
         <tr className={isOpen ? 'is-selected' : ''} onClick={() => toggleExpand(task.id)}>
           {/* Task */}
-          <td style={{ maxWidth: 320 }}>
+          <td className="task-col-task" style={{ maxWidth: 320 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <ChevronRightIcon style={{ width: 14, height: 14, marginTop: 3, flexShrink: 0, color: isOpen ? 'var(--accent-blue, #2563eb)' : 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
               <div style={{ minWidth: 0 }}>
@@ -393,7 +393,7 @@ const TaskListPage = () => {
           </td>
 
           {/* Assignees */}
-          <td>
+          <td className="hide-mobile">
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {assignees.slice(0, 4).map((a, i) => (
                 <span
@@ -415,7 +415,7 @@ const TaskListPage = () => {
           </td>
 
           {/* Project / Phase */}
-          <td>
+          <td className="hide-mobile">
             {task.project?.project_name ? (
               <>
                 <p className="lead-title">{task.project.project_name}</p>
@@ -435,7 +435,7 @@ const TaskListPage = () => {
           </td>
 
           {/* Follow-up */}
-          <td>
+          <td className="task-col-followup">
             {task.follow_up_date ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: fu === 'missed' ? '#dc2626' : fu === 'today' ? '#d97706' : 'var(--text-secondary)' }}>
                 <CalendarDaysIcon style={{ width: 12, height: 12 }} />
@@ -447,7 +447,7 @@ const TaskListPage = () => {
           </td>
 
           {/* Action */}
-          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+          <td className="task-col-action" style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <div className="lead-workspace__actions-cell">
               <button
                 type="button"
@@ -466,10 +466,67 @@ const TaskListPage = () => {
     );
   };
 
+  // ── A single task as a mobile card (clean, tap to open) ──
+  const renderTaskCard = (task) => {
+    const fu = fuState(task);
+    const note = latestRemark(task);
+    const assignees = task.assignees || [];
+    return (
+      <div key={task.id} className="task-card" role="button" tabIndex={0} onClick={() => openView(task.id)}>
+        <div className="task-card__row1">
+          <p className="task-card__title">{task.title}</p>
+          <Chip hex={STATUS_HEX[task.status] || '#64748b'}>{STATUS_LABELS[task.status] || task.status}</Chip>
+        </div>
+        <div className="task-card__meta">
+          <span className="task-card__prio" style={{ color: PRIORITY_HEX[task.priority] || '#64748b' }}>{task.priority}</span>
+          {task.creator && <span>· {fullName(task.creator)}</span>}
+          {task.department?.name && <span>· {task.department.name}</span>}
+          {task.project?.project_name && <span>· {task.project.project_name}</span>}
+        </div>
+        {note && (
+          <div className="task-card__note">“{note.content.length > 70 ? `${note.content.slice(0, 70)}…` : note.content}”</div>
+        )}
+        <div className="task-card__row2">
+          <span className={`task-card__fu task-card__fu--${fu || 'none'}`}>
+            {task.follow_up_date ? (
+              <>
+                <CalendarDaysIcon style={{ width: 13, height: 13 }} />
+                {fmtDate(task.follow_up_date)}
+                {fu === 'missed' && ' · Missed'}
+                {fu === 'today' && ' · Today'}
+              </>
+            ) : 'No follow-up'}
+          </span>
+          <div className="task-card__right">
+            {assignees.length > 0 && (
+              <div className="task-card__avatars">
+                {assignees.slice(0, 3).map((a, i) => (
+                  <span key={a.id} className="cell-lead-avatar" title={fullName(a)}
+                    style={{ background: colorFor(a.id), color: '#fff', border: '2px solid var(--bg-card, #fff)', marginLeft: i === 0 ? 0 : -8 }}>
+                    {initials(a)}
+                  </span>
+                ))}
+                {assignees.length > 3 && (
+                  <span className="cell-lead-avatar" style={{ background: '#e2e8f0', color: '#64748b', border: '2px solid var(--bg-card, #fff)', marginLeft: -8 }}>
+                    +{assignees.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
+            <button type="button" className="crm-btn crm-btn-sm task-card__action" title="Open / Update"
+              onClick={(e) => { e.stopPropagation(); openView(task.id); }}>
+              <PencilSquareIcon style={{ width: 15, height: 15 }} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const records = visibleRows.length;
 
   return (
-    <section className="lead-workspace" style={{ height: 'auto', overflow: 'visible', padding: '20px 24px' }}>
+    <section className="lead-workspace task-workspace" style={{ height: 'auto', overflow: 'visible' }}>
       {/* ── Header ── */}
       <header className="lead-workspace__header">
         <div>
@@ -576,12 +633,12 @@ const TaskListPage = () => {
             <table className="lead-workspace__table">
               <thead>
                 <tr>
-                  <th style={{ width: 'auto' }}>Task</th>
+                  <th className="task-col-task" style={{ width: 'auto' }}>Task</th>
                   <th className="lead-col-status">Status</th>
-                  <th style={{ width: 130 }}>Assignees</th>
-                  <th style={{ width: 170 }}>Project / Department</th>
-                  <th style={{ width: 140 }}>Follow-up</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
+                  <th className="hide-mobile" style={{ width: 130 }}>Assignees</th>
+                  <th className="hide-mobile" style={{ width: 170 }}>Project / Department</th>
+                  <th className="task-col-followup" style={{ width: 140 }}>Follow-up</th>
+                  <th className="task-col-action" style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -620,6 +677,27 @@ const TaskListPage = () => {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* ── Mobile card list (shown ≤640px; the table is hidden there) ── */}
+          <div className="task-cards-mobile">
+            {loading && <div className="task-cards-msg">Loading tasks…</div>}
+            {!loading && records === 0 && <div className="task-cards-msg">No tasks found for current filters</div>}
+            {!loading && groupBy === 'none' && pagedRows.map(renderTaskCard)}
+            {!loading && groupBy !== 'none' && groups.map(([key, tasks]) => {
+              const done = tasks.filter((t) => t.status === 'completed' || t.status === 'closed').length;
+              const over = tasks.filter((t) => t.is_overdue).length;
+              return (
+                <div key={key} className="task-cards-group">
+                  <div className="task-cards-group__head">
+                    <span className="task-cards-group__name">{key}</span>
+                    <span className="task-cards-group__count">{tasks.length}</span>
+                    <span className="task-cards-group__stat">{done}/{tasks.length} done{over > 0 && <span style={{ color: '#dc2626' }}> · {over} overdue</span>}</span>
+                  </div>
+                  {tasks.map(renderTaskCard)}
+                </div>
+              );
+            })}
           </div>
 
           {/* Pagination — 20 per page; only for the flat (ungrouped) list */}

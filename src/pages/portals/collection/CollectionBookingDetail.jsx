@@ -5,6 +5,8 @@ import bookingStatusApi from '../../../api/bookingStatusApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import { getRoleCode } from '../../../utils/permissions';
+import { ROLE_CODES } from '../../../utils/constants';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
   BanknotesIcon, UserIcon, ClockIcon,
@@ -17,6 +19,13 @@ import './CollectionWorkspace.css';
 
 /* ── tiny helpers ── */
 const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+// Full rupee value (no Lakh/Crore shortening) — used inside the edit popup where
+// the actual figures must be visible.
+const fmtFull = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '₹0';
+  return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+};
 const InfoRow = ({label,value,mono,color}) => (
   <div className="bkd-info-item">
     <div className="bkd-info-label">{label}</div>
@@ -391,7 +400,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     const area = parseFloat(devCostForm.plot_area || 0);
     const perSqft = parseFloat(devCostForm.development_cost_per_sqft || 0);
     if (guideline <= 0 || area <= 0 || perSqft <= 0) {
-      toast.error('Enter valid Plot Amount, Plot Area, and Development cost/sqft');
+      toast.error('Enter valid Guideline Value, Plot Area, and Development cost/sqft');
       return;
     }
     const cleanSplit = (split) => Object.fromEntries(
@@ -503,10 +512,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
 
+  const isCollectionManager = getRoleCode(user) === ROLE_CODES.COLLECTION;
   const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
   const devCostPlotAreaValue = toAmount(devCostForm.plot_area || booking.plot_area);
   const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
-  const previewPlotValue = devCostGuidelineValue * devCostPlotAreaValue;
+  // Plot Value = ROUNDUP(rate × sqft, -2) — round up to the nearest 100.
+  const previewPlotValue = Math.ceil((devCostGuidelineValue * devCostPlotAreaValue) / 100) * 100;
   const previewStampValue = Math.ceil((previewPlotValue * 0.07) / 100) * 100;
   const previewRegistrationValue = Math.ceil((previewPlotValue * 0.02) / 100) * 100;
   const previewDevelopmentValue = Math.round((devCostPlotAreaValue * devCostPerSqftValue) * 1.18 * 100) / 100;
@@ -1523,28 +1534,33 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="bkd-dev-summary-grid">
                     <div className="bkd-dev-summary-item">
                       <div className="bkd-dev-summary-label">Plot Value</div>
-                      <div className="bkd-dev-summary-value">{formatCurrency(previewPlotValue || plotValue)}</div>
+                      <div className="bkd-dev-summary-value">{fmtFull(previewPlotValue || plotValue)}</div>
                     </div>
                     <div className="bkd-dev-summary-item">
                       <div className="bkd-dev-summary-label">Stamp Duty (7%)</div>
-                      <div className="bkd-dev-summary-value">{formatCurrency(previewStampValue || stampValue)}</div>
+                      <div className="bkd-dev-summary-value">{fmtFull(previewStampValue || stampValue)}</div>
                     </div>
                     <div className="bkd-dev-summary-item">
                       <div className="bkd-dev-summary-label">Registration (2%)</div>
-                      <div className="bkd-dev-summary-value">{formatCurrency(previewRegistrationValue || registrationValue)}</div>
+                      <div className="bkd-dev-summary-value">{fmtFull(previewRegistrationValue || registrationValue)}</div>
                     </div>
                     <div className="bkd-dev-summary-item bkd-dev-summary-item-editable">
                       <div className="bkd-dev-summary-label">Development</div>
-                      <div className="bkd-dev-summary-value">{formatCurrency(previewDevelopmentValue || developmentValue)}</div>
+                      <div className="bkd-dev-summary-value">{fmtFull(previewDevelopmentValue || developmentValue)}</div>
                     </div>
                   </div>
 
                   <div className="bkd-form-row">
                     <div className="bkd-form-group">
-                      <label className="bkd-form-label">Plot Amount (Guideline Value) *</label>
+                      <label className="bkd-form-label">Guideline Value (per sq.ft) *</label>
                       <input type="number" className="bkd-form-control" placeholder="e.g. 5000"
                         value={devCostForm.guideline_value}
+                        disabled={isCollectionManager}
+                        title={isCollectionManager ? 'Collection managers cannot change the guideline value' : undefined}
                         onChange={e => setDevCostForm(p => ({ ...p, guideline_value: e.target.value }))} />
+                      {isCollectionManager && (
+                        <div className="bkd-dev-hint" style={{ marginTop: 4 }}>Guideline value is locked for your role.</div>
+                      )}
                     </div>
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Plot Area (sqft) *</label>
@@ -1566,7 +1582,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="qa-drawer-section" style={{ padding: '14px 0 8px' }}>
                     Registration Expenses (Detailed Split)
                     <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                      Subtotal: {formatCurrency(sumSplit(devCostForm.registration_split))}
+                      Subtotal: {fmtFull(sumSplit(devCostForm.registration_split))}
                     </span>
                   </div>
                   <div className="bkd-form-row" style={{ flexWrap: 'wrap' }}>
@@ -1588,7 +1604,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     </label>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
                       (To be selected if applicable)
-                      {devCostForm.modt_enabled && ` · Subtotal: ${formatCurrency(sumSplit(devCostForm.modt_split))}`}
+                      {devCostForm.modt_enabled && ` · Subtotal: ${fmtFull(sumSplit(devCostForm.modt_split))}`}
                     </span>
                   </div>
                   {devCostForm.modt_enabled && (
@@ -1607,22 +1623,26 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="bkd-dev-summary-grid" style={{ marginTop: 14 }}>
                     <div className="bkd-dev-summary-item" style={{ gridColumn: '1 / span 1' }}>
                       <div className="bkd-dev-summary-label">Reg. Split Subtotal</div>
-                      <div className="bkd-dev-summary-value">{formatCurrency(previewRegSplitTotal)}</div>
+                      <div className="bkd-dev-summary-value">{fmtFull(previewRegSplitTotal)}</div>
                     </div>
                     <div className="bkd-dev-summary-item" style={{ gridColumn: '2 / span 1' }}>
                       <div className="bkd-dev-summary-label">MODT Subtotal</div>
-                      <div className="bkd-dev-summary-value">{formatCurrency(previewModtSplitTotal)}</div>
+                      <div className="bkd-dev-summary-value">{fmtFull(previewModtSplitTotal)}</div>
                     </div>
                     <div className="bkd-dev-summary-item bkd-dev-summary-item-editable" style={{ gridColumn: '1 / -1' }}>
                       <div className="bkd-dev-summary-label">Live Grand Total</div>
-                      <div className="bkd-dev-summary-value" style={{ fontSize: 22, fontWeight: 800 }}>{formatCurrency(previewGrandTotal || totalValue)}</div>
+                      <div className="bkd-dev-summary-value" style={{ fontSize: 22, fontWeight: 800 }}>{fmtFull(previewGrandTotal || totalValue)}</div>
                     </div>
                   </div>
                   {renderActivityHistory()}
                 </div>
-                <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button className="qa-drawer-save-btn" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving}>
-                    {devCostSaving ? 'Updating...' : 'Update Cost Breakdown'}
+                <div className="qa-drawer-save-row" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, borderTop: '1px solid var(--border-primary)' }}>
+                  <button type="button" className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={closeActionModal} disabled={devCostSaving}>
+                    Close
+                  </button>
+                  <button type="button" className="bkd-btn bkd-btn-sm" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving}
+                    style={{ background: '#635BFF', borderColor: '#635BFF', color: '#fff' }}>
+                    {devCostSaving ? 'Saving…' : 'Save'}
                   </button>
                 </div>
               </div>
