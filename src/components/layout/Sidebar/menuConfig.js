@@ -15,7 +15,6 @@ import {
   BuildingStorefrontIcon,
   Cog6ToothIcon,
   UserGroupIcon,
-  AdjustmentsHorizontalIcon,
   Squares2X2Icon,
   BanknotesIcon,
   XCircleIcon,
@@ -24,6 +23,7 @@ import {
   UserPlusIcon,
   TrophyIcon,
   PhoneArrowDownLeftIcon,
+  PaperAirplaneIcon,
 } from '@heroicons/react/24/outline';
 
 /**
@@ -37,8 +37,12 @@ import {
 export const getSidebarMenuForRole = (roleCode) => {
   switch (roleCode) {
     case 'SA':
-    case 'ADM':
       return adminSidebar;
+    case 'ADM':
+      // Booking Approvals is Super Admin only — hide that child from plain Admins.
+      return adminSidebar.map((item) => (item.children
+        ? { ...item, children: item.children.filter((c) => c.path !== '/super-admin/booking-approvals') }
+        : item));
     case 'TC':
       return telecallerSidebar;
     case 'SM':
@@ -55,46 +59,67 @@ export const getSidebarMenuForRole = (roleCode) => {
 };
 
 // ── Admin / Super Admin ──
+// Grouped into WORKSPACE / INVENTORY / ADMINISTRATION sections. `{ section }`
+// items render as non-clickable uppercase group labels (see Sidebar.jsx).
 const adminSidebar = [
-  // Top-level Dashboard
-  { label: 'DASHBOARD', path: '/dashboard', icon: Squares2X2Icon },
-
-  // Lead Management – full CRM lead overview for admin
-  { label: 'Lead Management', path: '/super-admin/lead-management', icon: ClipboardDocumentListIcon },
-
-  // Reports – user activity + inventory cost reports
-  { label: 'Reports', path: '/super-admin/reports', icon: ChartBarIcon },
-   { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
-  // Inventory group
+  { section: 'WORKSPACE' },
+  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+  { label: 'Leads', path: '/super-admin/lead-management', icon: UsersIcon },
+  { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
   {
-    label: 'PROPERTIES',
+    label: 'Bookings',
+    icon: CreditCardIcon,
+    children: [
+      { label: 'Booking Approvals', path: '/super-admin/booking-approvals' },
+      { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
+      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
+    ],
+  },
+  {
+    label: 'Finance',
+    icon: BanknotesIcon,
+    children: [
+      { label: 'Payment Types', path: '/super-admin/payment-types' },
+      { label: 'Payment Plans', path: '/super-admin/payment-plans' },
+      { label: 'Payment Modes', path: '/super-admin/payment-modes' },
+      { label: 'Banks', path: '/super-admin/banks' },
+    ],
+  },
+  { label: 'Reports', path: '/super-admin/reports', icon: ChartBarIcon },
+
+  { section: 'INVENTORY' },
+  {
+    label: 'Projects',
     icon: BuildingStorefrontIcon,
     children: [
       { label: 'Inventory Overview', path: '/super-admin/inventory' },
-      { label: 'Locations', path: '/super-admin/locations' },
       { label: 'Projects', path: '/super-admin/projects' },
       { label: 'Project Types', path: '/super-admin/project-types' },
-      { label: 'Manage Units', path: '/super-admin/units' }
     ],
   },
+  { label: 'Units & Plots', path: '/super-admin/units', icon: HomeModernIcon },
+  { label: 'Locations', path: '/super-admin/locations', icon: MapPinIcon },
 
-  // Task Management — single page (list); dashboard lives on the main Dashboard
- 
-
-  // User Management group
+  { section: 'ADMINISTRATION' },
   {
-    label: 'User Management',
+    label: 'Users & Access',
     icon: UserGroupIcon,
     children: [
       { label: 'Users', path: '/super-admin/users' },
       { label: 'User Types', path: '/super-admin/user-types' },
     ],
   },
-
-  // Lead Configuration group
+  {
+    label: 'Workflows',
+    icon: ArrowsRightLeftIcon,
+    children: [
+      { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
+      { label: 'Score Master', path: '/super-admin/score-master' },
+    ],
+  },
   {
     label: 'Configuration',
-    icon: AdjustmentsHorizontalIcon,
+    icon: Cog6ToothIcon,
     children: [
       { label: 'Departments', path: '/super-admin/departments' },
       { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
@@ -107,22 +132,6 @@ const adminSidebar = [
       { label: 'Motivations', path: '/super-admin/motivations' },
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
       { label: 'Customer Types', path: '/super-admin/customer-types' },
-    ],
-  },
-
-  // System & Workflow group
-  {
-    label: 'System & Workflow',
-    icon: Cog6ToothIcon,
-    children: [
-      { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
-      { label: 'Score Master', path: '/super-admin/score-master' },
-      { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
-      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
-      { label: 'Payment Types', path: '/super-admin/payment-types' },
-      { label: 'Payment Plans', path: '/super-admin/payment-plans' },
-      { label: 'Payment Modes', path: '/super-admin/payment-modes' },
-      { label: 'Banks', path: '/super-admin/banks' },
     ],
   },
 ];
@@ -222,6 +231,7 @@ export const salesHeadMenu = [
 export const collectionMenu = [
   { group: 'Overview' },
   { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
+  { label: 'New Bookings', key: 'open-bookings', icon: PaperAirplaneIcon, badgeColor: 'blue' },
   { label: 'My Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { label: 'Payment Log', key: 'payments', icon: BanknotesIcon, badge: null },
   { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },

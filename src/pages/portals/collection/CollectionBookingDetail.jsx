@@ -276,6 +276,23 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const closeActionModal = () => setActionMode(null);
 
+  // Send a draft "Booking Open" booking to the Super Admin for approval.
+  const [sendingApproval, setSendingApproval] = useState(false);
+  const handleSendForApproval = async () => {
+    if (!window.confirm('Send this booking for Super Admin approval? The unit will be reserved.')) return;
+    setSendingApproval(true);
+    try {
+      await bookingApi.sendForApproval(bookingId);
+      toast.success('Booking sent for approval');
+      loadBooking();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to send for approval'));
+    } finally {
+      setSendingApproval(false);
+    }
+  };
+
   const handleAddPayment = async () => {
     if (!payForm.amount || parseFloat(payForm.amount) <= 0) { toast.error('Enter valid amount'); return; }
     if (!payForm.payment_category) {
@@ -466,7 +483,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const payments = booking.payments || [];
   const customer = booking.customer || {};
-  const buyerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || booking.customer_name || booking.buyer_name || '—';
+  // The lead's name (customer first/last mirror the originating lead).
+  const leadFullName = (booking.lead
+    ? `${booking.lead.first_name || ''} ${booking.lead.last_name || ''}`.trim()
+    : `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) || '—';
+  // The actual buyer comes from the dedicated buyer_name field — NOT the lead name.
+  const buyerName = booking.buyer_name || customer.buyer_name || booking.customer_name || leadFullName || '—';
   const customerPhoneRaw = customer.phone || customer.phone_number || customer.mobile || booking.customer_phone || '';
   const customerPhone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(customerPhoneRaw || '')) ? '—' : (customerPhoneRaw || '—');
   const toAmount = (v) => {
@@ -623,13 +645,36 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <BanknotesIcon style={{width:14,height:14}}/> Process Refund ({formatCurrency(totalPaid)} pending)
             </button>
           )}
+          {/* Booking Open → send to Super Admin for approval (unit reserved) */}
+          {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_OPEN' && (
+            <button className="bkd-btn bkd-btn-primary" disabled={sendingApproval} onClick={handleSendForApproval}>
+              <CheckCircleIcon style={{width:14,height:14}}/> {sendingApproval ? 'Sending…' : 'Send for Approval'}
+            </button>
+          )}
+          {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_PENDING' && (
+            <span style={{fontSize:12, color:'#B45309', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting Super Admin Approval</span>
+          )}
           <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
           <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
           {/* <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('devCost')}><BanknotesIcon style={{width:14,height:14}}/> Development Cost</button> */}
-          <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
+          {/* Payments are blocked until the booking is sent for approval (Booking Pending+) */}
+          {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
+            <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
+          )}
           <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
         </div>
       </div>
+
+      {/* Rejection banner — shows the Super Admin's reject remarks */}
+      {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_REJECTED' && (
+        <div className="bkd-alert-banner" style={{ background: '#FEF2F2', borderColor: '#FECACA' }}>
+          <XCircleIcon style={{ width: 18, height: 18, flexShrink: 0, color: '#DC2626' }} />
+          <div>
+            <span className="bkd-alert-title" style={{ color: '#991B1B' }}>Booking Rejected by Super Admin</span>
+            <span className="bkd-alert-text">{booking.custom_fields?.reject_remarks || 'No remarks provided.'}{totalPaid > 0 ? ` — refund of ${formatCurrency(totalPaid)} pending.` : ''}</span>
+          </div>
+        </div>
+      )}
 
       {/* Overdue Alert Banner */}
       {isOverdue && balanceDue > 0 && (
@@ -650,6 +695,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <div className="bkd-card-body">
                 <div className="bkd-info-grid">
                   <InfoRow label="Buyer Name" value={buyerName}/>
+                  <InfoRow label="Lead Name" value={leadFullName}/>
                   <InfoRow label="Customer Phone" value={customerPhone} mono/>
                   <InfoRow label="PAN" value={customer.pan_number} mono/>
                   <InfoRow label="Aadhaar" value={customer.aadhar_number} mono/>
@@ -920,7 +966,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           <div className="bkd-card-header">
             <div><div className="bkd-card-title"><CreditCardIcon style={{width:15,height:15}}/> Payment History</div>
               <div className="bkd-card-subtitle">All payments recorded for this booking</div></div>
-            <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
+            {/* Payments blocked until the booking is sent for approval (Pending+) */}
+            {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
+              <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
+            )}
           </div>
           <div>{payments.length === 0 ? (
             <div style={{padding:30,textAlign:'center',color:'var(--text-muted,#9ca3af)',fontSize:13}}>No payments recorded yet</div>

@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
 import { CollectionDashboard } from './CollectionDashboard';
 import { CollectionBookings } from './CollectionBookings';
+import { CollectionOpenBookings } from './CollectionOpenBookings';
 import { CollectionPayments } from './CollectionPayments';
 import CollectionBookingDetail from './CollectionBookingDetail';
 import CollectionDemandSchedule from './CollectionDemandSchedule';
@@ -44,6 +45,12 @@ const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelect
         <CollectionDashboard
           user={user}
           onNavigate={setActiveScreen}
+          onSelectBooking={setSelectedBookingId}
+        />
+      )}
+      {activeScreen === 'open-bookings' && (
+        <CollectionOpenBookings
+          user={user}
           onSelectBooking={setSelectedBookingId}
         />
       )}

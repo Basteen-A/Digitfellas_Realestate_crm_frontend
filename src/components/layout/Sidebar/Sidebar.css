@@ -27,8 +27,9 @@
 .app-sidebar__brand {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 18px 16px;
+  padding: 16px;
   border-bottom: 1px solid var(--sidebar-separator, var(--border-primary));
   background: var(--sidebar-brand-bg, transparent);
   position: relative;
@@ -44,27 +45,25 @@
   background: linear-gradient(90deg, transparent, var(--accent-blue-bg), transparent);
 }
 
+/* Logo area mirrors the portal sidebar: full wordmark when expanded, square
+   favicon mark on the collapsed rail. Transparent box, image scales to fit. */
 .app-sidebar__logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 100%;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple, #8B5CF6) 100%);
-  color: #fff;
-  font-weight: 800;
-  font-size: 12px;
-  box-shadow: 0 2px 8px rgba(98, 90, 250, 0.3);
 }
 
-.app-sidebar__logo img {
+.sidebar-logo {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
+.sidebar-logo--full { display: block; }
+.sidebar-logo--mark { display: none; }
 
 .app-sidebar__name {
   font-weight: 700;
@@ -351,3 +350,61 @@
   width: 14px;
   height: 14px;
 }
+
+/* ============================================================ */
+/* Portal-style structure: section labels, logo swap, collapse   */
+/* rail with hover-to-expand. Matches the tc/sm/sh/col sidebar.   */
+/* ============================================================ */
+
+.app-sidebar__role-text { white-space: nowrap; }
+
+/* Section dividers (WORKSPACE / INVENTORY / ADMINISTRATION) */
+.app-sidebar__section-label {
+  padding: 16px 14px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.app-sidebar__nav > .app-sidebar__section-label:first-child { padding-top: 8px; }
+
+.app-sidebar__link-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Sections replace the old per-group separators. */
+.app-sidebar__group + .app-sidebar__group { margin-top: 2px; padding-top: 0; border-top: none; }
+
+/* ── Collapsed rail ── */
+.app-sidebar--collapsed { width: 64px; }
+.app-sidebar--collapsed .app-sidebar__brand { justify-content: center; padding: 16px 8px; }
+.app-sidebar--collapsed .app-sidebar__brand::after { display: none; }
+.app-sidebar--collapsed .app-sidebar__logo { width: 40px; height: 40px; }
+.app-sidebar--collapsed .sidebar-logo--full { display: none; }
+.app-sidebar--collapsed .sidebar-logo--mark { display: block; }
+.app-sidebar--collapsed .app-sidebar__name,
+.app-sidebar--collapsed .app-sidebar__role-text,
+.app-sidebar--collapsed .app-sidebar__link-label,
+.app-sidebar--collapsed .app-sidebar__chevron,
+.app-sidebar--collapsed .app-sidebar__section-label { display: none; }
+.app-sidebar--collapsed .app-sidebar__role-badge { justify-content: center; padding: 8px 0; }
+.app-sidebar--collapsed .app-sidebar__link,
+.app-sidebar--collapsed .app-sidebar__group-button { justify-content: center; padding: 10px 0; }
+.app-sidebar--collapsed .app-sidebar__subnav { display: none; }
+
+/* ── Hover-to-expand the collapsed rail (portal behaviour) ── */
+.app-sidebar--collapsed:hover { width: 260px; box-shadow: 4px 0 24px rgba(0, 0, 0, 0.10); z-index: 110; }
+.app-sidebar--collapsed:hover .app-sidebar__brand { justify-content: center; padding: 16px; }
+.app-sidebar--collapsed:hover .app-sidebar__logo { width: 100%; height: 44px; }
+.app-sidebar--collapsed:hover .sidebar-logo--full { display: block; }
+.app-sidebar--collapsed:hover .sidebar-logo--mark { display: none; }
+.app-sidebar--collapsed:hover .app-sidebar__name,
+.app-sidebar--collapsed:hover .app-sidebar__role-text,
+.app-sidebar--collapsed:hover .app-sidebar__link-label,
+.app-sidebar--collapsed:hover .app-sidebar__chevron,
+.app-sidebar--collapsed:hover .app-sidebar__section-label { display: block; }
+.app-sidebar--collapsed:hover .app-sidebar__role-badge { justify-content: flex-start; padding: 7px 16px; }
+.app-sidebar--collapsed:hover .app-sidebar__link,
+.app-sidebar--collapsed:hover .app-sidebar__group-button { justify-content: flex-start; padding: 9px 12px; }
+.app-sidebar--collapsed:hover .app-sidebar__link--child { padding: 7px 12px 7px 38px; }
+.app-sidebar--collapsed:hover .app-sidebar__subnav { display: block; }

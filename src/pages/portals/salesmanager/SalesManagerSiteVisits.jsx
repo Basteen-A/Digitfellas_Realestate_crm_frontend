@@ -144,7 +144,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   });
   const [projects, setProjects] = useState([]);
   const [leads, setLeads] = useState([]);
-  const [salesHeads, setSalesHeads] = useState([]);
   const [customerTypeOptions, setCustomerTypeOptions] = useState([]);
   const [motivationOptions, setMotivationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
@@ -161,7 +160,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const phoneSearchTimer = useRef(null);
 
   const siteVisitActionOptions = getActionsForRole(workflowConfig?.actions || {}, 'SM').filter((action) => (
-    ['SM_SCHEDULE_REVISIT', 'SM_FOLLOW_UP', 'SM_NEGOTIATION_HOT', 'SM_LOST', 'SM_SITE_VISIT'].includes(action.code)
+    action.code === 'SM_SITE_VISIT'
   ));
   const selectedAction = siteVisitActionOptions.find((action) => action.code === createForm.action_code) || null;
   const isSiteVisitAction = selectedAction?.code === 'SM_SITE_VISIT';
@@ -175,7 +174,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     if (!createForm.motivation_type) return false;
     if (!createForm.customer_requirement?.trim()) return false;
     if (!createForm.time_spent) return false;
-    if (!createForm.sales_head_id) return false;
     if (!isVisitDetailsComplete(createForm)) return false;
 
     if (svFieldsRequired) {
@@ -305,7 +303,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   const loadCreateOptions = async () => {
     try {
-      const [projResp, leadsResp, incomingResp, ctResp, motResp, shResp, wfResp] = await Promise.all([
+      const [projResp, leadsResp, incomingResp, ctResp, motResp, wfResp] = await Promise.all([
         projectApi.getDropdown(),
         // allSm: include every sales manager's leads so an SM can record a site
         // visit against any SM lead, not only their own / incoming handoffs.
@@ -321,7 +319,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         }),
         customerTypeApi.getDropdown(),
         motivationApi.getDropdown(),
-        leadWorkflowApi.getAssignableUsers('SH'),
         leadWorkflowApi.getWorkflowConfig(),
       ]);
       setProjects(projResp.data || []);
@@ -342,7 +339,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
           return acc;
         }, []);
       setLeads(mergedLeads);
-      setSalesHeads(shResp.data || []);
       setWorkflowConfig(wfResp?.data || null);
       setCustomerTypeOptions(ctResp.data || []);
       setMotivationOptions(motResp.data || []);
@@ -356,6 +352,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     setPhoneSearch('');
     setPhoneResults([]);
     setSelectedLeadInfo(null);
+    setCreateForm((p) => ({
+      ...p,
+      action_code: 'SM_SITE_VISIT',
+    }));
     await loadCreateOptions();
   };
 
@@ -461,7 +461,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
     if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
     if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
-    if (!createForm.sales_head_id) { toast.error('Sales Head is required'); return; }
     if (!isVisitDetailsComplete(createForm)) { toast.error('All site visit detail fields are required'); return; }
     if (selectedAction.needsFollowUp && !createForm.next_follow_up_at) {
       toast.error('Next follow up date is required for selected action');
@@ -484,8 +483,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     try {
       await leadWorkflowApi.transitionLead(createForm.lead_id, createForm.action_code, {
         note: createForm.remarks || `Action updated via ${selectedAction.label}`,
-        assignToUserId: selectedAction.needsAssignee ? (createForm.sales_head_id || undefined) : undefined,
-        salesHeadUserId: createForm.sales_head_id || undefined,
         // Always send site-visit data if filled, regardless of action
         svDate: createForm.scheduled_date ? new Date(createForm.scheduled_date).toISOString() : undefined,
         svProjectId: createForm.project_id || undefined,
@@ -507,7 +504,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         scheduled_date: new Date().toISOString().split('T')[0],
         scheduled_time_slot: '', attended_by: '', remarks: '',
         customer_requirement: '', customer_type_id: '', motivation_type: '', time_spent: '', sales_head_id: '',
-        action_code: '',
+        action_code: 'SM_SITE_VISIT',
         next_follow_up_at: '', closure_reason_id: '', reason_note: '', call_status: '',
         ...EMPTY_VISIT_DETAILS,
       });
@@ -929,17 +926,6 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                           <option value="">Select project...</option>
                           {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
                         </select>
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Sales Head *</label>
-                        <select className="qa-drawer-field-select" style={{ width: '100%' }} value={createForm.sales_head_id} onChange={(e) => setCreateForm((p) => ({ ...p, sales_head_id: e.target.value }))} required>
-                          <option value="">Select Sales Head...</option>
-                          {salesHeads.map((sh) => <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Time Slot</label>
-                        <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={createForm.scheduled_time_slot} onChange={(e) => setCreateForm((p) => ({ ...p, scheduled_time_slot: e.target.value }))} placeholder="e.g. 10 AM - 12 PM" />
                       </div>
                       <div>
                         <label className="qa-drawer-field-label">Time Spent (mins) *</label>

@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import {
+  PlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon,
+  ArrowsRightLeftIcon, XMarkIcon, CircleStackIcon,
+} from '@heroicons/react/24/outline';
 import './MasterCrudPage.css';
 
 const getValueByPath = (row, path) => {
@@ -419,22 +423,26 @@ const MasterCrudPage = ({ config }) => {
                 }
               }}
             >
-              Seed Defaults
+              <CircleStackIcon className="master-btn-icon" /> Seed Defaults
             </button>
           )}
           <button type="button" className="master-page__primary" onClick={openCreate}>
-            + Add
+            <PlusIcon className="master-btn-icon" /> Add New
           </button>
         </div>
       </header>
 
       <div className="master-page__toolbar">
-        <input
-          className="master-page__search"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder={`Search ${config.title}`}
-        />
+        <div className="master-page__search-wrap">
+          <MagnifyingGlassIcon className="master-page__search-icon" />
+          <input
+            className="master-page__search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setQuery((prev) => ({ ...prev, page: 1, search: searchInput.trim() })); }}
+            placeholder={`Search ${config.title}…`}
+          />
+        </div>
         <button
           type="button"
           className="master-page__secondary"
@@ -490,14 +498,14 @@ const MasterCrudPage = ({ config }) => {
                   })}
                   <td>
                     <div className="master-table__actions">
-                      <button type="button" onClick={() => openEdit(row)}>
-                        Edit
+                      <button type="button" title="Edit" aria-label="Edit" onClick={() => openEdit(row)}>
+                        <PencilSquareIcon className="master-action-icon" />
                       </button>
-                      <button type="button" onClick={() => handleToggleStatus(row)}>
-                        Toggle
+                      <button type="button" title="Toggle status" aria-label="Toggle status" onClick={() => handleToggleStatus(row)}>
+                        <ArrowsRightLeftIcon className="master-action-icon" />
                       </button>
-                      <button type="button" className="danger" onClick={() => handleDelete(row)}>
-                        Delete
+                      <button type="button" className="danger" title="Delete" aria-label="Delete" onClick={() => handleDelete(row)}>
+                        <TrashIcon className="master-action-icon" />
                       </button>
                     </div>
                   </td>
@@ -536,8 +544,8 @@ const MasterCrudPage = ({ config }) => {
           <div className="master-modal__panel">
             <header className="master-modal__header">
               <h2>{modal.mode === 'create' ? `Create ${config.title}` : `Edit ${config.title}`}</h2>
-              <button type="button" onClick={closeModal}>
-                ✕
+              <button type="button" onClick={closeModal} aria-label="Close">
+                <XMarkIcon className="master-action-icon" />
               </button>
             </header>
 

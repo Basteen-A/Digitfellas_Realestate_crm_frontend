@@ -1,0 +1,149 @@
+/* ============================================================ */
+/* Booking Approvals — Super Admin review screen                 */
+/* ============================================================ */
+
+.ba-card { overflow-x: auto; }
+
+.ba-table-desktop { display: block; }
+.ba-mobile-list { display: none; }
+.ba-mobile-empty {
+  padding: 18px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ba-row:hover { background: var(--bg-table-row-hover); }
+.ba-row.is-open { background: var(--accent-blue-bg, rgba(37,99,235,0.06)); }
+
+/* Clickable booking number — toggles the detail panel (row is not clickable). */
+.ba-booking-link {
+  border: none; background: none; padding: 0; font: inherit; cursor: pointer;
+  font-weight: 700; color: var(--accent-blue, #2563eb); text-decoration: none;
+}
+.ba-booking-link:hover { text-decoration: underline; }
+
+.ba-chevron { width: 15px; height: 15px; color: var(--text-muted); transition: transform .15s; flex-shrink: 0; }
+.ba-chevron.open { transform: rotate(90deg); }
+
+.ba-muted { font-size: 12px; color: var(--text-muted); }
+
+/* ── Expanded detail panel ── */
+.ba-detail { padding: 18px 20px 22px; background: var(--bg-secondary, #f8fafc); border-top: 1px solid var(--border-primary); }
+.ba-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 20px; }
+@media (max-width: 900px) { .ba-detail-grid { grid-template-columns: 1fr; } }
+
+.ba-block { background: var(--bg-card, #fff); border: 1px solid var(--border-primary); border-radius: 12px; padding: 14px 16px; }
+.ba-block h4 { margin: 0 0 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-muted); }
+.ba-block h4 + h4 { margin-top: 16px; }
+
+.ba-info-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border-secondary, #eef2f7); font-size: 13px; }
+.ba-info-row:last-child { border-bottom: none; }
+.ba-info-row .k { color: var(--text-muted); white-space: nowrap; }
+.ba-info-row .v { color: var(--text-primary); font-weight: 600; text-align: right; word-break: break-word; }
+
+/* ── Payment Summary card ── */
+.ba-summary-head { margin-bottom: 12px; }
+.ba-summary-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: var(--text-primary); }
+.ba-summary-head p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+
+.ba-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 560px) { .ba-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+.ba-stat { border: 1px solid var(--border-primary); border-radius: 10px; padding: 10px 12px; background: var(--bg-card, #fff); }
+.ba-stat .label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+.ba-stat .value { font-size: 17px; font-weight: 800; margin-top: 4px; color: var(--text-primary); }
+.ba-stat.total .value { color: #4338ca; }
+.ba-stat.collected .value { color: #16a34a; }
+.ba-stat.balance .value { color: #dc2626; }
+
+.ba-breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+.ba-breakdown .bd { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-primary); border-radius: 8px; background: var(--bg-card, #fff); font-size: 12.5px; }
+.ba-breakdown .bd .bd-k { color: var(--text-secondary); }
+.ba-breakdown .bd .bd-v { font-weight: 700; color: var(--text-primary); }
+
+.ba-progress-wrap { margin-top: 6px; }
+.ba-progress-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.ba-progress-top strong { color: var(--text-primary); }
+.ba-progress-bar { height: 8px; border-radius: 6px; background: #e5e7eb; overflow: hidden; }
+.ba-progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #4338ca); transition: width .3s; }
+
+.ba-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+.ba-mobile-card {
+  display: none;
+  margin: 0 0 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--bg-card, #fff);
+  overflow: hidden;
+}
+
+.ba-mobile-card__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 14px 12px;
+}
+
+.ba-mobile-card__toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary, #f8fafc);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ba-mobile-card__main {
+  min-width: 0;
+}
+
+.ba-mobile-card__booking {
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.ba-mobile-card__customer {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.ba-mobile-card__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.ba-mobile-card__actions .ba-btn {
+  flex: 1 1 120px;
+  justify-content: center;
+}
+
+.ba-btn { display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.ba-btn:disabled { opacity: .6; cursor: default; }
+.ba-btn--approve { background: #16a34a; color: #fff; }
+.ba-btn--reject { background: #dc2626; color: #fff; }
+.ba-btn-icon { width: 15px; height: 15px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ba-table-desktop { display: none; }
+  .ba-mobile-list { display: block; }
+  .ba-mobile-card { display: block; }
+  .ba-card { overflow: visible; }
+  .ba-detail { padding: 14px; }
+  .ba-detail-grid { gap: 14px; }
+  .ba-actions { flex-direction: column-reverse; }
+  .ba-actions .ba-btn { width: 100%; justify-content: center; }
+  .ba-mobile-card__head { padding: 12px; }
+}

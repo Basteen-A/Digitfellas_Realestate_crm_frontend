@@ -409,3 +409,57 @@
   transition: all 0.2s;
   font-family: inherit;
 }
+
+/* ============================================================ */
+/* Professional polish: icon buttons, search-with-icon, etc.     */
+/* ============================================================ */
+
+/* Buttons carry leading hero icons now. */
+.master-page__primary,
+.master-page__secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.master-btn-icon { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* Search input with a leading magnifier. */
+.master-page__search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 340px;
+  min-width: 200px;
+}
+.master-page__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.master-page__search-wrap .master-page__search {
+  max-width: none;
+  width: 100%;
+  padding-left: 36px;
+}
+
+/* Compact, square icon action buttons in the table. */
+.master-table__actions button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.master-action-icon { width: 16px; height: 16px; }
+
+/* Modal close button sizing for the icon. */
+.master-modal__header button { width: 32px; height: 32px; }
+
+/* Header gets a touch more breathing room. */
+.master-page__header { padding-bottom: 4px; border-bottom: 1px solid var(--border-secondary); margin-bottom: 4px; }

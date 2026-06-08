@@ -103,37 +103,41 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             <XMarkIcon className="sidebar-icon" />
           </button>
         )}
-      {/* Brand */}
+      {/* Brand — same as the portal sidebar: full logo when expanded, square
+          mark on the collapsed rail. No extra text. */}
       <div className="app-sidebar__brand">
         <div className="app-sidebar__logo">
-          {isCollapsed ? <img src={logoFavico} alt="Logo" /> : <img src={logoFull} alt="Logo" />}
+          <img src={logoFull} alt="Logo" className="sidebar-logo sidebar-logo--full" />
+          <img src={logoFavico} alt="Logo" className="sidebar-logo sidebar-logo--mark" />
         </div>
-        {!isCollapsed && <span className="app-sidebar__name">RealEstate CRM</span>}
       </div>
 
       {/* Role Badge */}
-      {!isCollapsed && (
-        <div className="app-sidebar__role-badge">
-          <span className="app-sidebar__role-dot" />
-          <span>{roleLabel}</span>
-        </div>
-      )}
+      <div className="app-sidebar__role-badge">
+        <span className="app-sidebar__role-dot" />
+        <span className="app-sidebar__role-text">{roleLabel}</span>
+      </div>
 
-      {/* Navigation */}
+      {/* Navigation. Labels/chevrons always render; CSS hides them on the
+          collapsed rail and reveals them again on hover (portal-style). */}
       <nav className="app-sidebar__nav">
         {menu.map((item) => {
+          // Section divider label (WORKSPACE / INVENTORY / ADMINISTRATION)
+          if (item.section) {
+            return <div key={`sec-${item.section}`} className="app-sidebar__section-label">{item.section}</div>;
+          }
           if (item.children?.length) {
             const isOpen = !!openGroups[item.label];
             const hasActiveChild = item.children.some((child) => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
 
             return (
               <div key={item.label} className={`app-sidebar__group ${hasActiveChild ? 'has-active-child' : ''}`}>
-                <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)}>
+                <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)} title={item.label}>
                   <MenuIcon icon={item.icon} />
-                  {!isCollapsed && <span>{item.label}</span>}
-                  {!isCollapsed && <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>}
+                  <span className="app-sidebar__link-label">{item.label}</span>
+                  <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>
                 </button>
-                {!isCollapsed && isOpen && (
+                {isOpen && (
                   <div className="app-sidebar__subnav">
                     {item.children.map((child) => (
                       <NavLink
@@ -144,7 +148,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                           `app-sidebar__link app-sidebar__link--child ${isActive ? 'is-active' : ''}`
                         }
                       >
-                        {child.label}
+                        <span className="app-sidebar__link-label">{child.label}</span>
                       </NavLink>
                     ))}
                   </div>
@@ -159,9 +163,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
               to={item.path}
               onClick={handleLinkClick}
               className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
+              title={item.label}
             >
               <MenuIcon icon={item.icon} />
-              {!isCollapsed && <span>{item.label}</span>}
+              <span className="app-sidebar__link-label">{item.label}</span>
             </NavLink>
           );
         })}

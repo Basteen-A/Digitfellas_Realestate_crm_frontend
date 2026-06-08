@@ -50,6 +50,11 @@ const bookingApi = {
   // Payment form master data
   getPaymentFormMasters: () => api.get('/bookings/payments/form-masters'),
 
+  // Approval gate — Booking Open → Pending → Approved/Rejected
+  sendForApproval: (id) => api.patch(`/bookings/${id}/send-for-approval`),
+  approveBooking: (id) => api.patch(`/bookings/${id}/approve`),
+  rejectBooking: (id, data) => api.patch(`/bookings/${id}/reject`, data),
+
   // Collection workflow — booking status actions
   registerBooking: (id, formData) => api.patch(`/bookings/${id}/register`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

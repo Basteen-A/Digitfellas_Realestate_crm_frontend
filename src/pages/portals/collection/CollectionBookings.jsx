@@ -8,7 +8,7 @@ import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
   EyeIcon, BanknotesIcon, PencilSquareIcon, CheckCircleIcon,
   CreditCardIcon, ShieldCheckIcon, CalendarDaysIcon,
-  ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon,
+  ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
@@ -57,6 +57,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [payStatusPaymentDate, setPayStatusPaymentDate] = useState('');
   const [payStatusRegDate, setPayStatusRegDate] = useState('');
   const [payStatusSaving, setPayStatusSaving] = useState(false);
+  const [expandedMobileBookingId, setExpandedMobileBookingId] = useState(null);
   // Activity history
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -137,6 +138,23 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   }, [activeTab]);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
+
+  // Send a draft "Booking Open" booking to the Super Admin for approval.
+  const [sendingId, setSendingId] = useState(null);
+  const handleSendForApproval = async (booking, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Send booking ${booking.booking_number} for Super Admin approval? The unit will be reserved.`)) return;
+    setSendingId(booking.id);
+    try {
+      await bookingApi.sendForApproval(booking.id);
+      toast.success('Booking sent for approval');
+      loadBookings();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to send for approval'));
+    } finally {
+      setSendingId(null);
+    }
+  };
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
     bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
@@ -153,7 +171,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   }, []);
 
   const filteredBookings = useMemo(() => {
-    let list = bookings;
+    // "Booking Open" drafts live on the New Bookings screen until Collection
+    // sends them for approval — exclude them from the main bookings list.
+    let list = bookings.filter((b) => b.status_code !== 'BOOKING_OPEN');
     // Follow-up tab filtering
     if (activeTab === 'Today Follow-up') {
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -184,6 +204,148 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   }, [bookings]);
 
   const quickStatusOptions = statusOptions.filter((status) => QUICK_STATUS_CODES.includes(status.status_code));
+
+  const renderQuickActions = (booking, mobile = false) => (
+    <div className={`col-qa-actions ${mobile ? 'col-qa-actions--mobile' : ''}`} onClick={mobile ? (e) => e.stopPropagation() : undefined}>
+      <button className="col-qa-btn col-qa-view" title="View Details" onClick={() => onSelectBooking(booking.id)}>
+        <EyeIcon style={{ width: 15, height: 15 }} />
+      </button>
+      {booking.status_code !== 'BOOKING_OPEN' && (
+        <button className="col-qa-btn col-qa-pay" title="Record Payment" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'pay'); }}>
+          <BanknotesIcon style={{ width: 15, height: 15 }} />
+        </button>
+      )}
+      {booking.status_code === 'BOOKING_OPEN' && (
+        <button className="col-qa-btn" title="Send for Approval" style={{ color: '#2563EB' }} disabled={sendingId === booking.id} onClick={(e) => handleSendForApproval(booking, e)}>
+          <CheckCircleIcon style={{ width: 15, height: 15 }} />
+        </button>
+      )}
+      <button className="col-qa-btn col-qa-status" title="Update Payment Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'payStatus'); }}>
+        <CreditCardIcon style={{ width: 15, height: 15 }} />
+      </button>
+      <button className="col-qa-btn col-qa-status" title="Update Booking Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'status'); }}>
+        <PencilSquareIcon style={{ width: 15, height: 15 }} />
+      </button>
+      {['BOOKED', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.status_code) && (
+        <>
+          <button className="col-qa-btn" title="Register" style={{ color: '#22C55E' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'register'); }}>
+            <DocumentTextIcon style={{ width: 15, height: 15 }} />
+          </button>
+          <button className="col-qa-btn" title="EMI" style={{ color: '#F59E0B' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'emi'); }}>
+            <CreditCardIcon style={{ width: 15, height: 15 }} />
+          </button>
+          <button className="col-qa-btn" title="Request Cancel" style={{ color: '#EF4444' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
+            <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
+          </button>
+        </>
+      )}
+      {booking.status_code === 'EMI' && (
+        <button className="col-qa-btn" title="Request Cancel" style={{ color: '#EF4444' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
+          <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
+        </button>
+      )}
+      {booking.status_code === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
+        <button className="col-qa-btn" title="Confirm Cancel" style={{ color: '#DC2626' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'confirmCancel'); }}>
+          <XCircleIcon style={{ width: 15, height: 15 }} />
+        </button>
+      )}
+      {booking.status_code === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && (
+        <span style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600 }}>Awaiting SH</span>
+      )}
+      {booking.is_cancelled && parseFloat(booking.total_paid || 0) > 0 && (
+        <button className="col-qa-btn" title={`Process Refund (${formatCurrency(booking.total_paid || 0)} pending)`} style={{ color: '#F59E0B' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'refund'); }}>
+          <BanknotesIcon style={{ width: 15, height: 15 }} />
+        </button>
+      )}
+    </div>
+  );
+
+  const renderMobileBookingDetails = (booking, pct) => {
+    const totalValue = getComputedTotalValue(booking);
+    const collected = parseFloat(booking.total_paid || 0);
+    const balance = totalValue - collected;
+    const isToday = booking.next_follow_up_at && new Date(booking.next_follow_up_at).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
+    const isMissed = booking.next_follow_up_at && new Date(booking.next_follow_up_at).toISOString().slice(0, 10) < new Date().toISOString().slice(0, 10);
+    return (
+      <div className="col-bookings-mobile__details">
+        <div className="col-bookings-mobile__detail-grid">
+          <div className="col-bookings-mobile__detail">
+            <span className="col-bookings-mobile__label">Project / Unit</span>
+            <strong>{booking.project_name || '—'}</strong>
+            <span>{booking.unit_display || booking.unit_number || 'TBD'}</span>
+          </div>
+          <div className="col-bookings-mobile__detail">
+            <span className="col-bookings-mobile__label">Net Value</span>
+            <strong>{formatCurrency(totalValue)}</strong>
+            <span>Collected: {formatCurrency(collected)}</span>
+            <span>Balance: {formatCurrency(balance)}</span>
+          </div>
+          <div className="col-bookings-mobile__detail">
+            <span className="col-bookings-mobile__label">Progress</span>
+            <div className="col-progress" style={{ height: 6, width: '100%', marginTop: 6 }}>
+              <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+            <span style={{ marginTop: 4 }}>{pct}% collected</span>
+          </div>
+          <div className="col-bookings-mobile__detail">
+            <span className="col-bookings-mobile__label">Status</span>
+            <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color, alignSelf: 'flex-start' }}>
+              <span className="col-badge-dot" style={{ background: booking.status_color }} />
+              {booking.status_label}
+            </span>
+          </div>
+          <div className="col-bookings-mobile__detail">
+            <span className="col-bookings-mobile__label">Payment Status</span>
+            {booking.payment_status ? (
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
+                background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
+                color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
+                alignSelf: 'flex-start' }}>
+                {booking.payment_status}
+              </span>
+            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+          </div>
+          <div className="col-bookings-mobile__detail">
+            <span className="col-bookings-mobile__label">Follow-up</span>
+            {booking.next_follow_up_at ? (
+              <span style={{ fontWeight: 600, color: isMissed ? '#EF4444' : isToday ? '#3B82F6' : 'var(--text-muted)' }}>
+                {isToday ? '📅 Today' : isMissed ? `⚠ ${new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+              </span>
+            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMobileBookingCard = (booking) => {
+    const pct = booking.payment_percentage || 0;
+    const isOpen = expandedMobileBookingId === booking.id;
+    return (
+      <div key={booking.id} className={`col-bookings-mobile-card ${isOpen ? 'is-open' : ''}`}>
+        <div className="col-bookings-mobile-card__head">
+          <button
+            type="button"
+            className="col-bookings-mobile-card__toggle"
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} booking ${booking.booking_number}`}
+            onClick={() => setExpandedMobileBookingId(isOpen ? null : booking.id)}
+          >
+            <ChevronRightIcon style={{ width: 15, height: 15, color: 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
+          </button>
+          <div className="col-bookings-mobile-card__main">
+            <button type="button" className="col-booking-link col-bookings-mobile-card__booking" onClick={() => onSelectBooking(booking.id)}>
+              {booking.booking_number}
+            </button>
+            <div className="col-bookings-mobile-card__customer">{booking.customer_name || booking.buyer_name || '-'}</div>
+            <div className="col-bookings-mobile-card__meta">{booking.lead?.lead_number || ''}</div>
+          </div>
+          <div className="col-bookings-mobile-card__actions">{renderQuickActions(booking, true)}</div>
+        </div>
+        {isOpen && renderMobileBookingDetails(booking, pct)}
+      </div>
+    );
+  };
 
   // ── Drawer helpers ──
   const openDrawer = (booking, mode) => {
@@ -490,8 +652,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               <div className="col-empty-desc">{searchQuery ? 'Try a different search term' : 'Bookings from Sales Head will appear here'}</div>
             </div>
           ) : (
-            <div className="crm-table-wrap">
-              <table className="crm-table">
+            <>
+              <div className="crm-table-wrap col-bookings-table-desktop">
+                <table className="crm-table">
                 <thead>
                   <tr>
                     <th>Booking #</th>
@@ -510,7 +673,11 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     const pct = booking.payment_percentage || 0;
                     return (
                       <tr key={booking.id}>
-                        <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
+                        <td>
+                          <button type="button" className="col-booking-link" onClick={() => onSelectBooking(booking.id)}>
+                            {booking.booking_number}
+                          </button>
+                        </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{booking.customer_name || booking.buyer_name || '-'}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.lead?.lead_number || ''}</div>
@@ -555,59 +722,19 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           })() : <span style={{color:'var(--text-muted)'}}>—</span>}
                         </td>
                         <td>
-                          <div className="col-qa-actions">
-                            <button className="col-qa-btn col-qa-view" title="View Details" onClick={() => onSelectBooking(booking.id)}>
-                              <EyeIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                            <button className="col-qa-btn col-qa-pay" title="Record Payment" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'pay'); }}>
-                              <BanknotesIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                            <button className="col-qa-btn col-qa-status" title="Update Payment Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'payStatus'); }}>
-                              <CreditCardIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                            <button className="col-qa-btn col-qa-status" title="Update Booking Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'status'); }}>
-                              <PencilSquareIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                            {/* Workflow actions based on status */}
-                            {['BOOKED','TOKEN_RECEIVED','FORM_SUBMITTED','AGREEMENT_DRAFT','AGREEMENT_SIGNED'].includes(booking.status_code) && (
-                              <>
-                                <button className="col-qa-btn" title="Register" style={{color:'#22C55E'}} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'register'); }}>
-                                  <DocumentTextIcon style={{ width: 15, height: 15 }} />
-                                </button>
-                                <button className="col-qa-btn" title="EMI" style={{color:'#F59E0B'}} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'emi'); }}>
-                                  <CreditCardIcon style={{ width: 15, height: 15 }} />
-                                </button>
-                                <button className="col-qa-btn" title="Request Cancel" style={{color:'#EF4444'}} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
-                                  <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
-                                </button>
-                              </>
-                            )}
-                            {booking.status_code === 'EMI' && (
-                              <button className="col-qa-btn" title="Request Cancel" style={{color:'#EF4444'}} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
-                                <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
-                              </button>
-                            )}
-                            {booking.status_code === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
-                              <button className="col-qa-btn" title="Confirm Cancel" style={{color:'#DC2626'}} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'confirmCancel'); }}>
-                                <XCircleIcon style={{ width: 15, height: 15 }} />
-                              </button>
-                            )}
-                            {booking.status_code === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && (
-                              <span style={{fontSize:10, color:'#F59E0B', fontWeight:600}}>Awaiting SH</span>
-                            )}
-                            {booking.is_cancelled && parseFloat(booking.total_paid || 0) > 0 && (
-                              <button className="col-qa-btn" title={`Process Refund (${formatCurrency(booking.total_paid || 0)} pending)`} style={{color:'#F59E0B'}} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'refund'); }}>
-                                <BanknotesIcon style={{ width: 15, height: 15 }} />
-                              </button>
-                            )}
-                          </div>
+                          {renderQuickActions(booking)}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+
+              <div className="col-bookings-mobile">
+                {filteredBookings.map(renderMobileBookingCard)}
+              </div>
+            </>
           )}
         </div>
       </div>

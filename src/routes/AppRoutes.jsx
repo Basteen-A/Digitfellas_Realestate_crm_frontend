@@ -33,6 +33,7 @@ import CustomerTypes from '../pages/superadmin/CustomerTypes';
 import ScoreMaster from '../pages/superadmin/ScoreMaster';
 import LeadStatuses from '../pages/superadmin/LeadStatuses';
 import BookingStatuses from '../pages/superadmin/BookingStatuses';
+import BookingApprovals from '../pages/superadmin/BookingApprovals';
 import LeadStages from '../pages/superadmin/LeadStages';
 import ClosedLostReasons from '../pages/superadmin/ClosedLostReasons';
 import BookingCancelReasons from '../pages/superadmin/BookingCancelReasons';
@@ -180,6 +181,10 @@ const AppRoutes = () => {
             <Route path="/super-admin/score-master" element={<ScoreMaster />} />
             <Route path="/super-admin/lead-statuses" element={<LeadStatuses />} />
             <Route path="/super-admin/booking-statuses" element={<BookingStatuses />} />
+            {/* Booking approvals — Super Admin only (Admin cannot approve) */}
+            <Route element={<RoleRoute allowedRoles={['SA']} />}>
+              <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />
+            </Route>
             <Route path="/super-admin/lead-stages" element={<LeadStages />} />
             <Route path="/super-admin/closed-lost-reasons" element={<ClosedLostReasons />} />
             <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />

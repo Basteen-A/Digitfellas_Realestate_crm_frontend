@@ -47,6 +47,7 @@ import {
   ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
 import CalendarPicker from '../../../components/common/CalendarPicker';
+import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import './LeadDetailsPage.css';
 
 const QUICK_REMARKS = [
@@ -411,6 +412,8 @@ const LeadDetailsPage = () => {
   const [quickRemarkAnsNonAns, setQuickRemarkAnsNonAns] = useState(null);
   const [quickActionSaving, setQuickActionSaving] = useState(false);
   const [quickActionActivities, setQuickActionActivities] = useState([]);
+  // Voice note recorded with a quick-action remark (SM/SH only). { blob, url, duration }
+  const [quickVoice, setQuickVoice] = useState(null);
   const [hasPendingMissedFollowupsForMe, setHasPendingMissedFollowupsForMe] = useState(false);
   const [quickMissingLocationId, setQuickMissingLocationId] = useState('');
   const [quickMissingProjectIds, setQuickMissingProjectIds] = useState([]);
@@ -759,6 +762,7 @@ const LeadDetailsPage = () => {
     setQuickLocationDropdownOpen(false);
     setQuickProjectDropdownOpen(false);
     setQuickActionActivities([]);
+    setQuickVoice(null);
   }, []);
 
   const loadStatusRemarks = useCallback(async (action, setRemarks, setAnsNonAns) => {
@@ -1178,6 +1182,17 @@ const LeadDetailsPage = () => {
         }
         await leadWorkflowApi.transitionLead(lead.id, quickSelectedAction.code, payload);
         toast.success(`${quickSelectedAction.label} completed`);
+      }
+      // Persist the recorded voice note (if any) as a timeline activity on the lead.
+      if (quickVoice?.blob) {
+        try {
+          await leadWorkflowApi.addVoiceNote(lead.id, quickVoice.blob, {
+            duration: quickVoice.duration,
+            content: (quickActionForm.statusRemarkText || quickActionForm.note || '').trim() || undefined,
+          });
+        } catch {
+          toast.error('The action saved, but the voice note could not be uploaded.');
+        }
       }
       closeQuickActionsModal();
       await loadLeadData();
@@ -3026,6 +3041,18 @@ const LeadDetailsPage = () => {
                       onChange={(e) => setQuickActionForm((p) => ({ ...p, note: e.target.value }))}
                       placeholder="What was discussed? What's the next step?"
                     />
+                    {/* Voice note (record + transcribe + translate) — SM/SH only. */}
+                    {(roleCode === 'SM' || roleCode === 'SH') && (
+                      <VoiceNoteField
+                        voice={quickVoice}
+                        onVoiceChange={setQuickVoice}
+                        transcribeApi={leadWorkflowApi.transcribeVoice}
+                        onTranscribed={(text) => setQuickActionForm((p) => ({
+                          ...p,
+                          note: p.note?.trim() ? `${p.note.trim()}\n${text}` : text,
+                        }))}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -3075,6 +3102,14 @@ const LeadDetailsPage = () => {
                             <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
                           </div>
                           {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
+                          {act.metadata?.voice?.file_url && (
+                            <audio
+                              src={act.metadata.voice.file_url}
+                              controls
+                              preload="none"
+                              style={{ height: 34, width: '100%', maxWidth: 280, marginTop: 6 }}
+                            />
+                          )}
                           {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
                             <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                               Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}

@@ -570,7 +570,7 @@
 
 /* ── Activity table (like the leads table) ── */
 .tmq-act-tablewrap { overflow-x: auto; border: 1px solid var(--border-secondary); border-radius: var(--border-radius-md); }
-.tmq-act-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tmq-act-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 650px; }
 .tmq-act-table thead th {
   text-align: left; padding: 9px 12px; background: var(--bg-table-header);
   color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
@@ -702,8 +702,13 @@
   .col-dashboard .col-page-header-actions > button { flex: 1; justify-content: center; }
   .col-dashboard .col-card-header-new { flex-wrap: wrap; gap: 8px; }
   .col-dashboard .col-card-header-new .col-btn { margin-left: auto; }
-  /* Recent-activity table: let the Task cell wrap rather than overflow. */
-  .col-dashboard .col-table-new .col-cell-primary { white-space: normal; overflow-wrap: anywhere; }
+  /* Recent-activity table: let the Task cells wrap rather than overflow. */
+  .col-dashboard .col-table-new .col-cell-primary,
+  .col-dashboard .col-table-new .col-cell-secondary {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 }
 
 /* ── Modal: keep the voice card tidy on narrow phones ── */

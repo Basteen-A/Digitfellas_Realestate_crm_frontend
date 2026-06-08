@@ -1,17 +1,32 @@
 import React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import { toggleSidebar } from '../../../redux/slices/uiSlice';
 import { useThemeContext } from '../../../contexts/ThemeContext';
-import { Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, SunIcon, MoonIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import notificationApi from '../../../api/notificationApi';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
 import './Header.css';
 
+// Prettify the current route into a topbar title (e.g. "/super-admin/lead-management" → "Lead Management").
+const TITLE_OVERRIDES = {
+  '/dashboard': 'Dashboard',
+  '/super-admin/lead-management': 'Lead Management',
+  '/super-admin/booking-approvals': 'Booking Approvals',
+};
+const titleFromPath = (pathname = '') => {
+  if (TITLE_OVERRIDES[pathname]) return TITLE_OVERRIDES[pathname];
+  const seg = pathname.split('/').filter(Boolean).pop() || 'dashboard';
+  return seg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 const Header = ({ onMenuClick }) => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
+  const sidebarCollapsed = useSelector((state) => state.ui.sidebarCollapsed);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const loadUnreadCount = useCallback(async () => {
@@ -54,24 +69,25 @@ const Header = ({ onMenuClick }) => {
           onClick={handleMenuToggle}
           aria-label="Toggle sidebar"
         >
-          <Bars3Icon style={{ width: 20, height: 20 }} />
+          {/* Mobile opens the drawer (bars); desktop collapses the rail (chevron). */}
+          {onMenuClick
+            ? <Bars3Icon style={{ width: 20, height: 20 }} />
+            : (sidebarCollapsed
+              ? <ChevronRightIcon style={{ width: 18, height: 18 }} />
+              : <ChevronLeftIcon style={{ width: 18, height: 18 }} />)}
         </button>
-        <div className="hidden sm:block">
-          <p className="app-header__title">Real Estate CRM</p>
-          <p className="app-header__subtitle hidden md:block">Production Administration Console</p>
-        </div>
+        <p className="app-header__title">{titleFromPath(location.pathname)}</p>
       </div>
 
       <div className="app-header__right">
         <button
           type="button"
-          className="header-theme-toggle hidden xs:flex"
+          className="header-icon-button"
           onClick={toggleTheme}
           title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
           aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
         >
-          <span aria-hidden="true">{isDark ? <SunIcon style={{ width: 18, height: 18 }} /> : <MoonIcon style={{ width: 18, height: 18 }} />}</span>
-          <span className="hidden md:inline">{isDark ? 'Light' : 'Dark'}</span>
+          {isDark ? <SunIcon style={{ width: 20, height: 20 }} /> : <MoonIcon style={{ width: 20, height: 20 }} />}
         </button>
         <NotificationBell unreadCount={unreadCount} />
         <UserMenu />

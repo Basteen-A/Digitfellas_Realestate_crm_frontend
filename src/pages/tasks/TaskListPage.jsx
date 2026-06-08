@@ -107,6 +107,7 @@ const TaskListPage = () => {
   const [projectFilter, setProjectFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [assignFilter, setAssignFilter] = useState(''); // '' | 'by_me' | 'to_me'
+  const [updatedToday, setUpdatedToday] = useState(false);
   const [groupBy, setGroupBy] = useState('none');
   const [departments, setDepartments] = useState([]); // full list for the filter
   const [page, setPage] = useState(1);
@@ -225,9 +226,16 @@ const TaskListPage = () => {
       // "Assigned by me" = I created it; "Assigned to me" = I'm an assignee.
       if (assignFilter === 'by_me' && String(t.creator_id) !== String(myId)) return false;
       if (assignFilter === 'to_me' && !(t.assignees || []).some((a) => String(a.id) === String(myId))) return false;
+      
+      if (updatedToday) {
+        const todayStr = new Date().toDateString();
+        const updateVal = t.updated_at || t.updatedAt || t.created_at || t.createdAt;
+        if (!updateVal || new Date(updateVal).toDateString() !== todayStr) return false;
+      }
+      
       return true;
     }),
-    [rows, projectFilter, deptFilter, assignFilter, myId]
+    [rows, projectFilter, deptFilter, assignFilter, myId, updatedToday]
   );
 
   const groups = useMemo(() => {
@@ -245,7 +253,7 @@ const TaskListPage = () => {
   // filter, grouping, or a reload) so we never sit on an empty trailing page.
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, projectFilter, deptFilter, assignFilter, includeClosed, followUpFilter, groupBy]);
+  }, [search, statusFilter, projectFilter, deptFilter, assignFilter, includeClosed, followUpFilter, groupBy, updatedToday]);
 
   // Pagination applies to the flat (ungrouped) list — 20 rows per page.
   const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
@@ -258,6 +266,7 @@ const TaskListPage = () => {
   const clearAll = () => {
     setSearch(''); setStatusFilter(''); setProjectFilter(''); setDeptFilter('');
     setAssignFilter(''); setIncludeClosed(false); setFollowUpFilter('');
+    setUpdatedToday(false);
   };
 
   // Most recent user-written remark (skips status-only + auto "Task created.").
@@ -375,7 +384,7 @@ const TaskListPage = () => {
               <ChevronRightIcon style={{ width: 14, height: 14, marginTop: 3, flexShrink: 0, color: isOpen ? 'var(--accent-blue, #2563eb)' : 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
               <div style={{ minWidth: 0 }}>
                 <p className="lead-title">{task.title}</p>
-                <small style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                <small style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                   <span style={{ color: PRIORITY_HEX[task.priority] || '#64748b', fontWeight: 700, textTransform: 'capitalize' }}>{task.priority}</span>
                   {task.creator && <span>· {fullName(task.creator)}</span>}
                   {note && <span style={{ opacity: 0.85 }}>· “{note.content.length > 28 ? `${note.content.slice(0, 28)}…` : note.content}”</span>}
@@ -586,11 +595,15 @@ const TaskListPage = () => {
             <option value="">All Departments</option>
             {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
-          <label className="filter-tab" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', border: '1px solid var(--border-primary, #e2e8f0)' }}>
-            <input type="checkbox" checked={includeClosed} onChange={(e) => setIncludeClosed(e.target.checked)} style={{ accentColor: 'var(--accent-blue, #2563eb)' }} />
-            Include Closed / Cancelled
-          </label>
-          <button type="button" className="lead-workspace__clear-filters" onClick={clearAll}>Clear All</button>
+  <label className="filter-tab" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', border: '1px solid var(--border-primary, #e2e8f0)' }}>
+    <input type="checkbox" checked={includeClosed} onChange={(e) => setIncludeClosed(e.target.checked)} style={{ accentColor: 'var(--accent-blue, #2563eb)' }} />
+    Include Closed / Cancelled
+  </label>
+  <label className="filter-tab" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', border: '1px solid var(--border-primary, #e2e8f0)' }}>
+    <input type="checkbox" checked={updatedToday} onChange={(e) => setUpdatedToday(e.target.checked)} style={{ accentColor: 'var(--accent-blue, #2563eb)' }} />
+    Updated Today
+  </label>
+  <button type="button" className="lead-workspace__clear-filters" onClick={clearAll}>Clear All</button>
         </div>
       </div>
 

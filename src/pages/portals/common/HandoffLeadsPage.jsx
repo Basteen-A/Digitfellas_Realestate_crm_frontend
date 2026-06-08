@@ -41,7 +41,7 @@ const isLostHandoffRow = (row) => {
   return statusCode === 'LOST' || statusCode === 'COLD_LOST' || statusName === 'LOST' || statusName === 'COLD LOST';
 };
 
-const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false }) => {
+const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false, stageCode = null, currentOnly = false }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,7 +63,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
     };
   }, [meta, rows, workspaceRole]);
 
-  const visibleRows = useMemo(() => rows.filter((row) => !isLostHandoffRow(row)), [rows]);
+  const visibleRows = useMemo(() => workspaceRole === 'SM' ? rows : rows.filter((row) => !isLostHandoffRow(row)), [rows, workspaceRole]);
 
   const isTC = workspaceRole === 'TC';
   const isSH = workspaceRole === 'SH';
@@ -79,6 +79,8 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
         search: filters.search,
         page: 1,
         limit: 100,
+        stageCode,
+        currentOnly,
       });
 
       setRows(response.data || []);
@@ -89,7 +91,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, workspaceRole]);
+  }, [filters, workspaceRole, stageCode, currentOnly]);
 
   useEffect(() => {
     loadHandoffs();

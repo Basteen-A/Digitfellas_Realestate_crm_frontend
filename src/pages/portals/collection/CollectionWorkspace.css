@@ -2,6 +2,124 @@
    COLLECTION WORKSPACE - Premium Styles
    ============================================================ */
 
+/* Keep every cell in the bookings/payments tables vertically centered so
+   single-line columns (Value, Date, Action) line up with the multi-line
+   Buyer / Project cells. */
+.col-bookings-page .crm-table tbody td { vertical-align: middle; }
+.col-bookings-page .crm-table tbody td .crm-btn { vertical-align: middle; }
+
+/* Clickable booking number (the row itself is not clickable). */
+.col-booking-link {
+  border: none; background: none; padding: 0; font: inherit; cursor: pointer;
+  font-weight: 700; color: var(--accent-blue, #2563eb); text-decoration: none;
+}
+.col-booking-link:hover { text-decoration: underline; }
+
+.col-bookings-table-desktop { display: block; }
+.col-bookings-mobile { display: none; }
+.col-bookings-mobile-card {
+  display: none;
+  margin: 0 0 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--bg-card, #fff);
+  overflow: hidden;
+}
+
+.col-bookings-mobile-card__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+}
+
+.col-bookings-mobile-card__toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary, #f8fafc);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.col-bookings-mobile-card__main { min-width: 0; }
+.col-bookings-mobile-card__booking { display: inline-block; margin-bottom: 4px; }
+.col-bookings-mobile-card__customer {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  word-break: break-word;
+}
+.col-bookings-mobile-card__meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.col-bookings-mobile-card__actions {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+}
+
+.col-bookings-mobile-card__actions .col-qa-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.col-bookings-mobile-card__actions .col-qa-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.col-bookings-mobile__details {
+  padding: 0 14px 14px;
+}
+
+.col-bookings-mobile__detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.col-bookings-mobile__detail {
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.col-bookings-mobile__label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Action buttons grouped + vertically aligned in the table action column. */
+.col-action-group { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ── Responsive: let wide tables scroll instead of overflowing ── */
+@media (max-width: 768px) {
+  .col-bookings-page { padding: 12px; }
+  .col-bookings-page .page-header-actions { width: 100%; }
+  .col-bookings-page .page-header-actions > div[style] { flex: 1; min-width: 0 !important; }
+  .col-bookings-table-desktop { display: none; }
+  .col-bookings-mobile { display: block; }
+  .col-bookings-mobile-card { display: block; }
+  .col-bookings-page .crm-table-wrap { overflow: visible; }
+}
+
 /* ── Stat Cards ── */
 .col-stats-grid {
   display: grid;
@@ -803,6 +921,7 @@
 @media (max-width: 640px) {
   .col-qa-actions { gap: 4px; }
   .col-qa-btn { width: 28px; height: 28px; border-radius: 8px; }
+  .col-bookings-mobile__detail-grid { grid-template-columns: 1fr; }
   .col-profile-info-grid { grid-template-columns: 1fr; }
   .col-form-grid-3 { grid-template-columns: 1fr; }
   .col-booking-amounts { grid-template-columns: repeat(2, 1fr) !important; }

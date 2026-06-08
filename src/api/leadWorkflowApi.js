@@ -105,6 +105,35 @@ const leadWorkflowApi = {
   },
 
   /**
+   * POST /leads/transcribe — transcribe + translate a recorded clip (Gemini).
+   * `language` is the output language: 'tamil' | 'english'.
+   */
+  transcribeVoice: async (blob, language = 'english') => {
+    const fd = new FormData();
+    fd.append('voice', blob, 'voice-note.webm');
+    fd.append('language', language);
+    const { data } = await api.post('/leads/transcribe', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  /**
+   * POST /leads/:id/voice-note — store a voice note as a timeline activity.
+   * `content` is the (optional) transcribed text saved alongside the clip.
+   */
+  addVoiceNote: async (leadId, blob, { duration, content } = {}) => {
+    const fd = new FormData();
+    fd.append('voice', blob, 'voice-note.webm');
+    if (duration != null) fd.append('voice_duration', String(duration));
+    if (content) fd.append('content', content);
+    const { data } = await api.post(`/leads/${leadId}/voice-note`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  /**
    * GET /closed-lost-reasons?category=COLD
    * Fetches closure reasons filtered by category
    */

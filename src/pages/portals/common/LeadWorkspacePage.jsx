@@ -17,6 +17,7 @@ import paymentPlanApi from '../../../api/paymentPlanApi';
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import VoiceNoteField from '../../../components/common/VoiceNoteField';
 
 import {
   getWorkspaceTitle,
@@ -854,6 +855,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   const [quickActionLoading, setQuickActionLoading] = useState(false);
   const [quickWorkflowAction, setQuickWorkflowAction] = useState(null);
   const [quickActionSiteVisits, setQuickActionSiteVisits] = useState([]);
+  // Voice note recorded with a quick-action remark (SM/SH only). { blob, url, duration }
+  const [quickVoice, setQuickVoice] = useState(null);
   const [quickWorkflowForm, setQuickWorkflowForm] = useState({
     note: '',
     statusRemarkText: '',
@@ -2650,6 +2653,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
   const resetQuickWorkflowForm = useCallback(() => {
     setQuickWorkflowAction(null);
+    setQuickVoice(null);
     setQuickStatusRemarks([]);
     setQuickRemarkAnsNonAns(null);
     setQuickMissingLocationId('');
@@ -3137,6 +3141,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             }
             throw apiErr;
           }
+        }
+      }
+
+      // Persist the recorded voice note (if any) as a timeline activity on the lead.
+      if (quickVoice?.blob && quickActionLead?.id) {
+        try {
+          await leadWorkflowApi.addVoiceNote(quickActionLead.id, quickVoice.blob, {
+            duration: quickVoice.duration,
+            content: (quickWorkflowForm.statusRemarkText || quickWorkflowForm.note || '').trim() || undefined,
+          });
+        } catch {
+          toast.error('The action saved, but the voice note could not be uploaded.');
         }
       }
 
@@ -6386,6 +6402,18 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))}
                       placeholder="What was discussed? What's the next step?"
                     />
+                    {/* Voice note (record + transcribe + translate) — SM/SH only. */}
+                    {(workspaceRole === 'SM' || workspaceRole === 'SH') && (
+                      <VoiceNoteField
+                        voice={quickVoice}
+                        onVoiceChange={setQuickVoice}
+                        transcribeApi={leadWorkflowApi.transcribeVoice}
+                        onTranscribed={(text) => setQuickWorkflowForm((p) => ({
+                          ...p,
+                          note: p.note?.trim() ? `${p.note.trim()}\n${text}` : text,
+                        }))}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -6435,6 +6463,14 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                 <span className="qa-drawer-hist-date">{formatDateTimeInTimeZone(act.at || act.created_at)}</span>
                               </div>
                               {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
+                              {act.metadata?.voice?.file_url && (
+                                <audio
+                                  src={act.metadata.voice.file_url}
+                                  controls
+                                  preload="none"
+                                  style={{ height: 34, width: '100%', maxWidth: 260, marginTop: 6 }}
+                                />
+                              )}
                               {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
                                 <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                                   Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
