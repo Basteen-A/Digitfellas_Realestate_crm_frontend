@@ -48,6 +48,7 @@ import PaymentStatuses from '../pages/superadmin/PaymentStatuses';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
+import SiteSettings from '../pages/superadmin/SiteSettings';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -202,6 +203,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/payment-modes" element={<PaymentModes />} />
             <Route path="/super-admin/banks" element={<Banks />} />
             <Route path="/super-admin/payment-statuses" element={<PaymentStatuses />} />
+            <Route path="/super-admin/site-settings" element={<SiteSettings />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

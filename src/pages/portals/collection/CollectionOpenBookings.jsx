@@ -77,7 +77,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
       {/* ── Header (matches My Leads workspace) ── */}
       <header className="lead-workspace__header">
         <div>
-          <h1>New Bookings</h1>
+          <h1>Open Bookings</h1>
           <p className="hide-mobile">Open bookings from Sales Head — review and send for Super Admin approval</p>
         </div>
         <div className="lead-workspace__header-actions">
@@ -151,9 +151,6 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                           <div className="col-action-group">
                             <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>
                               <EyeIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                            <button type="button" className="crm-btn crm-btn-primary crm-btn-sm" disabled={sendingId === b.id} onClick={() => setConfirmBooking(b)}>
-                              <PaperAirplaneIcon style={{ width: 14, height: 14 }} /> {sendingId === b.id ? 'Sending…' : 'Send for Approval'}
                             </button>
                           </div>
                         </td>

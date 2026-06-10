@@ -135,6 +135,7 @@ const adminSidebar = [
       { label: 'Customer Types', path: '/super-admin/customer-types' },
     ],
   },
+  { label: 'Site Settings', path: '/super-admin/site-settings', icon: BuildingStorefrontIcon },
 ];
 
 // ── Telecaller ──

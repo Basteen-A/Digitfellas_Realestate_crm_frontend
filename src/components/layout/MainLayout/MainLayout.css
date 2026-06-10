@@ -6,6 +6,15 @@
   background: var(--bg-primary);
 }
 
+/* Desktop: pin the sidebar column to a fixed width that matches the sidebar's
+   own width. This way the collapsed rail's hover-to-expand grows the sidebar
+   as an OVERLAY (it has its own z-index + shadow) instead of widening the grid
+   track and pushing the page content — which read as a "slight shake". */
+@media (min-width: 768px) {
+  .main-layout { grid-template-columns: 260px 1fr; }
+  .main-layout[data-collapsed='true'] { grid-template-columns: 64px 1fr; }
+}
+
 .main-layout__right {
   min-width: 0;
   display: grid;

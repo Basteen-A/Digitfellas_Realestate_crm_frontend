@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useThemeContext } from '../../../contexts/ThemeContext';
+import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import { logout } from '../../../redux/slices/authSlice';
 import notificationApi from '../../../api/notificationApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
@@ -108,6 +109,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const navigate = useNavigate();
   const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
+  const { siteName } = useSiteSettings();
   const roleCode = getRoleCode(user);
   const canUsePhoneLookup = !['COL', 'ACCT', 'SE'].includes(roleCode);
   const isAdmin = ['SA', 'ADM'].includes(roleCode);
@@ -421,6 +423,12 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
               : <ChevronLeftIcon style={{ width: 18, height: 18 }} />
             }
           </button>
+          {siteName && (
+            <>
+              <span className="portal-topbar__brand">{siteName}</span>
+              <span className="portal-topbar__brand-sep" aria-hidden="true" />
+            </>
+          )}
           {SCREEN_TITLES[activeScreen] !== undefined ? (
             SCREEN_TITLES[activeScreen] ? (
               <div className="portal-topbar__title">

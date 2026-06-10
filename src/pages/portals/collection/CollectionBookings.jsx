@@ -90,11 +90,13 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [refundSaving, setRefundSaving] = useState(false);
 
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
-  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Development', 'MODT', 'Other'];
+  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'Development', 'MODT', 'Other'];
   const CATEGORY_COLORS = {
     'Plot Value': { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' },
     'Stamp Duty': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
     'Registration': { bg: '#E0F2FE', text: '#075985', border: '#BAE6FD' },
+    'Registration Expenses': { bg: '#E0F2FE', text: '#075985', border: '#BAE6FD' },
+    'Other Registration Expenses': { bg: '#CFFAFE', text: '#155E75', border: '#A5F3FC' },
     'Development': { bg: '#DCFCE7', text: '#166534', border: '#BBF7D0' },
     'MODT': { bg: '#FCE7F3', text: '#9D174D', border: '#FBCFE8' },
     'Other': { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
@@ -113,7 +115,12 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     const modtSplitTotal = cb.modt_enabled ? sumSplit(cb.modt_split) : 0;
     const plotTarget = toAmount(booking.plot_value || booking.base_price);
     const stampTarget = toAmount(booking.stamp_value || booking.stamp_duty);
-    const registrationTarget = toAmount(booking.registration_exp || booking.registration_charges) + regSplitTotal;
+    const regSplit = cb.registration_split || {};
+    const regExpensesTarget = toAmount(regSplit.registration_expenses);
+    const otherRegExpensesTarget = toAmount(regSplit.other_registration_expenses);
+    // Registration bucket excludes the two broken-out expense buckets (no double count).
+    const registrationTarget = toAmount(booking.registration_exp || booking.registration_charges)
+      + (regSplitTotal - regExpensesTarget - otherRegExpensesTarget);
     const developmentTarget = toAmount(booking.development_charges);
     const modtTarget = modtSplitTotal;
     const paidByCategory = (booking.payments || []).reduce((acc, p) => {
@@ -126,6 +133,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       { key: 'Plot Value', target: plotTarget, paid: paidByCategory['Plot Value'] || 0 },
       { key: 'Stamp Duty', target: stampTarget, paid: paidByCategory['Stamp Duty'] || 0 },
       { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
+      { key: 'Registration Expenses', target: regExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
+      { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
       { key: 'Development', target: developmentTarget, paid: paidByCategory['Development'] || 0 },
       { key: 'MODT', target: modtTarget, paid: paidByCategory['MODT'] || 0 },
       { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
@@ -152,13 +161,19 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   // Send a draft "Booking Open" booking to the Super Admin for approval.
   const [sendingId, setSendingId] = useState(null);
-  const handleSendForApproval = async (booking, e) => {
+  const [confirmBooking, setConfirmBooking] = useState(null);
+  const handleSendForApproval = (booking, e) => {
     if (e) e.stopPropagation();
-    if (!window.confirm(`Send booking ${booking.booking_number} for Super Admin approval? The unit will be reserved.`)) return;
+    setConfirmBooking(booking);
+  };
+  const doSendForApproval = async () => {
+    const booking = confirmBooking;
+    if (!booking) return;
     setSendingId(booking.id);
     try {
       await bookingApi.sendForApproval(booking.id);
       toast.success('Booking sent for approval');
+      setConfirmBooking(null);
       loadBookings();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to send for approval'));
@@ -1328,6 +1343,37 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Send-for-approval confirmation modal */}
+      {confirmBooking && (
+        <div onClick={() => sendingId === null && setConfirmBooking(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 440px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--accent-blue-bg, #eff4ff)', color: 'var(--accent-blue, #2563eb)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckCircleIcon style={{ width: 18, height: 18 }} />
+              </span>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Send for approval</h3>
+            </div>
+            <div style={{ padding: 20, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+              Send booking <strong style={{ color: 'var(--text-primary)' }}>{confirmBooking.booking_number}</strong>
+              {' '}({confirmBooking.customer_name || confirmBooking.buyer_name || 'customer'}) for Super Admin approval?
+              The unit will be <strong style={{ color: 'var(--text-primary)' }}>reserved</strong>.
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" onClick={() => setConfirmBooking(null)} disabled={sendingId === confirmBooking.id}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button type="button" onClick={doSendForApproval} disabled={sendingId === confirmBooking.id}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent-blue, #2563eb)', color: '#fff', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircleIcon style={{ width: 14, height: 14 }} /> {sendingId === confirmBooking.id ? 'Sending…' : 'Send for Approval'}
+              </button>
+            </div>
           </div>
         </div>
       )}

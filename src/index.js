@@ -14,6 +14,7 @@ import { store } from './redux/store';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { SiteSettingsProvider } from './contexts/SiteSettingsContext';
 import './styles/variables.css';
 import './styles/reset.css';
 import './styles/global.css';
@@ -32,6 +33,7 @@ root.render(
       <ThemeProvider>
         <SidebarProvider>
           <AuthProvider>
+            <SiteSettingsProvider>
             <BrowserRouter>
               <App />
               <Toaster
@@ -59,6 +61,7 @@ root.render(
                 }}
               />
             </BrowserRouter>
+            </SiteSettingsProvider>
           </AuthProvider>
         </SidebarProvider>
       </ThemeProvider>

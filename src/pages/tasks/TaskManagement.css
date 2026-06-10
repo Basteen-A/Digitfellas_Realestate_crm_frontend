@@ -4,7 +4,7 @@
    supports light/dark themes.
    ============================================================ */
 
-.tm-page { display: grid; gap: 16px; padding: 20px 24px; }
+.tm-page { display: grid; gap: 16px;  }
 
 .tm-header {
   display: flex; align-items: flex-end; justify-content: space-between;
@@ -296,7 +296,7 @@
   .tmp-main { width: 100%; }
 
   /* ── Page layout ── */
-  .tm-page { padding: 14px 12px; gap: 12px; }
+  .tm-page {  gap: 12px; }
 
   /* ── Header: stack title row + action buttons ── */
   .tm-header { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -423,10 +423,8 @@
 /* ─────────── ≤ 420px : small phone ─────────── */
 @media (max-width: 420px) {
   /* Stats single column on very small screens */
-  .tm-stats { grid-template-columns: 1fr !important; }
+ 
 
-  /* Even tighter page padding */
-  .tm-page { padding: 10px 8px; }
 
   /* Modal: remove border-radius for truly full-screen feel */
   .tm-modal { border-radius: 8px; }

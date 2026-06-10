@@ -15,6 +15,11 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Reserve the scrollbar gutter at all times so pages that differ in height
+     don't shift horizontally as the vertical scrollbar appears/disappears —
+     this is the "slight shaking" between page navigations. */
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 body {

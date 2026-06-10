@@ -378,10 +378,32 @@
   flex-shrink: 0;
 }
 
+.portal-topbar__brand {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+
+.portal-topbar__brand-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-primary);
+  flex-shrink: 0;
+}
+
 .portal-topbar__title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .portal-topbar__brand,
+  .portal-topbar__brand-sep {
+    display: none;
+  }
 }
 
 .portal-topbar__center {

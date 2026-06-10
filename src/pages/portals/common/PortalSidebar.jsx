@@ -1,7 +1,6 @@
 import React from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import logoFull from '../../../assets/images/Sujatha_N.png';
-import logoFavico from '../../../assets/images/Sujatha-Favico.png';
+import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './PortalSidebar.css';
 
 
@@ -16,6 +15,7 @@ const MenuIcon = ({ icon, className = 'portal-sidebar__hero-icon' }) => {
 };
 
 const PortalSidebar = ({ menuItems, activeScreen, onNavigate, roleName, collapsed, mobileOpen, onMobileClose }) => {
+  const { siteTitle, logoFull, logoMark } = useSiteSettings();
   return (
     <aside className={`portal-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {mobileOpen && (
@@ -31,8 +31,8 @@ const PortalSidebar = ({ menuItems, activeScreen, onNavigate, roleName, collapse
         <div className="portal-sidebar__brand-icon">
           {/* Both render; CSS shows the full logo when expanded (incl. hover-expand)
               and the square favicon mark on the collapsed rail. */}
-          <img src={logoFull} alt="Logo" className="sidebar-logo sidebar-logo--full" />
-          <img src={logoFavico} alt="Logo" className="sidebar-logo sidebar-logo--mark" />
+          <img src={logoFull} alt={siteTitle} className="sidebar-logo sidebar-logo--full" />
+          <img src={logoMark} alt={siteTitle} className="sidebar-logo sidebar-logo--mark" />
         </div>
       </div>
 

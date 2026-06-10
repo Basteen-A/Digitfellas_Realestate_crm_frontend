@@ -143,11 +143,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [refundSaving, setRefundSaving] = useState(false);
 
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
-  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Development', 'MODT', 'Other'];
+  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'Development', 'MODT', 'Other'];
   const CATEGORY_COLORS = {
     'Plot Value': { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' },
     'Stamp Duty': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
     'Registration': { bg: '#E0F2FE', text: '#075985', border: '#BAE6FD' },
+    'Registration Expenses': { bg: '#E0F2FE', text: '#075985', border: '#BAE6FD' },
+    'Other Registration Expenses': { bg: '#CFFAFE', text: '#155E75', border: '#A5F3FC' },
     'Development': { bg: '#DCFCE7', text: '#166534', border: '#BBF7D0' },
     'MODT': { bg: '#FCE7F3', text: '#9D174D', border: '#FBCFE8' },
     'Other': { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
@@ -283,12 +285,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   // Send a draft "Booking Open" booking to the Super Admin for approval.
   const [sendingApproval, setSendingApproval] = useState(false);
+  const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
   const handleSendForApproval = async () => {
-    if (!window.confirm('Send this booking for Super Admin approval? The unit will be reserved.')) return;
     setSendingApproval(true);
     try {
       await bookingApi.sendForApproval(bookingId);
       toast.success('Booking sent for approval');
+      setShowApprovalConfirm(false);
       loadBooking();
       loadActivities();
     } catch (err) {
@@ -539,11 +542,19 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     acc[cat] = (acc[cat] || 0) + toAmount(p.amount);
     return acc;
   }, {});
-  const registrationTarget = registrationValue + regSplitTotal;
+  // "Registration Expenses" and "Other Registration Expenses" are broken out of
+  // the registration split into their own payment buckets so they can be
+  // collected and logged separately. The base Registration bucket therefore
+  // excludes them to avoid double-counting (grand total is unchanged).
+  const regExpensesTarget = toAmount(savedRegSplit.registration_expenses);
+  const otherRegExpensesTarget = toAmount(savedRegSplit.other_registration_expenses);
+  const registrationTarget = registrationValue + (regSplitTotal - regExpensesTarget - otherRegExpensesTarget);
   const categoryBuckets = [
     { key: 'Plot Value', target: plotValue, paid: paidByCategory['Plot Value'] || 0 },
     { key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 },
     { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
+    { key: 'Registration Expenses', target: regExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
+    { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
     { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
     { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
@@ -646,7 +657,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
         <div className="bkd-header-actions">
           {/* Workflow action buttons */}
-          {(booking.bookingStatus?.status_code || booking.status_code) === 'EMI' && (
+          {['BOOKING_APPROVED', 'BOOKED', 'REGISTERED', 'EMI'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Request Cancel</button>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
@@ -662,7 +673,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           )}
           {/* Booking Open → send to Super Admin for approval (unit reserved) */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_OPEN' && (
-            <button className="bkd-btn bkd-btn-primary" disabled={sendingApproval} onClick={handleSendForApproval}>
+            <button className="bkd-btn bkd-btn-primary" disabled={sendingApproval} onClick={() => setShowApprovalConfirm(true)}>
               <CheckCircleIcon style={{width:14,height:14}}/> {sendingApproval ? 'Sending…' : 'Send for Approval'}
             </button>
           )}
@@ -723,7 +734,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <InfoRow label="Unit" value={booking.unit_display || booking.unit_number}/>
                   <InfoRow label="Area" value={booking.carpet_area ? `${booking.carpet_area} sq.ft` : '—'}/>
                   
-                  <InfoRow label="Current Handler" value={leadAssignee ? getUserLabel(leadAssignee) : '—'} />
+                
                   <InfoRow label="Previous Handler" value={previousLeadAssignee ? getUserLabel(previousLeadAssignee) : '—'} />
                   <InfoRow label="Payment Plan" value={paymentPlanLabel} />
                   <InfoRow label="Plan Type" value={paymentPlanType || '—'} />
@@ -1209,6 +1220,30 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       )}
 
       {/* ── QUICK ACTION MODAL (same as bookings list style) ── */}
+      {showApprovalConfirm && (
+        <div className="col-modal-overlay" onClick={() => !sendingApproval && setShowApprovalConfirm(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 440px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--accent-blue-bg, #eff4ff)', color: 'var(--accent-blue, #2563eb)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckCircleIcon style={{ width: 18, height: 18 }} />
+              </span>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Send for approval</h3>
+            </div>
+            <div style={{ padding: 20, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+              Send booking <strong style={{ color: 'var(--text-primary)' }}>{booking.booking_number}</strong>
+              {' '}({booking.customer_name || booking.buyer_name || 'customer'}) for Super Admin approval?
+              The unit will be <strong style={{ color: 'var(--text-primary)' }}>reserved</strong>.
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="bkd-btn bkd-btn-outline" onClick={() => setShowApprovalConfirm(false)} disabled={sendingApproval}>Cancel</button>
+              <button type="button" className="bkd-btn bkd-btn-primary" onClick={handleSendForApproval} disabled={sendingApproval}>
+                <CheckCircleIcon style={{ width: 14, height: 14 }} /> {sendingApproval ? 'Sending…' : 'Send for Approval'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {actionMode && (
         <div className="col-modal-overlay" onClick={closeActionModal}>
           <div className="qa-modal-panel" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>

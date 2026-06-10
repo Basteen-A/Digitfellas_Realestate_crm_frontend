@@ -6,6 +6,7 @@ import { toggleSidebar } from '../../../redux/slices/uiSlice';
 import { useThemeContext } from '../../../contexts/ThemeContext';
 import { Bars3Icon, SunIcon, MoonIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import notificationApi from '../../../api/notificationApi';
+import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
 import './Header.css';
@@ -15,6 +16,7 @@ const TITLE_OVERRIDES = {
   '/dashboard': 'Dashboard',
   '/super-admin/lead-management': 'Lead Management',
   '/super-admin/booking-approvals': 'Booking Approvals',
+  '/super-admin/site-settings': 'Site Settings',
 };
 const titleFromPath = (pathname = '') => {
   if (TITLE_OVERRIDES[pathname]) return TITLE_OVERRIDES[pathname];
@@ -26,6 +28,7 @@ const Header = ({ onMenuClick }) => {
   const dispatch = useDispatch();
   const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
+  const { siteName } = useSiteSettings();
   const sidebarCollapsed = useSelector((state) => state.ui.sidebarCollapsed);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -76,6 +79,12 @@ const Header = ({ onMenuClick }) => {
               ? <ChevronRightIcon style={{ width: 18, height: 18 }} />
               : <ChevronLeftIcon style={{ width: 18, height: 18 }} />)}
         </button>
+        {siteName && (
+          <>
+            <span className="app-header__brand">{siteName}</span>
+            <span className="app-header__brand-sep" aria-hidden="true" />
+          </>
+        )}
         <p className="app-header__title">{titleFromPath(location.pathname)}</p>
       </div>
 

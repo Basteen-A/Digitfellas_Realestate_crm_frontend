@@ -72,6 +72,7 @@ const BookingApprovals = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [rejectFor, setRejectFor] = useState(null);
   const [rejectRemarks, setRejectRemarks] = useState('');
+  const [approveFor, setApproveFor] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,12 +88,16 @@ const BookingApprovals = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleApprove = async (booking) => {
-    if (!window.confirm(`Approve booking ${booking.booking_number} for ${customerName(booking)}?`)) return;
+  const handleApprove = (booking) => setApproveFor(booking);
+  const closeApprove = () => setApproveFor(null);
+  const confirmApprove = async () => {
+    const booking = approveFor;
+    if (!booking) return;
     setBusyId(booking.id);
     try {
       await bookingApi.approveBooking(booking.id);
       toast.success('Booking approved');
+      setApproveFor(null);
       load();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to approve booking'));
@@ -358,6 +363,34 @@ const BookingApprovals = () => {
       </div>
 
       {/* Reject-remarks modal */}
+      {approveFor && (
+        <div className="col-modal-overlay" onClick={() => busyId !== approveFor.id && closeApprove()}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 460px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(16,185,129,0.12)', color: 'var(--accent-green, #059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckCircleIcon style={{ width: 18, height: 18 }} />
+              </span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Approve booking {approveFor.booking_number}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{customerName(approveFor)}</p>
+              </div>
+            </div>
+            <div style={{ padding: 20, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+              Approve this booking? It moves to <strong style={{ color: 'var(--text-primary)' }}>Booking Confirmed</strong> and the reserved unit is committed.
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={closeApprove} disabled={busyId === approveFor.id}>Cancel</button>
+              <button className="crm-btn crm-btn-sm" style={{ background: 'var(--accent-green, #059669)', color: '#fff', border: 'none' }}
+                disabled={busyId === approveFor.id} onClick={confirmApprove}>
+                <CheckCircleIcon style={{ width: 14, height: 14 }} /> {busyId === approveFor.id ? 'Approving…' : 'Approve Booking'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {rejectFor && (
         <div className="col-modal-overlay" onClick={closeReject}
           style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}>

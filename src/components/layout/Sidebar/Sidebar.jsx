@@ -4,9 +4,8 @@ import { useSelector } from 'react-redux';
 import { getSidebarMenuForRole, getTaskMenuItem, ROLE_LABELS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
 import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './Sidebar.css';
-import logoFull from '../../../assets/images/Sujatha_N.png';
-import logoFavico from '../../../assets/images/Sujatha-Favico.png';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -25,6 +24,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const user = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(user);
   const location = useLocation();
+  const { siteTitle, logoFull, logoMark } = useSiteSettings();
 
   // Determine which group contains the current path so it auto-opens
   const menu = React.useMemo(() => {
@@ -107,8 +107,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
           mark on the collapsed rail. No extra text. */}
       <div className="app-sidebar__brand">
         <div className="app-sidebar__logo">
-          <img src={logoFull} alt="Logo" className="sidebar-logo sidebar-logo--full" />
-          <img src={logoFavico} alt="Logo" className="sidebar-logo sidebar-logo--mark" />
+          <img src={logoFull} alt={siteTitle} className="sidebar-logo sidebar-logo--full" />
+          <img src={logoMark} alt={siteTitle} className="sidebar-logo sidebar-logo--mark" />
         </div>
       </div>
 

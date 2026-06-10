@@ -211,6 +211,18 @@ const InventoryUnitList = () => {
         next.phase_id = '';
         if (value) ensurePhasesLoaded(value);
       }
+      // When a phase is picked, prefill the per-sqft guided value from the
+      // phase's guideline value (and recompute total price). User can still edit.
+      if (name === 'phase_id') {
+        const phase = (phasesByProject[prev.project_id] || []).find((p) => String(p.id) === String(value));
+        const phaseRate = phase?.guideline_value_per_sqft;
+        if (phaseRate != null && phaseRate !== '') {
+          next.guided_value = String(phaseRate);
+          const area = parseFloat(prev.unit_area) || 0;
+          const gv = parseFloat(phaseRate) || 0;
+          if (area > 0 && gv > 0) next.total_price = (area * gv).toFixed(2);
+        }
+      }
       return next;
     });
   };
