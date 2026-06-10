@@ -118,6 +118,61 @@
   .col-bookings-mobile { display: block; }
   .col-bookings-mobile-card { display: block; }
   .col-bookings-page .crm-table-wrap { overflow: visible; }
+
+  /* The bookings list uses the shared lead-workspace responsive table. The
+     shared CSS collapses the data (hide-mobile) columns at ≤768 but only
+     reveals the expand toggle + styled expanded card at ≤640 — so reveal and
+     style them across the whole trimmed-table band, keeping every booking
+     expandable (and its quick actions reachable) on tablets too. */
+  .col-bookings-page .lead-workspace__table th.lead-col-toggle,
+  .col-bookings-page .lead-workspace__table td.lead-col-toggle {
+    display: table-cell !important;
+    width: 36px;
+    text-align: center;
+  }
+  .col-bookings-page .lead-workspace__expanded-row {
+    display: table-row !important;
+  }
+  .col-bookings-page .lead-workspace__expanded-row td {
+    padding: 0 !important;
+    background: var(--bg-primary, #f8fafc) !important;
+    border-bottom: 1px solid var(--border-primary, #e2e8f0);
+  }
+  .col-bookings-page .lead-workspace__expanded-card {
+    padding: 12px;
+    margin: 0 12px 12px;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-primary, #e2e8f0);
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  }
+  .col-bookings-page .expanded-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .col-bookings-page .expanded-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .col-bookings-page .expanded-info-item.full-width {
+    grid-column: span 2;
+  }
+  .col-bookings-page .expanded-info-item label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--text-secondary, #64748b);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .col-bookings-page .expanded-info-item p {
+    font-size: 11px;
+    color: var(--text-primary, #1e293b);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.4;
+  }
 }
 
 /* ── Stat Cards ── */
@@ -820,6 +875,14 @@
   gap: 6px;
   justify-content: center;
   align-items: center;
+}
+
+/* Inside the mobile expanded card the action set can be long — let it wrap
+   onto multiple rows, left-aligned, instead of overflowing. */
+.col-qa-actions--mobile {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .col-qa-btn {

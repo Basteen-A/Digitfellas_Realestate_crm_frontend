@@ -183,6 +183,26 @@ const leadWorkflowApi = {
     return data;
   },
 
+  // ── Super Admin lead transfer ──
+
+  /**
+   * POST /leads/bulk-transfer
+   * Move every lead owned by `fromUserId` over to `toUserId`.
+   */
+  bulkTransferLeads: async (fromUserId, toUserId, note) => {
+    const { data } = await api.post('/leads/bulk-transfer', { fromUserId, toUserId, note });
+    return data;
+  },
+
+  /**
+   * PATCH /leads/:id/transfer
+   * Move a single lead to any active user (any role).
+   */
+  transferLead: async (leadId, toUserId, note) => {
+    const { data } = await api.patch(`/leads/${leadId}/transfer`, { toUserId, note });
+    return data;
+  },
+
   getUserWithScore: async (userId) => {
     const { data } = await api.get(`/leads/user/${userId}/score`);
     return data;

@@ -592,12 +592,12 @@
 
 /* ============================================================
    Task List page (lead-workspace based) — mobile responsiveness
-   Desktop: full table. 641–768px: trimmed table. ≤640px: the table
-   is replaced by a clean card list (.task-cards-mobile) and the
-   filters are restored as a stacked grid (the shared lead CSS hides
-   .lead-workspace__toolbar-filters at ≤640 in favour of a dropdown
-   the task page does not use). All scoped under .task-workspace so
-   the shared lead pages are never affected.
+   Desktop: full table. 641–768px: trimmed table + inline filter
+   pills. ≤640px: the table is replaced by a clean card list
+   (.task-cards-mobile) and the filter pills collapse into the
+   shared "Filters" drawer — identical to the My Leads workspace.
+   All scoped under .task-workspace so the shared lead pages are
+   never affected.
    ============================================================ */
 .task-workspace { padding: 20px 24px; }
 
@@ -610,16 +610,10 @@
 @media (max-width: 768px) {
   .task-workspace { padding: 12px; }
 
-  /* Toolbar: search full width, filters wrap two-per-row. */
+  /* Toolbar: search full width; the filter pills wrap underneath. */
   .task-workspace .lead-workspace__toolbar { flex-direction: column; gap: 8px; }
   .task-workspace .lead-workspace__toolbar-search { width: 100%; min-width: 0; }
   .task-workspace .lead-workspace__toolbar-filters { flex-wrap: wrap; gap: 8px; }
-  .task-workspace .lead-workspace__toolbar-filters > select,
-  .task-workspace .lead-workspace__toolbar-filters > label.filter-tab,
-  .task-workspace .lead-workspace__toolbar-filters > .lead-workspace__clear-filters {
-    flex: 1 1 46%;
-    min-width: 0;
-  }
 
   /* Fixed table layout so the 4 kept columns fill the width (no scroll). */
   .task-workspace .lead-workspace__table-wrap { overflow-x: hidden; width: 100%; }
@@ -639,22 +633,8 @@
 
 /* ─────────── ≤ 640px : phones — card list replaces the table ─────────── */
 @media (max-width: 640px) {
-  /* Restore the filters the shared lead CSS hides, as a clean grid. */
-  .task-workspace .lead-workspace__toolbar-filters {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    width: 100%;
-  }
-  .task-workspace .lead-workspace__toolbar-filters > select { width: 100%; min-width: 0; margin: 0; }
-  .task-workspace .lead-workspace__toolbar-filters > label.filter-tab,
-  .task-workspace .lead-workspace__toolbar-filters > .lead-workspace__clear-filters {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-width: 0;
-    margin: 0;
-    justify-content: center;
-  }
+  /* The desktop filter pills stay hidden (shared lead CSS) and the
+     "Filters" drawer takes over — no per-filter pills on phones. */
 
   /* Swap table → cards. */
   .task-workspace .lead-workspace__table-wrap { display: none; }

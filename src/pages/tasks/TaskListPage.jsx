@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
   ArrowPathIcon, PlusCircleIcon, MagnifyingGlassIcon, ChevronRightIcon,
-  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, Squares2X2Icon,
-  ClipboardDocumentListIcon, CheckCircleIcon, ExclamationTriangleIcon,
+  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, FunnelIcon,
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
@@ -12,8 +11,6 @@ import TaskModal from './TaskModal';
 // Reuse the lead workspace design system so this page is visually consistent
 // (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
 import '../portals/common/LeadWorkspacePage.css';
-// Stat cards share the portal-dashboard card style (colored top accent + sub-label).
-import '../portals/collection/CollectionWorkspace.css';
 import './TaskManagement.css';
 
 const STATUS_LABELS = {
@@ -30,21 +27,24 @@ const PRIORITY_HEX = {
   low: '#16a34a', medium: '#d97706', high: '#ea580c', urgent: '#dc2626',
 };
 
-// Stat cards (values pulled from the /stats response keyed by `key`) — colored
-// top accent (variant) + faint icon, matching the portal dashboards.
-const STAT_CARDS = [
-  { key: 'total', label: 'Total Tasks', sub: 'all tasks', icon: Squares2X2Icon, variant: '' },
-  { key: 'open', label: 'Open', sub: 'to start', icon: ClipboardDocumentListIcon, variant: 'info' },
-  { key: 'work_in_progress', label: 'In Progress', sub: 'being worked on', icon: ArrowPathIcon, variant: 'warning' },
-  { key: 'completed', label: 'Completed', sub: 'done', icon: CheckCircleIcon, variant: 'success' },
-  { key: 'overdue', label: 'Overdue', sub: 'past due', icon: ExclamationTriangleIcon, variant: 'danger' },
-];
-
 const GROUP_BY = [
   { value: 'none', label: 'None' },
   { value: 'project', label: 'Project' },
   { value: 'department', label: 'Department' },
   { value: 'status', label: 'Status' },
+];
+
+// Toolbar pill options (single-select unless noted).
+const ASSIGN_OPTIONS = [
+  { value: 'by_me', label: 'Assigned by me' },
+  { value: 'to_me', label: 'Assigned to me' },
+];
+const STATUS_FILTER_OPTIONS = Object.entries(STATUS_LABELS)
+  .filter(([v]) => v !== 'pending')
+  .map(([v, l]) => ({ value: v, label: l }));
+const OPTION_TOGGLES = [
+  { value: 'include_closed', label: 'Include Closed / Cancelled' },
+  { value: 'updated_today', label: 'Updated Today' },
 ];
 
 // Uploaded files are served by the backend at :5000/uploads (file_url is relative).
@@ -95,10 +95,95 @@ const Chip = ({ hex, children }) => (
   </span>
 );
 
+// ── Toolbar filter pill — same markup/classes as the My Leads workspace so the
+// look is identical. Supports single-select (radio) and multi-select (checkbox).
+const FilterDropdown = ({
+  label, mobileLabel, options, single = false, selectedValues,
+  onToggle, onClear, isOpen, onToggleOpen, onClose,
+}) => {
+  const isSel = (v) => (single ? selectedValues === v : selectedValues.includes(v));
+  const count = single
+    ? (selectedValues ? '1' : 'All')
+    : (selectedValues.length ? selectedValues.length : 'All');
+  return (
+    <details className="lead-filter-dropdown" open={isOpen}>
+      <summary
+        className="lead-filter-dropdown__summary"
+        aria-expanded={isOpen}
+        onClick={(e) => { e.preventDefault(); onToggleOpen(); }}
+      >
+        <span className="hide-mobile">{label}</span>
+        <span className="show-mobile">{mobileLabel || label}</span>
+        <span className="lead-filter-dropdown__count">{count}</span>
+      </summary>
+      <div className="lead-filter-dropdown__menu">
+        <div className="lead-filter-dropdown__menu-head">
+          <strong>{label}</strong>
+          <button type="button" onClick={(e) => { e.preventDefault(); onClear(); onClose(); }}>Clear</button>
+        </div>
+        {!options.length ? (
+          <p className="lead-filter-dropdown__empty">No options</p>
+        ) : (
+          options.map((opt) => (
+            <label key={opt.value} className="lead-filter-dropdown__item">
+              <input
+                type={single ? 'radio' : 'checkbox'}
+                checked={isSel(opt.value)}
+                onChange={() => { onToggle(opt.value); if (single) onClose(); }}
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))
+        )}
+      </div>
+    </details>
+  );
+};
+
+// ── Mobile filter drawer — the "Filters" pill that opens a sectioned sheet,
+// identical to the My Leads mobile experience.
+const MobileFilters = ({ sections, totalSelected, isOpen, onToggleOpen, onClearAll }) => (
+  <details className="lead-mobile-filters show-mobile" open={isOpen}>
+    <summary
+      className="lead-mobile-filters__summary"
+      aria-expanded={isOpen}
+      onClick={(e) => { e.preventDefault(); onToggleOpen(); }}
+    >
+      <FunnelIcon style={{ width: 14, height: 14 }} />
+      <span>Filters</span>
+      <span className="lead-mobile-filters__count">{totalSelected || 'All'}</span>
+    </summary>
+    <div className="lead-mobile-filters__menu">
+      {sections.map((sec) => (
+        <div className="lead-mobile-filters__section" key={sec.key}>
+          <div className="lead-mobile-filters__head">
+            <strong>{sec.label}</strong>
+            <button type="button" onClick={sec.onClear}>Clear</button>
+          </div>
+          {!sec.options.length ? (
+            <p className="lead-mobile-filters__empty">No options</p>
+          ) : (
+            sec.options.map((opt) => (
+              <label key={opt.value} className="lead-mobile-filters__item">
+                <input
+                  type={sec.single ? 'radio' : 'checkbox'}
+                  checked={sec.single ? sec.selectedValues === opt.value : sec.selectedValues.includes(opt.value)}
+                  onChange={() => sec.onToggle(opt.value)}
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))
+          )}
+        </div>
+      ))}
+      <button type="button" className="lead-mobile-filters__clear-all" onClick={onClearAll}>Clear All</button>
+    </div>
+  </details>
+);
+
 const TaskListPage = () => {
   const currentUser = useSelector((state) => state.auth.user);
   const [rows, setRows] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -109,6 +194,7 @@ const TaskListPage = () => {
   const [assignFilter, setAssignFilter] = useState(''); // '' | 'by_me' | 'to_me'
   const [updatedToday, setUpdatedToday] = useState(false);
   const [groupBy, setGroupBy] = useState('none');
+  const [openFilterKey, setOpenFilterKey] = useState(null); // which toolbar/mobile filter pill is open
   const [departments, setDepartments] = useState([]); // full list for the filter
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -140,9 +226,8 @@ const TaskListPage = () => {
         }
         return acc;
       };
-      const [allRows, st] = await Promise.all([fetchAllTasks(), taskApi.getStats()]);
+      const allRows = await fetchAllTasks();
       setRows(allRows);
-      setStats(st.data || null);
       setDetails({}); // drawer caches may be stale after a reload
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to load tasks');
@@ -170,9 +255,9 @@ const TaskListPage = () => {
   }, []);
 
   const FOLLOW_UP_TABS = [
-    { value: '', label: 'All Tasks' },
-    { value: 'today', label: "Today's Follow-up" },
-    { value: 'missed', label: 'Missed Follow-up' },
+    { value: '', label: 'All Tasks', short: 'All' },
+    { value: 'today', label: "Today's Follow-up", short: 'Today' },
+    { value: 'missed', label: 'Missed Follow-up', short: 'Missed' },
   ];
 
   const openView = (id) => setModal({ open: true, mode: 'view', taskId: id });
@@ -552,22 +637,60 @@ const TaskListPage = () => {
         </div>
       </header>
 
-      {/* ── Stats ── */}
-      {stats && (
-        <div className="col-stat-grid-new" style={{ marginBottom: 16 }}>
-          {STAT_CARDS.map(({ key, label, sub, icon: Icon, variant }) => (
-            <div className={`col-stat-card-new ${variant}`} key={key}>
-              <div className="col-stat-label-new">{label}</div>
-              <div className="col-stat-value-new">{stats[key] ?? 0}</div>
-              <div className="col-stat-sub-new">{sub}</div>
-              <div className="col-stat-icon-new"><Icon style={{ width: 24, height: 24 }} /></div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Toolbar (search + filters) ── */}
+      {/* ── Toolbar (filters + search) — same pill layout as My Leads ── */}
       <div className="lead-workspace__toolbar">
+        <div className="lead-workspace__toolbar-filters">
+          <FilterDropdown
+            label="Assignment" mobileLabel="Assign" single options={ASSIGN_OPTIONS}
+            selectedValues={assignFilter}
+            onToggle={(v) => setAssignFilter((p) => (p === v ? '' : v))}
+            onClear={() => setAssignFilter('')}
+            isOpen={openFilterKey === 'assign'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'assign' ? null : 'assign'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <FilterDropdown
+            label="Status" single options={STATUS_FILTER_OPTIONS}
+            selectedValues={statusFilter}
+            onToggle={(v) => setStatusFilter((p) => (p === v ? '' : v))}
+            onClear={() => setStatusFilter('')}
+            isOpen={openFilterKey === 'status'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'status' ? null : 'status'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <FilterDropdown
+            label="Project" single options={projectOptions.map((p) => ({ value: p, label: p }))}
+            selectedValues={projectFilter}
+            onToggle={(v) => setProjectFilter((p) => (p === v ? '' : v))}
+            onClear={() => setProjectFilter('')}
+            isOpen={openFilterKey === 'project'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'project' ? null : 'project'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <FilterDropdown
+            label="Department" mobileLabel="Dept" single options={deptOptions.map((d) => ({ value: d, label: d }))}
+            selectedValues={deptFilter}
+            onToggle={(v) => setDeptFilter((p) => (p === v ? '' : v))}
+            onClear={() => setDeptFilter('')}
+            isOpen={openFilterKey === 'dept'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'dept' ? null : 'dept'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <FilterDropdown
+            label="Options" options={OPTION_TOGGLES}
+            selectedValues={[includeClosed && 'include_closed', updatedToday && 'updated_today'].filter(Boolean)}
+            onToggle={(v) => { if (v === 'include_closed') setIncludeClosed((b) => !b); else setUpdatedToday((b) => !b); }}
+            onClear={() => { setIncludeClosed(false); setUpdatedToday(false); }}
+            isOpen={openFilterKey === 'options'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'options' ? null : 'options'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <button type="button" className="lead-workspace__clear-filters" onClick={clearAll}>
+            <span className="hide-mobile">Clear All</span>
+            <span className="show-mobile">Clear</span>
+          </button>
+        </div>
+
         <div className="lead-workspace__toolbar-search">
           <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
           <input
@@ -576,34 +699,22 @@ const TaskListPage = () => {
             onKeyDown={(e) => e.key === 'Enter' && load()}
             placeholder="Search tasks by title or description"
           />
-        </div>
-        <div className="lead-workspace__toolbar-filters">
-          <select value={assignFilter} onChange={(e) => setAssignFilter(e.target.value)} title="Who the task belongs to">
-            <option value="">All Tasks</option>
-            <option value="by_me">Assigned by me</option>
-            <option value="to_me">Assigned to me</option>
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All Statuses</option>
-            {Object.entries(STATUS_LABELS).filter(([v]) => v !== 'pending').map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-          <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-            <option value="">All Projects</option>
-            {projectOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-            <option value="">All Departments</option>
-            {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-  <label className="filter-tab" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', border: '1px solid var(--border-primary, #e2e8f0)' }}>
-    <input type="checkbox" checked={includeClosed} onChange={(e) => setIncludeClosed(e.target.checked)} style={{ accentColor: 'var(--accent-blue, #2563eb)' }} />
-    Include Closed / Cancelled
-  </label>
-  <label className="filter-tab" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', border: '1px solid var(--border-primary, #e2e8f0)' }}>
-    <input type="checkbox" checked={updatedToday} onChange={(e) => setUpdatedToday(e.target.checked)} style={{ accentColor: 'var(--accent-blue, #2563eb)' }} />
-    Updated Today
-  </label>
-  <button type="button" className="lead-workspace__clear-filters" onClick={clearAll}>Clear All</button>
+          <MobileFilters
+            totalSelected={
+              (assignFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (projectFilter ? 1 : 0)
+              + (deptFilter ? 1 : 0) + (includeClosed ? 1 : 0) + (updatedToday ? 1 : 0)
+            }
+            isOpen={openFilterKey === 'mobile_filters'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'mobile_filters' ? null : 'mobile_filters'))}
+            onClearAll={() => { clearAll(); setOpenFilterKey(null); }}
+            sections={[
+              { key: 'assign', label: 'Assignment', single: true, options: ASSIGN_OPTIONS, selectedValues: assignFilter, onToggle: (v) => setAssignFilter((p) => (p === v ? '' : v)), onClear: () => setAssignFilter('') },
+              { key: 'status', label: 'Status', single: true, options: STATUS_FILTER_OPTIONS, selectedValues: statusFilter, onToggle: (v) => setStatusFilter((p) => (p === v ? '' : v)), onClear: () => setStatusFilter('') },
+              { key: 'project', label: 'Project', single: true, options: projectOptions.map((p) => ({ value: p, label: p })), selectedValues: projectFilter, onToggle: (v) => setProjectFilter((p) => (p === v ? '' : v)), onClear: () => setProjectFilter('') },
+              { key: 'dept', label: 'Department', single: true, options: deptOptions.map((d) => ({ value: d, label: d })), selectedValues: deptFilter, onToggle: (v) => setDeptFilter((p) => (p === v ? '' : v)), onClear: () => setDeptFilter('') },
+              { key: 'options', label: 'Options', single: false, options: OPTION_TOGGLES, selectedValues: [includeClosed && 'include_closed', updatedToday && 'updated_today'].filter(Boolean), onToggle: (v) => { if (v === 'include_closed') setIncludeClosed((b) => !b); else setUpdatedToday((b) => !b); }, onClear: () => { setIncludeClosed(false); setUpdatedToday(false); } },
+            ]}
+          />
         </div>
       </div>
 
@@ -612,7 +723,7 @@ const TaskListPage = () => {
         <div className="lead-workspace__list-card">
           {/* Tabs + group-by + record count */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
-            <div className="filter-tabs">
+            <div className="filter-tabs mobile-compact-tabs">
               {FOLLOW_UP_TABS.map((t) => (
                 <button
                   key={t.value || 'all'}
@@ -620,11 +731,13 @@ const TaskListPage = () => {
                   className={`filter-tab ${followUpFilter === t.value ? 'active' : ''}`}
                   onClick={() => setFollowUpFilter(t.value)}
                 >
-                  {t.label}
+                  <span className="hide-mobile">{t.label}</span>
+                  <span className="show-mobile">{t.short}</span>
                 </button>
               ))}
+              <small className="filter-tabs__records">{records} record{records === 1 ? '' : 's'}</small>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="filter-tabs__records" style={{ margin: 0, padding: 0 }}>Group by</span>
               <div className="filter-tabs">
                 {GROUP_BY.map((g) => (
@@ -639,7 +752,6 @@ const TaskListPage = () => {
                 ))}
               </div>
             </div>
-            <small className="filter-tabs__records">{records} record{records === 1 ? '' : 's'}</small>
           </div>
 
           <div className="lead-workspace__table-wrap">

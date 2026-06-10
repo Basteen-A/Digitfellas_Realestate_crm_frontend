@@ -2779,9 +2779,28 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       loadAssignableUsers(targetAssigneeRole);
     }
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
+      // Start every new booking from a clean slate — only the current lead's
+      // own details carry over, never the previous booking's buyer data.
+      setCustomerProfileForm({
+        buyer_name: `${quickActionLead?.first_name || ''} ${quickActionLead?.last_name || ''}`.trim(),
+        date_of_birth: '', pan_number: '', aadhar_number: '',
+        occupation: '', current_post: '', purchase_type: '', marital_status: '',
+        current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
+        permanent_address: '', permanent_area: '', permanent_city: '', permanent_state: '', permanent_pincode: '',
+        sameAsCurrent: false,
+        assignToUserId: '',
+        note: '',
+        inventoryUnitId: '',
+        paymentPlanId: '',
+        bookingProjectId: quickActionLead?.projectId || '',
+        bookingLocationId: quickActionLead?.locationId || '',
+        bookingPhaseId: '',
+      });
+      setAvailableUnits([]);
+      setAvailablePhases([]);
       loadAssignableUsers('COL');
       // Load phases for the project, then units
-      const projectIdForUnits = customerProfileForm.bookingProjectId || quickActionLead?.projectId;
+      const projectIdForUnits = quickActionLead?.projectId;
       if (projectIdForUnits) {
         projectPhaseApi.dropdown(projectIdForUnits).then(resp => {
           const phases = resp.data?.data || resp.data || [];

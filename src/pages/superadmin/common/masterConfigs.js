@@ -19,6 +19,7 @@ import paymentTypeApi from '../../../api/paymentTypeApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 import paymentModeApi from '../../../api/paymentModeApi';
 import bankApi from '../../../api/bankApi';
+import paymentStatusApi from '../../../api/paymentStatusApi';
 import departmentApi from '../../../api/departmentApi';
 import subDepartmentApi from '../../../api/subDepartmentApi';
 import api from '../../../api/axiosInstance';
@@ -683,6 +684,10 @@ export const masterConfigs = {
       { header: 'Status', path: 'status.status_name' },
       { header: 'Status Code', path: 'status.status_code' },
       { header: 'Remark', path: 'remark_text' },
+      {
+        header: 'User Type',
+        render: (row) => row.userType?.type_name || 'All Users',
+      },
       { header: 'Ans/Non-Ans', path: 'has_ans_non_ans', type: 'boolean' },
       {
         header: 'Default',
@@ -712,6 +717,13 @@ export const masterConfigs = {
         ],
       },
       { name: 'ans_non_ans_disabled', label: 'Lock Response Type', type: 'checkbox', defaultValue: false },
+      {
+        name: 'user_type_id',
+        label: 'Visible To (User Type)',
+        type: 'select',
+        loadOptions: loadUserTypeOptions,
+        placeholder: 'All Users (leave empty)',
+      },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
@@ -827,6 +839,29 @@ export const masterConfigs = {
       { name: 'ifsc_code', label: 'IFSC Code' },
       { name: 'swift_code', label: 'SWIFT Code' },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  paymentStatuses: {
+    title: 'Payment Statuses',
+    api: paymentStatusApi,
+    columns: [
+      { header: 'Status', path: 'status_name' },
+      { header: 'Code', path: 'status_code' },
+      { header: 'Follow-up', path: 'needs_followup', type: 'boolean' },
+      { header: 'Remarks', path: 'needs_remarks', type: 'boolean' },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'status_name', label: 'Status Name', required: true },
+      { name: 'status_code', label: 'Status Code', required: true },
+      { name: 'color_code', label: 'Color', type: 'color' },
+      { name: 'needs_followup', label: 'Needs Follow-up', type: 'checkbox', defaultValue: false },
+      { name: 'needs_remarks', label: 'Needs Remarks', type: 'checkbox', defaultValue: false },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },

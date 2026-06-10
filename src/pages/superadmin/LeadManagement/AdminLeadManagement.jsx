@@ -17,6 +17,8 @@ import {
   ChevronRightIcon,
   BuildingOffice2Icon,
   MapPinIcon,
+  ArrowsRightLeftIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import './AdminLeadManagement.css';
 
@@ -74,17 +76,38 @@ const AdminLeadManagement = () => {
   const [projects, setProjects] = useState([]);
   const [locations, setLocations] = useState([]);
 
+  // ── Bulk transfer (user → user) ──
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferFrom, setTransferFrom] = useState('');
+  const [transferTo, setTransferTo] = useState('');
+  const [transferNote, setTransferNote] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
+
+  // ── Single-lead move ──
+  const [moveLead, setMoveLead] = useState(null); // the lead row being moved
+  const [moveTo, setMoveTo] = useState('');
+  const [moveNote, setMoveNote] = useState('');
+  const [moving, setMoving] = useState(false);
+
+  const pickList = (res) => {
+    const list = res?.data?.data || res?.data || [];
+    return Array.isArray(list) ? list : [];
+  };
+
+  // Reusable so we can refresh after a transfer / delete.
+  const loadUsers = useCallback(() => {
+    userApi.getAll({ limit: 100 }) // 100 = server max; raising it 422s the request
+      .then((res) => setUsers(pickList(res)))
+      .catch((err) => { console.error('Load users failed:', err); setUsers([]); });
+  }, []);
+
   // ── Load users / projects / locations for dropdowns ──
   // Each loads independently so one failing request can't blank the others.
   useEffect(() => {
-    const pick = (res) => {
-      const list = res?.data?.data || res?.data || [];
-      return Array.isArray(list) ? list : [];
-    };
+    const pick = pickList;
 
-    userApi.getAll({ limit: 100 }) // 100 = server max; raising it 422s the request
-      .then((res) => setUsers(pick(res)))
-      .catch((err) => { console.error('Load users failed:', err); setUsers([]); });
+    loadUsers();
 
     projectApi.getDropdown()
       .then((res) => setProjects(pick(res)))
@@ -93,7 +116,7 @@ const AdminLeadManagement = () => {
     locationApi.getDropdown()
       .then((res) => setLocations(pick(res)))
       .catch((err) => { console.error('Load locations failed:', err); setLocations([]); });
-  }, []);
+  }, [loadUsers]);
 
   // ── Fetch leads ──
   const fetchLeads = useCallback(async () => {
@@ -234,6 +257,103 @@ const AdminLeadManagement = () => {
     return u ? (`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email) : '';
   }, [users, selectedUserId]);
 
+  // All users grouped by role for the transfer / move dropdowns.
+  // `activeOnly` excludes deactivated users (used for transfer/move targets).
+  const buildUserGroups = useCallback((activeOnly) => {
+    const groups = new Map();
+    users
+      .filter((u) => (activeOnly ? u.is_active !== false : true))
+      .map((u) => ({
+        id: u.id,
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Unknown',
+        active: u.is_active !== false,
+        roleLabel: u.userType?.type_name || u.userType?.short_code || 'Other',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((u) => {
+        if (!groups.has(u.roleLabel)) groups.set(u.roleLabel, []);
+        groups.get(u.roleLabel).push(u);
+      });
+    return Array.from(groups.entries()).map(([label, list]) => ({ label, users: list }));
+  }, [users]);
+
+  const allUserGroups = useMemo(() => buildUserGroups(false), [buildUserGroups]);
+  const activeUserGroups = useMemo(() => buildUserGroups(true), [buildUserGroups]);
+
+  const userName = useCallback((id) => {
+    const u = users.find((x) => x.id === id);
+    return u ? (`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email) : '';
+  }, [users]);
+
+  // ── Bulk transfer handlers ──
+  const closeTransfer = () => {
+    setTransferOpen(false);
+    setTransferFrom('');
+    setTransferTo('');
+    setTransferNote('');
+  };
+
+  const handleBulkTransfer = async () => {
+    if (!transferFrom || !transferTo) { toast.error('Pick both a source and a target user.'); return; }
+    if (transferFrom === transferTo) { toast.error('Source and target must be different.'); return; }
+    setTransferring(true);
+    try {
+      const res = await leadWorkflowApi.bulkTransferLeads(transferFrom, transferTo, transferNote.trim() || undefined);
+      const count = res?.data?.transferred ?? 0;
+      toast.success(count > 0
+        ? `Transferred ${count} lead(s) to ${userName(transferTo)}.`
+        : `${userName(transferFrom)} had no leads to transfer.`);
+      fetchLeads();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Lead transfer failed.');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!transferFrom) { toast.error('Pick the source user to delete.'); return; }
+    if (!window.confirm(
+      `Delete user "${userName(transferFrom)}"?\n\nTransfer their leads first — any leads still owned by them will be left unassigned.`
+    )) return;
+    setDeletingUser(true);
+    try {
+      await userApi.delete(transferFrom);
+      toast.success(`User "${userName(transferFrom)}" deleted.`);
+      setTransferFrom('');
+      loadUsers();
+      fetchLeads();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not delete user.');
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
+  // ── Single-lead move handlers ──
+  const openMove = (e, lead) => {
+    e.stopPropagation();
+    setMoveLead(lead);
+    setMoveTo('');
+    setMoveNote('');
+  };
+  const closeMove = () => { setMoveLead(null); setMoveTo(''); setMoveNote(''); };
+
+  const handleMoveLead = async () => {
+    if (!moveTo) { toast.error('Pick a user to move this lead to.'); return; }
+    setMoving(true);
+    try {
+      await leadWorkflowApi.transferLead(moveLead.id, moveTo, moveNote.trim() || undefined);
+      toast.success(`Lead moved to ${userName(moveTo)}.`);
+      closeMove();
+      fetchLeads();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not move lead.');
+    } finally {
+      setMoving(false);
+    }
+  };
+
   return (
     <section className="admin-lead-mgmt">
       {/* Header */}
@@ -243,6 +363,10 @@ const AdminLeadManagement = () => {
           <p>View and manage all leads across the CRM. Default: today's leads.</p>
         </div>
         <div className="admin-lead-mgmt__header-actions">
+          <button type="button" className="alm-btn alm-btn--secondary" onClick={() => setTransferOpen(true)}>
+            <ArrowsRightLeftIcon style={{ width: 16, height: 16 }} />
+            Transfer Leads
+          </button>
           <button type="button" className="alm-btn alm-btn--secondary" onClick={handleClearFilters}>
             <ArrowPathIcon style={{ width: 16, height: 16 }} />
             Reset
@@ -509,14 +633,24 @@ const AdminLeadManagement = () => {
                   <span className="alm-date-cell">{formatDateTime(lead.createdAt)}</span>
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    className="alm-btn alm-btn--icon"
-                    title="View Lead"
-                    onClick={(e) => { e.stopPropagation(); handleViewLead(lead.id); }}
-                  >
-                    <EyeIcon style={{ width: 18, height: 18 }} />
-                  </button>
+                  <div style={{ display: 'inline-flex', gap: 4 }}>
+                    <button
+                      type="button"
+                      className="alm-btn alm-btn--icon"
+                      title="View Lead"
+                      onClick={(e) => { e.stopPropagation(); handleViewLead(lead.id); }}
+                    >
+                      <EyeIcon style={{ width: 18, height: 18 }} />
+                    </button>
+                    <button
+                      type="button"
+                      className="alm-btn alm-btn--icon"
+                      title="Move lead to another user"
+                      onClick={(e) => openMove(e, lead)}
+                    >
+                      <ArrowsRightLeftIcon style={{ width: 18, height: 18 }} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -547,6 +681,202 @@ const AdminLeadManagement = () => {
             >
               Next <ChevronRightIcon style={{ width: 16, height: 16 }} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Transfer Modal ── */}
+      {transferOpen && (
+        <div
+          onClick={closeTransfer}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 12, width: '560px', maxWidth: '92vw',
+              maxHeight: '88vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            <header style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 20px', borderBottom: '1px solid #e5e7eb',
+            }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Transfer Leads</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  Move every lead from one user to another — status, site visits, telecaller history and timeline all carry over.
+                </div>
+              </div>
+              <button onClick={closeTransfer} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+            </header>
+
+            <div style={{ padding: '16px 20px', display: 'grid', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>From user (source)</label>
+                <select
+                  value={transferFrom}
+                  onChange={(e) => setTransferFrom(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
+                >
+                  <option value="">Select source user…</option>
+                  {allUserGroups.map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}{u.active ? '' : ' (inactive)'}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>To user (target)</label>
+                <select
+                  value={transferTo}
+                  onChange={(e) => setTransferTo(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
+                >
+                  <option value="">Select target user…</option>
+                  {activeUserGroups.map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Note (optional)</label>
+                <input
+                  value={transferNote}
+                  onChange={(e) => setTransferNote(e.target.value)}
+                  placeholder="Reason for transfer"
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={handleDeleteUser}
+                  disabled={!transferFrom || deletingUser}
+                  title="Soft-delete the source user (transfer their leads first)"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '8px 14px', border: '1px solid #FCA5A5', background: '#FEF2F2',
+                    color: '#B91C1C', borderRadius: 6, fontWeight: 600,
+                    cursor: (!transferFrom || deletingUser) ? 'not-allowed' : 'pointer',
+                    opacity: (!transferFrom || deletingUser) ? 0.6 : 1,
+                  }}
+                >
+                  <TrashIcon style={{ width: 16, height: 16 }} />
+                  {deletingUser ? 'Deleting…' : 'Delete source user'}
+                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={closeTransfer}
+                    style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkTransfer}
+                    disabled={transferring}
+                    style={{ padding: '8px 14px', border: 'none', background: '#4338CA', color: '#fff', borderRadius: 6, fontWeight: 600, cursor: transferring ? 'not-allowed' : 'pointer' }}
+                  >
+                    {transferring ? 'Transferring…' : 'Transfer all leads'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Single-Lead Move Modal ── */}
+      {moveLead && (
+        <div
+          onClick={closeMove}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 12, width: '480px', maxWidth: '92vw',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            <header style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 20px', borderBottom: '1px solid #e5e7eb',
+            }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Move Lead</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  {moveLead.leadNumber || moveLead.fullName || 'Lead'} · currently {moveLead.assignedToUserName || 'Unassigned'}
+                </div>
+              </div>
+              <button onClick={closeMove} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+            </header>
+
+            <div style={{ padding: '16px 20px', display: 'grid', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Move to user</label>
+                <select
+                  value={moveTo}
+                  onChange={(e) => setMoveTo(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
+                >
+                  <option value="">Select user…</option>
+                  {activeUserGroups.map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Note (optional)</label>
+                <input
+                  value={moveNote}
+                  onChange={(e) => setMoveNote(e.target.value)}
+                  placeholder="Reason for move"
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={closeMove}
+                  style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMoveLead}
+                  disabled={moving}
+                  style={{ padding: '8px 14px', border: 'none', background: '#4338CA', color: '#fff', borderRadius: 6, fontWeight: 600, cursor: moving ? 'not-allowed' : 'pointer' }}
+                >
+                  {moving ? 'Moving…' : 'Move lead'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

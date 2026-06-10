@@ -15,6 +15,15 @@ const formatCurrency = (val) => {
   return `₹${num.toLocaleString('en-IN')}`;
 };
 
+// Plot amount derived from the phase's guideline value × the plot's area.
+// Returns null when either piece is missing so the cell can show a dash.
+const phaseGuidelineAmount = (unit) => {
+  const perSqft = parseFloat(unit.phase?.guideline_value_per_sqft);
+  const area = parseFloat(unit.unit_area);
+  if (!perSqft || !area) return null;
+  return perSqft * area;
+};
+
 const statusClass = (status) => {
   switch (status) {
     case 'Available': return 'inv-status--available';
@@ -69,7 +78,7 @@ const InventoryUnitList = () => {
   // Phase data — keyed by project_id
   const [phasesByProject, setPhasesByProject] = useState({});
   const [phaseModal, setPhaseModal] = useState({ open: false, mode: 'create', row: null, project_id: '' });
-  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0 });
   const [phaseSaving, setPhaseSaving] = useState(false);
 
   const filteredProjects = useMemo(() => {
@@ -261,7 +270,7 @@ const InventoryUnitList = () => {
       return;
     }
     await ensurePhasesLoaded(useProjId, true);
-    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+    setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0 });
     setPhaseModal({ open: true, mode: 'create', row: null, project_id: useProjId });
   };
   const closePhaseManager = () => setPhaseModal({ open: false, mode: 'create', row: null, project_id: '' });
@@ -271,6 +280,7 @@ const InventoryUnitList = () => {
       phase_name: phase.phase_name || '',
       phase_code: phase.phase_code || '',
       description: phase.description || '',
+      guideline_value_per_sqft: phase.guideline_value_per_sqft ?? '',
       sort_order: phase.sort_order ?? 0,
     });
     setPhaseModal((prev) => ({ ...prev, mode: 'edit', row: phase }));
@@ -286,6 +296,7 @@ const InventoryUnitList = () => {
           phase_name: phaseForm.phase_name,
           phase_code: phaseForm.phase_code || null,
           description: phaseForm.description || null,
+          guideline_value_per_sqft: phaseForm.guideline_value_per_sqft === '' ? null : Number(phaseForm.guideline_value_per_sqft),
           sort_order: Number(phaseForm.sort_order) || 0,
         });
         toast.success('Phase updated');
@@ -295,12 +306,13 @@ const InventoryUnitList = () => {
           phase_name: phaseForm.phase_name,
           phase_code: phaseForm.phase_code || null,
           description: phaseForm.description || null,
+          guideline_value_per_sqft: phaseForm.guideline_value_per_sqft === '' ? null : Number(phaseForm.guideline_value_per_sqft),
           sort_order: Number(phaseForm.sort_order) || 0,
         });
         toast.success('Phase created');
       }
       await ensurePhasesLoaded(phaseModal.project_id, true);
-      setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 });
+      setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0 });
       setPhaseModal((prev) => ({ ...prev, mode: 'create', row: null }));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save phase');
@@ -434,6 +446,7 @@ const InventoryUnitList = () => {
               <th>Config</th>
               <th>Area</th>
               <th>Guided Value / sqft</th>
+              <th>Guideline Amount</th>
               <th>Total Price</th>
               <th>Block/Tower</th>
               <th>Status</th>
@@ -444,12 +457,12 @@ const InventoryUnitList = () => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={projectId ? 10 : 11} className="inv-table__empty">Loading...</td>
+                <td colSpan={projectId ? 11 : 12} className="inv-table__empty">Loading...</td>
               </tr>
             )}
             {!loading && units.length === 0 && (
               <tr>
-                <td colSpan={projectId ? 10 : 11} className="inv-table__empty">No units found</td>
+                <td colSpan={projectId ? 11 : 12} className="inv-table__empty">No units found</td>
               </tr>
             )}
             {!loading && units.map((unit) => (
@@ -462,6 +475,13 @@ const InventoryUnitList = () => {
                 <td>{unit.configuration || '-'}</td>
                 <td>{unit.unit_area ? `${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : '-'}</td>
                 <td>{unit.guided_value ? `₹${parseFloat(unit.guided_value).toLocaleString('en-IN')}` : '-'}</td>
+                <td>
+                  {phaseGuidelineAmount(unit) != null
+                    ? <span title={`${parseFloat(unit.phase.guideline_value_per_sqft).toLocaleString('en-IN')} /sq.ft. × ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}`}>
+                        {formatCurrency(phaseGuidelineAmount(unit))}
+                      </span>
+                    : <span style={{ color: '#94a3b8' }}>—</span>}
+                </td>
                 <td>{unit.total_price ? formatCurrency(unit.total_price) : '-'}</td>
                 <td>{unit.tower_block || '-'}</td>
                 <td>
@@ -762,13 +782,14 @@ const InventoryUnitList = () => {
                 ) : (
                   <table className="inv-table" style={{ width: '100%' }}>
                     <thead>
-                      <tr><th>Phase</th><th>Code</th><th>Units</th><th>Available</th><th>Actions</th></tr>
+                      <tr><th>Phase</th><th>Code</th><th>Guideline /sq.ft.</th><th>Units</th><th>Available</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
                       {(phasesByProject[phaseModal.project_id] || []).map((p) => (
                         <tr key={p.id}>
                           <td><strong>{p.phase_name}</strong></td>
                           <td>{p.phase_code || '-'}</td>
+                          <td>{p.guideline_value_per_sqft != null && p.guideline_value_per_sqft !== '' ? `₹${Number(p.guideline_value_per_sqft).toLocaleString('en-IN')}` : '—'}</td>
                           <td>{p.unit_count ?? 0}</td>
                           <td>{p.available_count ?? 0}</td>
                           <td>
@@ -804,6 +825,12 @@ const InventoryUnitList = () => {
                       onChange={(e) => setPhaseForm((p) => ({ ...p, description: e.target.value }))} />
                   </div>
                   <div className="inv-form__field">
+                    <label>Guideline Value / sq.ft. (₹)</label>
+                    <input type="number" min="0" step="0.01" value={phaseForm.guideline_value_per_sqft}
+                      placeholder="e.g. 3500 — plot amount = this × area"
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, guideline_value_per_sqft: e.target.value }))} />
+                  </div>
+                  <div className="inv-form__field">
                     <label>Sort Order</label>
                     <input type="number" value={phaseForm.sort_order}
                       onChange={(e) => setPhaseForm((p) => ({ ...p, sort_order: e.target.value }))} />
@@ -812,7 +839,7 @@ const InventoryUnitList = () => {
                 <div className="inv-form__footer" style={{ marginTop: 12 }}>
                   {phaseModal.mode === 'edit' && (
                     <button type="button" className="inv-btn inv-btn--secondary"
-                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0 }); }}>
+                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0 }); }}>
                       Cancel edit
                     </button>
                   )}

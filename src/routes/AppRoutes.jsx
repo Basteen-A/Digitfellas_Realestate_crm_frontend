@@ -44,6 +44,7 @@ import PaymentTypes from '../pages/superadmin/PaymentTypes';
 import PaymentPlans from '../pages/superadmin/PaymentPlans';
 import PaymentModes from '../pages/superadmin/PaymentModes';
 import Banks from '../pages/superadmin/Banks';
+import PaymentStatuses from '../pages/superadmin/PaymentStatuses';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
@@ -200,6 +201,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
             <Route path="/super-admin/payment-modes" element={<PaymentModes />} />
             <Route path="/super-admin/banks" element={<Banks />} />
+            <Route path="/super-admin/payment-statuses" element={<PaymentStatuses />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

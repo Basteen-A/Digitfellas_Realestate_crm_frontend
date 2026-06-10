@@ -82,6 +82,7 @@ const adminSidebar = [
       { label: 'Payment Types', path: '/super-admin/payment-types' },
       { label: 'Payment Plans', path: '/super-admin/payment-plans' },
       { label: 'Payment Modes', path: '/super-admin/payment-modes' },
+      { label: 'Payment Statuses', path: '/super-admin/payment-statuses' },
       { label: 'Banks', path: '/super-admin/banks' },
     ],
   },
@@ -231,9 +232,9 @@ export const salesHeadMenu = [
 export const collectionMenu = [
   { group: 'Overview' },
   { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
-  { label: 'New Bookings', key: 'open-bookings', icon: PaperAirplaneIcon, badgeColor: 'blue' },
-  { label: 'My Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
-  { label: 'Payment Log', key: 'payments', icon: BanknotesIcon, badge: null },
+  { label: 'Open Bookings', key: 'open-bookings', icon: PaperAirplaneIcon, badgeColor: 'blue' },
+  { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'Payments', key: 'payments', icon: BanknotesIcon, badge: null },
   { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },
   { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];

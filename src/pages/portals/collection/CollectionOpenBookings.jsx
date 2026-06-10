@@ -74,25 +74,39 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
 
   return (
     <div className="col-bookings-page">
-      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="page-header-left">
+      {/* ── Header (matches My Leads workspace) ── */}
+      <header className="lead-workspace__header">
+        <div>
           <h1>New Bookings</h1>
-          <p className="hidden sm:block">Open bookings from Sales Head — review and send for Super Admin approval</p>
+          <p className="hide-mobile">Open bookings from Sales Head — review and send for Super Admin approval</p>
         </div>
-        <div className="page-header-actions flex-wrap" style={{ gap: 8 }}>
-          <div style={{ position: 'relative', minWidth: 220 }}>
-            <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: 'var(--text-muted)' }} />
-            <input type="text" placeholder="Search bookings..." value={search} onChange={(e) => setSearch(e.target.value)}
-              className="col-form-input" style={{ paddingLeft: 32, height: 36, fontSize: 13, width: '100%' }} />
-          </div>
-          <button type="button" className="crm-btn crm-btn-ghost" onClick={load}>
-            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
+        <div className="lead-workspace__header-actions">
+          <button type="button" className="workspace-btn workspace-btn--ghost" onClick={load} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {loading ? 'Refreshing…' : 'Refresh'}
           </button>
+        </div>
+      </header>
+
+      {/* ── Toolbar (search) ── */}
+      <div className="lead-workspace__toolbar">
+        <div className="lead-workspace__toolbar-search">
+          <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search bookings by number, customer or project"
+          />
         </div>
       </div>
 
       <div className="crm-card">
         <div className="crm-card-body-flush">
+          {/* Record count row — same header band as the other booking lists */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+            <small className="filter-tabs__records" style={{ marginLeft: 0 }}>{filtered.length} record{filtered.length === 1 ? '' : 's'} to send for approval</small>
+          </div>
+
           {loading ? (
             <div className="simple-loader"><div className="simple-spinner" /><p>Loading...</p></div>
           ) : filtered.length === 0 ? (
@@ -102,51 +116,84 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
               <div className="col-empty-desc">New bookings from Sales Head will appear here to send for approval.</div>
             </div>
           ) : (
-            <div className="crm-table-wrap">
-              <table className="crm-table">
-                <thead>
-                  <tr>
-                    <th>Booking #</th>
-                    <th>Buyer</th>
-                    <th>Project · Unit</th>
-                    <th>Value</th>
-                    <th>Booking Date</th>
-                    <th style={{ textAlign: 'right' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((b) => (
-                    <tr key={b.id}>
-                      <td>
-                        <button type="button" className="col-booking-link" onClick={() => onSelectBooking?.(b.id)}>
+            <>
+              <div className="crm-table-wrap col-bookings-table-desktop">
+                <table className="crm-table">
+                  <thead>
+                    <tr>
+                      <th>Booking #</th>
+                      <th>Buyer</th>
+                      <th>Project · Unit</th>
+                      <th>Value</th>
+                      <th>Booking Date</th>
+                      <th style={{ textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((b) => (
+                      <tr key={b.id}>
+                        <td>
+                          <button type="button" className="col-booking-link" onClick={() => onSelectBooking?.(b.id)}>
+                            {b.booking_number}
+                          </button>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{b.customer_name || b.buyer_name || '-'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{b.lead?.lead_number || ''}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{b.project_name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {b.unit_display || b.unit_number || 'TBD'}</div>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{formatCurrency(computedTotal(b))}</td>
+                        <td>{fmtDate(b.booking_date)}</td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div className="col-action-group">
+                            <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>
+                              <EyeIcon style={{ width: 15, height: 15 }} />
+                            </button>
+                            <button type="button" className="crm-btn crm-btn-primary crm-btn-sm" disabled={sendingId === b.id} onClick={() => setConfirmBooking(b)}>
+                              <PaperAirplaneIcon style={{ width: 14, height: 14 }} /> {sendingId === b.id ? 'Sending…' : 'Send for Approval'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── Mobile card list (shown ≤768px; the table is hidden there) ── */}
+              <div className="col-bookings-mobile">
+                {filtered.map((b) => (
+                  <div key={b.id} className="col-bookings-mobile-card">
+                    <div className="col-bookings-mobile-card__head">
+                      <div className="col-bookings-mobile-card__main">
+                        <button type="button" className="col-booking-link col-bookings-mobile-card__booking" onClick={() => onSelectBooking?.(b.id)}>
                           {b.booking_number}
                         </button>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{b.customer_name || b.buyer_name || '-'}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{b.lead?.lead_number || ''}</div>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{b.project_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {b.unit_display || b.unit_number || 'TBD'}</div>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{formatCurrency(computedTotal(b))}</td>
-                      <td>{fmtDate(b.booking_date)}</td>
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div className="col-action-group">
-                          <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>
-                            <EyeIcon style={{ width: 15, height: 15 }} />
-                          </button>
-                          <button type="button" className="crm-btn crm-btn-primary crm-btn-sm" disabled={sendingId === b.id} onClick={() => setConfirmBooking(b)}>
-                            <PaperAirplaneIcon style={{ width: 14, height: 14 }} /> {sendingId === b.id ? 'Sending…' : 'Send for Approval'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <div className="col-bookings-mobile-card__customer">{b.customer_name || b.buyer_name || '-'}</div>
+                        <div className="col-bookings-mobile-card__meta">{b.project_name || '—'} · {b.unit_display || b.unit_number || 'TBD'}</div>
+                      </div>
+                      <div className="col-bookings-mobile-card__actions">
+                        <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>
+                          <EyeIcon style={{ width: 15, height: 15 }} />
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderTop: '1px solid var(--border-primary, #e2e8f0)' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{formatCurrency(computedTotal(b))}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtDate(b.booking_date)}</div>
+                      </div>
+                      <button type="button" className="crm-btn crm-btn-primary crm-btn-sm" disabled={sendingId === b.id} onClick={() => setConfirmBooking(b)} style={{ flexShrink: 0 }}>
+                        <PaperAirplaneIcon style={{ width: 14, height: 14 }} /> {sendingId === b.id ? 'Sending…' : 'Send'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

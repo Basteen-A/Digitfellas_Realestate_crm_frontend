@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
+import paymentStatusApi from '../../../api/paymentStatusApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -52,6 +53,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [bankOptions, setBankOptions] = useState([]);
   const [paymentStatus, setPaymentStatus] = useState('');
+  const [paymentStatusId, setPaymentStatusId] = useState('');
+  const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
   const [followUpDate, setFollowUpDate] = useState('');
   const [payStatusRemarks, setPayStatusRemarks] = useState('');
   const [payStatusPaymentDate, setPayStatusPaymentDate] = useState('');
@@ -139,7 +142,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   const [refundSaving, setRefundSaving] = useState(false);
 
-  const PAYMENT_STATUSES = ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Full Payment Received', 'Follow Up'];
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
   const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Development', 'MODT', 'Other'];
   const CATEGORY_COLORS = {
@@ -197,6 +199,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
+    paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
     bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
@@ -247,6 +250,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
     if (mode === 'payStatus') {
       setPaymentStatus(booking?.payment_status || '');
+      const matched = paymentStatusOptions.find(p => p.status_name === booking?.payment_status || p.status_code === booking?.payment_status);
+      setPaymentStatusId(booking?.payment_status_id || matched?.id || '');
       setFollowUpDate('');
       setPayStatusRemarks('');
       setPayStatusPaymentDate('');
@@ -387,14 +392,24 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const handlePaymentStatusUpdate = async () => {
     if (!paymentStatus) return;
-    // Contextual validation
-    if (['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus) && !followUpDate) { toast.error('Follow-up date is required'); return; }
-    if (['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus) && !payStatusRemarks.trim()) { toast.error('Remarks are required'); return; }
-    if (paymentStatus === 'Registration Scheduled' && !payStatusRegDate) { toast.error('Registration date is required'); return; }
-    if (['Part Payment Received', 'Full Payment Received'].includes(paymentStatus) && !payStatusPaymentDate) { toast.error('Payment date is required'); return; }
+    
+    const sel = paymentStatusOptions.find(p => p.id === paymentStatusId);
+    const needsFollowup = sel ? sel.needs_followup : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
+    const needsRemarks = sel ? sel.needs_remarks : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
+    const isRegScheduled = sel ? (sel.status_code === 'REGISTRATION_SCHEDULED' || sel.status_name === 'Registration Scheduled') : paymentStatus === 'Registration Scheduled';
+    const isPaymentDateReq = sel ? (sel.status_code === 'RECEIVED' || sel.status_code === 'PARTIAL' || sel.status_name === 'Part Payment Received') : ['Part Payment Received', 'Full Payment Received'].includes(paymentStatus);
+
+    if (needsFollowup && !followUpDate) { toast.error('Follow-up date is required'); return; }
+    if (needsRemarks && !payStatusRemarks.trim()) { toast.error('Remarks are required'); return; }
+    if (isRegScheduled && !payStatusRegDate) { toast.error('Registration date is required'); return; }
+    if (isPaymentDateReq && !payStatusPaymentDate) { toast.error('Payment date is required'); return; }
+
     setPayStatusSaving(true);
     try {
-      const payload = { payment_status: paymentStatus };
+      const payload = {
+        payment_status: paymentStatus,
+        payment_status_id: paymentStatusId || null,
+      };
       if (followUpDate) payload.next_follow_up_at = followUpDate;
       if (payStatusRemarks.trim()) payload.remarks = payStatusRemarks;
       if (payStatusPaymentDate) payload.payment_date = payStatusPaymentDate;
@@ -1419,119 +1434,73 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                    {PAYMENT_STATUSES.map(ps => (
-                      <button key={ps} className={`qa-drawer-st-btn ${paymentStatus === ps ? 'sel-follow-up' : ''}`}
-                        onClick={() => { setPaymentStatus(ps); setFollowUpDate(''); setPayStatusRemarks(''); setPayStatusPaymentDate(''); setPayStatusRegDate(''); }}>
-                        <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
-                          {ps === 'Follow Up' ? (
-                            <CalendarDaysIcon style={{ width: 18, height: 18, color: '#F59E0B' }} />
-                          ) : ps === 'Full Payment Received' ? (
-                            <CheckCircleIcon style={{ width: 18, height: 18, color: '#10B981' }} />
-                          ) : (
-                            <CreditCardIcon style={{ width: 18, height: 18, color: '#3B82F6' }} />
-                          )}
-                        </div>
-                        <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps}</div>
-                      </button>
-                    ))}
+                    {paymentStatusOptions.map(ps => {
+                      const isSelected = paymentStatusId === ps.id;
+                      return (
+                        <button key={ps.id} className={`qa-drawer-st-btn ${isSelected ? 'sel-follow-up' : ''}`}
+                          onClick={() => {
+                            setPaymentStatusId(ps.id);
+                            setPaymentStatus(ps.status_name);
+                            setFollowUpDate(''); setPayStatusRemarks(''); setPayStatusPaymentDate(''); setPayStatusRegDate('');
+                          }}>
+                          <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                            {ps.status_code === 'PENDING' || ps.status_code === 'OVERDUE' ? (
+                              <CalendarDaysIcon style={{ width: 18, height: 18, color: ps.color_code || '#F59E0B' }} />
+                            ) : ps.status_code === 'RECEIVED' ? (
+                              <CheckCircleIcon style={{ width: 18, height: 18, color: ps.color_code || '#10B981' }} />
+                            ) : (
+                              <CreditCardIcon style={{ width: 18, height: 18, color: ps.color_code || '#3B82F6' }} />
+                            )}
+                          </div>
+                          <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps.status_name}</div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* ── Contextual fields per payment status ── */}
-                  {paymentStatus && (
-                    <div style={{ marginTop: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
-
-                      {/* Bank Loan Applied: follow-up + remarks */}
-                      {paymentStatus === 'Bank Loan Applied' && (
-                        <>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
+                  {(() => {
+                    const sel = paymentStatusOptions.find(p => p.id === paymentStatusId);
+                    if (!sel) return null;
+                    const needsFollowup = sel.needs_followup;
+                    const needsRemarks = sel.needs_remarks;
+                    const isFullPayment = sel.status_code === 'RECEIVED';
+                    const isRegScheduled = sel.status_code === 'REGISTRATION_SCHEDULED' || sel.status_name === 'Registration Scheduled';
+                    const isPaymentDateReq = sel.status_code === 'RECEIVED' || sel.status_code === 'PARTIAL' || sel.status_name === 'Part Payment Received';
+                    return (
+                      <div style={{ marginTop: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
+                        {isFullPayment && (
+                          <div style={{background:'#DCFCE7',border:'1px solid #BBF7D0',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#166534'}}>
+                            <strong>✓ Full Payment:</strong> Booking will be auto-registered and the unit will be marked as <strong>Sold</strong>.
                           </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Bank name, loan status..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* OSR Received: follow-up + remarks */}
-                      {paymentStatus === 'OSR Received' && (
-                        <>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="OSR details..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Registration Scheduled: reg date + follow-up + remarks */}
-                      {paymentStatus === 'Registration Scheduled' && (
-                        <>
+                        )}
+                        {isRegScheduled && (
                           <div className="bkd-form-group" style={{marginBottom:10}}>
                             <label className="bkd-form-label">Registration Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusRegDate} onChange={e => setPayStatusRegDate(e.target.value)} />
                           </div>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Registration details..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Part Payment Received: payment date + follow-up + remarks */}
-                      {paymentStatus === 'Part Payment Received' && (
-                        <>
+                        )}
+                        {isPaymentDateReq && (
                           <div className="bkd-form-group" style={{marginBottom:10}}>
                             <label className="bkd-form-label">Payment Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusPaymentDate} onChange={e => setPayStatusPaymentDate(e.target.value)} />
                           </div>
+                        )}
+                        {needsFollowup && (
                           <div className="bkd-form-group" style={{marginBottom:10}}>
                             <label className="bkd-form-label">Next Follow-Up Date *</label>
                             <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
                           </div>
+                        )}
+                        {needsRemarks && (
                           <div className="bkd-form-group">
                             <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Payment details..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
+                            <textarea className="bkd-form-control" rows={2} placeholder="Status remarks..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
                           </div>
-                        </>
-                      )}
-
-                      {/* Follow Up: follow-up date + remarks */}
-                      {paymentStatus === 'Follow Up' && (
-                        <>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Follow-up notes..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Full Payment Received: payment date only, no follow-up */}
-                      {paymentStatus === 'Full Payment Received' && (
-                        <>
-                          <div style={{background:'#DCFCE7',border:'1px solid #BBF7D0',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#166534'}}>
-                            <strong>✓ Full Payment:</strong> Booking will be auto-registered and the unit will be marked as <strong>Sold</strong>.
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Payment Date *</label>
-                            <input type="date" className="bkd-form-control" value={payStatusPaymentDate} onChange={e => setPayStatusPaymentDate(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Current follow-up info */}
                   {booking?.next_follow_up_at && (

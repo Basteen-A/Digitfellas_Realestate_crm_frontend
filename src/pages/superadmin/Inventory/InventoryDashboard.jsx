@@ -12,7 +12,7 @@ const InventoryDashboard = () => {
 
   // Phase manager state
   const [phaseModal, setPhaseModal] = useState({ open: false, mode: 'create', row: null, project_id: '', project_name: '' });
-  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
+  const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0, is_approved: true });
   const [phaseSaving, setPhaseSaving] = useState(false);
   const [phaseList, setPhaseList] = useState([]);
   const [phaseCountByProject, setPhaseCountByProject] = useState({});
@@ -62,13 +62,13 @@ const InventoryDashboard = () => {
 
   const openPhaseModal = async (e, project) => {
     e.stopPropagation();
-    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
+    setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0, is_approved: true });
     setPhaseModal({ open: true, mode: 'create', row: null, project_id: project.project_id, project_name: project.project_name });
     await refreshPhaseList(project.project_id);
   };
   const closePhaseModal = () => {
     setPhaseModal({ open: false, mode: 'create', row: null, project_id: '', project_name: '' });
-    setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
+    setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0, is_approved: true });
     setPhaseList([]);
   };
 
@@ -77,6 +77,7 @@ const InventoryDashboard = () => {
       phase_name: phase.phase_name || '',
       phase_code: phase.phase_code || '',
       description: phase.description || '',
+      guideline_value_per_sqft: phase.guideline_value_per_sqft ?? '',
       sort_order: phase.sort_order ?? 0,
       is_approved: phase.is_approved !== false,
     });
@@ -93,6 +94,7 @@ const InventoryDashboard = () => {
           phase_name: phaseForm.phase_name,
           phase_code: phaseForm.phase_code || null,
           description: phaseForm.description || null,
+          guideline_value_per_sqft: phaseForm.guideline_value_per_sqft === '' ? null : Number(phaseForm.guideline_value_per_sqft),
           sort_order: Number(phaseForm.sort_order) || 0,
           is_approved: phaseForm.is_approved,
         });
@@ -103,12 +105,13 @@ const InventoryDashboard = () => {
           phase_name: phaseForm.phase_name,
           phase_code: phaseForm.phase_code || null,
           description: phaseForm.description || null,
+          guideline_value_per_sqft: phaseForm.guideline_value_per_sqft === '' ? null : Number(phaseForm.guideline_value_per_sqft),
           sort_order: Number(phaseForm.sort_order) || 0,
           is_approved: phaseForm.is_approved,
         });
         toast.success('Phase created');
       }
-      setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true });
+      setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0, is_approved: true });
       setPhaseModal((prev) => ({ ...prev, mode: 'create', row: null }));
       await refreshPhaseList(phaseModal.project_id);
       loadPhaseCounts();
@@ -336,6 +339,7 @@ const InventoryDashboard = () => {
                       <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
                         <th style={{ padding: '6px 8px' }}>Phase</th>
                         <th style={{ padding: '6px 8px' }}>Code</th>
+                        <th style={{ padding: '6px 8px' }}>Guideline /sq.ft.</th>
                         <th style={{ padding: '6px 8px' }}>Units</th>
                         <th style={{ padding: '6px 8px' }}>Available</th>
                         <th style={{ padding: '6px 8px' }}>Approval</th>
@@ -347,6 +351,11 @@ const InventoryDashboard = () => {
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '6px 8px' }}><strong>{p.phase_name}</strong></td>
                           <td style={{ padding: '6px 8px' }}>{p.phase_code || '—'}</td>
+                          <td style={{ padding: '6px 8px' }}>
+                            {p.guideline_value_per_sqft != null && p.guideline_value_per_sqft !== ''
+                              ? `₹${Number(p.guideline_value_per_sqft).toLocaleString('en-IN')}`
+                              : '—'}
+                          </td>
                           <td style={{ padding: '6px 8px' }}>{p.unit_count ?? 0}</td>
                           <td style={{ padding: '6px 8px' }}>{p.available_count ?? 0}</td>
                           <td style={{ padding: '6px 8px' }}>
@@ -404,6 +413,16 @@ const InventoryDashboard = () => {
                     />
                   </div>
                   <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Guideline Value / sq.ft.</label>
+                    <input
+                      type="number" min="0" step="0.01" value={phaseForm.guideline_value_per_sqft}
+                      placeholder="e.g. 3500"
+                      onChange={(e) => setPhaseForm((p) => ({ ...p, guideline_value_per_sqft: e.target.value }))}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
+                    />
+                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Plot amount = this × plot area</div>
+                  </div>
+                  <div>
                     <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Sort Order</label>
                     <input
                       type="number" value={phaseForm.sort_order}
@@ -426,7 +445,7 @@ const InventoryDashboard = () => {
                   {phaseModal.mode === 'edit' && (
                     <button
                       type="button"
-                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', sort_order: 0, is_approved: true }); }}
+                      onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0, is_approved: true }); }}
                       style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
                     >
                       Cancel edit

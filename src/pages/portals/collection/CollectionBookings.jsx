@@ -2,16 +2,26 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
+import paymentStatusApi from '../../../api/paymentStatusApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
   EyeIcon, BanknotesIcon, PencilSquareIcon, CheckCircleIcon,
   CreditCardIcon, ShieldCheckIcon, CalendarDaysIcon,
-  ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon, ChevronRightIcon,
+  ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon, ChevronRightIcon, ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
+
+// Booking list tabs — full label on desktop, short label on mobile (mobile-compact-tabs).
+const BOOKING_TABS = [
+  { value: 'All', label: 'All', short: 'All' },
+  { value: 'Active', label: 'Active', short: 'Active' },
+  { value: 'Today Follow-up', label: 'Today Follow-up', short: 'Today' },
+  { value: 'Missed Follow-up', label: 'Missed Follow-up', short: 'Missed' },
+  { value: 'Cancelled', label: 'Cancelled', short: 'Cancelled' },
+];
 
 const getComputedTotalValue = (booking) => {
   if (!booking) return 0;
@@ -52,6 +62,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [paySaving, setPaySaving] = useState(false);
   // Payment status form
   const [paymentStatus, setPaymentStatus] = useState('');
+  const [paymentStatusId, setPaymentStatusId] = useState('');
+  const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
   const [followUpDate, setFollowUpDate] = useState('');
   const [payStatusRemarks, setPayStatusRemarks] = useState('');
   const [payStatusPaymentDate, setPayStatusPaymentDate] = useState('');
@@ -77,7 +89,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   const [refundSaving, setRefundSaving] = useState(false);
 
-  const PAYMENT_STATUSES = ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Full Payment Received', 'Follow Up'];
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
   const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Development', 'MODT', 'Other'];
   const CATEGORY_COLORS = {
@@ -157,6 +168,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   };
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
+    paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => {});
     bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
@@ -260,93 +272,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     </div>
   );
 
-  const renderMobileBookingDetails = (booking, pct) => {
-    const totalValue = getComputedTotalValue(booking);
-    const collected = parseFloat(booking.total_paid || 0);
-    const balance = totalValue - collected;
-    const isToday = booking.next_follow_up_at && new Date(booking.next_follow_up_at).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
-    const isMissed = booking.next_follow_up_at && new Date(booking.next_follow_up_at).toISOString().slice(0, 10) < new Date().toISOString().slice(0, 10);
-    return (
-      <div className="col-bookings-mobile__details">
-        <div className="col-bookings-mobile__detail-grid">
-          <div className="col-bookings-mobile__detail">
-            <span className="col-bookings-mobile__label">Project / Unit</span>
-            <strong>{booking.project_name || '—'}</strong>
-            <span>{booking.unit_display || booking.unit_number || 'TBD'}</span>
-          </div>
-          <div className="col-bookings-mobile__detail">
-            <span className="col-bookings-mobile__label">Net Value</span>
-            <strong>{formatCurrency(totalValue)}</strong>
-            <span>Collected: {formatCurrency(collected)}</span>
-            <span>Balance: {formatCurrency(balance)}</span>
-          </div>
-          <div className="col-bookings-mobile__detail">
-            <span className="col-bookings-mobile__label">Progress</span>
-            <div className="col-progress" style={{ height: 6, width: '100%', marginTop: 6 }}>
-              <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-            </div>
-            <span style={{ marginTop: 4 }}>{pct}% collected</span>
-          </div>
-          <div className="col-bookings-mobile__detail">
-            <span className="col-bookings-mobile__label">Status</span>
-            <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color, alignSelf: 'flex-start' }}>
-              <span className="col-badge-dot" style={{ background: booking.status_color }} />
-              {booking.status_label}
-            </span>
-          </div>
-          <div className="col-bookings-mobile__detail">
-            <span className="col-bookings-mobile__label">Payment Status</span>
-            {booking.payment_status ? (
-              <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
-                background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
-                color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
-                alignSelf: 'flex-start' }}>
-                {booking.payment_status}
-              </span>
-            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-          </div>
-          <div className="col-bookings-mobile__detail">
-            <span className="col-bookings-mobile__label">Follow-up</span>
-            {booking.next_follow_up_at ? (
-              <span style={{ fontWeight: 600, color: isMissed ? '#EF4444' : isToday ? '#3B82F6' : 'var(--text-muted)' }}>
-                {isToday ? '📅 Today' : isMissed ? `⚠ ${new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-              </span>
-            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderMobileBookingCard = (booking) => {
-    const pct = booking.payment_percentage || 0;
-    const isOpen = expandedMobileBookingId === booking.id;
-    return (
-      <div key={booking.id} className={`col-bookings-mobile-card ${isOpen ? 'is-open' : ''}`}>
-        <div className="col-bookings-mobile-card__head">
-          <button
-            type="button"
-            className="col-bookings-mobile-card__toggle"
-            aria-expanded={isOpen}
-            aria-label={`${isOpen ? 'Collapse' : 'Expand'} booking ${booking.booking_number}`}
-            onClick={() => setExpandedMobileBookingId(isOpen ? null : booking.id)}
-          >
-            <ChevronRightIcon style={{ width: 15, height: 15, color: 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
-          </button>
-          <div className="col-bookings-mobile-card__main">
-            <button type="button" className="col-booking-link col-bookings-mobile-card__booking" onClick={() => onSelectBooking(booking.id)}>
-              {booking.booking_number}
-            </button>
-            <div className="col-bookings-mobile-card__customer">{booking.customer_name || booking.buyer_name || '-'}</div>
-            <div className="col-bookings-mobile-card__meta">{booking.lead?.lead_number || ''}</div>
-          </div>
-          <div className="col-bookings-mobile-card__actions">{renderQuickActions(booking, true)}</div>
-        </div>
-        {isOpen && renderMobileBookingDetails(booking, pct)}
-      </div>
-    );
-  };
-
   // ── Drawer helpers ──
   const openDrawer = (booking, mode) => {
     setDrawerBooking(booking);
@@ -358,6 +283,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setCancelReasonId(''); setCancelRemarks('');
     setPayForm({ payment_type: '', payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
     setPaymentStatus(booking.payment_status || '');
+    const matched = paymentStatusOptions.find(p => p.status_name === booking.payment_status || p.status_code === booking.payment_status);
+    setPaymentStatusId(booking.payment_status_id || matched?.id || '');
     setFollowUpDate(''); setPayStatusRemarks(''); setPayStatusPaymentDate(''); setPayStatusRegDate('');
     // Reset register form so REGISTERED inline form starts clean
     setRegisterForm({ registration_date: '', registration_number: '' });
@@ -499,14 +426,24 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   const handlePaymentStatusUpdate = async () => {
     if (!paymentStatus || !drawerBooking) return;
-    // Contextual validation
-    if (['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus) && !followUpDate) { toast.error('Follow-up date is required'); return; }
-    if (['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus) && !payStatusRemarks.trim()) { toast.error('Remarks are required'); return; }
-    if (paymentStatus === 'Registration Scheduled' && !payStatusRegDate) { toast.error('Registration date is required'); return; }
-    if (['Part Payment Received', 'Full Payment Received'].includes(paymentStatus) && !payStatusPaymentDate) { toast.error('Payment date is required'); return; }
+    
+    const sel = paymentStatusOptions.find(p => p.id === paymentStatusId);
+    const needsFollowup = sel ? sel.needs_followup : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
+    const needsRemarks = sel ? sel.needs_remarks : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
+    const isRegScheduled = sel ? (sel.status_code === 'REGISTRATION_SCHEDULED' || sel.status_name === 'Registration Scheduled') : paymentStatus === 'Registration Scheduled';
+    const isPaymentDateReq = sel ? (sel.status_code === 'RECEIVED' || sel.status_code === 'PARTIAL' || sel.status_name === 'Part Payment Received') : ['Part Payment Received', 'Full Payment Received'].includes(paymentStatus);
+
+    if (needsFollowup && !followUpDate) { toast.error('Follow-up date is required'); return; }
+    if (needsRemarks && !payStatusRemarks.trim()) { toast.error('Remarks are required'); return; }
+    if (isRegScheduled && !payStatusRegDate) { toast.error('Registration date is required'); return; }
+    if (isPaymentDateReq && !payStatusPaymentDate) { toast.error('Payment date is required'); return; }
+
     setPayStatusSaving(true);
     try {
-      const payload = { payment_status: paymentStatus };
+      const payload = {
+        payment_status: paymentStatus,
+        payment_status_id: paymentStatusId || null,
+      };
       if (followUpDate) payload.next_follow_up_at = followUpDate;
       if (payStatusRemarks.trim()) payload.remarks = payStatusRemarks;
       if (payStatusPaymentDate) payload.payment_date = payStatusPaymentDate;
@@ -610,36 +547,55 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   return (
     <div className="col-bookings-page">
-      {/* Page Header */}
-      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="page-header-left">
+      {/* ── Header (matches My Leads workspace) ── */}
+      <header className="lead-workspace__header">
+        <div>
           <h1>Bookings</h1>
-          <p className="hidden sm:block">Manage all property bookings and collections</p>
+          <p className="hide-mobile">Manage all property bookings and collections</p>
         </div>
-        <div className="page-header-actions flex-wrap" style={{ gap: 8 }}>
-          <div style={{ position: 'relative', minWidth: 220 }}>
-            <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: 'var(--text-muted)' }} />
-            <input type="text" placeholder="Search bookings..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="col-form-input" style={{ paddingLeft: 32, height: 36, fontSize: 13, width: '100%' }} />
-          </div>
-          <div className="filter-tabs">
-            {['All', 'Active', 'Today Follow-up', 'Missed Follow-up', 'Cancelled'].map((tab) => (
-              <button key={tab} className={`filter-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-                {tab}
-                {tab === 'Today Follow-up' && todayFollowUpCount > 0 && <span style={{marginLeft:4,background:'#3B82F6',color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,fontWeight:700}}>{todayFollowUpCount}</span>}
-                {tab === 'Missed Follow-up' && missedFollowUpCount > 0 && <span style={{marginLeft:4,background:'#EF4444',color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,fontWeight:700}}>{missedFollowUpCount}</span>}
-              </button>
-            ))}
-          </div>
-          <button type="button" className="crm-btn crm-btn-ghost" onClick={loadBookings}>
-            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
+        <div className="lead-workspace__header-actions">
+          <button type="button" className="workspace-btn workspace-btn--ghost" onClick={loadBookings} disabled={loading}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> {loading ? 'Refreshing…' : 'Refresh'}
           </button>
+        </div>
+      </header>
+
+      {/* ── Toolbar (search) ── */}
+      <div className="lead-workspace__toolbar">
+        <div className="lead-workspace__toolbar-search">
+          <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search bookings by number, customer, project or unit"
+          />
         </div>
       </div>
 
       {/* Bookings Table */}
       <div className="crm-card">
         <div className="crm-card-body-flush">
+          {/* Tabs + record count — same pill row as My Leads */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+            <div className="filter-tabs mobile-compact-tabs">
+              {BOOKING_TABS.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  className={`filter-tab ${activeTab === t.value ? 'active' : ''}`}
+                  onClick={() => setActiveTab(t.value)}
+                >
+                  <span className="hide-mobile">{t.label}</span>
+                  <span className="show-mobile">{t.short}</span>
+                  {t.value === 'Today Follow-up' && todayFollowUpCount > 0 && <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{todayFollowUpCount}</span>}
+                  {t.value === 'Missed Follow-up' && missedFollowUpCount > 0 && <span style={{ marginLeft: 4, background: '#EF4444', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{missedFollowUpCount}</span>}
+                </button>
+              ))}
+              <small className="filter-tabs__records">{filteredBookings.length} record{filteredBookings.length === 1 ? '' : 's'}</small>
+            </div>
+          </div>
+
           {loading ? (
             <div className="simple-loader">
               <div className="simple-spinner" />
@@ -652,89 +608,143 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               <div className="col-empty-desc">{searchQuery ? 'Try a different search term' : 'Bookings from Sales Head will appear here'}</div>
             </div>
           ) : (
-            <>
-              <div className="crm-table-wrap col-bookings-table-desktop">
-                <table className="crm-table">
+            <div className="lead-workspace__table-wrap">
+              <table className="lead-workspace__table">
                 <thead>
                   <tr>
-                    <th>Booking #</th>
-                    <th>Buyer</th>
-                    <th>Project · Unit</th>
-                    <th>Net Value</th>
-                    <th>Progress</th>
-                    <th>Status</th>
-                    <th>Payment Status</th>
-                    <th>Follow-up</th>
-                    <th style={{ textAlign: 'center' }}>Quick Actions</th>
+                    <th className="show-mobile lead-col-toggle"></th>
+                    <th className="lead-col-lead" style={{ width: 'auto' }}>Booking</th>
+                    <th className="hide-mobile" style={{ width: 160 }}>Project · Unit</th>
+                    <th className="hide-mobile" style={{ width: 120 }}>Net Value</th>
+                    <th className="hide-mobile" style={{ width: 110 }}>Progress</th>
+                    <th className="lead-col-status">Status</th>
+                    <th className="hide-mobile" style={{ width: 130 }}>Payment Status</th>
+                    <th className="lead-col-followup" style={{ textAlign: 'right' }}>Follow-up</th>
+                    <th className="hide-mobile" style={{ textAlign: 'center', width: 200 }}>Quick Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBookings.map((booking) => {
                     const pct = booking.payment_percentage || 0;
+                    const isExpanded = expandedMobileBookingId === booking.id;
+                    const totalValue = getComputedTotalValue(booking);
+                    const collected = parseFloat(booking.total_paid || 0);
+                    const balance = totalValue - collected;
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const fStr = booking.next_follow_up_at ? new Date(booking.next_follow_up_at).toISOString().slice(0, 10) : null;
+                    const isToday = fStr === todayStr;
+                    const isMissed = fStr && fStr < todayStr;
+                    const fuColor = isMissed ? '#EF4444' : isToday ? '#3B82F6' : 'var(--text-muted)';
+                    const fuShort = booking.next_follow_up_at
+                      ? (isToday ? '📅 Today' : `${isMissed ? '⚠ ' : ''}${new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}`)
+                      : '—';
+                    const paymentBadge = booking.payment_status ? (
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
+                        background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
+                        color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
+                      }}>{booking.payment_status}</span>
+                    ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>;
                     return (
-                      <tr key={booking.id}>
-                        <td>
-                          <button type="button" className="col-booking-link" onClick={() => onSelectBooking(booking.id)}>
-                            {booking.booking_number}
-                          </button>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{booking.customer_name || booking.buyer_name || '-'}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.lead?.lead_number || ''}</div>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{booking.project_name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</div>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{formatCurrency(getComputedTotalValue(booking))}</td>
-                        <td style={{ minWidth: 90 }}>
-                          <div className="col-progress" style={{ height: 6, width: '100%' }}>
-                            <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                          </div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{pct}%</div>
-                        </td>
-                        <td>
-                          <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color }}>
-                            <span className="col-badge-dot" style={{ background: booking.status_color }} />
-                            {booking.status_label}
-                          </span>
-                        </td>
-                        <td>
-                          {booking.payment_status ? (
-                            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
-                              background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
-                              color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
-                            }}>{booking.payment_status}</span>
-                          ) : <span style={{fontSize:11,color:'var(--text-muted)'}}>—</span>}
-                        </td>
-                        <td style={{ fontSize: 11 }}>
-                          {booking.next_follow_up_at ? (() => {
-                            const fDate = new Date(booking.next_follow_up_at);
-                            const todayStr = new Date().toISOString().slice(0, 10);
-                            const fStr = fDate.toISOString().slice(0, 10);
-                            const isToday = fStr === todayStr;
-                            const isMissed = fStr < todayStr;
-                            return (
-                              <span style={{ fontWeight: 600, color: isMissed ? '#EF4444' : isToday ? '#3B82F6' : 'var(--text-muted)' }}>
-                                {isToday ? '📅 Today' : isMissed ? '⚠ ' + fDate.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) : fDate.toLocaleDateString('en-IN', {day:'2-digit',month:'short'})}
-                              </span>
-                            );
-                          })() : <span style={{color:'var(--text-muted)'}}>—</span>}
-                        </td>
-                        <td>
-                          {renderQuickActions(booking)}
-                        </td>
-                      </tr>
+                      <React.Fragment key={booking.id}>
+                        <tr>
+                          <td className="show-mobile lead-col-toggle" style={{ padding: '10px 0', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                              onClick={(e) => { e.stopPropagation(); setExpandedMobileBookingId(isExpanded ? null : booking.id); }}
+                              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+                            >
+                              {isExpanded ? <ChevronDownIcon style={{ width: 14, height: 14 }} /> : <ChevronRightIcon style={{ width: 14, height: 14 }} />}
+                            </button>
+                          </td>
+                          <td className="lead-col-lead">
+                            <p className="lead-title">{booking.customer_name || booking.buyer_name || '-'}</p>
+                            <small>
+                              <button type="button" className="col-booking-link" onClick={(e) => { e.stopPropagation(); onSelectBooking(booking.id); }}>
+                                {booking.booking_number}
+                              </button>
+                            </small>
+                          </td>
+                          <td className="hide-mobile">
+                            <p className="lead-title">{booking.project_name || '-'}</p>
+                            <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</small>
+                          </td>
+                          <td className="hide-mobile" style={{ fontWeight: 600 }}>{formatCurrency(totalValue)}</td>
+                          <td className="hide-mobile" style={{ minWidth: 90 }}>
+                            <div className="col-progress" style={{ height: 6, width: '100%' }}>
+                              <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{pct}%</div>
+                          </td>
+                          <td className="lead-col-status">
+                            <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color }}>
+                              <span className="col-badge-dot" style={{ background: booking.status_color }} />
+                              {booking.status_label}
+                            </span>
+                          </td>
+                          <td className="hide-mobile">{paymentBadge}</td>
+                          <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: fuColor }}>{fuShort}</span>
+                          </td>
+                          <td className="hide-mobile">
+                            {renderQuickActions(booking)}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="lead-workspace__expanded-row show-mobile">
+                            <td colSpan={4}>
+                              <div className="lead-workspace__expanded-card">
+                                <div className="expanded-info-grid">
+                                  <div className="expanded-info-item">
+                                    <label>Project / Unit</label>
+                                    <p>{booking.project_name || '-'}{(booking.unit_display || booking.unit_number) ? ` / ${booking.unit_display || booking.unit_number}` : ''}</p>
+                                  </div>
+                                  <div className="expanded-info-item">
+                                    <label>Net Value</label>
+                                    <p>{formatCurrency(totalValue)}</p>
+                                  </div>
+                                  <div className="expanded-info-item">
+                                    <label>Collected</label>
+                                    <p>{formatCurrency(collected)} · {pct}%</p>
+                                  </div>
+                                  <div className="expanded-info-item">
+                                    <label>Balance</label>
+                                    <p>{formatCurrency(balance)}</p>
+                                  </div>
+                                  <div className="expanded-info-item">
+                                    <label>Payment Status</label>
+                                    <p>{booking.payment_status || '—'}</p>
+                                  </div>
+                                  {booking.next_follow_up_at && (
+                                    <div className="expanded-info-item">
+                                      <label>Next Follow-Up</label>
+                                      <p style={{ display: 'flex', alignItems: 'center', gap: 4, color: fuColor, fontWeight: 600 }}>
+                                        <CalendarDaysIcon style={{ width: 14, height: 14 }} />
+                                        <span>{new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}{isToday ? ' · Today' : isMissed ? ' · Missed' : ''}</span>
+                                      </p>
+                                    </div>
+                                  )}
+                                  {booking.lead?.lead_number && (
+                                    <div className="expanded-info-item">
+                                      <label>Lead</label>
+                                      <p>{booking.lead.lead_number}</p>
+                                    </div>
+                                  )}
+                                  <div className="expanded-info-item full-width">
+                                    <label>Quick Actions</label>
+                                    {renderQuickActions(booking, true)}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
-                </table>
-              </div>
-
-              <div className="col-bookings-mobile">
-                {filteredBookings.map(renderMobileBookingCard)}
-              </div>
-            </>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -885,119 +895,73 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                    {PAYMENT_STATUSES.map(ps => (
-                      <button key={ps} className={`qa-drawer-st-btn ${paymentStatus === ps ? 'sel-follow-up' : ''}`}
-                        onClick={() => { setPaymentStatus(ps); setFollowUpDate(''); setPayStatusRemarks(''); setPayStatusPaymentDate(''); setPayStatusRegDate(''); }}>
-                        <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
-                          {ps === 'Follow Up' ? (
-                            <CalendarDaysIcon style={{ width: 18, height: 18, color: '#F59E0B' }} />
-                          ) : ps === 'Full Payment Received' ? (
-                            <CheckCircleIcon style={{ width: 18, height: 18, color: '#10B981' }} />
-                          ) : (
-                            <CreditCardIcon style={{ width: 18, height: 18, color: '#3B82F6' }} />
-                          )}
-                        </div>
-                        <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps}</div>
-                      </button>
-                    ))}
+                    {paymentStatusOptions.map(ps => {
+                      const isSelected = paymentStatusId === ps.id;
+                      return (
+                        <button key={ps.id} className={`qa-drawer-st-btn ${isSelected ? 'sel-follow-up' : ''}`}
+                          onClick={() => {
+                            setPaymentStatusId(ps.id);
+                            setPaymentStatus(ps.status_name);
+                            setFollowUpDate(''); setPayStatusRemarks(''); setPayStatusPaymentDate(''); setPayStatusRegDate('');
+                          }}>
+                          <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
+                            {ps.status_code === 'PENDING' || ps.status_code === 'OVERDUE' ? (
+                              <CalendarDaysIcon style={{ width: 18, height: 18, color: ps.color_code || '#F59E0B' }} />
+                            ) : ps.status_code === 'RECEIVED' ? (
+                              <CheckCircleIcon style={{ width: 18, height: 18, color: ps.color_code || '#10B981' }} />
+                            ) : (
+                              <CreditCardIcon style={{ width: 18, height: 18, color: ps.color_code || '#3B82F6' }} />
+                            )}
+                          </div>
+                          <div className="qa-drawer-st-label" style={{ fontSize: 10 }}>{ps.status_name}</div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* ── Contextual fields per payment status ── */}
-                  {paymentStatus && (
-                    <div style={{ marginTop: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
-
-                      {/* Bank Loan Applied: follow-up + remarks */}
-                      {paymentStatus === 'Bank Loan Applied' && (
-                        <>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
+                  {(() => {
+                    const sel = paymentStatusOptions.find(p => p.id === paymentStatusId);
+                    if (!sel) return null;
+                    const needsFollowup = sel.needs_followup;
+                    const needsRemarks = sel.needs_remarks;
+                    const isFullPayment = sel.status_code === 'RECEIVED';
+                    const isRegScheduled = sel.status_code === 'REGISTRATION_SCHEDULED' || sel.status_name === 'Registration Scheduled';
+                    const isPaymentDateReq = sel.status_code === 'RECEIVED' || sel.status_code === 'PARTIAL' || sel.status_name === 'Part Payment Received';
+                    return (
+                      <div style={{ marginTop: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
+                        {isFullPayment && (
+                          <div style={{background:'#DCFCE7',border:'1px solid #BBF7D0',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#166534'}}>
+                            <strong>✓ Full Payment:</strong> Booking will be auto-registered and the unit will be marked as <strong>Sold</strong>.
                           </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Bank name, loan status..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* OSR Received: follow-up + remarks */}
-                      {paymentStatus === 'OSR Received' && (
-                        <>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="OSR details..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Registration Scheduled: reg date + follow-up + remarks */}
-                      {paymentStatus === 'Registration Scheduled' && (
-                        <>
+                        )}
+                        {isRegScheduled && (
                           <div className="bkd-form-group" style={{marginBottom:10}}>
                             <label className="bkd-form-label">Registration Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusRegDate} onChange={e => setPayStatusRegDate(e.target.value)} />
                           </div>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Registration details..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Part Payment Received: payment date + follow-up + remarks */}
-                      {paymentStatus === 'Part Payment Received' && (
-                        <>
+                        )}
+                        {isPaymentDateReq && (
                           <div className="bkd-form-group" style={{marginBottom:10}}>
                             <label className="bkd-form-label">Payment Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusPaymentDate} onChange={e => setPayStatusPaymentDate(e.target.value)} />
                           </div>
+                        )}
+                        {needsFollowup && (
                           <div className="bkd-form-group" style={{marginBottom:10}}>
                             <label className="bkd-form-label">Next Follow-Up Date *</label>
                             <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
                           </div>
+                        )}
+                        {needsRemarks && (
                           <div className="bkd-form-group">
                             <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Payment details..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
+                            <textarea className="bkd-form-control" rows={2} placeholder="Status remarks..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
                           </div>
-                        </>
-                      )}
-
-                      {/* Follow Up: follow-up date + remarks */}
-                      {paymentStatus === 'Follow Up' && (
-                        <>
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
-                            <label className="bkd-form-label">Next Follow-Up Date *</label>
-                            <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Remarks *</label>
-                            <textarea className="bkd-form-control" rows={2} placeholder="Follow-up notes..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Full Payment Received: payment date only, no follow-up */}
-                      {paymentStatus === 'Full Payment Received' && (
-                        <>
-                          <div style={{background:'#DCFCE7',border:'1px solid #BBF7D0',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#166534'}}>
-                            <strong>✓ Full Payment:</strong> Booking will be auto-registered and the unit will be marked as <strong>Sold</strong>.
-                          </div>
-                          <div className="bkd-form-group">
-                            <label className="bkd-form-label">Payment Date *</label>
-                            <input type="date" className="bkd-form-control" value={payStatusPaymentDate} onChange={e => setPayStatusPaymentDate(e.target.value)} />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Current follow-up info */}
                   {drawerBooking.next_follow_up_at && (
