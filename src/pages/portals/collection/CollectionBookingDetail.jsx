@@ -4,6 +4,8 @@ import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
 import paymentStatusApi from '../../../api/paymentStatusApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
+import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
@@ -46,9 +48,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [newStatusId, setNewStatusId] = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
   const [statusRemarks, setStatusRemarks] = useState('');
+  const [statusVoice, setStatusVoice] = useState(null); // EMI remarks voice note { blob, url, duration }
   const [cancelReasonId, setCancelReasonId] = useState('');
   const [cancelReasons, setCancelReasons] = useState([]);
   const [cancelRemarks, setCancelRemarks] = useState('');
+  const [cancelVoice, setCancelVoice] = useState(null); // cancel remarks voice note
   const [paymentModeOptions, setPaymentModeOptions] = useState([]);
   const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [bankOptions, setBankOptions] = useState([]);
@@ -57,6 +61,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
   const [followUpDate, setFollowUpDate] = useState('');
   const [payStatusRemarks, setPayStatusRemarks] = useState('');
+  const [payStatusVoice, setPayStatusVoice] = useState(null); // payment-status remarks voice note
   const [payStatusPaymentDate, setPayStatusPaymentDate] = useState('');
   const [payStatusRegDate, setPayStatusRegDate] = useState('');
   const [payStatusSaving, setPayStatusSaving] = useState(false);
@@ -244,8 +249,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         : '';
       setNewStatusId(selectedStatusId);
       setStatusRemarks('');
+      setStatusVoice(null);
       setCancelReasonId('');
       setCancelRemarks('');
+      setCancelVoice(null);
       setRegisterForm({ registration_date: '', registration_number: '' });
       setRegisterFiles([]);
       return;
@@ -256,6 +263,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       setPaymentStatusId(booking?.payment_status_id || matched?.id || '');
       setFollowUpDate('');
       setPayStatusRemarks('');
+      setPayStatusVoice(null);
       setPayStatusPaymentDate('');
       setPayStatusRegDate('');
       return;
@@ -422,6 +430,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       closeActionModal();
       setFollowUpDate('');
       setPayStatusRemarks('');
+      setPayStatusVoice(null);
       setPayStatusPaymentDate('');
       setPayStatusRegDate('');
       loadBooking();
@@ -1395,6 +1404,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           <label className="qa-drawer-field-label">EMI Remarks *</label>
                           <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Enter EMI remarks"
                             value={statusRemarks} onChange={e => setStatusRemarks(e.target.value)} />
+                          <VoiceNoteField
+                            voice={statusVoice}
+                            onVoiceChange={setStatusVoice}
+                            transcribeApi={leadWorkflowApi.transcribeVoice}
+                            onTranscribed={(text) => setStatusRemarks((p) => (p ? `${p} ${text}` : text))}
+                          />
                         </div>
                       );
                     }
@@ -1443,6 +1458,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                             <label className="qa-drawer-field-label">Cancel Remarks</label>
                             <textarea className="qa-drawer-remark-ta" rows={2} placeholder="Additional remarks..."
                               value={cancelRemarks} onChange={e => setCancelRemarks(e.target.value)} />
+                            <VoiceNoteField
+                              voice={cancelVoice}
+                              onVoiceChange={setCancelVoice}
+                              transcribeApi={leadWorkflowApi.transcribeVoice}
+                              onTranscribed={(text) => setCancelRemarks((p) => (p ? `${p} ${text}` : text))}
+                            />
                           </div>
                         </div>
                       );
@@ -1536,6 +1557,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           <div className="bkd-form-group">
                             <label className="bkd-form-label">Remarks *</label>
                             <textarea className="bkd-form-control" rows={2} placeholder="Status remarks..." value={payStatusRemarks} onChange={e => setPayStatusRemarks(e.target.value)} />
+                            <VoiceNoteField
+                              voice={payStatusVoice}
+                              onVoiceChange={setPayStatusVoice}
+                              transcribeApi={leadWorkflowApi.transcribeVoice}
+                              onTranscribed={(text) => setPayStatusRemarks((p) => (p ? `${p} ${text}` : text))}
+                            />
                           </div>
                         )}
                       </div>
