@@ -7,6 +7,8 @@ import { getErrorMessage } from '../../../utils/helpers';
 import {
   ArrowPathIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadCancellationRequests = ({ user }) => {
@@ -109,6 +111,8 @@ const SalesHeadCancellationRequests = ({ user }) => {
 
   const badgeStyle = { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, display: 'inline-block' };
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(requests, 25);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -150,7 +154,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
                   </tr>
               </thead>
               <tbody>
-                {requests.map(req => (
+                {pageItems.map(req => (
                   <tr key={req.id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
                     <td style={{...tdStyle, fontWeight:700, color:'var(--accent-blue)'}}>{req.booking_number}</td>
                     <td style={tdStyle}>
@@ -199,6 +203,13 @@ const SalesHeadCancellationRequests = ({ user }) => {
                 ))}
               </tbody>
             </table>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
         )}
       </div>

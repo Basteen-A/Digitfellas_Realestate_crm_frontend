@@ -6,6 +6,8 @@ import { getErrorMessage } from '../../utils/helpers';
 import {
   CreditCardIcon, ArrowPathIcon, CheckCircleIcon, XCircleIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../components/common/Pagination';
+import usePagination from '../../hooks/usePagination';
 import './BookingApprovals.css';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
@@ -16,7 +18,10 @@ const customerName = (b) => (b.customer?.buyer_name
   || `${b.customer?.first_name || ''} ${b.customer?.last_name || ''}`.trim()
   || b.buyer_name || '—');
 const fullName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : '');
-const labelize = (k) => k.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+// Display-only label overrides (keys/values on the record are unchanged).
+const SPLIT_LABEL_OVERRIDES = { registration_expenses: 'Regn Misc. Expenses' };
+const labelize = (k) => SPLIT_LABEL_OVERRIDES[k]
+  || k.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
 const toAmount = (v) => { const n = parseFloat(v || 0); return Number.isFinite(n) ? n : 0; };
 const sumSplit = (split) => Object.values(split || {}).reduce((s, v) => s + toAmount(v), 0);
@@ -171,7 +176,7 @@ const BookingApprovals = () => {
             {splitRows.length > 0 && (
               <>
                 <h4 style={{ margin: '4px 0 8px', fontSize: 11, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  Registration Expenses (Detailed Split)
+                  Regn Misc. Expenses (Detailed Split)
                 </h4>
                 <div className="ba-breakdown">
                   {splitRows.map(([k, v]) => (
@@ -273,6 +278,8 @@ const BookingApprovals = () => {
     );
   };
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(rows, 25);
+
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -306,7 +313,7 @@ const BookingApprovals = () => {
             {!loading && rows.length === 0 && (
               <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>No bookings pending approval</td></tr>
             )}
-            {!loading && rows.map((b) => {
+            {!loading && pageItems.map((b) => {
               const s = computeSummary(b);
               const isOpen = expandedId === b.id;
               return (
@@ -358,8 +365,17 @@ const BookingApprovals = () => {
         <div className="ba-mobile-list">
           {loading && <div className="ba-mobile-empty">Loading…</div>}
           {!loading && rows.length === 0 && <div className="ba-mobile-empty">No bookings pending approval</div>}
-          {!loading && rows.map(renderMobileCard)}
+          {!loading && pageItems.map(renderMobileCard)}
         </div>
+        {!loading && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
       </div>
 
       {/* Reject-remarks modal */}

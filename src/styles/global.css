@@ -17,6 +17,18 @@ body {
   flex-direction: column;
 }
 
+/* ── Prevent mobile auto-zoom on input focus ──
+   Android/iOS browsers zoom in when a focused form control has a font-size
+   below 16px. Bumping controls to 16px on small screens stops the page from
+   zooming after login (and elsewhere) while keeping intentional pinch-zoom. */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* ── Focus Styles ── */
 :focus-visible {
   outline: 2px solid var(--accent-blue);

@@ -12,6 +12,8 @@ import {
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
 import CalendarPicker from '../../../components/common/CalendarPicker';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import '../common/LeadWorkspacePage.css';
 import {
   FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
@@ -256,6 +258,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       visits: [...group.visits].sort((a, b) => getVisitSortTime(b) - getVisitSortTime(a)),
     }));
   }, [filteredVisits]);
+
+  const { pageItems: pagedLeadGroups, page, setPage, pageSize, setPageSize, total } = usePagination(leadGroups, 25);
 
   const selectedVisitSiblingWithDetails = useMemo(() => getSiblingVisitWithDetails(selectedVisit, visits), [selectedVisit, visits]);
   const selectedVisitDetails = useMemo(() => (
@@ -556,7 +560,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {leadGroups.map(({ lead, visits: leadVisits }) => {
+          {pagedLeadGroups.map(({ lead, visits: leadVisits }) => {
             const leadId = lead?.id || 'unknown';
             const isExpanded = expandedLead === leadId;
 
@@ -675,6 +679,13 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
               </div>
             );
           })}
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 

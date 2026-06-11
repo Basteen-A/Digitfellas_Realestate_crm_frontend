@@ -187,10 +187,13 @@ const leadWorkflowApi = {
 
   /**
    * POST /leads/bulk-transfer
-   * Move every lead owned by `fromUserId` over to `toUserId`.
+   * Move every lead owned by `fromUserId` over to one or more target users.
+   * Pass a single id or an array of ids; with several targets the leads are
+   * split round-robin across them. (A single id still works for the legacy call.)
    */
-  bulkTransferLeads: async (fromUserId, toUserId, note) => {
-    const { data } = await api.post('/leads/bulk-transfer', { fromUserId, toUserId, note });
+  bulkTransferLeads: async (fromUserId, toUserIds, note) => {
+    const targets = Array.isArray(toUserIds) ? toUserIds : [toUserIds];
+    const { data } = await api.post('/leads/bulk-transfer', { fromUserId, toUserIds: targets, note });
     return data;
   },
 

@@ -159,6 +159,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     'MODT': { bg: '#FCE7F3', text: '#9D174D', border: '#FBCFE8' },
     'Other': { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
   };
+  // Display-only label overrides for the Record Payment modal. The stored
+  // payment_category value is kept unchanged (e.g. 'Registration Expenses') so
+  // existing payments, per-category buckets, colors, and the backend keep working.
+  const CATEGORY_LABELS = {
+    'Registration Expenses': 'Regn Misc. Expenses',
+  };
+  const categoryLabel = (cat) => CATEGORY_LABELS[cat] || cat;
 
   const loadActivities = useCallback(async () => {
     if (!bookingId) return;
@@ -530,7 +537,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   // Detailed split + optional MODT stored in custom_fields.cost_breakdown
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmount(v), 0);
-  const labelize = (k) => k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const labelize = (k) => categoryLabel(k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
   const costBreakdown = booking.custom_fields?.cost_breakdown || {};
   const savedRegSplit = costBreakdown.registration_split || {};
   const savedModtEnabled = !!costBreakdown.modt_enabled;
@@ -561,10 +568,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const categoryBuckets = [
     { key: 'Plot Value', target: plotValue, paid: paidByCategory['Plot Value'] || 0 },
     { key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 },
+     { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
     { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
     { key: 'Registration Expenses', target: regExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
     { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
-    { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
     { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
@@ -739,7 +746,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <InfoRow label="Customer Phone" value={customerPhone} mono/>
                   <InfoRow label="PAN" value={customer.pan_number} mono/>
                   <InfoRow label="Aadhaar" value={customer.aadhar_number} mono/>
-                  <InfoRow label="Email" value={customer.email} mono/>
                   <InfoRow label="Booking Date" value={fmtD(booking.booking_date)}/>
                 </div>
                 <hr className="bkd-divider"/>
@@ -947,7 +953,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                               background: c.bg, color: c.text, border: `1px solid ${c.border}`,
                               padding: '2px 8px', borderRadius: 10, fontWeight: 700,
                             }}>
-                              {b.key} · {pct}%
+                              {categoryLabel(b.key)} · {pct}%
                             </span>
                             <span style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 600 }}>
                               {formatCurrency(b.paid)} / {formatCurrency(b.target)}
@@ -1308,7 +1314,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           const suffix = target > 0
                             ? ` — Balance ${formatCurrency(balance)} of ${formatCurrency(target)}`
                             : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
-                          return <option key={cat} value={cat}>{cat}{suffix}</option>;
+                          return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                         })}
                       </select>
                     </div>
@@ -1325,7 +1331,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         borderRadius: 8, color: c.text, fontSize: 12, fontWeight: 600,
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <span>{payForm.payment_category}</span>
+                          <span>{categoryLabel(payForm.payment_category)}</span>
                           <span>Target {formatCurrency(bucket.target)} · Paid {formatCurrency(bucket.paid)} · Balance {formatCurrency(balance)}</span>
                         </div>
                         <div style={{ height: 6, background: '#FFFFFF80', borderRadius: 4, overflow: 'hidden' }}>
@@ -1591,7 +1597,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {actionMode === 'devCost' && (() => {
               const regSplitFields = [
                 { key: 'stamp_commission', label: 'Stamp Commission' },
-                { key: 'registration_expenses', label: 'Registration Expenses' },
+                { key: 'registration_expenses', label: 'Regn Misc. Expenses' },
                 { key: 'writer_expenses', label: 'Writer Expenses' },
                 { key: 'patta_charges', label: 'Patta Charges' },
                 { key: 'other_registration_expenses', label: 'Other Registration Expenses' },
@@ -1600,7 +1606,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 { key: 'stamp_duty', label: 'Stamp Duty' },
                 { key: 'registration_fees', label: 'Registration Fees' },
                 { key: 'stamp_commission', label: 'Stamp Commission' },
-                { key: 'registration_expenses', label: 'Registration Expenses' },
+                { key: 'registration_expenses', label: 'Regn Misc. Expenses' },
                 { key: 'writer_expenses', label: 'Writer Expenses' },
               ];
               const setRegField = (key, val) => setDevCostForm(p => ({
@@ -1666,7 +1672,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
 
                   <div className="qa-drawer-section" style={{ padding: '14px 0 8px' }}>
-                    Registration Expenses (Detailed Split)
+                    Regn Misc. Expenses (Detailed Split)
                     <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
                       Subtotal: {fmtFull(sumSplit(devCostForm.registration_split))}
                     </span>

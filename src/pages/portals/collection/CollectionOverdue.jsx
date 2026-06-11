@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import bookingApi from '../../../api/bookingApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import './CollectionWorkspace.css';
 
 const fmt = (v) => formatCurrency(v);
@@ -56,6 +58,8 @@ const CollectionOverdue = ({ user, onSelectBooking }) => {
       (b.project_name || '').toLowerCase().includes(s)
     );
   });
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filtered, 25);
 
   return (
     <div className="col-dashboard-new">
@@ -123,7 +127,7 @@ const CollectionOverdue = ({ user, onSelectBooking }) => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((b) => {
+                {pageItems.map((b) => {
                   const pending = b.net_amount - (b.total_paid || 0);
                   const days = getDaysOverdue(b.next_follow_up_at);
                   const severity = days > 30 ? 'col-badge-danger' : days > 14 ? 'col-badge-warning' : 'col-badge-secondary';
@@ -161,6 +165,15 @@ const CollectionOverdue = ({ user, onSelectBooking }) => {
             </table>
           )}
         </div>
+        {!loading && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
       </div>
     </div>
   );

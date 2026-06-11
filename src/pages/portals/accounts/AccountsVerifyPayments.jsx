@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import bookingApi from '../../../api/bookingApi';
 import dashboardApi from '../../../api/dashboardApi';
 import { formatCurrency } from '../../../utils/formatters';
+import Pagination from '../../../components/common/Pagination';
 import {
   MagnifyingGlassIcon,
   CheckCircleIcon,
@@ -29,6 +30,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   const [filter, setFilter] = useState(initialFilter);
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -54,13 +56,13 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
     setLoading(true);
     try {
       const apiStatus = ['unverified', 'verified', 'rejected'].includes(normalizedFilter) ? normalizedFilter : undefined;
-      const res = await bookingApi.getAllPayments({ status: apiStatus, page, limit: 20 });
+      const res = await bookingApi.getAllPayments({ status: apiStatus, page, limit });
       const data = res.data?.data || res.data;
       let rows = extractRows(data);
       let filteredRows = rows.filter(matchesFilter);
 
       if (apiStatus && normalizedFilter !== 'unverified' && filteredRows.length === 0) {
-        const fallbackRes = await bookingApi.getAllPayments({ page, limit: 20 });
+        const fallbackRes = await bookingApi.getAllPayments({ page, limit });
         const fallbackData = fallbackRes.data?.data || fallbackRes.data;
         const fallbackRows = extractRows(fallbackData);
         const fallbackFilteredRows = fallbackRows.filter(matchesFilter);
@@ -98,7 +100,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
     } finally {
       setLoading(false);
     }
-  }, [normalizedFilter, page, matchesFilter]);
+  }, [normalizedFilter, page, limit, matchesFilter]);
 
   useEffect(() => {
     setFilter(initialFilter || 'unverified');
@@ -162,7 +164,6 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
     return `${days} days`;
   };
 
-  const totalPages = Math.ceil(total / 20);
   const visiblePayments = payments.filter((p) => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -274,17 +275,13 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="acct-verify-pagination">
-              <span className="acct-verify-count">
-                Page {page} of {totalPages} · {total} total
-              </span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className="col-btn col-btn-ghost col-btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
-                <button className="col-btn col-btn-ghost col-btn-sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next →</button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            pageSize={limit}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
+          />
         </div>
 
         {/* RIGHT: Detail Sidebar or Placeholder */}

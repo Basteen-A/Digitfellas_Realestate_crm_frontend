@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import bookingApi from '../../../api/bookingApi';
 import { formatCurrency } from '../../../utils/formatters';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import './CollectionWorkspace.css';
 
 const fmt = (v) => formatCurrency(v);
@@ -57,6 +59,8 @@ const CollectionDemandSchedule = ({ user }) => {
       (b.project_name || '').toLowerCase().includes(s)
     );
   });
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filtered, 25);
 
   return (
     <div className="col-dashboard-new">
@@ -132,7 +136,7 @@ const CollectionDemandSchedule = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((b) => {
+                {pageItems.map((b) => {
                   const pending = b.net_amount - (b.total_paid || 0);
                   const status = getDemandStatus(b);
                   return (
@@ -152,6 +156,15 @@ const CollectionDemandSchedule = ({ user }) => {
             </table>
           )}
         </div>
+        {!loading && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
       </div>
     </div>
   );

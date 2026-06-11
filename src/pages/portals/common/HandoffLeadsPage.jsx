@@ -6,6 +6,8 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
 import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import './HandoffLeadsPage.css';
 
 const dedupePipeText = (value) => {
@@ -64,6 +66,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
   }, [meta, rows, workspaceRole]);
 
   const visibleRows = useMemo(() => workspaceRole === 'SM' ? rows : rows.filter((row) => !isLostHandoffRow(row)), [rows, workspaceRole]);
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(visibleRows, 25);
 
   const isTC = workspaceRole === 'TC';
   const isSH = workspaceRole === 'SH';
@@ -180,7 +183,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">No handoff leads found</td>
               </tr>
             )}
-            {!loading && visibleRows.map((row) => (
+            {!loading && pageItems.map((row) => (
               <tr key={row.id} className={row.pendingAcceptance ? 'handoff-row-pending' : ''}>
                 {(isTC || isSH) ? (
                   <>
@@ -263,6 +266,15 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
             ))}
           </tbody>
         </table>
+        {!loading && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
       </div>
     </div>
   );

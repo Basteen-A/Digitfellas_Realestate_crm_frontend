@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import './InventoryDashboard.css';
 
 const InventoryDashboard = () => {
@@ -145,6 +147,7 @@ const InventoryDashboard = () => {
   };
 
   const { global, projects } = dashboard;
+  const { pageItems: pagedProjects, page, setPage, pageSize, setPageSize, total } = usePagination(projects, 25);
 
   if (loading) {
     return (
@@ -203,8 +206,9 @@ const InventoryDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="inv-project-grid">
-          {projects.map((proj) => {
+        <>
+          <div className="inv-project-grid">
+          {pagedProjects.map((proj) => {
             const total = parseInt(proj.total_units) || 0;
             const available = parseInt(proj.available_units) || 0;
             const booked = parseInt(proj.booked_units) || 0;
@@ -292,7 +296,15 @@ const InventoryDashboard = () => {
               </div>
             );
           })}
-        </div>
+          </div>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
       )}
 
       {/* ── Phase Manager Modal ── */}

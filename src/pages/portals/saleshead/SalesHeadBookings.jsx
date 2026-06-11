@@ -7,6 +7,8 @@ import paymentTypeApi from '../../../api/paymentTypeApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { ClipboardDocumentListIcon, PencilSquareIcon, LinkIcon, CreditCardIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadBookings = ({ user }) => {
@@ -114,6 +116,7 @@ const SalesHeadBookings = ({ user }) => {
     setEditMode(true);
   };
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(bookings, 25);
 
   return (
     <div>
@@ -167,7 +170,7 @@ const SalesHeadBookings = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map(booking => (
+                  {pageItems.map(booking => (
                     <tr key={booking.id} className="is-clickable" onClick={() => openDetail(booking.id)}>
                       <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
                       <td>
@@ -206,6 +209,15 @@ const SalesHeadBookings = ({ user }) => {
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && bookings.length > 0 && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           )}
         </div>
       </div>

@@ -80,6 +80,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   const createFileRef = useRef(null); // hidden input behind the "Choose files" button
+  // Optional documents attached alongside a status update (not mandatory).
+  const [statusFiles, setStatusFiles] = useState([]);
+  const statusFileRef = useRef(null);
 
   // Status / remark form (Quick-Action style update)
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
@@ -433,9 +436,12 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
         cancellation_reason: statusForm.cancellation_reason || null,
         voiceBlob: voiceBlob || undefined,
         voice_duration: voiceBlob ? voiceDuration : undefined,
+        // Optional documents — uploaded with the remark and linked to it.
+        documents: statusFiles.length > 0 ? statusFiles : undefined,
       });
       toast.success('Task updated');
       setStatusForm((p) => ({ ...p, content: '', cancellation_reason: '' }));
+      setStatusFiles([]);
       clearVoice();
       await loadTask();
       onSaved?.();
@@ -767,6 +773,43 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                       )}
                       {recError && <div className="tmq-voice-err">{recError}</div>}
                     </div>
+
+                    {/* Optional document attachment for this status update */}
+                    <div className="tmq-status-attach">
+                      <label className="tmq-field-label">Attachment (optional)</label>
+                      <div className="tm-file-picker">
+                        <button type="button" className="tm-file-btn" onClick={() => statusFileRef.current?.click()}>
+                          Choose files
+                        </button>
+                        <span className="tm-file-count">
+                          {statusFiles.length ? `${statusFiles.length} file(s)` : 'Image / PDF, up to 25MB each'}
+                        </span>
+                        <input
+                          ref={statusFileRef}
+                          type="file"
+                          multiple
+                          accept="image/*,application/pdf"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            setStatusFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
+                            if (statusFileRef.current) statusFileRef.current.value = '';
+                          }}
+                        />
+                      </div>
+                      {statusFiles.length > 0 && (
+                        <div className="tm-file-chips">
+                          {statusFiles.map((f, i) => (
+                            <span key={`${f.name}-${i}`} className="tm-file-chip" title={`${f.name} (${humanSize(f.size)})`}>
+                              <DocumentIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                              <span className="tm-file-chip-name">{f.name}</span>
+                              <button type="button" className="tm-chip-x" title="Remove"
+                                onClick={() => setStatusFiles((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {needsFollowUp(statusForm.new_status) && (
                       <div style={{ marginTop: 10 }}>
                         <label className="tmq-field-label">Follow-up Date *</label>
@@ -903,6 +946,23 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                                       <MicrophoneIcon style={{ width: 13, height: 13 }} />
                                       <audio className="tmq-voice-audio" src={r.voice.file_url} controls preload="none" />
                                       {r.voice.duration ? <span className="tmq-voice-len">{mmss(r.voice.duration)}</span> : null}
+                                    </div>
+                                  )}
+                                  {Array.isArray(r.attachments) && r.attachments.length > 0 && (
+                                    <div className="tmq-act-attachments">
+                                      {r.attachments.map((att, i) => (
+                                        <a
+                                          key={att.id || i}
+                                          href={fileHref(att)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="tmq-act-attach"
+                                          title={`${att.file_name || 'File'} (${humanSize(att.file_size)})`}
+                                        >
+                                          <DocumentIcon style={{ width: 13, height: 13, flexShrink: 0 }} />
+                                          <span className="tmq-act-attach-name">{att.file_name || 'File'}</span>
+                                        </a>
+                                      ))}
                                     </div>
                                   )}
                                 </td>

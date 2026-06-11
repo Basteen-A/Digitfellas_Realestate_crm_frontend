@@ -42,14 +42,17 @@ const taskApi = {
   // When a voice note is recorded, send multipart/form-data so the audio blob
   // rides along with the status/remark fields; otherwise send plain JSON.
   addRemark: async (id, payload) => {
-    if (payload && payload.voiceBlob) {
+    const docs = Array.isArray(payload?.documents) ? payload.documents : [];
+    // Multipart whenever a voice clip and/or document files ride along.
+    if (payload && (payload.voiceBlob || docs.length > 0)) {
       const fd = new FormData();
       if (payload.content != null) fd.append('content', payload.content);
       if (payload.new_status) fd.append('new_status', payload.new_status);
       if (payload.follow_up_date) fd.append('follow_up_date', payload.follow_up_date);
       if (payload.cancellation_reason) fd.append('cancellation_reason', payload.cancellation_reason);
       if (payload.voice_duration != null) fd.append('voice_duration', String(payload.voice_duration));
-      fd.append('voice', payload.voiceBlob, payload.voiceName || 'voice-note.webm');
+      if (payload.voiceBlob) fd.append('voice', payload.voiceBlob, payload.voiceName || 'voice-note.webm');
+      docs.forEach((f) => fd.append('documents', f));
       const { data } = await api.post(`${basePath}/${id}/remarks`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

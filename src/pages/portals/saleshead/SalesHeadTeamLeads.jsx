@@ -12,6 +12,8 @@ import {
   HandRaisedIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 
 const getVisitDetails = (visit) => {
   const directVisitDetails = parseVisitDetailsValue(
@@ -118,6 +120,9 @@ const SalesHeadTeamLeads = () => {
   const formatDateTime = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
   const selectedVisitDetails = getVisitDetails(selectedVisit);
   const rawSelectedVisitDetails = getRawVisitDetails(selectedVisit);
+
+  const leadsPg = usePagination(smLeads, 25);
+  const visitsPg = usePagination(smVisits, 25);
 
   const getStatusBadge = (status) => {
     const colors = {
@@ -264,7 +269,7 @@ const SalesHeadTeamLeads = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {smLeads.map(lead => (
+                          {leadsPg.pageItems.map(lead => (
                             <tr key={lead.id}>
                               <td>
                                 <div style={{ fontWeight: 700, fontSize: 13 }}>{lead.fullName}</div>
@@ -290,6 +295,13 @@ const SalesHeadTeamLeads = () => {
                         </tbody>
                       </table>
                     </div>
+                    <Pagination
+                      page={leadsPg.page}
+                      pageSize={leadsPg.pageSize}
+                      total={leadsPg.total}
+                      onPageChange={leadsPg.setPage}
+                      onPageSizeChange={leadsPg.setPageSize}
+                    />
                   </div>
                 )}
               </div>
@@ -321,7 +333,7 @@ const SalesHeadTeamLeads = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {smVisits.map(v => (
+                          {visitsPg.pageItems.map(v => (
                             <tr key={v.id}>
                               <td>
                                 <div style={{ fontWeight: 600, fontSize: 13 }}>{v.lead?.first_name} {v.lead?.last_name || ''}</div>
@@ -345,6 +357,13 @@ const SalesHeadTeamLeads = () => {
                         </tbody>
                       </table>
                     </div>
+                    <Pagination
+                      page={visitsPg.page}
+                      pageSize={visitsPg.pageSize}
+                      total={visitsPg.total}
+                      onPageChange={visitsPg.setPage}
+                      onPageSizeChange={visitsPg.setPageSize}
+                    />
                   </div>
                 )}
               </div>

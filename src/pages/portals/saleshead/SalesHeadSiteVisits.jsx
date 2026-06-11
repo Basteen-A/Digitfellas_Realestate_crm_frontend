@@ -12,6 +12,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 
 const getUserDisplayName = (user) => {
   if (!user) return '';
@@ -97,6 +99,8 @@ const SalesHeadSiteVisits = () => {
     if (filter === 'cancelled') return v.status === 'Cancelled';
     return true;
   });
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredVisits, 25);
 
   const getStatusBadge = (status) => {
     const colors = {
@@ -190,7 +194,7 @@ const SalesHeadSiteVisits = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVisits.map(v => (
+                  {pageItems.map(v => (
                     <tr key={v.id}>
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{v.lead?.first_name} {v.lead?.last_name || ''}</div>
@@ -219,6 +223,13 @@ const SalesHeadSiteVisits = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
         </div>
       )}

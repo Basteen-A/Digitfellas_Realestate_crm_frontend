@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { getSidebarMenuForRole, getTaskMenuItem, ROLE_LABELS } from './menuConfig';
+import { getSidebarMenuForRole, getTaskMenuItem } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
 import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
@@ -74,8 +74,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const roleLabel = ROLE_LABELS[roleCode] || roleCode || '';
-
   const handleLinkClick = () => {
     if (isMobile && onMobileClose) {
       onMobileClose();
@@ -110,12 +108,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
           <img src={logoFull} alt={siteTitle} className="sidebar-logo sidebar-logo--full" />
           <img src={logoMark} alt={siteTitle} className="sidebar-logo sidebar-logo--mark" />
         </div>
-      </div>
-
-      {/* Role Badge */}
-      <div className="app-sidebar__role-badge">
-        <span className="app-sidebar__role-dot" />
-        <span className="app-sidebar__role-text">{roleLabel}</span>
       </div>
 
       {/* Navigation. Labels/chevrons always render; CSS hides them on the

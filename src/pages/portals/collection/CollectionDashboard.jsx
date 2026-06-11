@@ -290,6 +290,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
               <table className="col-table-new">
                 <thead>
                   <tr>
+                    <th>Booking</th>
                     <th>Customer</th>
                     <th>Amount</th>
                     <th>Status</th>
@@ -298,10 +299,21 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                 <tbody>
                   {recentPayments.slice(0, 5).map((p, i) => (
                     <tr key={i}>
+                      <td className="col-cell-mono">
+                        {p.booking_id ? (
+                          <button
+                            type="button"
+                            className="col-booking-link"
+                            onClick={() => onSelectBooking(p.booking_id)}
+                          >
+                            {p.booking_number || '—'}
+                          </button>
+                        ) : (p.booking_number || '—')}
+                      </td>
                       <td>
                         <div className="col-cell-primary">{p.customer_name}</div>
                         <div className="col-cell-mono col-cell-secondary">
-                          {p.payment_number || p.booking_number} · {p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}
+                          {[p.payment_number, p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''].filter(Boolean).join(' · ')}
                         </div>
                       </td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(p.amount)}</td>

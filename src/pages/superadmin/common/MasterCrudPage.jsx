@@ -4,6 +4,7 @@ import {
   PlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon,
   ArrowsRightLeftIcon, XMarkIcon, CircleStackIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
 import './MasterCrudPage.css';
 
 const getValueByPath = (row, path) => {
@@ -19,9 +20,9 @@ const normalizeArray = (value) =>
 
 const MasterCrudPage = ({ config }) => {
   const [rows, setRows] = useState([]);
-  const [meta, setMeta] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
+  const [meta, setMeta] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
   const [searchInput, setSearchInput] = useState('');
-  const [query, setQuery] = useState({ page: 1, limit: 20, search: '' });
+  const [query, setQuery] = useState({ page: 1, limit: 25, search: '' });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
@@ -515,29 +516,13 @@ const MasterCrudPage = ({ config }) => {
         </table>
       </div>
 
-      <div className="master-page__pagination">
-        <p>
-          Showing page {meta.page || 1} of {meta.totalPages || 1} ({meta.total || 0} records)
-        </p>
-        <div>
-          <button
-            type="button"
-            className="master-page__secondary"
-            disabled={!meta.hasPrevPage}
-            onClick={() => setQuery((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            className="master-page__secondary"
-            disabled={!meta.hasNextPage}
-            onClick={() => setQuery((prev) => ({ ...prev, page: prev.page + 1 }))}
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={meta.page || query.page}
+        pageSize={query.limit}
+        total={meta.total || 0}
+        onPageChange={(p) => setQuery((prev) => ({ ...prev, page: p }))}
+        onPageSizeChange={(size) => setQuery((prev) => ({ ...prev, limit: size, page: 1 }))}
+      />
 
       {modal.open && (
         <div className="master-modal" role="dialog" aria-modal="true">

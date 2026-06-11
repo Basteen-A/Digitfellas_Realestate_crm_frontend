@@ -5,6 +5,8 @@ import paymentTypeApi from '../../../api/paymentTypeApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { CreditCardIcon, ClockIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadPayments = ({ user }) => {
@@ -72,6 +74,8 @@ const SalesHeadPayments = ({ user }) => {
     }
   };
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(bookings, 25);
+
   return (
     <div>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -112,7 +116,7 @@ const SalesHeadPayments = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map(b => (
+                  {pageItems.map(b => (
                     <tr key={b.id}>
                       <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{b.booking_number}</td>
                       <td style={{ fontWeight: 600 }}>{b.customer_name}</td>
@@ -149,6 +153,15 @@ const SalesHeadPayments = ({ user }) => {
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && bookings.length > 0 && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           )}
         </div>
       </div>

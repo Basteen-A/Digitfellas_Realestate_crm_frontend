@@ -473,11 +473,15 @@
 .tmq-voice-done { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--accent-green, #0f7b5c); }
 
 /* ── "Choose files" picker + selected-file chips ── */
-.tm-file-picker { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-input); border-radius: 10px; padding: 6px; background: var(--bg-input); }
-.tm-file-btn { border: 1px solid var(--border-input); background: var(--bg-card); border-radius: 8px; padding: 7px 16px; font-size: 12.5px; font-weight: 700; font-family: inherit; color: var(--text-primary); cursor: pointer; transition: all .15s; }
+.tm-file-picker { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--border-input); border-radius: 10px; padding: 6px; background: var(--bg-input); }
+.tm-file-btn { flex-shrink: 0; border: 1px solid var(--border-input); background: var(--bg-card); border-radius: 8px; padding: 7px 16px; font-size: 12.5px; font-weight: 700; font-family: inherit; color: var(--text-primary); cursor: pointer; transition: all .15s; }
 .tm-file-btn:hover:not(:disabled) { border-color: var(--accent-blue); color: var(--accent-blue); }
 .tm-file-btn:disabled { opacity: .6; cursor: default; }
-.tm-file-count { font-size: 12.5px; color: var(--text-muted); }
+.tm-file-count { font-size: 12.5px; color: var(--text-muted); min-width: 0; }
+
+/* Optional attachment inside the status-update block */
+.tmq-status-attach { margin-top: 12px; }
+.tmq-status-attach .tmq-field-label { display: block; margin-bottom: 6px; }
 .tm-file-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .tm-file-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: var(--border-radius-full); padding: 4px 6px 4px 10px; font-size: 12px; font-weight: 500; color: var(--text-primary); }
 .tm-file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -578,6 +582,18 @@
 .tmq-act-table tbody tr:last-child td { border-bottom: 0; }
 .tmq-act-table tbody tr:nth-child(even) { background: var(--bg-table-row-stripe); }
 
+/* Inline documents attached to a status update, shown in the Remark cell. */
+.tmq-act-attachments { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tmq-act-attach {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 200px;
+  border: 1px solid var(--border-input); background: var(--bg-input);
+  border-radius: var(--border-radius-full); padding: 3px 9px;
+  font-size: 11.5px; font-weight: 500; color: var(--accent-blue);
+  text-decoration: none;
+}
+.tmq-act-attach:hover { border-color: var(--accent-blue); background: var(--accent-blue-bg); }
+.tmq-act-attach-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Side-by-side dashboard split: status breakdown | recent activity */
 .tm-dash-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
 .tm-subcard { background: var(--bg-secondary); border: 1px solid var(--border-secondary); border-radius: var(--border-radius-lg); padding: 16px; }
@@ -599,8 +615,16 @@
    ============================================================ */
 .task-workspace { padding: 20px 24px; }
 
-/* Indent task rows so they sit nested under their group header (Department/Project/Status). */
-.task-workspace .lead-workspace__table tr.task-row--grouped td.task-col-task { padding-left: 38px; }
+/* Indent task rows so they sit nested under their group header (Department/Project only). */
+.task-workspace .lead-workspace__table tr.task-row--grouped td.task-col-task { padding-left: 0; }
+.task-workspace .lead-workspace__table tr.task-row--grouped-department td.task-col-task { padding-left: 10px; }
+.task-workspace .lead-workspace__table tr.task-row--grouped-project td.task-col-task { padding-left: 10px; }
+
+/* Group by = None: the ungrouped rows have no group header to sit under, so give
+   the Task column (header + rows) a clear, aligned left indent instead of sitting
+   flush against the card edge. */
+.task-workspace .lead-workspace__table th.task-col-task,
+.task-workspace .lead-workspace__table tbody tr:not(.task-row--grouped) td.task-col-task { padding-left: 22px; }
 
 /* Inline drawer body — two columns on desktop, one on mobile. */
 .task-drawer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 16px 20px 18px 44px; }

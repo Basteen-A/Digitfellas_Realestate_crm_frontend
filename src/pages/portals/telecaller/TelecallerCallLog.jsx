@@ -1,4 +1,6 @@
 import React from 'react';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 
 const TelecallerCallLog = ({ user }) => {
   const callLogs = [
@@ -11,6 +13,8 @@ const TelecallerCallLog = ({ user }) => {
     const map = { 'warm': 'badge-warm', 'hot': 'badge-hot', 'cold': 'badge-cold', 'not reachable': 'badge-nr', 'interested': 'badge-interested' };
     return map[outcome.toLowerCase()] || 'badge-open';
   };
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(callLogs, 25);
 
   return (
     <div>
@@ -34,7 +38,7 @@ const TelecallerCallLog = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {callLogs.map((log, idx) => (
+                {pageItems.map((log, idx) => (
                   <tr key={idx}>
                     <td>{log.time}</td>
                     <td><strong>{log.name}</strong></td>
@@ -46,6 +50,13 @@ const TelecallerCallLog = ({ user }) => {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       </div>
     </div>

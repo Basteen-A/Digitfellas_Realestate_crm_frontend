@@ -6,6 +6,8 @@ import { getErrorMessage } from '../../../utils/helpers';
 import {
   ArrowPathIcon, ClipboardDocumentListIcon, PaperAirplaneIcon, EyeIcon, MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
@@ -72,6 +74,8 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
       || (b.project_name || '').toLowerCase().includes(q);
   });
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filtered, 25);
+
   return (
     <div className="col-bookings-page">
       {/* ── Header (matches My Leads workspace) ── */}
@@ -131,7 +135,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((b) => (
+                    {pageItems.map((b) => (
                       <tr key={b.id}>
                         <td>
                           <button type="button" className="col-booking-link" onClick={() => onSelectBooking?.(b.id)}>
@@ -169,7 +173,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
 
               {/* ── Mobile card list (shown ≤768px; the table is hidden there) ── */}
               <div className="col-bookings-mobile">
-                {filtered.map((b) => (
+                {pageItems.map((b) => (
                   <div key={b.id} className="col-bookings-mobile-card">
                     <div className="col-bookings-mobile-card__head">
                       <div className="col-bookings-mobile-card__main">
@@ -197,6 +201,13 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                   </div>
                 ))}
               </div>
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
             </>
           )}
         </div>

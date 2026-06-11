@@ -11,6 +11,8 @@ import {
   CreditCardIcon, ShieldCheckIcon, CalendarDaysIcon,
   ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon, ChevronRightIcon, ChevronDownIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
@@ -101,6 +103,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     'MODT': { bg: '#FCE7F3', text: '#9D174D', border: '#FBCFE8' },
     'Other': { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
   };
+  // Display-only label overrides; stored payment_category value is unchanged.
+  const CATEGORY_LABELS = { 'Registration Expenses': 'Regn Misc. Expenses' };
+  const categoryLabel = (cat) => CATEGORY_LABELS[cat] || cat;
 
   // Build per-category buckets (target + paid) for the drawer booking
   const getDrawerCategoryBuckets = (booking) => {
@@ -219,6 +224,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       (b.buyer_name || '').toLowerCase().includes(q)
     );
   }, [bookings, searchQuery, activeTab]);
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredBookings, 25);
 
   // Follow-up counts for tab badges
   const todayFollowUpCount = useMemo(() => {
@@ -639,7 +646,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBookings.map((booking) => {
+                  {pageItems.map((booking) => {
                     const pct = booking.payment_percentage || 0;
                     const isExpanded = expandedMobileBookingId === booking.id;
                     const totalValue = getComputedTotalValue(booking);
@@ -760,6 +767,15 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && filteredBookings.length > 0 && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           )}
         </div>
       </div>
@@ -1026,7 +1042,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                                 const suffix = target > 0
                                   ? ` — Balance ${formatCurrency(balance)} of ${formatCurrency(target)}`
                                   : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
-                                return <option key={cat} value={cat}>{cat}{suffix}</option>;
+                                return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                               })}
                             </select>
                           </div>
@@ -1041,7 +1057,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                               borderRadius: 8, color: c.text, fontSize: 12, fontWeight: 600,
                             }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <span>{selectedBucket.key}</span>
+                                <span>{categoryLabel(selectedBucket.key)}</span>
                                 <span>Target {formatCurrency(selectedBucket.target)} · Paid {formatCurrency(selectedBucket.paid)} · Balance {formatCurrency(balance)}</span>
                               </div>
                               <div style={{ height: 6, background: '#FFFFFF80', borderRadius: 4, overflow: 'hidden' }}>

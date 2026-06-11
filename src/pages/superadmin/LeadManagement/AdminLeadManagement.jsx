@@ -13,13 +13,12 @@ import {
   FunnelIcon,
   ArrowPathIcon,
   EyeIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   BuildingOffice2Icon,
   MapPinIcon,
   ArrowsRightLeftIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
 import './AdminLeadManagement.css';
 
 const getTodayString = () => {
@@ -66,7 +65,7 @@ const AdminLeadManagement = () => {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [page, setPage] = useState(1);
-  const [limit] = useState(50);
+  const [limit, setLimit] = useState(25);
 
   // ── Data ──
   const [leads, setLeads] = useState([]);
@@ -79,7 +78,7 @@ const AdminLeadManagement = () => {
   // ── Bulk transfer (user → user) ──
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
-  const [transferTo, setTransferTo] = useState('');
+  const [transferTo, setTransferTo] = useState([]); // target user ids (round-robin when >1)
   const [transferNote, setTransferNote] = useState('');
   const [transferring, setTransferring] = useState(false);
   const [deletingUser, setDeletingUser] = useState(false);
@@ -289,20 +288,31 @@ const AdminLeadManagement = () => {
   const closeTransfer = () => {
     setTransferOpen(false);
     setTransferFrom('');
-    setTransferTo('');
+    setTransferTo([]);
     setTransferNote('');
   };
 
+  const toggleTransferTo = (id) => {
+    setTransferTo((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
   const handleBulkTransfer = async () => {
-    if (!transferFrom || !transferTo) { toast.error('Pick both a source and a target user.'); return; }
-    if (transferFrom === transferTo) { toast.error('Source and target must be different.'); return; }
+    if (!transferFrom || transferTo.length === 0) { toast.error('Pick a source user and at least one target user.'); return; }
+    if (transferTo.includes(transferFrom)) { toast.error('Source and target must be different.'); return; }
     setTransferring(true);
     try {
       const res = await leadWorkflowApi.bulkTransferLeads(transferFrom, transferTo, transferNote.trim() || undefined);
       const count = res?.data?.transferred ?? 0;
-      toast.success(count > 0
-        ? `Transferred ${count} lead(s) to ${userName(transferTo)}.`
-        : `${userName(transferFrom)} had no leads to transfer.`);
+      const perUser = res?.data?.perUser || [];
+      if (count === 0) {
+        toast.success(`${userName(transferFrom)} had no leads to transfer.`);
+      } else if (transferTo.length > 1) {
+        const detail = perUser.filter((p) => p.count > 0).map((p) => `${p.count} → ${p.name}`).join(', ');
+        toast.success(`Transferred ${count} lead(s) round-robin (${detail}).`);
+      } else {
+        toast.success(`Transferred ${count} lead(s) to ${userName(transferTo[0])}.`);
+      }
+      closeTransfer();
       fetchLeads();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lead transfer failed.');
@@ -659,30 +669,14 @@ const AdminLeadManagement = () => {
       </div>
 
       {/* Pagination */}
-      {!loading && leads.length > 0 && (
-        <div className="admin-lead-mgmt__pagination">
-          <span className="alm-pagination-info">
-            Page {meta.page || page} of {meta.totalPages || 1} &middot; {meta.total || leads.length} total
-          </span>
-          <div className="alm-pagination-btns">
-            <button
-              type="button"
-              className="alm-btn alm-btn--sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeftIcon style={{ width: 16, height: 16 }} /> Prev
-            </button>
-            <button
-              type="button"
-              className="alm-btn alm-btn--sm"
-              disabled={page >= (meta.totalPages || 1)}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next <ChevronRightIcon style={{ width: 16, height: 16 }} />
-            </button>
-          </div>
-        </div>
+      {!loading && (
+        <Pagination
+          page={meta.page || page}
+          pageSize={limit}
+          total={meta.total || leads.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
+        />
       )}
 
       {/* ── Bulk Transfer Modal ── */}
@@ -734,21 +728,51 @@ const AdminLeadManagement = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>To user (target)</label>
-                <select
-                  value={transferTo}
-                  onChange={(e) => setTransferTo(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
-                >
-                  <option value="">Select target user…</option>
-                  {activeUserGroups.map((g) => (
-                    <optgroup key={g.label} label={g.label}>
-                      {g.users.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span>To user(s){transferTo.length > 0 ? ` · ${transferTo.length} selected` : ''}</span>
+                  {transferTo.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTransferTo([])}
+                      style={{ background: 'none', border: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </label>
+                <div style={{ border: '1px solid #d1d5db', borderRadius: 6, maxHeight: 220, overflowY: 'auto', padding: 6 }}>
+                  {activeUserGroups.map((g) => {
+                    const selectable = g.users.filter((u) => u.id !== transferFrom);
+                    if (selectable.length === 0) return null;
+                    return (
+                      <div key={g.label} style={{ marginBottom: 6 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', color: '#6b7280', padding: '4px 6px' }}>{g.label}</div>
+                        {selectable.map((u) => {
+                          const checked = transferTo.includes(u.id);
+                          return (
+                            <label
+                              key={u.id}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: checked ? '#EEF2FF' : 'transparent' }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleTransferTo(u.id)}
+                                style={{ width: 16, height: 16, accentColor: '#4338CA', cursor: 'pointer' }}
+                              />
+                              <span style={{ fontSize: 14, color: '#111827' }}>{u.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+                {transferTo.length > 1 && (
+                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                    Leads will be split evenly across the {transferTo.length} selected users in round-robin order.
+                  </div>
+                )}
               </div>
 
               <div>

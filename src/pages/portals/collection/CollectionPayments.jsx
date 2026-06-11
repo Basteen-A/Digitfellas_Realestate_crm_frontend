@@ -41,7 +41,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
     : filter === 'pending' ? allPayments.filter(p => !p.is_verified && !p.is_bounced)
     : allPayments.filter(p => p.is_bounced);
 
-  const totalAmount = filtered.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+    
 
   return (
     <div>
@@ -82,9 +82,6 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
         <div className="col-section-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>
             Showing {filtered.length} payment{filtered.length !== 1 ? 's' : ''}
-          </span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-green)' }}>
-            Total: {formatCurrency(totalAmount)}
           </span>
         </div>
       </div>

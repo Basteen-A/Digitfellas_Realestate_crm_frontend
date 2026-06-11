@@ -1,0 +1,105 @@
+/* ============================================================
+   COMMON PAGINATION BAR
+   Shared across every list page. Stripe-style accent (#625afa).
+   ============================================================ */
+
+.pg-pagination {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-secondary, #475569);
+  margin-top: 12px;
+}
+
+.pg-pagination__rows {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pg-pagination__label {
+  color: var(--text-muted, #64748b);
+}
+
+.pg-pagination__select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 6px 30px 6px 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background-color: var(--bg-primary, #fff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  color: var(--text-primary, #0f172a);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pg-pagination__select:hover {
+  border-color: var(--accent-blue, #625afa);
+}
+
+.pg-pagination__select:focus {
+  outline: none;
+  border-color: var(--accent-blue, #625afa);
+  box-shadow: 0 0 0 3px var(--accent-blue-bg, rgba(98, 90, 250, 0.12));
+}
+
+.pg-pagination__info {
+  color: var(--text-secondary, #475569);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-pagination__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.pg-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pg-pagination__btn:hover:not(:disabled) {
+  border-color: var(--accent-blue, #625afa);
+  color: var(--accent-blue, #625afa);
+  background: var(--accent-blue-bg, rgba(98, 90, 250, 0.12));
+}
+
+.pg-pagination__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pg-pagination__icon {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 768px) {
+  .pg-pagination {
+    gap: 12px;
+    padding: 10px 12px;
+  }
+}

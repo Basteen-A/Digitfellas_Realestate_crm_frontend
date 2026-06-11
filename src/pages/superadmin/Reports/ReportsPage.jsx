@@ -8,6 +8,8 @@ import {
   ChartBarIcon, UsersIcon, BuildingOffice2Icon, ArrowPathIcon,
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -94,6 +96,8 @@ const UserActivityReport = ({ period }) => {
     } finally { setDetailLoading(false); }
   };
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(users, 25);
+
   if (detail) return <UserDetail detail={detail} isCol={isCol} loading={detailLoading} onBack={() => setDetail(null)} />;
 
   return (
@@ -136,7 +140,7 @@ const UserActivityReport = ({ period }) => {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {pageItems.map((u) => (
                 <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(u.id)}>
                   <td style={{ ...td, fontWeight: 600 }}>
                     {fullName(u.first_name, u.last_name)}
@@ -164,6 +168,15 @@ const UserActivityReport = ({ period }) => {
               ))}
             </tbody>
           </table>
+        )}
+        {!loading && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
       </div>
     </>
@@ -328,6 +341,7 @@ const InventoryReport = ({ period }) => {
   useEffect(() => { load(); }, [load]);
 
   const t = data?.totals || {};
+  const unitsPg = usePagination(data?.units || [], 25);
 
   return (
     <>
@@ -381,7 +395,7 @@ const InventoryReport = ({ period }) => {
                 </tr>
               </thead>
               <tbody>
-                {(data?.units || []).map((u) => (
+                {unitsPg.pageItems.map((u) => (
                   <tr key={u.id}>
                     <td style={{ ...td, fontWeight: 600 }}>
                       {u.project_name}
@@ -405,6 +419,13 @@ const InventoryReport = ({ period }) => {
                 )}
               </tbody>
             </table>
+            <Pagination
+              page={unitsPg.page}
+              pageSize={unitsPg.pageSize}
+              total={unitsPg.total}
+              onPageChange={unitsPg.setPage}
+              onPageSizeChange={unitsPg.setPageSize}
+            />
           </div>
         </>
       )}

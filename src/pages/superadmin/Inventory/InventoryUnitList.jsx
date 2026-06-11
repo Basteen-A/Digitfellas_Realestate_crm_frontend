@@ -5,6 +5,7 @@ import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import locationApi from '../../../api/locationApi';
 import projectApi from '../../../api/projectApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
+import Pagination from '../../../components/common/Pagination';
 import './InventoryUnitList.css';
 
 const formatCurrency = (val) => {
@@ -56,7 +57,7 @@ const InventoryUnitList = () => {
   const navigate = useNavigate();
 
   const [units, setUnits] = useState([]);
-  const [meta, setMeta] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
+  const [meta, setMeta] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
   const [projectInfo, setProjectInfo] = useState(null);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,7 @@ const InventoryUnitList = () => {
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [phaseFilter, setPhaseFilter] = useState('');
-  const [query, setQuery] = useState({ page: 1, limit: 50, search: '', unit_status: '', phase_id: '' });
+  const [query, setQuery] = useState({ page: 1, limit: 25, search: '', unit_status: '', phase_id: '' });
 
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [formValues, setFormValues] = useState({ ...EMPTY_FORM });
@@ -136,7 +137,7 @@ const InventoryUnitList = () => {
 
       const response = await inventoryUnitApi.getAll(params);
       const rows = response.data?.data || response.data || [];
-      const pageMeta = response.data?.meta || { page: 1, limit: 50, total: 0, totalPages: 1 };
+      const pageMeta = response.data?.meta || { page: 1, limit: 25, total: 0, totalPages: 1 };
 
       setUnits(rows);
       setMeta(pageMeta);
@@ -519,25 +520,13 @@ const InventoryUnitList = () => {
       </div>
 
       {/* ── Pagination ── */}
-      <div className="inv-pagination">
-        <span>
-          Showing page {meta.page || 1} of {meta.totalPages || 1} ({meta.total || 0} units)
-        </span>
-        <div>
-          <button
-            disabled={!meta.hasPrevPage}
-            onClick={() => setQuery((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-          >
-            Prev
-          </button>
-          <button
-            disabled={!meta.hasNextPage}
-            onClick={() => setQuery((prev) => ({ ...prev, page: prev.page + 1 }))}
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={meta.page || query.page}
+        pageSize={query.limit}
+        total={meta.total || 0}
+        onPageChange={(p) => setQuery((prev) => ({ ...prev, page: p }))}
+        onPageSizeChange={(size) => setQuery((prev) => ({ ...prev, limit: size, page: 1 }))}
+      />
 
       {/* ── Add/Edit Modal ── */}
       {modal.open && (

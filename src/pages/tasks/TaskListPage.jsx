@@ -8,6 +8,7 @@ import {
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import TaskModal from './TaskModal';
+import Pagination from '../../components/common/Pagination';
 // Reuse the lead workspace design system so this page is visually consistent
 // (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
 import '../portals/common/LeadWorkspacePage.css';
@@ -198,7 +199,7 @@ const TaskListPage = () => {
   const [openFilterKey, setOpenFilterKey] = useState(null); // which toolbar/mobile filter pill is open
   const [departments, setDepartments] = useState([]); // full list for the filter
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
+  const [pageSize, setPageSize] = useState(25);
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
   const [expandedId, setExpandedId] = useState(null);
   const [details, setDetails] = useState({}); // id -> full task detail (lazy)
@@ -356,12 +357,12 @@ const TaskListPage = () => {
     setPage(1);
   }, [search, statusFilter, projectFilter, deptFilter, assignFilter, assigneeFilter, includeClosed, followUpFilter, groupBy, updatedToday]);
 
-  // Pagination applies to the flat (ungrouped) list — 20 rows per page.
-  const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
+  // Pagination applies to the flat (ungrouped) list.
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const pagedRows = useMemo(
-    () => visibleRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [visibleRows, safePage]
+    () => visibleRows.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [visibleRows, safePage, pageSize]
   );
 
   const clearAll = () => {
@@ -471,7 +472,7 @@ const TaskListPage = () => {
   };
 
   // ── A single task row (+ its drawer when expanded) ──
-  const renderRow = (task, grouped = false) => {
+  const renderRow = (task, grouped = false, groupedClass = '') => {
     const fu = fuState(task);
     const assignees = task.assignees || [];
     const isOpen = expandedId === task.id;
@@ -479,12 +480,12 @@ const TaskListPage = () => {
     return (
       <React.Fragment key={task.id}>
         <tr
-          className={`${isOpen ? 'is-selected' : ''}${grouped ? ' task-row--grouped' : ''}`.trim()}
+          className={`${isOpen ? 'is-selected' : ''}${grouped ? ` task-row--grouped ${groupedClass}` : ''}`.trim()}
           onClick={() => toggleExpand(task.id)}
         >
           {/* Task */}
           <td className="task-col-task" style={{ maxWidth: 320 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: grouped ? 0 : 8 }}>
               <ChevronRightIcon style={{ width: 14, height: 14, marginTop: 3, flexShrink: 0, color: isOpen ? 'var(--accent-blue, #2563eb)' : 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
               <div style={{ minWidth: 0 }}>
                 <p className="lead-title">{task.title}</p>
@@ -825,7 +826,11 @@ const TaskListPage = () => {
                           </div>
                         </td>
                       </tr>
-                      {!collapsed && tasks.map((t) => renderRow(t, true))}
+                      {!collapsed && tasks.map((t) => {
+                        const groupedClass = groupBy === 'department' ? 'task-row--grouped-department' : 
+                                           groupBy === 'project' ? 'task-row--grouped-project' : 'task-row--grouped';
+                        return renderRow(t, true, groupedClass);
+                      })}
                     </React.Fragment>
                   );
                 })}
@@ -854,32 +859,15 @@ const TaskListPage = () => {
             })}
           </div>
 
-          {/* Pagination — 20 per page; only for the flat (ungrouped) list */}
-          {!loading && groupBy === 'none' && records > PAGE_SIZE && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, padding: '12px 16px', borderTop: '1px solid var(--border-primary, #e2e8f0)' }}>
-              <small className="filter-tabs__records">
-                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, records)} of {records}
-              </small>
-              <button
-                type="button"
-                className="crm-btn crm-btn-sm"
-                style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '6px 12px' }}
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </button>
-              <small className="filter-tabs__records" style={{ margin: 0 }}>Page {safePage} of {totalPages}</small>
-              <button
-                type="button"
-                className="crm-btn crm-btn-sm"
-                style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '6px 12px' }}
-                disabled={safePage >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </button>
-            </div>
+          {/* Pagination — only for the flat (ungrouped) list */}
+          {!loading && groupBy === 'none' && (
+            <Pagination
+              page={safePage}
+              pageSize={pageSize}
+              total={records}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            />
           )}
         </div>
       </div>

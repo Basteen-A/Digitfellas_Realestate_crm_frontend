@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../../components/common/Pagination';
+import usePagination from '../../../hooks/usePagination';
 
 const SalesManagerVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
@@ -69,6 +71,8 @@ const SalesManagerVisits = ({ onNavigate }) => {
     return true;
   });
 
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredVisits, 25);
+
   return (
     <div className="visits-page">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -107,7 +111,7 @@ const SalesManagerVisits = ({ onNavigate }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVisits.map(v => (
+                {pageItems.map(v => (
                   <tr key={v.id}>
                     <td>
                       <div style={{ fontWeight: 700 }}>{v.lead?.first_name} {v.lead?.last_name || ''}</div>
@@ -139,6 +143,13 @@ const SalesManagerVisits = ({ onNavigate }) => {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
