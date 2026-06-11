@@ -47,7 +47,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
     <div>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1><CreditCardIcon style={{ width: 22, height: 22, display: 'inline', verticalAlign: 'text-bottom', marginRight: 8 }} />Payment History</h1>
+          <h1><CreditCardIcon style={{ width: 22, height: 22, display: 'inline', verticalAlign: 'text-bottom', marginRight: 8 }} />Payments</h1>
           <p className="hidden sm:block">Track all payment transactions across your bookings</p>
         </div>
         <div className="page-header-actions">
@@ -69,11 +69,11 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
         </div>
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'pending' ? '2px solid var(--accent-yellow)' : undefined }} onClick={() => setFilter('pending')}>
           <div className="col-stat-icon" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}><ClockIcon style={{ width: 20, height: 20 }} /></div>
-          <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => !p.is_verified && !p.is_bounced).length}</div><div className="col-stat-label">Pending</div></div>
+          <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => !p.is_verified && !p.is_bounced).length}</div><div className="col-stat-label">Unverified</div></div>
         </div>
         <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'bounced' ? '2px solid var(--accent-red)' : undefined }} onClick={() => setFilter('bounced')}>
           <div className="col-stat-icon" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}><XCircleIcon style={{ width: 20, height: 20 }} /></div>
-          <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => p.is_bounced).length}</div><div className="col-stat-label">Bounced</div></div>
+          <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => p.is_bounced).length}</div><div className="col-stat-label">Rejected</div></div>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(p.payment_date)}</td>
                     <td>
                       {p.is_verified ? <span className="col-badge col-badge-neutral">Verified</span>
-                        : p.is_bounced ? <span className="col-badge" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>Bounced</span>
+                        : p.is_bounced ? <span className="col-badge" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>Rejected</span>
                         : <span className="col-badge" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>Pending</span>}
                     </td>
                   </tr>

@@ -1,8 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  ClipboardDocumentListIcon,
+  InboxStackIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
+import '../portals/collection/CollectionWorkspace.css';
 import './TaskManagement.css';
 
 const STATUS_LABELS = {
@@ -71,12 +79,26 @@ const TaskDashboardWidget = ({ onOpenTasks }) => {
         </div>
 
         {stats && (
-          <div className="tm-stats" style={{ marginTop: 12 }}>
-            <div className="tm-stat"><div className="tm-stat__label">Total</div><div className="tm-stat__value">{stats.total}</div></div>
-            <div className="tm-stat"><div className="tm-stat__label">Open</div><div className="tm-stat__value">{stats.open}</div></div>
-            <div className="tm-stat"><div className="tm-stat__label">In Progress</div><div className="tm-stat__value">{stats.work_in_progress}</div></div>
-            <div className="tm-stat"><div className="tm-stat__label">Completed</div><div className="tm-stat__value">{stats.completed}</div></div>
-            <div className="tm-stat tm-stat--overdue"><div className="tm-stat__label">Overdue</div><div className="tm-stat__value">{stats.overdue}</div></div>
+          <div className="col-stat-grid-new" style={{ marginTop: 14, marginBottom: 0 }}>
+            {[
+              { label: 'Total', value: stats.total, sub: 'all tasks', icon: ClipboardDocumentListIcon, variant: 'info' },
+              { label: 'Open', value: stats.open, sub: 'awaiting action', icon: InboxStackIcon, variant: 'purple' },
+              { label: 'In Progress', value: stats.work_in_progress, sub: 'being worked on', icon: ClockIcon, variant: 'warning' },
+              { label: 'Completed', value: stats.completed, sub: 'finished', icon: CheckCircleIcon, variant: 'success' },
+              { label: 'Overdue', value: stats.overdue, sub: 'past due date', icon: ExclamationTriangleIcon, variant: 'danger' },
+            ].map((card) => {
+              const Icon = card.icon;
+              return (
+                <div className={`col-stat-card-new ${card.variant}`} key={card.label}>
+                  <div className="col-stat-label-new">{card.label}</div>
+                  <div className="col-stat-value-new">{card.value ?? 0}</div>
+                  <div className="col-stat-sub-new">{card.sub}</div>
+                  <div className="col-stat-icon-new">
+                    <Icon style={{ width: 24, height: 24 }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

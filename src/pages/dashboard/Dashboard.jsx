@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -25,11 +25,10 @@ import {
   UserGroupIcon,
   BuildingStorefrontIcon,
   AdjustmentsHorizontalIcon,
-  HandRaisedIcon,
 } from '@heroicons/react/24/outline';
+import '../portals/collection/CollectionWorkspace.css';
 import './Dashboard.css';
 
-const ICON_SIZE = { width: 22, height: 22 };
 const ICON_SM = { width: 18, height: 18 };
 
 const getGreeting = () => {
@@ -47,59 +46,78 @@ const Dashboard = () => {
   const roleCode = getRoleCode(user);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [statsResp, adminResp] = await Promise.all([
-          dashboardApi.getStats().catch(() => ({ data: null })),
-          dashboardApi.getAdminStats().catch(() => ({ data: null })),
-        ]);
-        setStats(statsResp.data || null);
-        setAdminStats(adminResp.data || null);
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Unable to load dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  const refresh = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [statsResp, adminResp] = await Promise.all([
-        dashboardApi.getStats().catch(() => ({ data: null })),
-        dashboardApi.getAdminStats().catch(() => ({ data: null })),
+        dashboardApi.getStats().catch(() => null),
+        dashboardApi.getAdminStats().catch(() => null),
       ]);
-      setStats(statsResp.data || null);
-      setAdminStats(adminResp.data || null);
+      // Both endpoints return successResponse: { success, message, data }.
+      // Be tolerant of either the wrapped body or a bare object.
+      setStats(statsResp?.data ?? statsResp ?? null);
+      setAdminStats(adminResp?.data ?? adminResp ?? null);
     } catch (error) {
-      toast.error('Unable to refresh');
+      toast.error(error.response?.data?.message || 'Unable to load dashboard');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, color: 'var(--text-secondary)' }}>
-        <div style={{ width: 36, height: 36, border: '3px solid var(--accent-blue-bg)', borderTopColor: 'var(--accent-blue)', borderRadius: '50%', animation: 'tc-spin 0.8s linear infinite', marginBottom: 16 }} />
+      <div className="simple-loader">
+        <div className="simple-spinner" />
         <p>Loading dashboard...</p>
       </div>
     );
   }
 
-  const statCards = [
-    { label: 'Total Leads', value: adminStats?.totalLeads ?? 0, icon: <UsersIcon style={ICON_SIZE} />, iconBg: 'var(--accent-blue-bg)', iconColor: 'var(--accent-blue)', change: `↑ ${adminStats?.thisMonthLeads ?? 0} this month`, changeType: 'up' },
-    { label: 'Total Bookings', value: adminStats?.totalBookings ?? 0, icon: <ClipboardDocumentListIcon style={ICON_SIZE} />, iconBg: 'var(--accent-green-bg)', iconColor: 'var(--accent-green)', valueColor: 'var(--accent-green)', change: 'Active bookings', changeType: 'up' },
-    { label: 'Total Revenue', value: formatCurrency(adminStats?.totalRevenue ?? 0), icon: <BanknotesIcon style={ICON_SIZE} />, iconBg: 'var(--accent-yellow-bg)', iconColor: 'var(--accent-yellow)', valueColor: 'var(--accent-yellow)', change: 'Collected payments', changeType: 'up' },
-    { label: 'Active Users', value: adminStats?.activeUsers ?? stats?.masters?.activeUsers ?? 0, icon: <ComputerDesktopIcon style={ICON_SIZE} />, iconBg: 'var(--accent-purple-bg)', iconColor: 'var(--accent-purple)', change: (stats?.userDistribution || []).map(u => `${u.count} ${u.short_code}`).join(', ') || 'Team members', changeType: 'neutral' },
-    { label: 'Conversion Rate', value: `${adminStats?.conversionRate ?? 0}%`, icon: <ChartBarIcon style={ICON_SIZE} />, iconBg: 'var(--accent-cyan-bg)', iconColor: 'var(--accent-cyan)', valueColor: 'var(--accent-cyan)', change: 'Lead to booking', changeType: 'up' },
-  ];
-
+  const userDistribution = stats?.userDistribution || [];
+  const recentActivity = stats?.recentActivity || [];
+  const sourceStats = adminStats?.sourceStats || [];
+  const maxSourceLeads = Math.max(...sourceStats.map((s) => parseInt(s.total_leads, 10) || 0), 1);
   const sourceColors = ['#ea580c', '#2563eb', '#d97706', '#16a34a', '#7c3aed', '#0891b2', '#db2777'];
+
+  const statCards = [
+    {
+      label: 'Total Leads',
+      value: adminStats?.totalLeads ?? 0,
+      sub: `+${adminStats?.thisMonthLeads ?? 0} this month`,
+      icon: UsersIcon,
+      variant: 'info',
+    },
+    {
+      label: 'Total Bookings',
+      value: adminStats?.totalBookings ?? 0,
+      sub: 'active bookings',
+      icon: ClipboardDocumentListIcon,
+      variant: 'success',
+    },
+    {
+      label: 'Total Revenue',
+      value: formatCurrency(adminStats?.totalRevenue ?? 0),
+      sub: 'collected payments',
+      icon: BanknotesIcon,
+      variant: 'warning',
+    },
+    {
+      label: 'Active Users',
+      value: adminStats?.activeUsers ?? stats?.masters?.activeUsers ?? 0,
+      sub: userDistribution.map((u) => `${u.count} ${u.short_code}`).join(' · ') || 'team members',
+      icon: ComputerDesktopIcon,
+      variant: 'purple',
+    },
+    {
+      label: 'Conversion Rate',
+      value: `${adminStats?.conversionRate ?? 0}%`,
+      sub: 'lead to booking',
+      icon: ChartBarIcon,
+      variant: 'info',
+    },
+  ];
 
   const workspaceLinks = [
     { label: 'Telecaller Workspace', path: '/telecaller/leads', icon: <PhoneIcon style={ICON_SM} />, desc: 'Manage telecaller leads', allowed: ['TC', 'SA', 'ADM'] },
@@ -117,194 +135,233 @@ const Dashboard = () => {
     { label: 'Workflow', path: '/super-admin/workflow-actions', icon: <AdjustmentsHorizontalIcon style={ICON_SM} /> },
   ];
 
-  const sourceStats = adminStats?.sourceStats || [];
-  const maxSourceLeads = Math.max(...sourceStats.map(s => parseInt(s.total_leads) || 0), 1);
-
   return (
-    <section>
-      {/* Greeting Banner */}
-      <div className="dash-greeting">
-        <div className="dash-greeting__title">
-          {getGreeting()}, {user?.first_name || 'Admin'} <HandRaisedIcon style={{ width: 18, height: 18, marginLeft: 4, verticalAlign: 'text-bottom' }} />
+    <div className="col-dashboard">
+      {/* ── Page Header ── */}
+      <div className="col-page-header">
+        <div className="col-page-header-left">
+          <h1>{getGreeting()}, {user?.first_name || 'Admin'} 👋</h1>
+          <p>Here's your organization overview for today. Stay on top of your metrics.</p>
         </div>
-        <div className="dash-greeting__sub">
-          Here's your organization overview for today. Stay on top of your metrics.
-        </div>
-      </div>
-
-      {/* Header Actions */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1><Cog6ToothIcon style={{ width: 24, height: 24 }} /> Organization Overview</h1>
-          <p>Complete business metrics across all teams</p>
-        </div>
-        <div className="page-header-actions">
-          <button className="crm-btn crm-btn-ghost" onClick={refresh}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
-          <button className="crm-btn crm-btn-primary"><ArrowDownTrayIcon style={{ width: 16, height: 16 }} /> Export</button>
+        <div className="col-page-header-actions">
+          <button type="button" className="col-btn col-btn-ghost" onClick={load}>
+            <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
+          </button>
+          <button type="button" className="col-btn col-btn-primary">
+            <ArrowDownTrayIcon style={{ width: 16, height: 16 }} /> Export
+          </button>
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="stats-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {statCards.map((card) => (
-          <div className="stat-card" key={card.label}>
-            <div className="stat-card-header">
-              <div className="stat-card-label">{card.label}</div>
-              <div className="stat-card-icon" style={{ background: card.iconBg, color: card.iconColor }}>{card.icon}</div>
-            </div>
-            <div className="stat-card-value" style={card.valueColor ? { color: card.valueColor } : {}}>{card.value}</div>
-            <div className={`stat-card-change change-${card.changeType}`}>{card.change}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Two Column: Sources + Project Inventory */}
-      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4 mb-5">
-        {/* Leads by Source */}
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <div className="crm-card-title"><SignalIcon style={ICON_SM} /> Leads by Source</div>
-          </div>
-          <div className="crm-card-body">
-            {sourceStats.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No source data available</div>
-            ) : (
-              <div className="mini-bars" style={{ height: 150 }}>
-                {sourceStats.map((source, idx) => {
-                  const height = Math.round(((parseInt(source.total_leads) || 0) / maxSourceLeads) * 100);
-                  return (
-                    <div className="mini-bar-item" key={source.source_name}>
-                      <div className="mini-bar-val">{source.total_leads}</div>
-                      <div className="mini-bar" style={{ height: `${Math.max(height, 8)}%`, background: source.color_code || sourceColors[idx % sourceColors.length] }}></div>
-                      <div className="mini-bar-lbl">{source.source_name}</div>
-                    </div>
-                  );
-                })}
+      {/* ── Stat Cards ── */}
+      <div className="col-stat-grid-new">
+        {statCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div className={`col-stat-card-new ${card.variant}`} key={card.label}>
+              <div className="col-stat-label-new">{card.label}</div>
+              <div className="col-stat-value-new">{card.value}</div>
+              <div className="col-stat-sub-new">{card.sub}</div>
+              <div className="col-stat-icon-new">
+                <Icon style={{ width: 24, height: 24 }} />
               </div>
-            )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Leads by Source (full-width row) ── */}
+      <div className="col-card-new">
+        <div className="col-card-header-new">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SignalIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
+            <div>
+              <div className="col-card-title-new">Leads by Source</div>
+              <div className="col-card-subtitle-new">Where your leads come from</div>
+            </div>
           </div>
         </div>
-
-        {/* Project Inventory */}
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <div className="crm-card-title"><BuildingOfficeIcon style={ICON_SM} /> Project Inventory</div>
-          </div>
-          <div className="crm-card-body">
-            {(adminStats?.projectInventory || []).length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No project data available</div>
-            ) : (
-              (adminStats?.projectInventory || []).map((project) => {
-                const total = parseInt(project.total_units) || 0;
-                const available = parseInt(project.available_units) || 0;
-                const sold = total - available;
-                const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
-                const progressClass = pct >= 60 ? 'progress-green' : pct >= 30 ? 'progress-blue' : 'progress-yellow';
-
+        <div className="col-card-body-new">
+          {sourceStats.length === 0 ? (
+            <div className="col-empty-mini">
+              <SignalIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+              <span>No source data available</span>
+            </div>
+          ) : (
+            <div className="src-bars">
+              {sourceStats.map((source, idx) => {
+                const val = parseInt(source.total_leads, 10) || 0;
+                const pct = Math.round((val / maxSourceLeads) * 100);
+                const color = source.color_code || sourceColors[idx % sourceColors.length];
                 return (
-                  <div className="project-row" key={project.id}>
-                    <div className="project-info">
-                      <span className="project-name">{project.project_name}</span>
-                      <span className="project-stat">{sold}/{total} sold · {formatCurrency(project.revenue || 0)}</span>
+                  <div className="src-bar-row" key={source.source_name}>
+                    <div className="src-bar-name" title={source.source_name}>{source.source_name}</div>
+                    <div className="src-bar-track">
+                      <div className="src-bar-fill" style={{ width: `${Math.max(pct, 2)}%`, background: color }} />
                     </div>
-                    <div className={`crm-progress ${progressClass}`}>
-                      <div className="crm-progress-fill" style={{ width: `${pct}%` }}></div>
-                    </div>
+                    <div className="src-bar-val">{val.toLocaleString('en-IN')}</div>
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Workspace Links */}
+      {/* ── Role Workspaces ── */}
       {workspaceLinks.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><BriefcaseIcon style={ICON_SM} /> Role Workspaces</h2>
-          <div className="crm-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {workspaceLinks.map((link) => (
-              <Link key={link.path} to={link.path} className="admin-workspace-card">
-                <span className="admin-workspace-card__icon">{link.icon}</span>
-                <div>
-                  <div className="admin-workspace-card__name">{link.label}</div>
-                  <div className="admin-workspace-card__desc">{link.desc}</div>
-                </div>
-                <span className="admin-workspace-card__arrow">→</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Quick Admin Links */}
-      {['SA', 'ADM'].includes(roleCode) && (
-        <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Cog6ToothIcon style={ICON_SM} /> Quick Access</h2>
-          <div className="crm-grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {quickLinks.map((link) => (
-              <Link key={link.path} to={link.path} className="admin-config-card">
-                <span className="admin-config-card__icon">{link.icon}</span>
-                <span className="admin-config-card__label">{link.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Two Column: User Distribution + Activity */}
-      <div className="crm-grid crm-grid-1 md:crm-grid-2 gap-4 mt-4">
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <div className="crm-card-title"><UserGroupIcon style={ICON_SM} /> User Distribution</div>
-          </div>
-          <div className="crm-card-body">
-            {(stats?.userDistribution || []).map((item) => (
-              <div key={item.short_code} className="admin-dist-row">
-                <div className="admin-dist-row__info">
-                  <div className="crm-avatar crm-avatar-sm crm-avatar-blue">{item.short_code}</div>
-                  <span>{item.type_name}</span>
-                </div>
-                <span className="crm-badge badge-contacted">{item.count}</span>
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <BriefcaseIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
+              <div>
+                <div className="col-card-title-new">Role Workspaces</div>
+                <div className="col-card-subtitle-new">Jump into a team's pipeline</div>
               </div>
-            ))}
-            {(!stats?.userDistribution || stats.userDistribution.length === 0) && (
-              <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No data</div>
-            )}
+            </div>
           </div>
-        </div>
-
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <div className="crm-card-title"><DocumentTextIcon style={ICON_SM} /> Recent Activity</div>
-          </div>
-          <div className="crm-card-body-flush">
-            {(stats?.recentActivity || []).length === 0 && (
-              <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No recent activity</div>
-            )}
-            {(stats?.recentActivity || []).map((item) => (
-              <div className="followup-item" key={item.id}>
-                <div className="crm-avatar crm-avatar-sm crm-avatar-purple">
-                  {(item.action || '').substring(0, 2).toUpperCase()}
-                </div>
-                <div className="followup-content">
-                  <div className="followup-name">{item.action}</div>
-                  <div className="followup-meta">
-                    <span>{item.table_name}</span>
-                    <span>{item.user?.first_name || 'System'}</span>
+          <div className="col-card-body-new">
+            <div className="crm-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {workspaceLinks.map((link) => (
+                <Link key={link.path} to={link.path} className="admin-workspace-card">
+                  <span className="admin-workspace-card__icon">{link.icon}</span>
+                  <div>
+                    <div className="admin-workspace-card__name">{link.label}</div>
+                    <div className="admin-workspace-card__desc">{link.desc}</div>
                   </div>
-                </div>
+                  <span className="admin-workspace-card__arrow">→</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick Access ── */}
+      {['SA', 'ADM'].includes(roleCode) && (
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Cog6ToothIcon style={{ width: 20, height: 20, color: 'var(--accent-purple)' }} />
+              <div>
+                <div className="col-card-title-new">Quick Access</div>
+                <div className="col-card-subtitle-new">Manage master configuration</div>
               </div>
-            ))}
+            </div>
+          </div>
+          <div className="col-card-body-new">
+            <div className="crm-grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {quickLinks.map((link) => (
+                <Link key={link.path} to={link.path} className="admin-config-card">
+                  <span className="admin-config-card__icon">{link.icon}</span>
+                  <span className="admin-config-card__label">{link.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── User Distribution + Recent Activity ── */}
+      <div className="col-two-col-new">
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserGroupIcon style={{ width: 20, height: 20, color: 'var(--accent-purple)' }} />
+              <div>
+                <div className="col-card-title-new">User Distribution</div>
+                <div className="col-card-subtitle-new">Team members by role</div>
+              </div>
+            </div>
+          </div>
+          <div className="col-card-body-flush-new">
+            {userDistribution.length === 0 ? (
+              <div className="col-empty-mini">
+                <UserGroupIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No users found</span>
+              </div>
+            ) : (
+              <table className="col-table-new">
+                <thead>
+                  <tr>
+                    <th>Role</th>
+                    <th style={{ textAlign: 'right' }}>Users</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userDistribution.map((item) => (
+                    <tr key={item.short_code}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="crm-avatar crm-avatar-sm crm-avatar-blue">{item.short_code}</div>
+                          <span className="col-cell-primary">{item.type_name}</span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="col-badge-new col-badge-pending">{item.count}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        <div className="col-card-new">
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DocumentTextIcon style={{ width: 20, height: 20, color: 'var(--accent-green)' }} />
+              <div>
+                <div className="col-card-title-new">Recent Activity</div>
+                <div className="col-card-subtitle-new">Latest system events</div>
+              </div>
+            </div>
+          </div>
+          <div className="col-card-body-flush-new">
+            {recentActivity.length === 0 ? (
+              <div className="col-empty-mini">
+                <DocumentTextIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No recent activity</span>
+              </div>
+            ) : (
+              <div className="col-table-scroll-y">
+                <table className="col-table-new">
+                  <thead>
+                    <tr>
+                      <th>Action</th>
+                      <th>Module</th>
+                      <th>By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentActivity.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div className="crm-avatar crm-avatar-sm crm-avatar-purple">
+                              {(item.action || '').substring(0, 2).toUpperCase()}
+                            </div>
+                            <span className="col-cell-primary">{item.action}</span>
+                          </div>
+                        </td>
+                        <td><span className="col-cell-secondary">{item.table_name || '—'}</span></td>
+                        <td>{item.user?.first_name || 'System'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Task Management — embedded for task-portal users (Super Admin etc.) */}
+      {/* ── Tasks (task-portal users) ── */}
       {hasTaskPortalAccess(user) && (
         <TaskDashboardWidget onOpenTasks={() => navigate('/super-admin/tasks')} />
       )}
-    </section>
+    </div>
   );
 };
 

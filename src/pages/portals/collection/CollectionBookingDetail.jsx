@@ -579,7 +579,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const verifiedCount = payments.filter(p => p.is_verified).length;
   const pendingCount = payments.filter(p => !p.is_verified && !p.is_bounced).length;
   const tabs = [
-    { key: 'payment-history', label: 'Payment History', icon: CreditCardIcon },
+    { key: 'payment-history', label: 'Payments', icon: CreditCardIcon },
     { key: 'activity-log', label: 'Activity Log', icon: ClockIcon },
     { key: 'uploads', label: 'Uploads', icon: CloudArrowUpIcon },
   ];
@@ -680,8 +680,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_PENDING' && (
             <span style={{fontSize:12, color:'#B45309', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting Super Admin Approval</span>
           )}
-          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
-          <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
+          {/* Payment/Booking status changes are blocked while still Booking Open (not yet sent for approval) */}
+          {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
+            <>
+              <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
+              <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
+            </>
+          )}
           {/* <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('devCost')}><BanknotesIcon style={{width:14,height:14}}/> Development Cost</button> */}
           {/* Payments are blocked until the booking is sent for approval (Booking Pending+) */}
           {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
@@ -1619,6 +1624,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <label className="bkd-form-label">Plot Area (sqft) *</label>
                       <input type="number" className="bkd-form-control" placeholder="e.g. 1200"
                         value={devCostForm.plot_area}
+                        disabled={isCollectionManager}
                         onChange={e => setDevCostForm(p => ({ ...p, plot_area: e.target.value }))} />
                     </div>
                   </div>

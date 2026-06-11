@@ -119,7 +119,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
     day: '2-digit', month: 'short', year: 'numeric'
   });
 
-  const firstName = user?.name?.split(' ')[0] || 'User';
+  const firstName = user?.first_name || user?.firstName || 'User';
 
   if (loading) {
     return (
@@ -172,9 +172,6 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadStats}>
             <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
-          </button>
-          <button className="col-btn col-btn-primary" onClick={() => onNavigate('bookings')}>
-            + New Booking
           </button>
         </div>
       </div>
@@ -232,8 +229,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
               <table className="col-table-new">
                 <thead>
                   <tr>
+                     <th>Booking</th>
                     <th>Customer</th>
-                    <th>Booking</th>
                     <th>Date</th>
                     <th></th>
                   </tr>
@@ -241,13 +238,22 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                 <tbody>
                   {recentBookings.slice(0, 4).map((c, i) => (
                     <tr key={i}>
+                      <td className="col-cell-mono">
+                        <button
+                          type="button"
+                          className="col-booking-link"
+                          onClick={() => onSelectBooking(c.booking_id)}
+                        >
+                          {c.booking_number}
+                        </button>
+                      </td>
                       <td>
                         <div className="col-cell-primary">{c.customer_name}</div>
                         <div className="col-cell-secondary">{c.project_name} {c.unit_number ? `- ${c.unit_number}` : ''}</div>
                       </td>
-                      <td className="col-cell-mono">{c.booking_number}</td>
-                      <td>{c.booking_date ? new Date(c.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}</td>
-                      <td>
+                      
+                      <td>{c.booking_date ? new Date(c.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                      <td>  
                         <button className="col-btn col-btn-primary col-btn-sm" onClick={() => onSelectBooking(c.booking_id)}>
                           View
                         </button>

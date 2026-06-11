@@ -45,7 +45,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
   const today = new Date().toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric'
   });
-  const firstName = user?.name?.split(' ')[0] || 'User';
+  const firstName = user?.first_name || user?.firstName || 'User';
 
   if (loading) {
     return (

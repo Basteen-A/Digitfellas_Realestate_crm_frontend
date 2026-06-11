@@ -192,6 +192,7 @@ const TaskListPage = () => {
   const [projectFilter, setProjectFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [assignFilter, setAssignFilter] = useState(''); // '' | 'by_me' | 'to_me'
+  const [assigneeFilter, setAssigneeFilter] = useState(''); // '' | <user id> — a specific assignee
   const [updatedToday, setUpdatedToday] = useState(false);
   const [groupBy, setGroupBy] = useState('none');
   const [openFilterKey, setOpenFilterKey] = useState(null); // which toolbar/mobile filter pill is open
@@ -303,6 +304,19 @@ const TaskListPage = () => {
     return [...new Set([...fromApi, ...fromRows])].sort();
   }, [departments, rows]);
 
+  // Assignee options are the distinct people assigned across the loaded tasks.
+  const assigneeOptions = useMemo(() => {
+    const map = new Map();
+    rows.forEach((t) => (t.assignees || []).forEach((a) => {
+      if (a && a.id != null && !map.has(String(a.id))) {
+        map.set(String(a.id), fullName(a) || `User ${a.id}`);
+      }
+    }));
+    return [...map.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+
   const myId = currentUser?.id;
   const visibleRows = useMemo(
     () => rows.filter((t) => {
@@ -311,7 +325,9 @@ const TaskListPage = () => {
       // "Assigned by me" = I created it; "Assigned to me" = I'm an assignee.
       if (assignFilter === 'by_me' && String(t.creator_id) !== String(myId)) return false;
       if (assignFilter === 'to_me' && !(t.assignees || []).some((a) => String(a.id) === String(myId))) return false;
-      
+      // Specific assignee filter — task must include the chosen user as an assignee.
+      if (assigneeFilter && !(t.assignees || []).some((a) => String(a.id) === assigneeFilter)) return false;
+
       if (updatedToday) {
         const todayStr = new Date().toDateString();
         const updateVal = t.updated_at || t.updatedAt || t.created_at || t.createdAt;
@@ -320,7 +336,7 @@ const TaskListPage = () => {
       
       return true;
     }),
-    [rows, projectFilter, deptFilter, assignFilter, myId, updatedToday]
+    [rows, projectFilter, deptFilter, assignFilter, assigneeFilter, myId, updatedToday]
   );
 
   const groups = useMemo(() => {
@@ -338,7 +354,7 @@ const TaskListPage = () => {
   // filter, grouping, or a reload) so we never sit on an empty trailing page.
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, projectFilter, deptFilter, assignFilter, includeClosed, followUpFilter, groupBy, updatedToday]);
+  }, [search, statusFilter, projectFilter, deptFilter, assignFilter, assigneeFilter, includeClosed, followUpFilter, groupBy, updatedToday]);
 
   // Pagination applies to the flat (ungrouped) list — 20 rows per page.
   const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
@@ -350,7 +366,7 @@ const TaskListPage = () => {
 
   const clearAll = () => {
     setSearch(''); setStatusFilter(''); setProjectFilter(''); setDeptFilter('');
-    setAssignFilter(''); setIncludeClosed(false); setFollowUpFilter('');
+    setAssignFilter(''); setAssigneeFilter(''); setIncludeClosed(false); setFollowUpFilter('');
     setUpdatedToday(false);
   };
 
@@ -455,14 +471,17 @@ const TaskListPage = () => {
   };
 
   // ── A single task row (+ its drawer when expanded) ──
-  const renderRow = (task) => {
+  const renderRow = (task, grouped = false) => {
     const fu = fuState(task);
     const assignees = task.assignees || [];
     const isOpen = expandedId === task.id;
     const note = latestRemark(task);
     return (
       <React.Fragment key={task.id}>
-        <tr className={isOpen ? 'is-selected' : ''} onClick={() => toggleExpand(task.id)}>
+        <tr
+          className={`${isOpen ? 'is-selected' : ''}${grouped ? ' task-row--grouped' : ''}`.trim()}
+          onClick={() => toggleExpand(task.id)}
+        >
           {/* Task */}
           <td className="task-col-task" style={{ maxWidth: 320 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -677,6 +696,15 @@ const TaskListPage = () => {
             onClose={() => setOpenFilterKey(null)}
           />
           <FilterDropdown
+            label="Assignee" mobileLabel="User" single options={assigneeOptions}
+            selectedValues={assigneeFilter}
+            onToggle={(v) => setAssigneeFilter((p) => (p === v ? '' : v))}
+            onClear={() => setAssigneeFilter('')}
+            isOpen={openFilterKey === 'assignee'}
+            onToggleOpen={() => setOpenFilterKey((p) => (p === 'assignee' ? null : 'assignee'))}
+            onClose={() => setOpenFilterKey(null)}
+          />
+          <FilterDropdown
             label="Options" options={OPTION_TOGGLES}
             selectedValues={[includeClosed && 'include_closed', updatedToday && 'updated_today'].filter(Boolean)}
             onToggle={(v) => { if (v === 'include_closed') setIncludeClosed((b) => !b); else setUpdatedToday((b) => !b); }}
@@ -702,7 +730,7 @@ const TaskListPage = () => {
           <MobileFilters
             totalSelected={
               (assignFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (projectFilter ? 1 : 0)
-              + (deptFilter ? 1 : 0) + (includeClosed ? 1 : 0) + (updatedToday ? 1 : 0)
+              + (deptFilter ? 1 : 0) + (assigneeFilter ? 1 : 0) + (includeClosed ? 1 : 0) + (updatedToday ? 1 : 0)
             }
             isOpen={openFilterKey === 'mobile_filters'}
             onToggleOpen={() => setOpenFilterKey((p) => (p === 'mobile_filters' ? null : 'mobile_filters'))}
@@ -712,6 +740,7 @@ const TaskListPage = () => {
               { key: 'status', label: 'Status', single: true, options: STATUS_FILTER_OPTIONS, selectedValues: statusFilter, onToggle: (v) => setStatusFilter((p) => (p === v ? '' : v)), onClear: () => setStatusFilter('') },
               { key: 'project', label: 'Project', single: true, options: projectOptions.map((p) => ({ value: p, label: p })), selectedValues: projectFilter, onToggle: (v) => setProjectFilter((p) => (p === v ? '' : v)), onClear: () => setProjectFilter('') },
               { key: 'dept', label: 'Department', single: true, options: deptOptions.map((d) => ({ value: d, label: d })), selectedValues: deptFilter, onToggle: (v) => setDeptFilter((p) => (p === v ? '' : v)), onClear: () => setDeptFilter('') },
+              { key: 'assignee', label: 'Assignee', single: true, options: assigneeOptions, selectedValues: assigneeFilter, onToggle: (v) => setAssigneeFilter((p) => (p === v ? '' : v)), onClear: () => setAssigneeFilter('') },
               { key: 'options', label: 'Options', single: false, options: OPTION_TOGGLES, selectedValues: [includeClosed && 'include_closed', updatedToday && 'updated_today'].filter(Boolean), onToggle: (v) => { if (v === 'include_closed') setIncludeClosed((b) => !b); else setUpdatedToday((b) => !b); }, onClear: () => { setIncludeClosed(false); setUpdatedToday(false); } },
             ]}
           />
@@ -796,7 +825,7 @@ const TaskListPage = () => {
                           </div>
                         </td>
                       </tr>
-                      {!collapsed && tasks.map(renderRow)}
+                      {!collapsed && tasks.map((t) => renderRow(t, true))}
                     </React.Fragment>
                   );
                 })}

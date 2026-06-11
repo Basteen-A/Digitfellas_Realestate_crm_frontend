@@ -126,6 +126,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                       <th>Project · Unit</th>
                       <th>Value</th>
                       <th>Booking Date</th>
+                      <th>Booking Status</th>
                       <th style={{ textAlign: 'right' }}>Action</th>
                     </tr>
                   </thead>
@@ -147,6 +148,12 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                         </td>
                         <td style={{ fontWeight: 600 }}>{formatCurrency(computedTotal(b))}</td>
                         <td>{fmtDate(b.booking_date)}</td>
+                        <td>
+                          <span className="col-badge" style={{ background: `${b.status_color || '#6B7280'}22`, color: b.status_color || '#6B7280' }}>
+                            <span className="col-badge-dot" style={{ background: b.status_color || '#6B7280' }} />
+                            {b.status_label || b.status_name}
+                          </span>
+                        </td>
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <div className="col-action-group">
                             <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>

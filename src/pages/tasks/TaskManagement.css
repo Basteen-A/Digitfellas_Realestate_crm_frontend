@@ -599,6 +599,9 @@
    ============================================================ */
 .task-workspace { padding: 20px 24px; }
 
+/* Indent task rows so they sit nested under their group header (Department/Project/Status). */
+.task-workspace .lead-workspace__table tr.task-row--grouped td.task-col-task { padding-left: 38px; }
+
 /* Inline drawer body — two columns on desktop, one on mobile. */
 .task-drawer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 16px 20px 18px 44px; }
 

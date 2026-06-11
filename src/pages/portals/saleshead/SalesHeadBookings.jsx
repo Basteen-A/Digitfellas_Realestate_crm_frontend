@@ -303,7 +303,7 @@ const SalesHeadBookings = ({ user }) => {
                     </div>
 
                     <div style={{ marginTop: 25 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}><CreditCardIcon style={{ width: 18, height: 18, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Payment History</h3>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}><CreditCardIcon style={{ width: 18, height: 18, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Payments</h3>
                       {(!selectedBooking.payments || selectedBooking.payments.length === 0) ? (
                         <div style={{ padding: 20, textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: 8, color: 'var(--text-muted)' }}>
                           No payments recorded for this booking yet.
