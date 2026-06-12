@@ -88,6 +88,8 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
   // Task Details accordion (collapsed by default in the update/view popup)
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // Activity / Attachments tab switcher (Activity is the default tab).
+  const [detailTab, setDetailTab] = useState('activity'); // 'activity' | 'attachments'
 
   // ── Voice note recorder (attached to the status update) ──
   const [recording, setRecording] = useState(false);
@@ -475,6 +477,21 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   const remarks = task?.remarks || [];
   const attachments = Array.isArray(task?.attachments) ? task.attachments : [];
 
+  // Resolve an attachment's uploader name from the people we know about
+  // (creator + assignees + assignable users), since the file only stores an id.
+  const userById = useMemo(() => {
+    const m = new Map();
+    const add = (u) => { if (u && u.id != null) m.set(String(u.id), u); };
+    add(task?.creator);
+    (task?.assignees || []).forEach(add);
+    users.forEach(add);
+    return m;
+  }, [task, users]);
+  const uploaderLabel = (att) => {
+    const u = userById.get(String(att?.uploaded_by));
+    return u ? fullName(u) : '';
+  };
+
   // ── Task fields — same UI for everyone; `disabled` (non-creator) is read-only ──
   const renderFields = (disabled) => {
     const displayedAssignees = disabled
@@ -782,13 +799,12 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                           Choose files
                         </button>
                         <span className="tm-file-count">
-                          {statusFiles.length ? `${statusFiles.length} file(s)` : 'Image / PDF, up to 25MB each'}
+                          {statusFiles.length ? `${statusFiles.length} file(s)` : 'Any file type, up to 25MB each'}
                         </span>
                         <input
                           ref={statusFileRef}
                           type="file"
                           multiple
-                          accept="image/*,application/pdf"
                           style={{ display: 'none' }}
                           onChange={(e) => {
                             setStatusFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
@@ -848,7 +864,6 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                       ref={createFileRef}
                       type="file"
                       multiple
-                      accept="image/*,application/pdf"
                       style={{ display: 'none' }}
                       onChange={(e) => {
                         setPendingFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
@@ -868,113 +883,137 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
                       ))}
                     </div>
                   )}
-                  <div className="tmq-hint" style={{ padding: 0, marginTop: 8 }}>Images and PDFs, up to 25MB each.</div>
+                  <div className="tmq-hint" style={{ padding: 0, marginTop: 8 }}>Any file type, up to 25MB each.</div>
                 </div>
               )}
 
-              {/* ── Attachments (existing task): view + upload more ── */}
+              {/* ── Activity / Attachments tabs (existing task) ── */}
               {!isCreate && (
                 <>
                   <div className="tmq-divider" />
-                  <div className="tmq-section">Attachments {attachments.length ? `(${attachments.length})` : ''}</div>
-                  {attachments.length === 0 ? (
-                    <div className="tmq-hint" style={{ padding: 0 }}>No attachments yet.</div>
-                  ) : (
-                    <div className="tm-attach-list">
-                      {attachments.map((att, i) => {
-                        const isImg = (att.mime_type || '').startsWith('image/');
-                        return (
-                          <a key={att.id || i} href={fileHref(att)} target="_blank" rel="noreferrer"
-                            className="tm-attach-row"
-                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', textDecoration: 'none', color: 'inherit' }}>
-                            <span style={{ width: 34, height: 34, borderRadius: 6, background: '#f1f5f9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                              {isImg ? <img src={fileHref(att)} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{(att.mime_type || '').includes('pdf') ? '📄' : '📎'}</span>}
-                            </span>
-                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {att.file_name || 'File'} <span className="tmq-hint" style={{ padding: 0 }}>({humanSize(att.file_size)})</span>
-                            </span>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {canEditCore && (
-                    <div style={{ marginTop: 8 }}>
-                      <div className="tm-file-picker">
-                        <button type="button" className="tm-file-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-                          {uploading ? 'Uploading…' : 'Choose files'}
-                        </button>
-                        <span className="tm-file-count">Add photos / PDF (up to 25MB each)</span>
-                      </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        accept="image/*,application/pdf"
-                        style={{ display: 'none' }}
-                        disabled={uploading}
-                        onChange={(e) => handleUploadToExisting(e.target.files)}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
+                  <div className="tm-tabs" style={{ padding: '0 20px' }}>
+                    <button
+                      type="button"
+                      className={`tm-tab ${detailTab === 'activity' ? 'is-active' : ''}`}
+                      onClick={() => setDetailTab('activity')}
+                    >
+                      Activity {remarks.length ? `(${remarks.length})` : ''}
+                    </button>
+                    <button
+                      type="button"
+                      className={`tm-tab ${detailTab === 'attachments' ? 'is-active' : ''}`}
+                      onClick={() => setDetailTab('attachments')}
+                    >
+                      Attachments {attachments.length ? `(${attachments.length})` : ''}
+                    </button>
+                  </div>
 
-              {/* ── Activity history (table) ── */}
-              {!isCreate && (
-                <>
-                  <div className="tmq-divider" />
-                  <div className="tmq-section">Activity {remarks.length ? `(${remarks.length})` : ''}</div>
-                  {remarks.length === 0 ? (
-                    <div className="tmq-hint" style={{ padding: 0 }}>No activity yet.</div>
-                  ) : (
-                    <div className="tmq-act-tablewrap">
-                      <table className="tmq-act-table">
-                        <thead>
-                          <tr><th>Status</th><th>Remark</th><th>By</th><th>Date</th><th>Follow-up</th></tr>
-                        </thead>
-                        <tbody>
-                          {remarks.map((r) => {
-                            const meta = STATUS_META[r.status_at_time];
+                  {/* Activity tab (default) */}
+                  {detailTab === 'activity' && (
+                    remarks.length === 0 ? (
+                      <div className="tmq-hint" style={{ marginTop: 10 }}>No activity yet.</div>
+                    ) : (
+                      <div className="tmq-act-tablewrap" style={{ marginTop: 10 }}>
+                        <table className="tmq-act-table">
+                          <thead>
+                            <tr><th>Status</th><th>Remark</th><th>By</th><th>Date</th><th>Follow-up</th></tr>
+                          </thead>
+                          <tbody>
+                            {remarks.map((r) => {
+                              const meta = STATUS_META[r.status_at_time];
+                              return (
+                                <tr key={r.id}>
+                                  <td><span style={{ color: meta?.hex || 'var(--text-primary)', fontWeight: 600 }}>{STATUS_LABELS[r.status_at_time] || 'Update'}</span></td>
+                                  <td>
+                                    {r.content || '—'}
+                                    {r.voice?.file_url && (
+                                      <div className="tmq-voice-play">
+                                        <MicrophoneIcon style={{ width: 13, height: 13 }} />
+                                        <audio className="tmq-voice-audio" src={r.voice.file_url} controls preload="none" />
+                                        {r.voice.duration ? <span className="tmq-voice-len">{mmss(r.voice.duration)}</span> : null}
+                                      </div>
+                                    )}
+                                    {Array.isArray(r.attachments) && r.attachments.length > 0 && (
+                                      <div className="tmq-act-attachments">
+                                        {r.attachments.map((att, i) => (
+                                          <a
+                                            key={att.id || i}
+                                            href={fileHref(att)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="tmq-act-attach"
+                                            title={`${att.file_name || 'File'} (${humanSize(att.file_size)})`}
+                                          >
+                                            <DocumentIcon style={{ width: 13, height: 13, flexShrink: 0 }} />
+                                            <span className="tmq-act-attach-name">{att.file_name || 'File'}</span>
+                                          </a>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td>{r.user ? fullName(r.user) : 'System'}</td>
+                                  <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
+                                  <td style={{ whiteSpace: 'nowrap' }}>{r.follow_up_date ? fmtDate(r.follow_up_date) : '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  )}
+
+                  {/* Attachments tab */}
+                  {detailTab === 'attachments' && (
+                    <>
+                      {attachments.length === 0 ? (
+                        <div className="tmq-hint" style={{ marginTop: 10 }}>No attachments yet.</div>
+                      ) : (
+                        <div className="tm-attach-list" style={{ marginTop: 10 }}>
+                          {attachments.map((att, i) => {
+                            const isImg = (att.mime_type || '').startsWith('image/');
+                            const who = uploaderLabel(att);
                             return (
-                              <tr key={r.id}>
-                                <td><span style={{ color: meta?.hex || 'var(--text-primary)', fontWeight: 600 }}>{STATUS_LABELS[r.status_at_time] || 'Update'}</span></td>
-                                <td>
-                                  {r.content || '—'}
-                                  {r.voice?.file_url && (
-                                    <div className="tmq-voice-play">
-                                      <MicrophoneIcon style={{ width: 13, height: 13 }} />
-                                      <audio className="tmq-voice-audio" src={r.voice.file_url} controls preload="none" />
-                                      {r.voice.duration ? <span className="tmq-voice-len">{mmss(r.voice.duration)}</span> : null}
-                                    </div>
+                              <a key={att.id || i} href={fileHref(att)} target="_blank" rel="noreferrer"
+                                className="tm-attach-row"
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', textDecoration: 'none', color: 'inherit' }}>
+                                <span style={{ width: 34, height: 34, borderRadius: 6, background: '#f1f5f9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                  {isImg ? <img src={fileHref(att)} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{(att.mime_type || '').includes('pdf') ? '📄' : '📎'}</span>}
+                                </span>
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                  <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {att.file_name || 'File'} <span className="tmq-hint" style={{ padding: 0 }}>({humanSize(att.file_size)})</span>
+                                  </span>
+                                  {(who || att.uploaded_at) && (
+                                    <span className="tmq-hint" style={{ padding: 0, display: 'block', marginTop: 2 }}>
+                                      {who ? `Uploaded by ${who}` : 'Uploaded'}{att.uploaded_at ? ` · ${fmtDateTime(att.uploaded_at)}` : ''}
+                                    </span>
                                   )}
-                                  {Array.isArray(r.attachments) && r.attachments.length > 0 && (
-                                    <div className="tmq-act-attachments">
-                                      {r.attachments.map((att, i) => (
-                                        <a
-                                          key={att.id || i}
-                                          href={fileHref(att)}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="tmq-act-attach"
-                                          title={`${att.file_name || 'File'} (${humanSize(att.file_size)})`}
-                                        >
-                                          <DocumentIcon style={{ width: 13, height: 13, flexShrink: 0 }} />
-                                          <span className="tmq-act-attach-name">{att.file_name || 'File'}</span>
-                                        </a>
-                                      ))}
-                                    </div>
-                                  )}
-                                </td>
-                                <td>{r.user ? fullName(r.user) : 'System'}</td>
-                                <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
-                                <td style={{ whiteSpace: 'nowrap' }}>{r.follow_up_date ? fmtDate(r.follow_up_date) : '—'}</td>
-                              </tr>
+                                </span>
+                              </a>
                             );
                           })}
-                        </tbody>
-                      </table>
-                    </div>
+                        </div>
+                      )}
+                      {canEditCore && (
+                        <div className="tmq-attach-uploader" style={{ marginTop: 10 }}>
+                          <div className="tm-file-picker">
+                            <button type="button" className="tm-file-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                              {uploading ? 'Uploading…' : 'Choose files'}
+                            </button>
+                            <span className="tm-file-count">Add any file (up to 25MB each)</span>
+                          </div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            style={{ display: 'none' }}
+                            disabled={uploading}
+                            onChange={(e) => handleUploadToExisting(e.target.files)}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}

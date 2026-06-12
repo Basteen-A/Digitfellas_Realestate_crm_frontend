@@ -14,6 +14,8 @@ const bookingApi = {
   approvePaymentAccounts: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/accounts`),
   approvePaymentManagement: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/management`),
   verifyPayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/verify`, data),
+  // Super Admin — edit an existing payment
+  updatePayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}`, data),
 
   // Scoped to current user (Collection Manager)
   getMyBookings: (params = {}) => api.get('/bookings/my', { params }),

@@ -94,6 +94,28 @@ const Profile = () => {
 
       <div className="profile-grid">
         <div className="profile-card">
+          <div className="profile-card__title">Points & Rewards</div>
+          <div className="profile-card__rows">
+            <div className="profile-field">
+              <span className="profile-field__label">Total Points</span>
+              <span className="profile-field__value" style={{ 
+                color: (user?.points || 0) >= 0 ? '#059669' : '#DC2626', 
+                fontWeight: 700, 
+                fontSize: 18 
+              }}>
+                {user?.points || 0}
+              </span>
+            </div>
+            <div className="profile-field">
+              <span className="profile-field__label">Points Status</span>
+              <span className="profile-field__value">
+                {(user?.points || 0) > 0 ? 'Positive' : (user?.points || 0) < 0 ? 'Negative' : 'Neutral'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="profile-card">
           <div className="profile-card__title">Personal Details</div>
           <div className="profile-card__rows">
             <div className="profile-field">

@@ -6,7 +6,8 @@ import { useThemeContext } from '../../../contexts/ThemeContext';
 import { logout } from '../../../redux/slices/authSlice';
 import notificationApi from '../../../api/notificationApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
-import { getRoleCode, hasTaskPortalAccess } from '../../../utils/permissions';
+import userApi from '../../../api/userApi';
+import { getRoleCode, hasTaskPortalAccess, hasAnyRole } from '../../../utils/permissions';
 import { portalTaskMenuItem } from '../../../components/layout/Sidebar/menuConfig';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import PortalSidebar from './PortalSidebar';
@@ -157,6 +158,26 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const [phoneLookupError, setPhoneLookupError] = useState('');
   const [phoneLookupSearched, setPhoneLookupSearched] = useState(false);
   const [screenContext, setScreenContext] = useState(null);
+  const [pointsModalOpen, setPointsModalOpen] = useState(false);
+  const [pointsHistoryData, setPointsHistoryData] = useState(null);
+  const [pointsHistoryLoading, setPointsHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (pointsModalOpen && user?.id) {
+      setPointsHistoryLoading(true);
+      userApi.getPointsHistory(user.id)
+        .then((res) => {
+          setPointsHistoryData(res.data?.data || res.data);
+        })
+        .catch((err) => {
+          toast.error(err.response?.data?.message || 'Failed to load points history');
+        })
+        .finally(() => {
+          setPointsHistoryLoading(false);
+        });
+    }
+  }, [pointsModalOpen, user?.id]);
+
   const locationScreen = location.state?.screen;
   const locationScreenData = location.state?.screenData;
 
@@ -548,9 +569,14 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile'); }}>
                     <UserIcon style={ICON_STYLE} /> My Profile
                   </button>
-                  <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
+                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
                     <LockClosedIcon style={ICON_STYLE} /> Change Password
                   </button>
+                  {hasAnyRole(user, ['SM', 'SH']) && (
+                    <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); setPointsModalOpen(true); }}>
+                      <span style={{ fontSize: 13, marginRight: 6 }}>🏆</span> Reward Points
+                    </button>
+                  )}
                   {isAdmin && (
                     <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/dashboard'); }}>
                       <ChevronLeftIcon style={ICON_STYLE} /> Back to CRM
@@ -691,6 +717,143 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                       </div>
                     ))}
                   </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {pointsModalOpen && (
+          <div className="portal-phone-modal-overlay" onClick={() => setPointsModalOpen(false)} role="presentation">
+            <div className="portal-phone-modal" role="dialog" aria-modal="true" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
+              <div className="portal-phone-modal__header">
+                <div>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 16 }}>🏆 Loyalty &amp; Reward Points</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 12.5 }}>Your performance points history and lead breakdown</p>
+                </div>
+                <button type="button" className="portal-phone-modal__close" onClick={() => setPointsModalOpen(false)} aria-label="Close points history">
+                  <XMarkIcon style={{ width: 18, height: 18 }} />
+                </button>
+              </div>
+
+              <div className="portal-phone-modal__body" style={{ padding: '20px', overflowY: 'auto', maxHeight: 'calc(80vh - 100px)' }}>
+                {pointsHistoryLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)', fontSize: 13, fontStyle: 'italic' }}>
+                    Loading points data...
+                  </div>
+                ) : (
+                  <div>
+                    {/* Points Summary Header Card */}
+                    <div style={{ 
+                      background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)', 
+                      color: '#fff', 
+                      borderRadius: 12, 
+                      padding: '20px 24px', 
+                      textAlign: 'center',
+                      marginBottom: 24,
+                      boxShadow: '0 4px 12px rgba(234, 179, 8, 0.15)'
+                    }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.9 }}>
+                        Total Cumulative Balance
+                      </div>
+                      <div style={{ fontSize: 40, fontWeight: 800, marginTop: 4, letterSpacing: '-0.5px' }}>
+                        {pointsHistoryData?.total_points || 0} <span style={{ fontSize: 20, fontWeight: 600 }}>pts</span>
+                      </div>
+                    </div>
+
+                    {/* Per-Lead Breakdown */}
+                    <div style={{ marginBottom: 24 }}>
+                      <h4 style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, marginTop: 0 }}>
+                        Per-Lead Breakdown
+                      </h4>
+                      {!pointsHistoryData?.per_lead || Object.keys(pointsHistoryData.per_lead).length === 0 ? (
+                        <div style={{ background: 'var(--bg-secondary, #f8fafc)', border: '1px dashed var(--border-primary, #e2e8f0)', borderRadius: 8, padding: '20px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                          No points recorded per lead yet
+                        </div>
+                      ) : (
+                        <div style={{ overflowX: 'auto', border: '1px solid var(--border-primary, #e2e8f0)', borderRadius: 8 }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, textAlign: 'left' }}>
+                            <thead>
+                              <tr style={{ background: 'var(--bg-secondary, #f8fafc)', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                                <th style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Lead Name</th>
+                                <th style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Booking Number</th>
+                                <th style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right' }}>Total Points</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(pointsHistoryData.per_lead).map(([leadId, details]) => (
+                                <tr key={leadId} style={{ borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+                                  <td style={{ padding: '10px 12px', fontWeight: 500, color: 'var(--text-primary)' }}>{details.name}</td>
+                                  <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{details.booking_number || '—'}</td>
+                                  <td style={{ 
+                                    padding: '10px 12px', 
+                                    textAlign: 'right', 
+                                    fontWeight: 700, 
+                                    color: details.points >= 0 ? '#16a34a' : '#dc2626' 
+                                  }}>
+                                    {details.points > 0 ? `+${details.points}` : details.points}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Detailed Transaction Ledger */}
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, marginTop: 0 }}>
+                        Points Transaction Log
+                      </h4>
+                      {!pointsHistoryData?.history || pointsHistoryData.history.length === 0 ? (
+                        <div style={{ background: 'var(--bg-secondary, #f8fafc)', border: '1px dashed var(--border-primary, #e2e8f0)', borderRadius: 8, padding: '20px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                          No point transactions recorded yet
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          maxHeight: 180, 
+                          overflowY: 'auto', 
+                          border: '1px solid var(--border-primary, #e2e8f0)', 
+                          borderRadius: 8 
+                        }}>
+                          {pointsHistoryData.history.map((entry, idx) => (
+                            <div 
+                              key={entry.id || idx} 
+                              style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center', 
+                                padding: '10px 12px', 
+                                borderBottom: idx < pointsHistoryData.history.length - 1 ? '1px solid var(--border-primary, #e2e8f0)' : 'none',
+                                fontSize: 12
+                              }}
+                            >
+                              <div style={{ minWidth: 0, marginRight: 12 }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {entry.reason || 'Points Award'}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted, #9ca3af)', marginTop: 2 }}>
+                                  Awarded by {entry.awardedByUser ? `${entry.awardedByUser.first_name} ${entry.awardedByUser.last_name}` : 'System'} on {new Date(entry.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ 
+                                  fontWeight: 700, 
+                                  fontSize: 12.5, 
+                                  color: entry.points >= 0 ? '#16a34a' : '#dc2626' 
+                                }}>
+                                  {entry.points > 0 ? `+${entry.points}` : entry.points}
+                                </div>
+                                <div style={{ fontSize: 10, color: 'var(--text-muted, #9ca3af)', marginTop: 2 }}>
+                                  Bal: {entry.balance_after}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

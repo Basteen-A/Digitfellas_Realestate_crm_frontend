@@ -5,6 +5,7 @@ import bookingStatusApi from '../../../api/bookingStatusApi';
 import paymentStatusApi from '../../../api/paymentStatusApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import userApi from '../../../api/userApi';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -65,6 +66,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [payStatusPaymentDate, setPayStatusPaymentDate] = useState('');
   const [payStatusRegDate, setPayStatusRegDate] = useState('');
   const [payStatusSaving, setPayStatusSaving] = useState(false);
+  const [awardPointsTo, setAwardPointsTo] = useState(''); // 'sm' | 'sh' | ''
+  const [awardPointsValue, setAwardPointsValue] = useState('');
+  // Super-Admin payment editing
+  const [editPayment, setEditPayment] = useState(null);
+  const [editPayForm, setEditPayForm] = useState({});
+  const [editPaySaving, setEditPaySaving] = useState(false);
+  // Super-Admin approve / reject (from the detail page)
+  const [approvalAction, setApprovalAction] = useState(null); // 'approve' | 'reject'
+  const [approvalRemarks, setApprovalRemarks] = useState('');
+  const [approvalSaving, setApprovalSaving] = useState(false);
   const emptyRegSplit = {
     stamp_commission: '',
     registration_expenses: '',
@@ -237,7 +248,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const getUserLabel = (person) => {
     if (!person) return '';
     const name = `${person.first_name || ''} ${person.last_name || ''}`.trim();
-    const roleCode = person.userType?.short_code || person.user_type?.short_code;
+    const roleCode = person.userType?.short_code || person.user_type?.short_code || person.short_code;
     return roleCode ? `${name} (${roleCode})` : name;
   };
 
@@ -246,6 +257,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const paymentPlanLabel = booking?.paymentPlan?.plan_name || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_name || '—';
   const paymentPlanType = booking?.paymentPlan?.plan_type || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_type || '';
   const quickStatusOptions = statusOptions.filter((status) => QUICK_STATUS_CODES.includes(status.status_code));
+
+  // The actual SM/SH who handled this lead — resolved from assignment history by the
+  // API (booking.salesManager / booking.salesHead). Fall back to the reports_to chain.
+  const salesManager = booking?.salesManager || leadAssignee?.manager || null;
+  const salesHead = booking?.salesHead || salesManager?.manager || null;
 
   const openActionModal = (mode) => {
     setActionMode(mode);
@@ -262,6 +278,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       setCancelVoice(null);
       setRegisterForm({ registration_date: '', registration_number: '' });
       setRegisterFiles([]);
+      setAwardPointsTo('');
+      setAwardPointsValue('');
       return;
     }
     if (mode === 'payStatus') {
@@ -350,6 +368,73 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       loadActivities();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
     finally { setPaySaving(false); }
+  };
+
+  const openEditPayment = (p) => {
+    setEditPayment(p);
+    setEditPayForm({
+      amount: p.amount ?? '',
+      payment_category: p.payment_category || '',
+      payment_type: p.payment_type || '',
+      payment_mode_id: p.payment_mode_id || '',
+      payment_mode: p.payment_mode || '',
+      payment_date: p.payment_date ? String(p.payment_date).slice(0, 10) : '',
+      transaction_ref: p.transaction_ref || p.utr_number || p.cheque_dd_number || '',
+      bank_id: p.bank_id || '',
+      remarks: p.remarks || '',
+    });
+  };
+
+  const handleEditPaymentSave = async () => {
+    if (!editPayment) return;
+    if (editPayForm.amount === '' || parseFloat(editPayForm.amount) < 0) {
+      toast.error('Enter a valid amount');
+      return;
+    }
+    setEditPaySaving(true);
+    try {
+      await bookingApi.updatePayment(bookingId, editPayment.id, editPayForm);
+      toast.success('Payment updated');
+      setEditPayment(null);
+      loadBooking();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update payment'));
+    } finally {
+      setEditPaySaving(false);
+    }
+  };
+
+  const handleApproveBooking = async () => {
+    setApprovalSaving(true);
+    try {
+      await bookingApi.approveBooking(bookingId);
+      toast.success('Booking approved');
+      setApprovalAction(null);
+      loadBooking();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to approve booking'));
+    } finally {
+      setApprovalSaving(false);
+    }
+  };
+
+  const handleRejectBooking = async () => {
+    if (!approvalRemarks.trim()) { toast.error('Rejection remarks are required'); return; }
+    setApprovalSaving(true);
+    try {
+      await bookingApi.rejectBooking(bookingId, { remarks: approvalRemarks.trim() });
+      toast.success('Booking rejected');
+      setApprovalAction(null);
+      setApprovalRemarks('');
+      loadBooking();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to reject booking'));
+    } finally {
+      setApprovalSaving(false);
+    }
   };
 
   const handleStatusUpdate = async () => {
@@ -530,10 +615,27 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return Number.isFinite(n) ? n : 0;
   };
   const totalPaid = toAmount(booking.total_paid);
-  const plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
-  const stampValue = toAmount(booking.stamp_value || booking.stamp_duty);
-  const registrationValue = toAmount(booking.registration_exp || booking.registration_charges);
-  const developmentValue = toAmount(booking.development_charges);
+  // Derive Plot/Stamp/Registration/Development from guideline × area with ROUNDUP(…, -2),
+  // falling back to stored columns — matches Booking Approvals and the dev-cost preview so
+  // Registration (2%) no longer shows a stale/zero value.
+  const guidelineRate = toAmount(booking.guideline_value);
+  const plotAreaSqft = toAmount(booking.plot_area);
+  const perSqftCost = toAmount(booking.development_cost_per_sqft);
+  let plotValue;
+  let stampValue;
+  let registrationValue;
+  if (guidelineRate > 0 && plotAreaSqft > 0) {
+    plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100;
+    stampValue = Math.ceil((plotValue * 0.07) / 100) * 100;
+    registrationValue = Math.ceil((plotValue * 0.02) / 100) * 100;
+  } else {
+    plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
+    stampValue = toAmount(booking.stamp_value || booking.stamp_duty);
+    registrationValue = toAmount(booking.registration_exp || booking.registration_charges);
+  }
+  const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
+    ? Math.round(plotAreaSqft * perSqftCost * 1.18 * 100) / 100
+    : toAmount(booking.development_charges);
 
   // Detailed split + optional MODT stored in custom_fields.cost_breakdown
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmount(v), 0);
@@ -558,25 +660,30 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     acc[cat] = (acc[cat] || 0) + toAmount(p.amount);
     return acc;
   }, {});
-  // "Registration Expenses" and "Other Registration Expenses" are broken out of
-  // the registration split into their own payment buckets so they can be
-  // collected and logged separately. The base Registration bucket therefore
-  // excludes them to avoid double-counting (grand total is unchanged).
-  const regExpensesTarget = toAmount(savedRegSplit.registration_expenses);
+  // Registration charges break into three independently-collected buckets (no
+  // double-counting — grand total is unchanged):
+  //   • Registration            → the base 2% legal charge only.
+  //   • Registration Expenses    → ONE combined bar for all of the misc split
+  //                                items (Stamp Commission, Regn Misc. Expenses,
+  //                                Writer Expenses, Patta Charges, …) EXCEPT
+  //                                "Other Registration Expenses".
+  //   • Other Registration Expenses → its own separate bar.
   const otherRegExpensesTarget = toAmount(savedRegSplit.other_registration_expenses);
-  const registrationTarget = registrationValue + (regSplitTotal - regExpensesTarget - otherRegExpensesTarget);
+  const regMiscExpensesTarget = regSplitTotal - otherRegExpensesTarget;
+  const registrationTarget = registrationValue;
   const categoryBuckets = [
     { key: 'Plot Value', target: plotValue, paid: paidByCategory['Plot Value'] || 0 },
     { key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 },
      { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
     { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
-    { key: 'Registration Expenses', target: regExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
+    { key: 'Registration Expenses', target: regMiscExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
     { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
     { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
 
   const isCollectionManager = getRoleCode(user) === ROLE_CODES.COLLECTION;
+  const canEditPayments = getRoleCode(user) === ROLE_CODES.SUPER_ADMIN;
   const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
   const devCostPlotAreaValue = toAmount(devCostForm.plot_area || booking.plot_area);
   const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
@@ -626,17 +733,20 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                   background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
-                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
+                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' :
+                    act.activity_type === 'POINTS_AWARDED' ? '#EAB30822' : '#6B728022',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
-                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
+                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' :
+                    act.activity_type === 'POINTS_AWARDED' ? '#EAB308' : '#6B7280',
                   fontSize: 12, fontWeight: 700,
                 }}>
                   {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
                    act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
+                   act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> :
+                   act.activity_type === 'POINTS_AWARDED' ? <span style={{ fontSize: 13 }}>🏆</span> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
@@ -687,26 +797,36 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <BanknotesIcon style={{width:14,height:14}}/> Process Refund ({formatCurrency(totalPaid)} pending)
             </button>
           )}
-          {/* Booking Open → send to Super Admin for approval (unit reserved) */}
-          {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_OPEN' && (
+          {/* Booking Open → send to Super Admin for approval (unit reserved).
+              This is a Collection action — the Super Admin never sends for approval. */}
+          {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_OPEN' && !canEditPayments && (
             <button className="bkd-btn bkd-btn-primary" disabled={sendingApproval} onClick={() => setShowApprovalConfirm(true)}>
               <CheckCircleIcon style={{width:14,height:14}}/> {sendingApproval ? 'Sending…' : 'Send for Approval'}
             </button>
           )}
+          {/* Booking Pending → Super Admin approves/rejects right here; others just wait. */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_PENDING' && (
-            <span style={{fontSize:12, color:'#B45309', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting Super Admin Approval</span>
+            canEditPayments ? (
+              <>
+                <button className="bkd-btn bkd-btn-primary" style={{background:'#16A34A'}} disabled={approvalSaving} onClick={() => setApprovalAction('approve')}>
+                  <CheckCircleIcon style={{width:14,height:14}}/> Approve
+                </button>
+                <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#DC2626',color:'#DC2626'}} disabled={approvalSaving} onClick={() => { setApprovalRemarks(''); setApprovalAction('reject'); }}>
+                  <XCircleIcon style={{width:14,height:14}}/> Reject
+                </button>
+              </>
+            ) : (
+              <span style={{fontSize:12, color:'#B45309', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting Super Admin Approval</span>
+            )
           )}
-          {/* Payment/Booking status changes are blocked while still Booking Open (not yet sent for approval) */}
-          {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
+          {/* Collection-only actions — hidden for the Super Admin review view.
+              Also blocked while still Booking Open (not yet sent for approval). */}
+          {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments && (
             <>
               <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
               <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
+              <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
             </>
-          )}
-          {/* <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('devCost')}><BanknotesIcon style={{width:14,height:14}}/> Development Cost</button> */}
-          {/* Payments are blocked until the booking is sent for approval (Booking Pending+) */}
-          {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
-            <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
           )}
           <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
         </div>
@@ -735,6 +855,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       )}
 
       <div className="bkd-two-col">
+        {/* Left column: Customer Information + Award Points stacked */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
             <div className="bkd-card">
               <div className="bkd-card-header">
                 <div className="bkd-card-title"><UserIcon style={{width:15,height:15}}/> Customer Information</div>
@@ -758,13 +880,157 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <InfoRow label="Previous Handler" value={previousLeadAssignee ? getUserLabel(previousLeadAssignee) : '—'} />
                   <InfoRow label="Payment Plan" value={paymentPlanLabel} />
                   <InfoRow label="Plan Type" value={paymentPlanType || '—'} />
-                  <InfoRow label="Sales Head / Manager" value={previousLeadAssignee ? getUserLabel(previousLeadAssignee) : '—'} />
+                  <InfoRow label="Sales Manager" value={salesManager ? getUserLabel(salesManager) : '—'} />
+                  <InfoRow label="Sales Head" value={salesHead ? getUserLabel(salesHead) : '—'} />
                   <InfoRow label="Collection Owner" value={leadAssignee ? getUserLabel(leadAssignee) : '—'} />
                   <InfoRow label="Booking Status" value={booking.status_label} />
                   <InfoRow label="Payment Status" value={booking.payment_status || '—'} />
                 </div>
               </div>
             </div>
+
+            {leadAssignee && (
+              <div className="bkd-card">
+                <div className="bkd-card-header">
+                  <div className="bkd-card-title">Award Points (Optional)</div>
+                </div>
+                <div className="bkd-card-body">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {salesManager ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <button
+                          type="button"
+                          style={{
+                            flex: 1, padding: '10px 14px', borderRadius: 8, border: awardPointsTo === 'sm' ? '2px solid #16A34A' : '1px solid #D1D5DB',
+                            background: awardPointsTo === 'sm' ? '#DCFCE7' : '#FFFFFF', color: '#166534', fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                          }}
+                          onClick={() => setAwardPointsTo(awardPointsTo === 'sm' ? '' : 'sm')}
+                        >
+                          Sales Manager ({salesManager.first_name} {salesManager.last_name})
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 8 }}>
+                        No Sales Manager assigned
+                      </div>
+                    )}
+                    {salesHead ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <button
+                          type="button"
+                          style={{
+                            flex: 1, padding: '10px 14px', borderRadius: 8, border: awardPointsTo === 'sh' ? '2px solid #7C3AED' : '1px solid #D1D5DB',
+                            background: awardPointsTo === 'sh' ? '#EDE9FE' : '#FFFFFF', color: '#6D28D9', fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                          }}
+                          onClick={() => setAwardPointsTo(awardPointsTo === 'sh' ? '' : 'sh')}
+                        >
+                          Sales Head ({salesHead.first_name} {salesHead.last_name})
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 8 }}>
+                        No Sales Head assigned
+                      </div>
+                    )}
+                    {awardPointsTo && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                        <input
+                          type="number"
+                          className="bkd-form-control"
+                          placeholder="Points (+ or -)"
+                          value={awardPointsValue}
+                          onChange={(e) => setAwardPointsValue(e.target.value)}
+                          style={{ flex: 1, fontSize: 13 }}
+                        />
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-primary crm-btn-sm"
+                          disabled={!awardPointsValue || statusSaving}
+                          onClick={async () => {
+                            if (!awardPointsValue || isNaN(parseInt(awardPointsValue)) || parseInt(awardPointsValue) === 0) {
+                              toast.error('Enter valid points value');
+                              return;
+                            }
+                            const points = parseInt(awardPointsValue, 10);
+                            const targetUserId = awardPointsTo === 'sm' ? salesManager?.id : salesHead?.id;
+                            if (!targetUserId) {
+                              toast.error('User not found');
+                              return;
+                            }
+                            setStatusSaving(true);
+                            try {
+                              const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                              await userApi.awardPoints(targetUserId, points, reason, bookingId, booking.lead?.id);
+                              toast.success(`${points > 0 ? 'Awarded' : 'Deducted'} ${Math.abs(points)} points to ${awardPointsTo.toUpperCase()}`);
+                              setAwardPointsValue('');
+                              setAwardPointsTo('');
+                              loadActivities();
+                            } catch (err) {
+                              toast.error(getErrorMessage(err, 'Failed to award points'));
+                            } finally {
+                              setStatusSaving(false);
+                            }
+                          }}
+                        >
+                          {statusSaving ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    )}
+                    {activities.filter((a) => a.activity_type === 'POINTS_AWARDED').length > 0 && (
+                      <div style={{ marginTop: 20 }}>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.4px',
+                            color: 'var(--text-secondary)',
+                            marginBottom: 8,
+                          }}
+                        >
+                          Award History
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {activities
+                            .filter((a) => a.activity_type === 'POINTS_AWARDED')
+                            .map((act, idx) => (
+                              <div
+                                key={act.id || idx}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  padding: '8px 10px',
+                                  borderRadius: 6,
+                                  border: '1px solid var(--border-primary, #e2e8f0)',
+                                  background: 'var(--bg-secondary, #f8fafc)',
+                                  fontSize: 12.5,
+                                }}
+                              >
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{act.title}</div>
+                                {act.description && (
+                                  <div style={{ color: 'var(--text-secondary)', fontSize: 11.5, marginTop: 2 }}>
+                                    {act.description}
+                                  </div>
+                                )}
+                                <div style={{ color: 'var(--text-muted, #9ca3af)', fontSize: 10.5, marginTop: 4 }}>
+                                  By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'} on{' '}
+                                  {new Date(act.performed_at).toLocaleDateString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+        </div>
+        {/* Right column: Payment Summary */}
 
             <div className="bkd-card bkd-payment-preview-card">
               <div className="bkd-payment-preview-header">
@@ -894,7 +1160,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   {(otherChargesTotal > 0) && (
                     <div className="bkd-extra-charges-shell" style={{ marginTop: 14, padding: '12px 14px', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #111827)' }}>Other Registration Charges</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #111827)' }}>Registration Charges</div>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#4338CA' }}>
                           Subtotal: {formatCurrency(otherChargesTotal)}
                         </div>
@@ -1012,8 +1278,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           <div className="bkd-card-header">
             <div><div className="bkd-card-title"><CreditCardIcon style={{width:15,height:15}}/> Payment History</div>
               <div className="bkd-card-subtitle">All payments recorded for this booking</div></div>
-            {/* Payments blocked until the booking is sent for approval (Pending+) */}
-            {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && (
+            {/* Payments blocked until sent for approval (Pending+); hidden for Super Admin review. */}
+            {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments && (
               <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
             )}
           </div>
@@ -1050,7 +1316,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
                     : p.is_verified ? <span className="bkd-badge bkd-badge-neutral">Verified</span>
                     : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
-                  <td>—</td>
+                  <td>
+                    {canEditPayments && !isRefund ? (
+                      <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => openEditPayment(p)}>
+                        <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
+                      </button>
+                    ) : '—'}
+                  </td>
                 </tr>
                 );
               })}
@@ -1074,7 +1346,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             : (
               <div className="bkd-timeline">
                 {activities.map((act,i) => {
-                  const color = act.activity_type==='PAYMENT_RECORDED'?'#10b981':act.activity_type==='STATUS_CHANGE'?'#3b82f6':act.activity_type==='CANCELLED'?'#ef4444':'#6b7280';
+                  const color = act.activity_type==='PAYMENT_RECORDED'?'#10b981':act.activity_type==='STATUS_CHANGE'?'#3b82f6':act.activity_type==='POINTS_AWARDED'?'#eab308':act.activity_type==='CANCELLED'?'#ef4444':'#6b7280';
                   return (
                     <div className="bkd-timeline-item" key={act.id||i}>
                       <div className="bkd-timeline-dot" style={{borderColor:color}}/>
@@ -1264,9 +1536,127 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
       )}
 
+      {/* ── SUPER ADMIN: Approve / Reject booking ── */}
+      {approvalAction && (
+        <div className="col-modal-overlay" onClick={() => !approvalSaving && setApprovalAction(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 460px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {approvalAction === 'approve' ? 'Approve' : 'Reject'} booking {booking.booking_number}
+              </h3>
+            </div>
+            {approvalAction === 'approve' ? (
+              <div style={{ padding: 20, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                Approve this booking? It moves to <strong style={{ color: 'var(--text-primary)' }}>Booking Confirmed</strong> and the reserved unit is committed.
+              </div>
+            ) : (
+              <div style={{ padding: 20 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>Rejection remarks *</label>
+                <textarea
+                  value={approvalRemarks}
+                  onChange={(e) => setApprovalRemarks(e.target.value)}
+                  placeholder="Why is this booking being rejected?"
+                  rows={4}
+                  style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border-input, #cbd5e1)', padding: '10px 12px', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+            )}
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="bkd-btn bkd-btn-outline" onClick={() => setApprovalAction(null)} disabled={approvalSaving}>Cancel</button>
+              {approvalAction === 'approve' ? (
+                <button type="button" className="bkd-btn bkd-btn-primary" style={{ background: '#16A34A' }} disabled={approvalSaving} onClick={handleApproveBooking}>
+                  <CheckCircleIcon style={{ width: 14, height: 14 }} /> {approvalSaving ? 'Approving…' : 'Approve Booking'}
+                </button>
+              ) : (
+                <button type="button" className="bkd-btn bkd-btn-primary" style={{ background: '#DC2626' }} disabled={approvalSaving || !approvalRemarks.trim()} onClick={handleRejectBooking}>
+                  <XCircleIcon style={{ width: 14, height: 14 }} /> {approvalSaving ? 'Rejecting…' : 'Reject Booking'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUPER ADMIN: Edit Payment ── */}
+      {editPayment && (
+        <div className="col-modal-overlay" onClick={() => !editPaySaving && setEditPayment(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 560px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Edit Payment {editPayment.payment_number ? `· ${editPayment.payment_number}` : ''}
+              </h3>
+              <button className="qa-drawer-close" onClick={() => setEditPayment(null)} disabled={editPaySaving}>×</button>
+            </div>
+            <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="bkd-form-group">
+                <label className="bkd-form-label">Amount</label>
+                <input type="number" className="bkd-form-control" value={editPayForm.amount}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, amount: e.target.value }))} />
+              </div>
+              <div className="bkd-form-group">
+                <label className="bkd-form-label">Payment Date</label>
+                <input type="date" className="bkd-form-control" value={editPayForm.payment_date}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, payment_date: e.target.value }))} />
+              </div>
+              <div className="bkd-form-group">
+                <label className="bkd-form-label">Paid For</label>
+                <select className="bkd-form-control" value={editPayForm.payment_category}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, payment_category: e.target.value }))}>
+                  <option value="">Select…</option>
+                  {PAYMENT_CATEGORIES.map(cat => <option key={cat} value={cat}>{categoryLabel(cat)}</option>)}
+                </select>
+              </div>
+              <div className="bkd-form-group">
+                <label className="bkd-form-label">Type</label>
+                <select className="bkd-form-control" value={editPayForm.payment_type}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, payment_type: e.target.value }))}>
+                  <option value="">Select…</option>
+                  {paymentTypeOptions.map(pt => <option key={pt.id} value={pt.type_name}>{pt.type_name}</option>)}
+                </select>
+              </div>
+              <div className="bkd-form-group">
+                <label className="bkd-form-label">Mode</label>
+                <select className="bkd-form-control" value={editPayForm.payment_mode_id}
+                  onChange={(e) => {
+                    const m = paymentModeOptions.find(x => String(x.id) === String(e.target.value));
+                    setEditPayForm(f => ({ ...f, payment_mode_id: e.target.value, payment_mode: m?.mode_name || '' }));
+                  }}>
+                  <option value="">{editPayForm.payment_mode || 'Select…'}</option>
+                  {paymentModeOptions.map(m => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
+                </select>
+              </div>
+              <div className="bkd-form-group">
+                <label className="bkd-form-label">Bank</label>
+                <select className="bkd-form-control" value={editPayForm.bank_id}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, bank_id: e.target.value }))}>
+                  <option value="">None</option>
+                  {bankOptions.map(b => <option key={b.id} value={b.id}>{b.bank_name}</option>)}
+                </select>
+              </div>
+              <div className="bkd-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="bkd-form-label">Reference / UTR / Cheque No.</label>
+                <input type="text" className="bkd-form-control" value={editPayForm.transaction_ref}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, transaction_ref: e.target.value }))} />
+              </div>
+              <div className="bkd-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="bkd-form-label">Remarks</label>
+                <textarea className="bkd-form-control" rows={2} value={editPayForm.remarks}
+                  onChange={(e) => setEditPayForm(f => ({ ...f, remarks: e.target.value }))} />
+              </div>
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="bkd-btn bkd-btn-outline" onClick={() => setEditPayment(null)} disabled={editPaySaving}>Cancel</button>
+              <button type="button" className="bkd-btn bkd-btn-primary" onClick={handleEditPaymentSave} disabled={editPaySaving}>
+                {editPaySaving ? 'Saving…' : 'Save Payment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {actionMode && (
         <div className="col-modal-overlay" onClick={closeActionModal}>
-          <div className="qa-modal-panel" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
+          <div className="qa-modal-panel" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
             <div className="qa-drawer-handle" />
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
@@ -1476,6 +1866,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     }
                     return null;
                   })()}
+
                   {renderActivityHistory()}
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>

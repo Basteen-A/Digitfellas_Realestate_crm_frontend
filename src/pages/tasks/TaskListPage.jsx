@@ -805,7 +805,7 @@ const TaskListPage = () => {
                 )}
 
                 {/* Ungrouped */}
-                {!loading && groupBy === 'none' && pagedRows.map(renderRow)}
+                {!loading && groupBy === 'none' && pagedRows.map((t) => renderRow(t))}
 
                 {/* Grouped */}
                 {!loading && groupBy !== 'none' && groups.map(([key, tasks]) => {
@@ -828,7 +828,8 @@ const TaskListPage = () => {
                       </tr>
                       {!collapsed && tasks.map((t) => {
                         const groupedClass = groupBy === 'department' ? 'task-row--grouped-department' : 
-                                           groupBy === 'project' ? 'task-row--grouped-project' : 'task-row--grouped';
+                                           groupBy === 'project' ? 'task-row--grouped-project' :
+                                           groupBy === 'status' ? 'task-row--grouped-status' : 'task-row--grouped';
                         return renderRow(t, true, groupedClass);
                       })}
                     </React.Fragment>

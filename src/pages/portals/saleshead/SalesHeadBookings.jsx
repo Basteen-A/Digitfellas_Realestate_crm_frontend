@@ -26,7 +26,7 @@ const SalesHeadBookings = ({ user }) => {
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { limit: 100 };
+      const params = { limit: 100, scope: 'team' };
       if (activeTab === 'Active') params.is_cancelled = 'false';
       if (activeTab === 'Cancelled') params.is_cancelled = 'true';
       // For 'Completed', we might need to filter by a specific status code if available

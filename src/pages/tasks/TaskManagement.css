@@ -104,7 +104,7 @@
 }
 .tm-modal {
   background: var(--bg-modal); border: 1px solid var(--border-primary); border-radius: var(--border-radius-xl, 16px);
-  width: min(100%, 740px); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
+  width: min(100%, 800px); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
   box-shadow: var(--shadow-modal);
 }
 .tm-modal__header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border-secondary); }
@@ -210,6 +210,12 @@
 .tmq-block { padding: 0 20px 12px; }
 .tmq-hint { padding: 0 20px 10px; font-size: 11px; color: var(--text-muted); }
 .tmq-divider { height: 1px; background: var(--border-secondary); margin: 6px 20px; }
+
+/* Attachments list, its uploader, and the Activity table align with the 20px
+   section padding (they sit directly under a .tmq-section, not inside a block). */
+.tm-attach-list { padding: 0 20px 4px; }
+.tmq-attach-uploader { padding: 0 20px; }
+.tmq-act-tablewrap { margin-left: 20px; margin-right: 20px; }
 
 /* Status grid */
 .tmq-status-grid { padding: 0 20px 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -338,6 +344,8 @@
   .tmq-block { padding: 0 14px 10px; }
   .tmq-hint { padding: 0 14px 8px; }
   .tmq-divider { margin: 4px 14px; }
+  .tm-attach-list { padding: 0 14px 4px; }
+  .tmq-attach-uploader { padding: 0 14px; }
 
   /* Status grid: 2 columns on mobile */
   .tmq-status-grid { padding: 0 14px 10px; grid-template-columns: repeat(2, 1fr); gap: 6px; }
@@ -615,16 +623,23 @@
    ============================================================ */
 .task-workspace { padding: 20px 24px; }
 
+/* Top-align every cell so each column (status, assignees, follow-up, action) lines
+   up with the top of the Task title instead of floating to the row's middle. */
+.task-workspace .lead-workspace__table tbody td { vertical-align: top; }
+
 /* Indent task rows so they sit nested under their group header (Department/Project only). */
 .task-workspace .lead-workspace__table tr.task-row--grouped td.task-col-task { padding-left: 0; }
-.task-workspace .lead-workspace__table tr.task-row--grouped-department td.task-col-task { padding-left: 10px; }
-.task-workspace .lead-workspace__table tr.task-row--grouped-project td.task-col-task { padding-left: 10px; }
+.task-workspace .lead-workspace__table tr.task-row--grouped-department td.task-col-task { padding-left: 15px; }
+.task-workspace .lead-workspace__table tr.task-row--grouped-project td.task-col-task { padding-left: 15px; }
+.task-workspace .lead-workspace__table tr.task-row--grouped-status td.task-col-task { padding-left: 15px; }
 
 /* Group by = None: the ungrouped rows have no group header to sit under, so give
-   the Task column (header + rows) a clear, aligned left indent instead of sitting
-   flush against the card edge. */
-.task-workspace .lead-workspace__table th.task-col-task,
+   the Task column a clear left indent instead of sitting flush against the card edge.
+   The row title is pushed right by the expand chevron (14px) + its gap (8px), so the
+   "TASK" header is indented to match (22 + 14 + 8 = 44px) and sits directly above the
+   task names; the chevron lives in the 22px gutter to its left. */
 .task-workspace .lead-workspace__table tbody tr:not(.task-row--grouped) td.task-col-task { padding-left: 22px; }
+.task-workspace .lead-workspace__table th.task-col-task { padding-left: 44px; }
 
 /* Inline drawer body — two columns on desktop, one on mobile. */
 .task-drawer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 16px 20px 18px 44px; }

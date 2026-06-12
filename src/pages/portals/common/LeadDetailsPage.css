@@ -993,6 +993,12 @@
   background: var(--bg-card, #fff);
 }
 
+/* Desktop width for the Quick Actions panel (800px). */
+.lead-quick-modal .qa-modal-panel {
+  max-width: 800px;
+  width: 100%;
+}
+
 /* ── Contextual Fields Block inside Quick Update Modal ── */
 .qa-drawer-ctx-block {
   padding: 0 20px 12px;

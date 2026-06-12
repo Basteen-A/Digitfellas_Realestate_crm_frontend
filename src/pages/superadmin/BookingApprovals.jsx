@@ -4,11 +4,23 @@ import bookingApi from '../../api/bookingApi';
 import { formatCurrency } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
 import {
-  CreditCardIcon, ArrowPathIcon, CheckCircleIcon, XCircleIcon, ChevronRightIcon,
+  CreditCardIcon, ArrowPathIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../components/common/Pagination';
 import usePagination from '../../hooks/usePagination';
+import { useAuthContext } from '../../contexts/AuthContext';
+import CollectionBookingDetail from '../portals/collection/CollectionBookingDetail';
 import './BookingApprovals.css';
+
+// Status filter tabs → matching booking status codes (null = all).
+const STATUS_TABS = [
+  { key: 'all', label: 'All', codes: null },
+  { key: 'open', label: 'Open', codes: ['BOOKING_OPEN'] },
+  { key: 'pending', label: 'Pending', codes: ['BOOKING_PENDING'] },
+  { key: 'approved', label: 'Approved', codes: ['BOOKING_APPROVED', 'BOOKED', 'REGISTERED', 'EMI'] },
+  { key: 'rejected', label: 'Rejected', codes: ['BOOKING_REJECTED'] },
+  { key: 'cancelled', label: 'Cancelled', codes: ['CANCEL', 'REQUEST_TO_CANCEL'] },
+];
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'top' };
@@ -71,21 +83,21 @@ const phaseOf = (b) => b.phase?.phase_name || b.inventoryUnit?.phase?.phase_name
 const unitOf = (b) => b.unit_number || b.inventoryUnit?.unit_number || (b.unit_display && b.unit_display !== 'N/A' ? b.unit_display : null);
 
 const BookingApprovals = () => {
+  const { user } = useAuthContext();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [busyId, setBusyId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
-  const [rejectFor, setRejectFor] = useState(null);
-  const [rejectRemarks, setRejectRemarks] = useState('');
-  const [approveFor, setApproveFor] = useState(null);
+  const [statusTab, setStatusTab] = useState('all');
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await bookingApi.getAll({ status_code: 'BOOKING_PENDING', limit: 100 });
+      // Super Admin sees ALL bookings across every status, not just pending.
+      const resp = await bookingApi.getAll({ limit: 200 });
       setRows(resp.data?.data || resp.data || []);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to load pending bookings'));
+      toast.error(getErrorMessage(err, 'Failed to load bookings'));
     } finally {
       setLoading(false);
     }
@@ -93,28 +105,12 @@ const BookingApprovals = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleApprove = (booking) => setApproveFor(booking);
-  const closeApprove = () => setApproveFor(null);
-  const confirmApprove = async () => {
-    const booking = approveFor;
-    if (!booking) return;
-    setBusyId(booking.id);
-    try {
-      await bookingApi.approveBooking(booking.id);
-      toast.success('Booking approved');
-      setApproveFor(null);
-      load();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to approve booking'));
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const activeCodes = STATUS_TABS.find((t) => t.key === statusTab)?.codes || null;
+  const filteredRows = activeCodes
+    ? rows.filter((b) => activeCodes.includes(b.bookingStatus?.status_code || b.status_code))
+    : rows;
 
-  const openReject = (booking) => { setRejectFor(booking); setRejectRemarks(''); };
-  const closeReject = () => { setRejectFor(null); setRejectRemarks(''); };
-
-  const renderDetailContent = (b, showActions = true) => {
+  const renderDetailContent = (b) => {
     const s = computeSummary(b);
     const regSubtotal = sumSplit(s.regSplit);
     const modtSubtotal = sumSplit(s.modtSplit);
@@ -202,40 +198,14 @@ const BookingApprovals = () => {
             </div>
           </div>
         </div>
-
-        {showActions && (
-          <div className="ba-actions">
-            <button className="ba-btn ba-btn--reject" disabled={busyId === b.id} onClick={() => openReject(b)}>
-              <XCircleIcon className="ba-btn-icon" /> Reject
-            </button>
-            <button className="ba-btn ba-btn--approve" disabled={busyId === b.id} onClick={() => handleApprove(b)}>
-              <CheckCircleIcon className="ba-btn-icon" /> Approve
-            </button>
-          </div>
-        )}
       </div>
     );
-  };
-
-  const handleReject = async () => {
-    if (!rejectRemarks.trim()) { toast.error('Rejection remarks are required'); return; }
-    setBusyId(rejectFor.id);
-    try {
-      await bookingApi.rejectBooking(rejectFor.id, { remarks: rejectRemarks.trim() });
-      toast.success('Booking rejected');
-      closeReject();
-      load();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to reject booking'));
-    } finally {
-      setBusyId(null);
-    }
   };
 
   const renderDetail = (b) => {
     return (
       <tr>
-        <td colSpan={7} style={{ padding: 0, background: 'transparent' }}>
+        <td colSpan={8} style={{ padding: 0, background: 'transparent' }}>
           {renderDetailContent(b)}
         </td>
       </tr>
@@ -258,38 +228,67 @@ const BookingApprovals = () => {
             <ChevronRightIcon className={`ba-chevron ${isOpen ? 'open' : ''}`} />
           </button>
           <div className="ba-mobile-card__main">
-            <button type="button" className="ba-booking-link ba-mobile-card__booking" onClick={() => setExpandedId(isOpen ? null : b.id)}>
+            <button type="button" className="ba-booking-link ba-mobile-card__booking" onClick={() => setSelectedBookingId(b.id)}>
               {b.booking_number}
             </button>
             <div className="ba-mobile-card__customer">{customerName(b)}</div>
             <div className="ba-muted">{formatCurrency(summary.totalValue)} total · {Math.round(summary.pct)}% collected</div>
+            <div style={{ marginTop: 4 }}>
+              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${b.status_color || '#6B7280'}22`, color: b.status_color || '#6B7280' }}>{b.status_label || '—'}</span>
+            </div>
           </div>
           <div className="ba-mobile-card__actions" onClick={(e) => e.stopPropagation()}>
-            <button className="ba-btn ba-btn--reject" disabled={busyId === b.id} onClick={() => openReject(b)}>
-              <XCircleIcon className="ba-btn-icon" /> Reject
-            </button>
-            <button className="ba-btn ba-btn--approve" disabled={busyId === b.id} onClick={() => handleApprove(b)}>
-              <CheckCircleIcon className="ba-btn-icon" /> Approve
-            </button>
+            <button className="ba-btn" onClick={() => setSelectedBookingId(b.id)}>View</button>
           </div>
         </div>
-        {isOpen && renderDetailContent(b, false)}
+        {isOpen && renderDetailContent(b)}
       </div>
     );
   };
 
-  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(rows, 25);
+  const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredRows, 25);
+
+  // When a booking is selected, show the full detail page (with SA payment editing).
+  if (selectedBookingId) {
+    return (
+      <CollectionBookingDetail
+        user={user}
+        bookingId={selectedBookingId}
+        onBack={() => { setSelectedBookingId(null); load(); }}
+      />
+    );
+  }
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1><CreditCardIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Booking Approvals</h1>
-          <p className="hidden sm:block">Review bookings sent by Collection and approve or reject them</p>
+          <h1><CreditCardIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Bookings</h1>
+          <p className="hidden sm:block">All bookings across every status — approve or reject those pending, open any booking to view or edit payments</p>
         </div>
         <button className="crm-btn crm-btn-ghost" onClick={load} disabled={loading}>
           <ArrowPathIcon style={{ width: 15, height: 15 }} /> {loading ? 'Refreshing…' : 'Refresh'}
         </button>
+      </div>
+
+      {/* Status filter tabs */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        {STATUS_TABS.map((t) => {
+          const count = t.codes
+            ? rows.filter((b) => t.codes.includes(b.bookingStatus?.status_code || b.status_code)).length
+            : rows.length;
+          const active = statusTab === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setStatusTab(t.key)}
+              className={`crm-btn crm-btn-sm ${active ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
+            >
+              {t.label} <span style={{ opacity: 0.7 }}>({count})</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="crm-card ba-card">
@@ -303,15 +302,16 @@ const BookingApprovals = () => {
               <th style={th}>Project / Phase / Unit</th>
               <th style={th}>Value</th>
               <th style={th}>Collected</th>
+              <th style={th}>Status</th>
               <th style={{ ...th, textAlign: 'right' }}>Action</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>Loading…</td></tr>
+              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>Loading…</td></tr>
             )}
-            {!loading && rows.length === 0 && (
-              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>No bookings pending approval</td></tr>
+            {!loading && filteredRows.length === 0 && (
+              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>No bookings in this view</td></tr>
             )}
             {!loading && pageItems.map((b) => {
               const s = computeSummary(b);
@@ -323,7 +323,7 @@ const BookingApprovals = () => {
                       <ChevronRightIcon className={`ba-chevron ${isOpen ? 'open' : ''}`} />
                     </td>
                     <td style={{ ...td, fontWeight: 700 }}>
-                      <button type="button" className="ba-booking-link" onClick={() => setExpandedId(isOpen ? null : b.id)}>
+                      <button type="button" className="ba-booking-link" onClick={() => setSelectedBookingId(b.id)}>
                         {b.booking_number}
                       </button>
                     </td>
@@ -336,22 +336,18 @@ const BookingApprovals = () => {
                     </td>
                     <td style={{ ...td, fontWeight: 700 }}>{formatCurrency(s.totalValue)}</td>
                     <td style={td}>{formatCurrency(s.collected)}</td>
+                    <td style={td}>
+                      <span className="ba-status-badge" style={{
+                        display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700,
+                        background: `${b.status_color || '#6B7280'}22`, color: b.status_color || '#6B7280',
+                      }}>{b.status_label || '—'}</span>
+                    </td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                       <button
-                        className="crm-btn crm-btn-sm"
-                        style={{ background: '#16a34a', color: '#fff', border: 'none', marginRight: 8 }}
-                        disabled={busyId === b.id}
-                        onClick={() => handleApprove(b)}
+                        className="crm-btn crm-btn-ghost crm-btn-sm"
+                        onClick={() => setSelectedBookingId(b.id)}
                       >
-                        <CheckCircleIcon style={{ width: 15, height: 15 }} /> Approve
-                      </button>
-                      <button
-                        className="crm-btn crm-btn-sm"
-                        style={{ background: '#dc2626', color: '#fff', border: 'none' }}
-                        disabled={busyId === b.id}
-                        onClick={() => openReject(b)}
-                      >
-                        <XCircleIcon style={{ width: 15, height: 15 }} /> Reject
+                        View
                       </button>
                     </td>
                   </tr>
@@ -364,7 +360,7 @@ const BookingApprovals = () => {
         </div>
         <div className="ba-mobile-list">
           {loading && <div className="ba-mobile-empty">Loading…</div>}
-          {!loading && rows.length === 0 && <div className="ba-mobile-empty">No bookings pending approval</div>}
+          {!loading && filteredRows.length === 0 && <div className="ba-mobile-empty">No bookings in this view</div>}
           {!loading && pageItems.map(renderMobileCard)}
         </div>
         {!loading && (
@@ -377,67 +373,6 @@ const BookingApprovals = () => {
           />
         )}
       </div>
-
-      {/* Reject-remarks modal */}
-      {approveFor && (
-        <div className="col-modal-overlay" onClick={() => busyId !== approveFor.id && closeApprove()}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 460px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(16,185,129,0.12)', color: 'var(--accent-green, #059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <CheckCircleIcon style={{ width: 18, height: 18 }} />
-              </span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Approve booking {approveFor.booking_number}</h3>
-                <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{customerName(approveFor)}</p>
-              </div>
-            </div>
-            <div style={{ padding: 20, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
-              Approve this booking? It moves to <strong style={{ color: 'var(--text-primary)' }}>Booking Confirmed</strong> and the reserved unit is committed.
-            </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={closeApprove} disabled={busyId === approveFor.id}>Cancel</button>
-              <button className="crm-btn crm-btn-sm" style={{ background: 'var(--accent-green, #059669)', color: '#fff', border: 'none' }}
-                disabled={busyId === approveFor.id} onClick={confirmApprove}>
-                <CheckCircleIcon style={{ width: 14, height: 14 }} /> {busyId === approveFor.id ? 'Approving…' : 'Approve Booking'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {rejectFor && (
-        <div className="col-modal-overlay" onClick={closeReject}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 460px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Reject booking {rejectFor.booking_number}</h3>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-                {customerName(rejectFor)} · the lead returns to the Sales Head and any payment becomes refundable.
-              </p>
-            </div>
-            <div style={{ padding: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>Rejection remarks *</label>
-              <textarea
-                value={rejectRemarks}
-                onChange={(e) => setRejectRemarks(e.target.value)}
-                placeholder="Why is this booking being rejected?"
-                rows={4}
-                style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border-input, #cbd5e1)', padding: '10px 12px', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }}
-              />
-            </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={closeReject} disabled={busyId === rejectFor.id}>Cancel</button>
-              <button className="crm-btn crm-btn-sm" style={{ background: '#dc2626', color: '#fff', border: 'none' }}
-                disabled={busyId === rejectFor.id || !rejectRemarks.trim()} onClick={handleReject}>
-                {busyId === rejectFor.id ? 'Rejecting…' : 'Reject Booking'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
