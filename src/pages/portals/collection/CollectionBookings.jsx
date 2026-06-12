@@ -268,12 +268,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
           <button className="col-qa-btn" title="EMI" style={{ color: '#F59E0B' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'emi'); }}>
             <CreditCardIcon style={{ width: 15, height: 15 }} />
           </button>
-          <button className="col-qa-btn" title="Request Cancel" style={{ color: '#EF4444' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
-            <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
-          </button>
         </>
       )}
-      {booking.status_code === 'EMI' && (
+      {['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.status_code) && (
         <button className="col-qa-btn" title="Request Cancel" style={{ color: '#EF4444' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
           <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
         </button>
@@ -366,11 +363,16 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const handleConfirmCancel = async () => {
     const totalPaidAmt = parseFloat(workflowBooking?.total_paid || 0);
     const amt = parseFloat(cancelRefundForm.refund_amount || 0);
-    if (amt > totalPaidAmt + 0.01) { toast.error(`Refund cannot exceed collected (${formatCurrency(totalPaidAmt)})`); return; }
+    if (totalPaidAmt > 0.01) {
+      if (Math.abs(amt - totalPaidAmt) > 0.01) {
+        toast.error(`Outstanding collected amount of ${formatCurrency(totalPaidAmt)} must be fully refunded to confirm cancellation.`);
+        return;
+      }
+    }
     setConfirmCancelSaving(true);
     try {
       await bookingApi.confirmCancel(workflowBooking.id, amt > 0 ? cancelRefundForm : {});
-      toast.success(amt > 0 ? 'Booking cancelled and refund recorded' : 'Booking cancelled');
+      toast.success('Booking cancelled and refund recorded');
       setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
       closeWorkflow();
       loadBookings();
@@ -1242,7 +1244,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                 </div>
 
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
-                  Refund (optional — leave 0 to record refund later)
+                  Refund (required — must equal total collected amount)
                 </div>
                 <div className="bkd-form-row">
                   <div className="bkd-form-group">

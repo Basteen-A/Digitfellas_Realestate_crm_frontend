@@ -783,7 +783,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
         <div className="bkd-header-actions">
           {/* Workflow action buttons */}
-          {['BOOKING_APPROVED', 'BOOKED', 'REGISTERED', 'EMI'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
+          {['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Request Cancel</button>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
@@ -2267,7 +2267,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </div>
 
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
-                  Refund (optional — leave 0 to record refund later)
+                  Refund (required — must equal total collected amount)
                 </div>
                 <div className="bkd-form-row">
                   <div className="bkd-form-group">
@@ -2314,11 +2314,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div className="qa-drawer-save-row">
                   <button className="qa-drawer-save-btn" style={{ background: '#DC2626' }} disabled={confirmCancelSaving} onClick={async () => {
                     const amt = parseFloat(cancelRefundForm.refund_amount || 0);
-                    if (amt > totalPaid + 0.01) { toast.error(`Refund cannot exceed collected (${formatCurrency(totalPaid)})`); return; }
+                    if (totalPaid > 0.01) {
+                      if (Math.abs(amt - totalPaid) > 0.01) {
+                        toast.error(`Outstanding collected amount of ${formatCurrency(totalPaid)} must be fully refunded to confirm cancellation.`);
+                        return;
+                      }
+                    }
                     setConfirmCancelSaving(true);
                     try {
                       await bookingApi.confirmCancel(bookingId, amt > 0 ? cancelRefundForm : {});
-                      toast.success(amt > 0 ? 'Booking cancelled and refund recorded' : 'Booking cancelled');
+                      toast.success('Booking cancelled and refund recorded');
                       setWorkflowMode(null);
                       setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
                       loadBooking(); loadActivities();
