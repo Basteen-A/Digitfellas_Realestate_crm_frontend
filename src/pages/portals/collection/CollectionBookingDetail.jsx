@@ -1052,22 +1052,22 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div className="bkd-payment-preview-top-grid">
                   <div className="bkd-payment-preview-card bkd-payment-preview-card-total">
                     <p className="bkd-payment-preview-card-label">Total Value</p>
-                    <h2 className="bkd-payment-preview-card-value">{formatCurrency(liveTotalValue)}</h2>
+                    <h2 className="bkd-payment-preview-card-value">{fmtFull(liveTotalValue)}</h2>
                   </div>
 
                   <div className="bkd-payment-preview-card bkd-payment-preview-card-collected">
                     <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-collected">Total Collected</p>
-                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-collected">{formatCurrency(totalPaid)}</h2>
+                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-collected">{fmtFull(totalPaid)}</h2>
                   </div>
 
                   <div className="bkd-payment-preview-card bkd-payment-preview-card-balance">
                     <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-balance">Balance Due</p>
-                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-balance">{formatCurrency(balanceDue)}</h2>
+                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-balance">{fmtFull(balanceDue)}</h2>
                   </div>
 
                   <div className="bkd-payment-preview-card bkd-payment-preview-card-unverified">
                     <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-unverified">Unverified</p>
-                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-unverified">{formatCurrency(unverifiedAmt)}</h2>
+                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-unverified">{fmtFull(unverifiedAmt)}</h2>
                   </div>
                 </div>
 
@@ -1083,7 +1083,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         Edit
                       </button>
                       <p className="bkd-payment-preview-grand-label">Grand Total</p>
-                      <p className="bkd-payment-preview-grand-value">{formatCurrency(totalValue)}</p>
+                      <p className="bkd-payment-preview-grand-value">{fmtFull(totalValue)}</p>
                     </div>
                   </div>
 
@@ -1102,7 +1102,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         </div>
                       </div>
 
-                      <h3 className="bkd-payment-preview-breakdown-item-value">{formatCurrency(plotValue)}</h3>
+                      <h3 className="bkd-payment-preview-breakdown-item-value">{fmtFull(plotValue)}</h3>
                     </div>
 
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-stamp">
@@ -1119,7 +1119,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         </div>
                       </div>
 
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-stamp">{formatCurrency(stampValue)}</h3>
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-stamp">{fmtFull(stampValue)}</h3>
                     </div>
 
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-registration">
@@ -1136,7 +1136,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         </div>
                       </div>
 
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-registration">{formatCurrency(registrationValue)}</h3>
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-registration">{fmtFull(registrationValue)}</h3>
                     </div>
 
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-development">
@@ -1153,7 +1153,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         </div>
                       </div>
 
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-development">{formatCurrency(developmentValue)}</h3>
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-development">{fmtFull(developmentValue)}</h3>
                     </div>
                   </div>
 
@@ -1162,7 +1162,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #111827)' }}>Registration Charges</div>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#4338CA' }}>
-                          Subtotal: {formatCurrency(otherChargesTotal)}
+                          Subtotal: {fmtFull(otherChargesTotal)}
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1173,7 +1173,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                             padding: '4px 8px', borderRadius: 6, border: '1px solid #C7D2FE',
                           }}>
                             <span style={{ opacity: 0.85 }}>{labelize(k)}</span>
-                            <strong>{formatCurrency(toAmount(v))}</strong>
+                            <strong>{fmtFull(toAmount(v))}</strong>
                           </span>
                         ))}
                         {savedModtEnabled && Object.entries(savedModtSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
@@ -1183,7 +1183,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                             padding: '4px 8px', borderRadius: 6, border: '1px solid #FDE68A',
                           }}>
                             <span style={{ opacity: 0.85 }}>MODT · {labelize(k)}</span>
-                            <strong>{formatCurrency(toAmount(v))}</strong>
+                            <strong>{fmtFull(toAmount(v))}</strong>
                           </span>
                         ))}
                       </div>
@@ -1202,8 +1202,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
 
                   <div className="bkd-payment-preview-progress-foot">
-                    <p className="bkd-payment-preview-progress-foot-text">{formatCurrency(totalPaid)} collected out of {formatCurrency(liveTotalValue)}</p>
-                    <p className="bkd-payment-preview-progress-foot-pending">{formatCurrency(liveTotalValue - totalPaid)} pending</p>
+                    <p className="bkd-payment-preview-progress-foot-text">{fmtFull(totalPaid)} collected out of {fmtFull(liveTotalValue)}</p>
+                    <p className="bkd-payment-preview-progress-foot-pending">{fmtFull(liveTotalValue - totalPaid)} pending</p>
                   </div>
 
                   <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1222,8 +1222,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                               {categoryLabel(b.key)} · {pct}%
                             </span>
                             <span style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 600 }}>
-                              {formatCurrency(b.paid)} / {formatCurrency(b.target)}
-                              {b.target > 0 && <span style={{ marginLeft: 6, color: '#DC2626' }}>· {formatCurrency(balance)} due</span>}
+                              {fmtFull(b.paid)} / {fmtFull(b.target)}
+                              {b.target > 0 && <span style={{ marginLeft: 6, color: '#DC2626' }}>· {fmtFull(balance)} due</span>}
                             </span>
                           </div>
                           <div style={{ height: 6, background: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
