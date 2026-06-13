@@ -20,6 +20,7 @@ import {
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
 import { TaskDashboardWidget } from '../../tasks';
+import { SalesManagerLeaderboardCard } from '../common/LeaderboardCard';
 import '../collection/CollectionWorkspace.css';
 
 const DATE_FILTER_OPTIONS = [
@@ -173,12 +174,21 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
     return val.toFixed(0);
   };
 
+  // Calculate follow-up counts from available data
+  const followUpCounts = {
+    today: todayFollowUps.length,
+    missed: missedFollowUps.length,
+    dueToday: stats?.dueToday ?? 0,
+    overdue: stats?.overdueActions ?? 0,
+    total: (todayFollowUps.length || 0) + (missedFollowUps.length || 0),
+  };
+
   const kpiCards = [
     { label: 'Total Active Site Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, sub: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, icon: HomeModernIcon, variant: 'info' },
     { label: 'Booked Leads', value: stats?.bookedLeads ?? 0, sub: 'booked customers', icon: UserGroupIcon, variant: 'success' },
     { label: 'Under Negotiations', value: stats?.negotiations ?? 0, sub: 'in negotiation', icon: ChartBarIcon, variant: '' },
     { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, sub: 'pending revisit', icon: ArrowPathIcon, variant: 'warning' },
-    { label: 'Follow Up', value: todayFollowUps.length, sub: 'scheduled today', icon: PhoneIcon, variant: 'success' },
+    { label: 'Follow Up', value: followUpCounts.total, sub: `${followUpCounts.today} today · ${followUpCounts.missed} missed · ${followUpCounts.dueToday || followUpCounts.overdue} overdue`, icon: PhoneIcon, variant: 'success' },
     { label: 'Booking Sq Ft', value: formatSqft(stats?.bookingSqft ?? 0), sub: 'total booked area', icon: CubeIcon, variant: 'info' },
   ];
 
@@ -336,6 +346,11 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
             </div>
           );
         })}
+      </div>
+
+      {/* Leaderboard Section */}
+      <div className="col-two-col-new" style={{ marginTop: 16 }}>
+        <SalesManagerLeaderboardCard user={user} />
       </div>
 
       {/* Two Column Layout */}

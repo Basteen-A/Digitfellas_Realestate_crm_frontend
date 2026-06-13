@@ -15,6 +15,7 @@ import {
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
 import { TaskDashboardWidget } from '../../tasks';
+import { SalesHeadLeaderboardCard } from '../common/LeaderboardCard';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadDashboard = ({ user, onNavigate }) => {
@@ -98,6 +99,11 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
             </div>
           );
         })}
+      </div>
+
+      {/* Leaderboard Section */}
+      <div className="col-two-col-new" style={{ marginTop: 16 }}>
+        <SalesHeadLeaderboardCard user={user} />
       </div>
 
       {/* Cancel Requests Banner */}

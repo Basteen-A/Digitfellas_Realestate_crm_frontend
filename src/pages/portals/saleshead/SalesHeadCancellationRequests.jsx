@@ -62,10 +62,17 @@ const SalesHeadCancellationRequests = ({ user }) => {
     finally { setSaving(false); }
   };
 
-  const getDaysBadge = (days, canApprove, isApproved) => {
-    if (isApproved) return <span style={{...badgeStyle, background:'#10B98122', color:'#10B981'}}>✓ Approved</span>;
-    if (canApprove) return <span style={{...badgeStyle, background: days > 10 ? '#EF444422' : '#22C55E22', color: days > 10 ? '#EF4444' : '#22C55E'}}>{days} days — Ready</span>;
-    return <span style={{...badgeStyle, background:'#F59E0B22', color:'#F59E0B'}}>Day {days}/7 — Follow up</span>;
+  const getDaysBadge = (req) => {
+    if (req.cancel_approved) {
+      const label = req.cancel_auto_approved ? '✓ Auto-approved' : '✓ Approved';
+      return <span style={{...badgeStyle, background:'#10B98122', color:'#10B981'}}>{label}</span>;
+    }
+    if (req.cancel_rejected) {
+      return <span style={{...badgeStyle, background:'#EF444422', color:'#EF4444'}}>Rejected — no auto-approve</span>;
+    }
+    const daysLeft = req.days_until_auto_approve ?? Math.max(0, 7 - (req.days_since_request || 0));
+    if (daysLeft <= 0) return <span style={{...badgeStyle, background:'#EF444422', color:'#EF4444'}}>Auto-approving…</span>;
+    return <span style={{...badgeStyle, background:'#F59E0B22', color:'#F59E0B'}}>Auto-approves in {daysLeft} day{daysLeft === 1 ? '' : 's'}</span>;
   };
 
   const badgeStyle = { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, display: 'inline-block' };
@@ -77,7 +84,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Cancellation Requests</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Review and approve/reject cancellation requests after 7-day follow-up</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Approve or reject cancellation requests any time — untouched requests auto-approve after the 7-day follow-up window</p>
         </div>
         <button className="crm-btn crm-btn-ghost" onClick={loadRequests} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <ArrowPathIcon style={{width:16,height:16}}/> Refresh
@@ -86,9 +93,9 @@ const SalesHeadCancellationRequests = ({ user }) => {
 
       <div className="crm-card" style={{ borderRadius: 12, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{padding:48,textAlign:'center'}}>
-            <ArrowPathIcon style={{width:32,height:32,color:'var(--text-muted)',margin:'0 auto',animation:'spin 1s linear infinite'}}/>
-            <div style={{marginTop:12,color:'var(--text-muted)'}}>Loading...</div>
+          <div style={{ textAlign: 'center', padding: 80 }}>
+            <div style={{ width: 32, height: 32, border: '3px solid var(--accent-blue-bg)', borderTopColor: 'var(--accent-blue)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <p style={{ color: 'var(--text-secondary)' }}>Loading cancellation requests...</p>
           </div>
         ) : requests.length === 0 ? (
           <div style={{padding:48,textAlign:'center',color:'var(--text-muted)'}}>
@@ -128,7 +135,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
                     <td style={{...tdStyle, fontSize:12}}>{req.cancelReason?.reason_name || '—'}</td>
                     <td style={{...tdStyle, fontSize:12, maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{req.cancel_remarks || '—'}</td>
                     <td style={{...tdStyle, fontSize:12}}>{req.previous_status_name || '—'}</td>
-                    <td style={tdStyle}>{getDaysBadge(req.days_since_request, req.can_approve, req.cancel_approved)}</td>
+                    <td style={tdStyle}>{getDaysBadge(req)}</td>
                     <td style={{...tdStyle, textAlign:'center'}}>
                       {!req.cancel_approved ? (
                         <div style={{display:'flex',gap:6,justifyContent:'center'}}>
@@ -136,19 +143,15 @@ const SalesHeadCancellationRequests = ({ user }) => {
                             onClick={() => openActionModal(req, 'reject')}
                             style={{...actionBtnStyle, background:'#FEE2E2', color:'#DC2626', border:'1px solid #FECACA'}}
                           >
-                            <XCircleIcon style={{width:13,height:13}}/> Reject
+                            <XCircleIcon style={{width:13,height:13}}/> Cancel
                           </button>
                           <button
-                            disabled={!req.can_approve}
-                            title={req.can_approve ? 'Approve cancellation' : `${7 - req.days_since_request} days remaining`}
                             onClick={() => openActionModal(req, 'approve')}
                             style={{
                               ...actionBtnStyle,
-                              background: req.can_approve ? '#DCFCE7' : '#F3F4F6',
-                              color: req.can_approve ? '#16A34A' : '#9CA3AF',
-                              border: `1px solid ${req.can_approve ? '#BBF7D0' : '#E5E7EB'}`,
-                              cursor: req.can_approve ? 'pointer' : 'not-allowed',
-                              opacity: req.can_approve ? 1 : 0.6,
+                              background: '#DCFCE7',
+                              color: '#16A34A',
+                              border: '1px solid #BBF7D0',
                             }}
                           >
                             <CheckCircleIcon style={{width:13,height:13}}/> Approve
@@ -177,8 +180,8 @@ const SalesHeadCancellationRequests = ({ user }) => {
       {!loading && requests.length > 0 && (
         <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <span><strong>{requests.length}</strong> total requests</span>
-          <span><strong style={{color:'#22C55E'}}>{requests.filter(r => r.can_approve && !r.cancel_approved).length}</strong> ready for decision</span>
-          <span><strong style={{color:'#F59E0B'}}>{requests.filter(r => !r.can_approve && !r.cancel_approved).length}</strong> in follow-up period</span>
+          <span><strong style={{color:'#22C55E'}}>{requests.filter(r => !r.cancel_approved).length}</strong> pending decision</span>
+          <span><strong style={{color:'#F59E0B'}}>{requests.filter(r => !r.cancel_approved && (r.days_until_auto_approve ?? 7) <= 2).length}</strong> auto-approving soon</span>
           <span><strong style={{color:'#10B981'}}>{requests.filter(r => r.cancel_approved).length}</strong> approved</span>
         </div>
       )}

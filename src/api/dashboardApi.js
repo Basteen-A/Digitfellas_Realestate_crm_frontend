@@ -71,6 +71,31 @@ const dashboardApi = {
     const { data } = await api.get('/dashboard/accounts');
     return data;
   },
+
+  // Leaderboard APIs
+  getTelecallerLeaderboard: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.dateFilter) query.set('dateFilter', params.dateFilter);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/leaderboard/telecaller${qs ? `?${qs}` : ''}`);
+    return data;
+  },
+
+  getSalesManagerLeaderboard: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.dateFilter) query.set('dateFilter', params.dateFilter);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/leaderboard/sales-manager${qs ? `?${qs}` : ''}`);
+    return data;
+  },
+
+  getSalesHeadLeaderboard: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.dateFilter) query.set('dateFilter', params.dateFilter);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/leaderboard/sales-head${qs ? `?${qs}` : ''}`);
+    return data;
+  },
 };
 
 export default dashboardApi;

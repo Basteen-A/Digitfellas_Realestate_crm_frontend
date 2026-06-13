@@ -537,8 +537,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     const guideline = parseFloat(devCostForm.guideline_value || 0);
     const area = parseFloat(devCostForm.plot_area || 0);
     const perSqft = parseFloat(devCostForm.development_cost_per_sqft || 0);
-    if (guideline <= 0 || area <= 0 || perSqft <= 0) {
-      toast.error('Enter valid Guideline Value, Plot Area, and Development cost/sqft');
+    if (guideline <= 0 || area <= 0) {
+      toast.error('Enter valid Guideline Value and Plot Area');
       return;
     }
     const cleanSplit = (split) => Object.fromEntries(
@@ -2119,7 +2119,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     </div>
                   </div>
                   <div className="bkd-form-group">
-                    <label className="bkd-form-label">Development Cost / Sqft *</label>
+                    <label className="bkd-form-label">Development Cost / Sqft</label>
                     <input type="number" className="bkd-form-control" placeholder="e.g. 250"
                       value={devCostForm.development_cost_per_sqft}
                       onChange={e => setDevCostForm(p => ({ ...p, development_cost_per_sqft: e.target.value }))} />

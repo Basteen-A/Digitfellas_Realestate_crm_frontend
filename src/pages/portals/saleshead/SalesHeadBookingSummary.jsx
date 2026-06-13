@@ -184,8 +184,6 @@ const SiteRow = ({ site }) => (
 
 /* ─── SM Accordion Row ───────────────────────────────────────── */
 const SMRow = ({ sm, isOpen, onToggle }) => {
-  const initials = (sm.fullName || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-
   return (
     <div style={{ borderBottom: '1px solid var(--border-primary)' }}>
       {/* SM Header */}
@@ -208,26 +206,12 @@ const SMRow = ({ sm, isOpen, onToggle }) => {
             ? <ChevronDownIcon style={{ width: 16, height: 16, color: 'var(--accent-blue)', flexShrink: 0, transition: 'transform 0.2s' }} />
             : <ChevronRightIcon style={{ width: 16, height: 16, color: 'var(--text-secondary)', flexShrink: 0, transition: 'transform 0.2s' }} />
           }
-          <div style={{
-            width: 34, height: 34, borderRadius: '50%',
-            background: sm.roleCode === 'SH'
-              ? 'var(--accent-green)'
-              : (isOpen ? 'var(--accent-blue)' : 'var(--bg-tertiary)'),
-            color: (sm.roleCode === 'SH' || isOpen) ? '#fff' : 'var(--text-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 12, flexShrink: 0,
-            transition: 'all 0.2s',
-          }}>
-            {initials}
-          </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: isOpen ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
               {sm.fullName} {sm.roleCode === 'SH' && <span style={{ fontSize: 11, color: 'var(--accent-green)', fontWeight: 600 }}>(Self)</span>}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', gap: 10 }}>
-              <span>{sm.sites.length} site{sm.sites.length !== 1 ? 's' : ''}</span>
-              <span>·</span>
-              <span>{sm.email}</span>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+              {sm.sites.length} site{sm.sites.length !== 1 ? 's' : ''}
             </div>
           </div>
         </div>
@@ -469,7 +453,7 @@ const SalesHeadBookingSummary = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <UserIcon style={{ width: 14, height: 14 }} />
-            Sales Manager / Site
+            Sales Manager 
           </div>
           <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <CheckCircleIcon style={{ width: 13, height: 13, color: '#15803d' }} />

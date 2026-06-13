@@ -20,6 +20,7 @@ import {
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
 import { TaskDashboardWidget } from '../../tasks';
+import { TelecallerLeaderboardCard } from '../common/LeaderboardCard';
 import '../collection/CollectionWorkspace.css';
 
 const TelecallerDashboard = ({ user, onNavigate }) => {
@@ -165,6 +166,11 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
             </div>
           );
         })}
+      </div>
+
+      {/* Leaderboard Section */}
+      <div className="col-two-col-new" style={{ marginTop: 16 }}>
+        <TelecallerLeaderboardCard user={user} />
       </div>
 
       {/* Two Column Layout */}

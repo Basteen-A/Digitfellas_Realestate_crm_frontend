@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
+import projectApi from '../../../api/projectApi';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
 import './InventoryDashboard.css';
@@ -19,11 +20,69 @@ const InventoryDashboard = () => {
   const [phaseList, setPhaseList] = useState([]);
   const [phaseCountByProject, setPhaseCountByProject] = useState({});
 
+  // The projects endpoint caps page size at PAGINATION.MAX_LIMIT (100) server-side,
+  // so a single large `limit` request silently drops every project past the newest 100.
+  // Page through all of them so the inventory list stays complete.
+  const fetchAllProjects = async () => {
+    const PAGE_SIZE = 100;
+    const first = await projectApi.getAll({ page: 1, limit: PAGE_SIZE });
+    const firstRows = first.data || [];
+    const totalPages = first.meta?.totalPages || 1;
+    if (totalPages <= 1) return firstRows;
+
+    const restPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        projectApi
+          .getAll({ page: i + 2, limit: PAGE_SIZE })
+          .then((r) => r.data || [])
+          .catch(() => [])
+      )
+    );
+    return restPages.reduce((acc, rows) => acc.concat(rows), firstRows);
+  };
+
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const response = await inventoryUnitApi.getDashboard();
-      setDashboard(response.data || { global: {}, projects: [] });
+      // Fetch all projects to show complete list
+      const [dashboardResponse, allProjects] = await Promise.all([
+        inventoryUnitApi.getDashboard().catch(() => ({ data: { global: {}, projects: [] } })),
+        fetchAllProjects().catch(() => []),
+      ]);
+
+      const dashboardData = dashboardResponse.data || { global: {}, projects: [] };
+      
+      // Create a map of projects with inventory data
+      const projectsWithInventory = new Map(
+        (dashboardData.projects || []).map(p => [p.project_id, p])
+      );
+      
+      // Merge all projects with their inventory data (if available)
+      const mergedProjects = allProjects.map(project => {
+        const inventoryData = projectsWithInventory.get(project.id);
+        if (inventoryData) {
+          return inventoryData;
+        }
+        // Return project with zero inventory stats
+        return {
+          project_id: project.id,
+          project_name: project.project_name,
+          project_type: project.projectType?.type_name || project.project_type,
+          location_name: project.location?.location_name,
+          city: project.location?.city,
+          total_units: 0,
+          available_units: 0,
+          booked_units: 0,
+          sold_units: 0,
+          booked_value: 0,
+          sold_value: 0,
+        };
+      });
+      
+      setDashboard({
+        global: dashboardData.global || {},
+        projects: mergedProjects,
+      });
     } catch (error) {
       console.error('Dashboard load error:', error);
       toast.error('Failed to load inventory dashboard');
@@ -50,6 +109,7 @@ const InventoryDashboard = () => {
   useEffect(() => {
     loadDashboard();
     loadPhaseCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadPhaseCounts]);
 
   // ── Phase CRUD ──
