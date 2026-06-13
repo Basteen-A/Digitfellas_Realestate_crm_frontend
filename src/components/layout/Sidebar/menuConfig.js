@@ -66,15 +66,7 @@ const adminSidebar = [
   { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
   { label: 'Leads', path: '/super-admin/lead-management', icon: UsersIcon },
   { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
-  {
-    label: 'Bookings',
-    icon: CreditCardIcon,
-    children: [
-      { label: 'Booking Approvals', path: '/super-admin/booking-approvals' },
-      { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
-      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
-    ],
-  },
+   { label: 'Bookings', path: '/super-admin/booking-approvals' ,icon: CreditCardIcon},
   {
     label: 'Finance',
     icon: BanknotesIcon,
@@ -133,6 +125,8 @@ const adminSidebar = [
       { label: 'Motivations', path: '/super-admin/motivations' },
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
       { label: 'Customer Types', path: '/super-admin/customer-types' },
+       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
+      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
     ],
   },
   { label: 'Site Settings', path: '/super-admin/site-settings', icon: BuildingStorefrontIcon },

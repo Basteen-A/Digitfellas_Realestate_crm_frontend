@@ -800,6 +800,25 @@
   border-bottom: none;
 }
 
+/* ── Group By Styles ── */
+.lead-group-header {
+  background: var(--bg-secondary, #f8fafc);
+  border-top: 1px solid var(--border-primary, #e2e8f0);
+  border-bottom: 1px solid var(--border-primary, #e2e8f0);
+}
+
+.lead-group-header:hover {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+.lead-group-header td {
+  padding: 12px 16px;
+}
+
+.lead-row--grouped {
+  border-left: 3px solid var(--accent-blue, #2563eb);
+}
+
 /* ── Cell Lead (avatar + info) ── */
 .cell-lead {
   display: flex;
@@ -3757,64 +3776,72 @@ textarea.crm-form-input {
 
 /* ── Save Row ── */
 .qa-drawer-save-row {
-  padding: 12px 20px 20px;
+  padding: 14px 20px 16px;
   display: flex;
-  gap: 8px;
-  background: var(--bg-card, #fff);
-  border-top: 1px solid var(--border-primary, #e2e8f0);
-  position: sticky;
-  bottom: 0;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .qa-drawer-save-btn {
-  flex: 1;
   height: 40px;
-  padding: 0 20px;
+  padding: 0 24px;
   border-radius: 10px;
   border: none;
-  background: #0F7B5C;
+  background: var(--gradient-primary, linear-gradient(135deg, #625afa 0%, #4f46e5 100%));
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(98, 90, 250, 0.3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
 }
 
-.qa-drawer-save-btn:hover {
-  background: #0C6A4E;
+.qa-drawer-save-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(98, 90, 250, 0.35);
+  transform: translateY(-1px);
 }
 
-.qa-drawer-save-btn:active {
-  transform: scale(0.98);
+.qa-drawer-save-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .qa-drawer-save-btn:disabled {
-  background: var(--border-primary, #e2e8f0);
-  color: var(--text-muted, #94a3b8);
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .qa-drawer-skip-btn {
   height: 40px;
-  padding: 0 18px;
+  padding: 0 20px;
   border-radius: 10px;
-  border: 1.5px solid var(--border-primary, #e2e8f0);
-  background: var(--bg-secondary, #f8fafc);
+  border: 1.5px solid var(--border-primary);
+  background: var(--bg-card, #fff);
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
 }
 
 .qa-drawer-skip-btn:hover {
-  background: var(--border-primary, #e2e8f0);
+  border-color: #94a3b8;
+  color: var(--text-primary);
+}
+
+.qa-drawer-skip-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── Drawer modal body scrollable ── */

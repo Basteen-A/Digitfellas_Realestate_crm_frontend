@@ -415,6 +415,14 @@ const buildDuplicateLeadInfo = (lead) => {
 
 const FOLLOW_UP_WORKSPACE_ROLES = ['TC', 'SM', 'SH'];
 
+// Group by options for lead list view
+const GROUP_BY_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'status', label: 'Status' },
+  { value: 'source', label: 'Source' },
+  { value: 'project', label: 'Project' },
+];
+
 const getProjectDisplayName = (project) => {
   const raw = String(project?.project_name || '').trim();
   if (!raw) return '';
@@ -849,6 +857,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   const pageRef = useRef(1); // last loaded page
   const [pendingMissedCount, setPendingMissedCount] = useState(0); // authoritative overdue count for the Today-tab gate
 
+  // ── Group By ──
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'status' | 'stage' | 'source'
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+
   // ── Quick Action Popup ──
   const [quickActionLead, setQuickActionLead] = useState(null);
   const [quickActionActivities, setQuickActionActivities] = useState([]);
@@ -1242,6 +1254,52 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       return true;
     });
   }, [leads, filters.search, activeTab, workspaceRole, isSmHandoffReadOnlyLead, isShTaggedReadOnlyLead]);
+
+  // ── Group leads by selected field (status/stage/source/project) ──
+  const groupedLeads = useMemo(() => {
+    if (groupBy === 'none') return null;
+    
+    const groups = {};
+    filteredLeads.forEach((lead) => {
+      let key;
+      switch (groupBy) {
+        case 'status':
+          key = lead.statusLabel || lead.statusName || lead.status || 'Unknown';
+          break;
+        case 'source':
+          key = lead.source || 'Unknown';
+          break;
+        case 'project':
+          // Get project name from interestedProjects array or project field
+          if (lead.interestedProjects?.length > 0) {
+            const projNames = lead.interestedProjects
+              .map((pid) => projectOptions.find((p) => p.id === pid)?.project_name)
+              .filter(Boolean);
+            key = projNames.length > 0 ? projNames.join(', ') : (lead.project || 'No Project');
+          } else {
+            key = lead.project || 'No Project';
+          }
+          break;
+        default:
+          key = 'Unknown';
+      }
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(lead);
+    });
+    
+    // Sort groups alphabetically
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredLeads, groupBy, projectOptions]);
+
+  // Toggle group collapse state
+  const toggleGroup = (groupKey) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
 
   const selectedSourceSubSources = useMemo(
     () => subSourceMap[newLeadForm.lead_source_id] || [],
@@ -3201,6 +3259,251 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     );
   }
 
+  // ── Render a single lead row (used for both grouped and ungrouped views) ──
+  const renderLeadRow = (lead, groupKey = null) => {
+    const isExpanded = expandedLeadIds.has(lead.id);
+    const leadTableRemarks = getUserRemarkText({ description: lead.remarks, metadata: lead.metadata })
+      || String(lead.remarks || '').trim();
+    const latestNote = leadTableRemarks
+      ? Array.from(new Set(
+        leadTableRemarks
+          .split('|')
+          .map((part) => part.trim())
+          .filter(Boolean)
+      )).join(' | ')
+      : '-';
+
+    // Site-visit and booked statuses render in a readable dark green
+    // rather than the lighter tint stored in the DB color.
+    const statusLabelLc = (lead.statusLabel || '').toLowerCase();
+    const statusChipColor = statusLabelLc.includes('site visit') || statusLabelLc.includes('book')
+      ? '#15803d'
+      : lead.statusColor;
+
+    return (
+      <React.Fragment key={lead.id}>
+        <tr className={`${selectedLeadId === lead.id ? 'is-selected' : ''}${groupKey ? ' lead-row--grouped' : ''}`}>
+          <td className="show-mobile lead-col-toggle" style={{ padding: '10px 0', textAlign: 'center' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleExpandLead(lead.id); }}
+              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+            >
+              {isExpanded ? <ChevronDownIcon style={{ width: 14, height: 14 }} /> : <ChevronRightIcon style={{ width: 14, height: 14 }} />}
+            </button>
+          </td>
+          <td className="lead-col-lead">
+            <p className="lead-title">{lead.fullName}</p>
+            <small>
+              <a
+                href={`/portal/lead/${lead.id}`}
+                onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
+                style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
+              >
+                {lead.leadNumber}
+              </a>
+            </small>
+          </td>
+          {workspaceRole !== 'SH' && (
+            <td className="hide-mobile">
+              <p className="lead-title">{lead.phone}</p>
+            </td>
+          )}
+          <td className="lead-col-status">
+            <span
+              className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
+              style={{
+                backgroundColor: `${statusChipColor}22`,
+                color: statusChipColor,
+                borderColor: statusChipColor
+              }}
+            >
+              {lead.statusLabel}
+            </span>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: lead.nextFollowUpAt && isFollowUpMissedByDate(lead.nextFollowUpAt) && !lead.isClosed ? '#dc2626' : '#64748b' }}>
+              {lead.nextFollowUpAt ? (
+                <>
+                  <CalendarDaysIcon style={{ width: 12, height: 12 }} />
+                  <span>{formatDate(lead.nextFollowUpAt)}</span>
+                </>
+              ) : <span>—</span>}
+            </div>
+          </td>
+          {workspaceRole !== 'SH' && (
+            <td className="hide-mobile">
+              <p className="lead-title">{lead.source || '-'}</p>
+              <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>{lead.subSource || '-'}</small>
+            </td>
+          )}
+          <td className="hide-mobile">
+            <p className="lead-title">{(() => {
+              const projText = lead.interestedProjects?.length > 0
+                ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
+                : lead.project;
+              return projText || '-';
+            })()}</p>
+            {(() => {
+              const locText = lead.interestedLocations?.length > 0
+                ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
+                : lead.location;
+              return locText ? (
+                <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Location: {locText}</small>
+              ) : null;
+            })()}
+          </td>
+          <td className="hide-mobile">
+            <p className="assigned-name">{lead.assignedToUserName || 'Unassigned'}</p>
+            <small className="assigned-role">
+              {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
+            </small>
+          </td>
+          <td className="hide-mobile">
+            <small style={{ color: 'var(--text-secondary)' }}>{latestNote}</small>
+          </td>
+          <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+            <div className="lead-workspace__actions-cell">
+              {activeTab !== 'new' && activeTab !== 'unassigned' && (
+                <button
+                  className="crm-btn crm-btn-sm lead-action-view-btn"
+                  style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
+                >
+                  <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> 
+                </button>
+              )}
+              {!lead.assignedToUserId && activeTab === 'new' && (
+                <button
+                  className="crm-btn crm-btn-sm"
+                  style={{ marginRight: 4, background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await leadWorkflowApi.assignLead(lead.id, user.id, 'Self-assigned from pool');
+                      toast.success(`Lead claimed: ${lead.fullName}`);
+                      setSelectedLeadId(null);
+                      setActiveTab('today');
+                    } catch (err) {
+                      toast.error(getErrorMessage(err, 'Failed to claim lead'));
+                    }
+                  }}
+                >
+                  <><HandRaisedIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Claim</>
+                </button>
+              )}
+              {(lead.assignedToUserId || activeTab !== 'new') && (
+                <button
+                  className="crm-btn crm-btn-primary crm-btn-sm"
+                  disabled={
+                    isLeadReadOnly(lead)
+                    || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe)
+                  }
+                  title={
+                    FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe
+                      ? 'Complete missed follow-ups first to enable today actions'
+                      : undefined
+                  }
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    resetQuickWorkflowForm();
+                    setQuickActionLead(lead);
+                    setQaActiveTab('history');
+                    // Load site visits and activities for this lead
+                    let activities = [];
+                    try {
+                      const [svResp, actResp] = await Promise.all([
+                        siteVisitApi.getAll({ lead_id: lead.id }),
+                        leadWorkflowApi.getLeadActivities(lead.id)
+                      ]);
+                      setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
+                      activities = actResp.data || [];
+                      setQuickActionActivities(activities);
+                    } catch {
+                      setQuickActionSiteVisits([]);
+                      setQuickActionActivities([]);
+                    }
+
+                    // Auto-select last action based on the lead's current status
+                    if (!lead.isClosed) {
+                      const leadStatus = lead.statusCode || '';
+                      if (leadStatus) {
+                        const matchingAction = roleActions.find(
+                          (a) => a.targetStatusCode === leadStatus && a.tone !== 'danger'
+                        );
+                        if (matchingAction) {
+                          // If this lead was already updated today, prefill the form with
+                          // that update so a same-day edit rewrites it instead of adding a row.
+                          const todayUpdate = activities.find((a) => {
+                            const d = new Date(a.at || a.created_at);
+                            return !Number.isNaN(d.getTime())
+                              && isSameLocalDay(d, new Date())
+                              && getUserRemarkText(a);
+                          });
+                          const prefill = todayUpdate ? {
+                            statusRemarkText: getUserRemarkText(todayUpdate),
+                            // Activity metadata doesn't carry the follow-up date; fall back to the
+                            // lead's current next_follow_up_date (set by the same-day update).
+                            nextFollowUpAt: followUpIsoToInputValue(getScheduledFollowUpIso(todayUpdate) || lead.nextFollowUpAt),
+                            callResult: todayUpdate.metadata?.statusRemarkResponseType
+                              || todayUpdate.metadata?.callResult
+                              || todayUpdate.metadata?.last_call_result
+                              || '',
+                          } : null;
+                          setTimeout(() => handleQuickWorkflowActionSelect(matchingAction, prefill), 100);
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <BoltIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
+                </button>
+              )}
+            </div>
+          </td>
+        </tr>
+        {isExpanded && (
+          <tr className="lead-workspace__expanded-row show-mobile">
+            <td colSpan={4}>
+              <div className="lead-workspace__expanded-card">
+                <div className="expanded-info-grid">
+                  {workspaceRole !== 'SH' && (
+                    <div className="expanded-info-item">
+                      <label>Contact</label>
+                      <p>{lead.phone} {lead.email ? `| ${lead.email}` : ''}</p>
+                    </div>
+                  )}
+                  <div className="expanded-info-item">
+                    <label>Source</label>
+                    <p>{lead.source || '-'} {lead.subSource ? ` (${lead.subSource})` : ''}</p>
+                  </div>
+                  <div className="expanded-info-item">
+                    <label>Project/Location</label>
+                    <p>{lead.project} {lead.location ? `/ ${lead.location}` : ''}</p>
+                  </div>
+                  <div className="expanded-info-item">
+                    <label>Assigned To</label>
+                    <p>{lead.assignedToUserName || 'Unassigned'} ({lead.assignedRoleLabel || lead.ownerRoleLabel || 'Pool'})</p>
+                  </div>
+                  {lead.nextFollowUpAt && (
+                    <div className="expanded-info-item">
+                      <label>Next Follow-Up</label>
+                      <p style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#475569', fontWeight: '500' }}>
+                        <CalendarDaysIcon style={{ width: 14, height: 14, color: '#64748b' }} />
+                        <span>{formatDate(lead.nextFollowUpAt)}</span>
+                      </p>
+                    </div>
+                  )}
+                  <div className="expanded-info-item full-width">
+                    <label>Latest Remarks</label>
+                    <p>{latestNote}</p>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </React.Fragment>
+    );
+  };
+
   return (
     <section className="lead-workspace">
       {/* ── Header ── */}
@@ -3307,6 +3610,39 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             <span className="hide-mobile">Clear All</span>
             <span className="show-mobile">Clear</span>
           </button>
+
+          {/* Group By Dropdown */}
+          <div className="lead-filter-dropdown">
+            <div
+              className="lead-filter-dropdown__summary"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setOpenFilterKey((prev) => (prev === 'groupBy' ? null : 'groupBy'))}
+            >
+              <span className="hide-mobile">Group by</span>
+              <span className="show-mobile">Group</span>
+              <span className="lead-filter-dropdown__count">
+                {GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label || 'None'}
+              </span>
+            </div>
+            {openFilterKey === 'groupBy' && (
+              <div className="lead-filter-dropdown__menu">
+                <div className="lead-filter-dropdown__menu-head">
+                  <strong>Group by</strong>
+                  <button type="button" onClick={() => { setGroupBy('none'); setOpenFilterKey(null); }}>Clear</button>
+                </div>
+                {GROUP_BY_OPTIONS.map((opt) => (
+                  <label key={opt.value} className="lead-filter-dropdown__item">
+                    <input
+                      type="radio"
+                      checked={groupBy === opt.value}
+                      onChange={() => { setGroupBy(opt.value); setOpenFilterKey(null); }}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="lead-workspace__toolbar-search">
@@ -3496,246 +3832,51 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 {!loading && !filteredLeads.length && (
                   <tr><td colSpan={workspaceRole === 'SH' ? 7 : 10} className="lead-workspace__empty">No leads found for current filters</td></tr>
                 )}
-                {!loading && filteredLeads.map((lead) => {
-                  const isExpanded = expandedLeadIds.has(lead.id);
-                  const leadTableRemarks = getUserRemarkText({ description: lead.remarks, metadata: lead.metadata })
-                    || String(lead.remarks || '').trim();
-                  const latestNote = leadTableRemarks
-                    ? Array.from(new Set(
-                      leadTableRemarks
-                        .split('|')
-                        .map((part) => part.trim())
-                        .filter(Boolean)
-                    )).join(' | ')
-                    : '-';
-
-                  // Site-visit and booked statuses render in a readable dark green
-                  // rather than the lighter tint stored in the DB color.
-                  const statusLabelLc = (lead.statusLabel || '').toLowerCase();
-                  const statusChipColor = statusLabelLc.includes('site visit') || statusLabelLc.includes('book')
-                    ? '#15803d'
-                    : lead.statusColor;
-
+                {/* Render leads - either grouped or ungrouped */}
+                {!loading && groupBy === 'none' && filteredLeads.map((lead) => renderLeadRow(lead))}
+                
+                {/* Grouped view */}
+                {!loading && groupBy !== 'none' && groupedLeads?.map(([groupKey, groupLeads]) => {
+                  const isCollapsed = collapsedGroups.has(groupKey);
+                  const groupId = `${groupBy}:${groupKey}`;
                   return (
-                    <React.Fragment key={lead.id}>
-                      <tr className={selectedLeadId === lead.id ? 'is-selected' : ''}>
-                        <td className="show-mobile lead-col-toggle" style={{ padding: '10px 0', textAlign: 'center' }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleExpandLead(lead.id); }}
-                            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
-                          >
-                            {isExpanded ? <ChevronDownIcon style={{ width: 14, height: 14 }} /> : <ChevronRightIcon style={{ width: 14, height: 14 }} />}
-                          </button>
-                        </td>
-                        <td className="lead-col-lead">
-                          <p className="lead-title">{lead.fullName}</p>
-                          <small>
-                            <a
-                              href={`/portal/lead/${lead.id}`}
-                              onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
-                              style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
-                            >
-                              {lead.leadNumber}
-                            </a>
-                          </small>
-                        </td>
-                        {workspaceRole !== 'SH' && (
-                          <td className="hide-mobile">
-                            <p className="lead-title">{lead.phone}</p>
-                          </td>
-                        )}
-                        <td className="lead-col-status">
-                          <span
-                            className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
-                            style={{
-                              backgroundColor: `${statusChipColor}22`,
-                              color: statusChipColor,
-                              borderColor: statusChipColor
-                            }}
-                          >
-                            {lead.statusLabel}
-                          </span>
-                          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: lead.nextFollowUpAt && isFollowUpMissedByDate(lead.nextFollowUpAt) && !lead.isClosed ? '#dc2626' : '#64748b' }}>
-                            {lead.nextFollowUpAt ? (
-                              <>
-                                <CalendarDaysIcon style={{ width: 12, height: 12 }} />
-                                <span>{formatDate(lead.nextFollowUpAt)}</span>
-                              </>
-                            ) : <span>—</span>}
-                          </div>
-                        </td>
-                        {workspaceRole !== 'SH' && (
-                          <td className="hide-mobile">
-                            <p className="lead-title">{lead.source || '-'}</p>
-                            <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>{lead.subSource || '-'}</small>
-                          </td>
-                        )}
-                        <td className="hide-mobile">
-                          <p className="lead-title">{(() => {
-                            const projText = lead.interestedProjects?.length > 0
-                              ? lead.interestedProjects.map((pid) => projectOptions.find((p) => p.id === pid)?.project_name).filter(Boolean).join(', ')
-                              : lead.project;
-                            return projText || '-';
-                          })()}</p>
-                          {(() => {
-                            const locText = lead.interestedLocations?.length > 0
-                              ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
-                              : lead.location;
-                            return locText ? (
-                              <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Location: {locText}</small>
-                            ) : null;
-                          })()}
-                        </td>
-                        <td className="hide-mobile">
-                          <p className="assigned-name">{lead.assignedToUserName || 'Unassigned'}</p>
-                          <small className="assigned-role">
-                            {lead.assignedRoleLabel || lead.ownerRoleLabel || lead.assignedRole || lead.ownerRole || 'Pool'}
-                          </small>
-                        </td>
-                        <td className="hide-mobile">
-                          <small style={{ color: 'var(--text-secondary)' }}>{latestNote}</small>
-                        </td>
-                        <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <div className="lead-workspace__actions-cell">
-                            {activeTab !== 'new' && activeTab !== 'unassigned' && (
-                              <button
-                                className="crm-btn crm-btn-sm lead-action-view-btn"
-                                style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                                onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
-                              >
-                                <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> 
-                              </button>
-                            )}
-                            {!lead.assignedToUserId && activeTab === 'new' && (
-                              <button
-                                className="crm-btn crm-btn-sm"
-                                style={{ marginRight: 4, background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  try {
-                                    await leadWorkflowApi.assignLead(lead.id, user.id, 'Self-assigned from pool');
-                                    toast.success(`Lead claimed: ${lead.fullName}`);
-                                    setSelectedLeadId(null);
-                                    setActiveTab('today');
-                                  } catch (err) {
-                                    toast.error(getErrorMessage(err, 'Failed to claim lead'));
-                                  }
-                                }}
-                              >
-                                <><HandRaisedIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Claim</>
-                              </button>
-                            )}
-                            {(lead.assignedToUserId || activeTab !== 'new') && (
-                              <button
-                                className="crm-btn crm-btn-primary crm-btn-sm"
-                                disabled={
-                                  isLeadReadOnly(lead)
-                                  || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe)
-                                }
-                                title={
-                                  FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe
-                                    ? 'Complete missed follow-ups first to enable today actions'
-                                    : undefined
-                                }
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  resetQuickWorkflowForm();
-                                  setQuickActionLead(lead);
-                                  setQaActiveTab('history');
-                                  // Load site visits and activities for this lead
-                                  let activities = [];
-                                  try {
-                                    const [svResp, actResp] = await Promise.all([
-                                      siteVisitApi.getAll({ lead_id: lead.id }),
-                                      leadWorkflowApi.getLeadActivities(lead.id)
-                                    ]);
-                                    setQuickActionSiteVisits(svResp.data?.rows || svResp.data || []);
-                                    activities = actResp.data || [];
-                                    setQuickActionActivities(activities);
-                                  } catch {
-                                    setQuickActionSiteVisits([]);
-                                    setQuickActionActivities([]);
-                                  }
-
-                                  // Auto-select last action based on the lead's current status
-                                  if (!lead.isClosed) {
-                                    const leadStatus = lead.statusCode || '';
-                                    if (leadStatus) {
-                                      const matchingAction = roleActions.find(
-                                        (a) => a.targetStatusCode === leadStatus && a.tone !== 'danger'
-                                      );
-                                      if (matchingAction) {
-                                        // If this lead was already updated today, prefill the form with
-                                        // that update so a same-day edit rewrites it instead of adding a row.
-                                        const todayUpdate = activities.find((a) => {
-                                          const d = new Date(a.at || a.created_at);
-                                          return !Number.isNaN(d.getTime())
-                                            && isSameLocalDay(d, new Date())
-                                            && getUserRemarkText(a);
-                                        });
-                                        const prefill = todayUpdate ? {
-                                          statusRemarkText: getUserRemarkText(todayUpdate),
-                                          // Activity metadata doesn't carry the follow-up date; fall back to the
-                                          // lead's current next_follow_up_date (set by the same-day update).
-                                          nextFollowUpAt: followUpIsoToInputValue(getScheduledFollowUpIso(todayUpdate) || lead.nextFollowUpAt),
-                                          callResult: todayUpdate.metadata?.statusRemarkResponseType
-                                            || todayUpdate.metadata?.callResult
-                                            || todayUpdate.metadata?.last_call_result
-                                            || '',
-                                        } : null;
-                                        setTimeout(() => handleQuickWorkflowActionSelect(matchingAction, prefill), 100);
-                                      }
-                                    }
-                                  }
-                                }}
-                              >
-                                <BoltIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Follow up
-                              </button>
-                            )}
+                    <React.Fragment key={groupId}>
+                      {/* Group Header Row */}
+                      <tr 
+                        className="lead-group-header"
+                        onClick={() => toggleGroup(groupKey)}
+                        style={{ cursor: 'pointer', background: 'var(--bg-secondary, #f8fafc)' }}
+                      >
+                        <td colSpan={workspaceRole === 'SH' ? 7 : 10} style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ transition: 'transform 0.15s' }}>
+                              {isCollapsed ? (
+                                <ChevronRightIcon style={{ width: 16, height: 16, color: 'var(--text-secondary)' }} />
+                              ) : (
+                                <ChevronDownIcon style={{ width: 16, height: 16, color: 'var(--text-secondary)' }} />
+                              )}
+                            </span>
+                            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
+                              {groupKey}
+                            </span>
+                            <span style={{ 
+                              fontSize: 12, 
+                              fontWeight: 600, 
+                              color: 'var(--accent-blue, #2563eb)', 
+                              background: 'rgba(37,99,235,0.1)', 
+                              borderRadius: 999, 
+                              padding: '2px 10px' 
+                            }}>
+                              {groupLeads.length}
+                            </span>
+                            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
+                              {isCollapsed ? 'Click to expand' : 'Click to collapse'}
+                            </span>
                           </div>
                         </td>
                       </tr>
-                      {isExpanded && (
-                        <tr className="lead-workspace__expanded-row show-mobile">
-                          <td colSpan={4}>
-                            <div className="lead-workspace__expanded-card">
-                              <div className="expanded-info-grid">
-                                {workspaceRole !== 'SH' && (
-                                  <div className="expanded-info-item">
-                                    <label>Contact</label>
-                                    <p>{lead.phone} {lead.email ? `| ${lead.email}` : ''}</p>
-                                  </div>
-                                )}
-                                <div className="expanded-info-item">
-                                  <label>Source</label>
-                                  <p>{lead.source || '-'} {lead.subSource ? ` (${lead.subSource})` : ''}</p>
-                                </div>
-                                <div className="expanded-info-item">
-                                  <label>Project/Location</label>
-                                  <p>{lead.project} {lead.location ? `/ ${lead.location}` : ''}</p>
-                                </div>
-                                <div className="expanded-info-item">
-                                  <label>Assigned To</label>
-                                  <p>{lead.assignedToUserName || 'Unassigned'} ({lead.assignedRoleLabel || lead.ownerRoleLabel || 'Pool'})</p>
-                                </div>
-                                {lead.nextFollowUpAt && (
-                                  <div className="expanded-info-item">
-                                    <label>Next Follow-Up</label>
-                                    <p style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#475569', fontWeight: '500' }}>
-                                      <CalendarDaysIcon style={{ width: 14, height: 14, color: '#64748b' }} />
-                                      <span>{formatDate(lead.nextFollowUpAt)}</span>
-                                    </p>
-                                  </div>
-                                )}
-                                <div className="expanded-info-item full-width">
-                                  <label>Latest Remarks</label>
-                                  <p>{latestNote}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                      {/* Group Leads */}
+                      {!isCollapsed && groupLeads.map((lead) => renderLeadRow(lead, groupKey))}
                     </React.Fragment>
                   );
                 })}
