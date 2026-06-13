@@ -25,10 +25,16 @@ const dashboardApi = {
     return data;
   },
 
-  getSalesManagerStats: async () => {
-    const { data } = await api.get('/dashboard/sales-manager');
+  getSalesManagerStats: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.dateFilter) query.set('dateFilter', params.dateFilter);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const qs = query.toString();
+    const { data } = await api.get(`/dashboard/sales-manager${qs ? `?${qs}` : ''}`);
     return data;
   },
+
 
   getSalesHeadStats: async () => {
     const { data } = await api.get('/dashboard/sales-head');

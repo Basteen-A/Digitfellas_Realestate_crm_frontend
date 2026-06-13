@@ -12,6 +12,10 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
+  CalendarDaysIcon,
+  PhoneXMarkIcon,
+  SignalSlashIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
@@ -93,16 +97,22 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const firstName = user?.first_name || user?.firstName || 'User';
-  // const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const kpiCards = [
-    { label: 'New Leads', value: stats?.newLeadsToday ?? 0, sub: 'unclaimed today', icon: UserPlusIcon, variant: 'info' },
-    { label: 'Active Leads', value: stats?.activeLeads ?? 0, sub: 'in your pipeline', icon: UsersIcon, variant: '' },
-    { label: "Today's Follow-Ups", value: stats?.todaysPendingFollowUps ?? 0, sub: 'due today', icon: PhoneIcon, variant: 'warning' },
-    { label: 'Missed Follow-Ups', value: stats?.overdueFollowUps ?? 0, sub: 'overdue', icon: ExclamationTriangleIcon, variant: 'danger' },
+  // ── Row 1: Today's Activity KPIs ──
+  const primaryCards = [
+    { label: "Today's Scheduled", value: stats?.todaysScheduled ?? 0, sub: 'tasks for today', icon: CalendarDaysIcon, variant: 'info' },
+    { label: "Today's Follow Ups", value: stats?.todaysPendingFollowUps ?? 0, sub: 'due today', icon: PhoneIcon, variant: 'warning' },
+    { label: 'Missed Follow Ups', value: stats?.overdueFollowUps ?? 0, sub: 'overdue', icon: ExclamationTriangleIcon, variant: 'danger' },
     { label: 'Answered Today', value: stats?.answeredToday ?? 0, sub: 'calls answered', icon: CheckCircleIcon, variant: 'success' },
-    { label: 'SV Scheduled', value: stats?.svScheduled ?? 0, sub: 'site visits', icon: HomeModernIcon, variant: 'warning' },
-    { label: 'SV Done', value: stats?.svCompleted ?? 0, sub: 'completed', icon: CheckCircleIcon, variant: 'success' },
+    { label: 'Unanswered Today', value: stats?.unansweredToday ?? 0, sub: 'not reached', icon: PhoneXMarkIcon, variant: 'danger' },
+  ];
+
+  // ── Row 2: Pipeline Overview ──
+  const secondaryCards = [
+    { label: 'Site Visits - Last 7 Days', value: stats?.siteVisitsLast7Days ?? 0, sub: 'recent visits', icon: MapPinIcon, variant: 'info' },
+    { label: 'Current Active Leads', value: stats?.activeLeads ?? 0, sub: 'in your pipeline', icon: UsersIcon, variant: '' },
+    { label: 'RNR Leads', value: stats?.rnrLeads ?? 0, sub: 'ringing no response', icon: SignalSlashIcon, variant: 'warning' },
+    { label: 'Total SV Scheduled', value: stats?.svScheduled ?? 0, sub: 'site visits lined up', icon: HomeModernIcon, variant: 'success' },
   ];
 
   return (
@@ -111,7 +121,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
       <div className="col-page-header">
         <div className="col-page-header-left">
           <h1>{greeting}, {firstName}</h1>
-          <p>Let’s convert some leads today!</p>
+          <p>Let's convert some leads today!</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadDashboardData}>
@@ -123,9 +133,26 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
         </div>
       </div>
 
-      {/* Stat Cards */}
+      {/* Row 1: Today's Activity KPIs */}
       <div className="col-stat-grid-new">
-        {kpiCards.map((card) => {
+        {primaryCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div className={`col-stat-card-new ${card.variant}`} key={card.label}>
+              <div className="col-stat-label-new">{card.label}</div>
+              <div className="col-stat-value-new">{card.value}</div>
+              <div className="col-stat-sub-new">{card.sub}</div>
+              <div className="col-stat-icon-new">
+                {Icon ? <Icon style={{ width: 24, height: 24 }} /> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Row 2: Pipeline Overview */}
+      <div className="col-stat-grid-new" style={{ marginTop: 0 }}>
+        {secondaryCards.map((card) => {
           const Icon = card.icon;
           return (
             <div className={`col-stat-card-new ${card.variant}`} key={card.label}>

@@ -170,42 +170,47 @@ const SalesHeadBookings = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageItems.map(booking => (
-                    <tr key={booking.id} className="is-clickable" onClick={() => openDetail(booking.id)}>
-                      <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{booking.customer_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.lead?.lead_number || ''}</div>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{booking.project_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {booking.unit_display}</div>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{formatCurrency(booking.net_amount)}</td>
-                      <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(booking.total_paid || 0)}</td>
-                      <td style={{ minWidth: 100 }}>
-                        <div className="col-progress" style={{ height: 6, width: '100%' }}>
-                          <div 
-                            className={`col-progress-bar ${booking.payment_percentage >= 100 ? 'success' : booking.payment_percentage >= 50 ? '' : 'warning'}`}
-                            style={{ width: `${Math.min(booking.payment_percentage || 0, 100)}%` }} 
-                          />
-                        </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{booking.payment_percentage || 0}% Collected</div>
-                      </td>
-                      <td>
-                        <span className="col-badge" style={{ 
-                          background: `${booking.status_color}22`, 
-                          color: booking.status_color 
-                        }}>
-                          <span className="col-badge-dot" style={{ background: booking.status_color }} />
-                          {booking.status_label}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>View</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {pageItems.map(booking => {
+                    const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
+                    const displayStatusLabel = isCancelApproved ? 'Cancelled' : booking.status_label;
+                    const displayStatusColor = isCancelApproved ? '#DC2626' : booking.status_color;
+                    return (
+                      <tr key={booking.id} className="is-clickable" onClick={() => openDetail(booking.id)}>
+                        <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{booking.customer_name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.lead?.lead_number || ''}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{booking.project_name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {booking.unit_display}</div>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{formatCurrency(booking.net_amount)}</td>
+                        <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(booking.total_paid || 0)}</td>
+                        <td style={{ minWidth: 100 }}>
+                          <div className="col-progress" style={{ height: 6, width: '100%' }}>
+                            <div 
+                              className={`col-progress-bar ${booking.payment_percentage >= 100 ? 'success' : booking.payment_percentage >= 50 ? '' : 'warning'}`}
+                              style={{ width: `${Math.min(booking.payment_percentage || 0, 100)}%` }} 
+                            />
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{booking.payment_percentage || 0}% Collected</div>
+                        </td>
+                        <td>
+                          <span className="col-badge" style={{ 
+                            background: `${displayStatusColor}22`, 
+                            color: displayStatusColor 
+                          }}>
+                            <span className="col-badge-dot" style={{ background: displayStatusColor }} />
+                            {displayStatusLabel}
+                          </span>
+                        </td>
+                        <td>
+                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>View</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -305,7 +310,9 @@ const SalesHeadBookings = ({ user }) => {
                         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Project: <strong>{selectedBooking.project?.project_name || '-'}</strong> | Unit: <strong>{selectedBooking.unit_number || 'TBD'}</strong></div>
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>
-                        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Details</button>
+                        {!selectedBooking.is_cancelled && (selectedBooking.bookingStatus?.status_code || selectedBooking.status_code) !== 'REQUEST_TO_CANCEL' && (
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Details</button>
+                        )}
                         {selectedBooking.lead_id && (
                           <a href={`/leads/${selectedBooking.lead_id}`} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ textDecoration: 'none' }}>
                             <LinkIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />View Lead

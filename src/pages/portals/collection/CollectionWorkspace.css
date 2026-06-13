@@ -1723,10 +1723,10 @@
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
 }
-.bkd-payment-preview-breakdown-card-total { background: #f9fafb; }
-.bkd-payment-preview-breakdown-card-stamp { background: #fffbeb; border-color: #fef3c7; }
-.bkd-payment-preview-breakdown-card-registration { background: #eff6ff; border-color: #dbeafe; }
-.bkd-payment-preview-breakdown-card-development { background: #f5f3ff; border-color: #e9d5ff; }
+.bkd-payment-preview-breakdown-card-plot { background: #EEF2FF; border-color: #C7D2FE; }
+.bkd-payment-preview-breakdown-card-stamp { background: #FEF3C7; border-color: #FDE68A; }
+.bkd-payment-preview-breakdown-card-registration { background: #E0F2FE; border-color: #BAE6FD; }
+.bkd-payment-preview-breakdown-card-development { background: #DCFCE7; border-color: #BBF7D0; }
 .bkd-payment-preview-breakdown-item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .bkd-payment-preview-breakdown-icon-shell {
   width: 30px;
@@ -1739,9 +1739,10 @@
   justify-content: center;
   flex: 0 0 auto;
 }
-.bkd-payment-preview-breakdown-icon-shell-stamp { border-color: #fef3c7; }
-.bkd-payment-preview-breakdown-icon-shell-registration { border-color: #dbeafe; }
-.bkd-payment-preview-breakdown-icon-shell-development { border-color: #e9d5ff; }
+.bkd-payment-preview-breakdown-icon-shell-plot { border-color: #C7D2FE; }
+.bkd-payment-preview-breakdown-icon-shell-stamp { border-color: #FDE68A; }
+.bkd-payment-preview-breakdown-icon-shell-registration { border-color: #BAE6FD; }
+.bkd-payment-preview-breakdown-icon-shell-development { border-color: #BBF7D0; }
 .bkd-payment-preview-breakdown-icon {
   width: 12px;
   height: 12px;
@@ -1786,9 +1787,10 @@
   word-break: normal;
   white-space: normal;
 }
-.bkd-payment-preview-breakdown-icon-stamp { color: #d97706; }
-.bkd-payment-preview-breakdown-icon-registration { color: #2563eb; }
-.bkd-payment-preview-breakdown-icon-development { color: #7c3aed; }
+.bkd-payment-preview-breakdown-icon-plot { color: #4338CA; }
+.bkd-payment-preview-breakdown-icon-stamp { color: #92400E; }
+.bkd-payment-preview-breakdown-icon-registration { color: #075985; }
+.bkd-payment-preview-breakdown-icon-development { color: #166534; }
 .bkd-payment-preview-breakdown-item-label {
   margin: 0;
   color: #6b7280;
@@ -1798,18 +1800,20 @@
   text-transform: uppercase;
   letter-spacing: .05em;
 }
-.bkd-payment-preview-breakdown-item-label-stamp { color: #b45309; }
-.bkd-payment-preview-breakdown-item-label-registration { color: #1d4ed8; }
-.bkd-payment-preview-breakdown-item-label-development { color: #7c3aed; }
+.bkd-payment-preview-breakdown-item-label-plot { color: #4338CA; }
+.bkd-payment-preview-breakdown-item-label-stamp { color: #92400E; }
+.bkd-payment-preview-breakdown-item-label-registration { color: #075985; }
+.bkd-payment-preview-breakdown-item-label-development { color: #166534; }
 .bkd-payment-preview-breakdown-item-sub {
   margin: 2px 0 0;
   color: #9ca3af;
   font-size: 9px;
   line-height: 1.2;
 }
-.bkd-payment-preview-breakdown-item-sub-stamp { color: #f59e0b; }
-.bkd-payment-preview-breakdown-item-sub-registration { color: #3b82f6; }
-.bkd-payment-preview-breakdown-item-sub-development { color: #a855f7; }
+.bkd-payment-preview-breakdown-item-sub-plot { color: #6366F1; }
+.bkd-payment-preview-breakdown-item-sub-stamp { color: #D97706; }
+.bkd-payment-preview-breakdown-item-sub-registration { color: #0284C7; }
+.bkd-payment-preview-breakdown-item-sub-development { color: #15803d; }
 .bkd-payment-preview-breakdown-item-value {
   margin: 0;
   color: #111827;
@@ -1817,9 +1821,10 @@
   line-height: 1.1;
   font-weight: 700;
 }
-.bkd-payment-preview-breakdown-item-value-stamp { color: #b45309; }
-.bkd-payment-preview-breakdown-item-value-registration { color: #1d4ed8; }
-.bkd-payment-preview-breakdown-item-value-development { color: #7c3aed; }
+.bkd-payment-preview-breakdown-item-value-plot { color: #4338CA; }
+.bkd-payment-preview-breakdown-item-value-stamp { color: #92400E; }
+.bkd-payment-preview-breakdown-item-value-registration { color: #075985; }
+.bkd-payment-preview-breakdown-item-value-development { color: #166534; }
 .bkd-payment-preview-progress { margin-top: 10px; }
 .bkd-payment-preview-progress-head,
 .bkd-payment-preview-progress-foot {
@@ -1836,7 +1841,7 @@
   font-weight: 600;
 }
 .bkd-payment-preview-progress-percent {
-  color: #374151;
+  color: #047857;
   font-size: 12px;
   line-height: 1.2;
   font-weight: 600;
@@ -1851,7 +1856,7 @@
 }
 .bkd-payment-preview-progress-fill {
   height: 100%;
-  background: #f43f5e;
+  background: #047857;
   border-radius: 999px;
 }
 .bkd-payment-preview-progress-foot {

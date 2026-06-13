@@ -186,6 +186,84 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
         onApplyCustom={loadStats}
       />
 
+      {/* Cancellation Requests & Decisions */}
+      {stats?.cancellationRequests?.length > 0 && (
+        <div className="col-card-new" style={{ marginBottom: 20, border: '1.5px solid #FECACA', background: '#FFFDFD' }}>
+          <div className="col-card-header-new" style={{ paddingBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ExclamationTriangleIcon style={{ width: 20, height: 20, color: '#DC2626' }} />
+              <div>
+                <div className="col-card-title-new" style={{ color: '#991B1B' }}>Cancellation Requests & Decisions</div>
+                <div className="col-card-subtitle-new">Review Sales Head decisions and take action</div>
+              </div>
+            </div>
+          </div>
+          <div className="col-card-body-flush-new">
+            <table className="col-table-new">
+              <thead>
+                <tr>
+                  <th>Booking #</th>
+                  <th>Customer / Project</th>
+                  <th>Cancel Reason</th>
+                  <th>SH Decision Status</th>
+                  <th>Remarks</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.cancellationRequests.map((req) => {
+                  let badgeBg = '#FEF3C7';
+                  let badgeText = '#D97706';
+                  let badgeLabel = 'Awaiting SH Review';
+                  let remarksText = req.cancel_remarks || '—';
+                  if (req.approved_by) {
+                    badgeBg = '#D1FAE5';
+                    badgeText = '#065F46';
+                    badgeLabel = 'Approved (Awaiting Confirm)';
+                    remarksText = req.approval_remarks || '—';
+                  } else if (req.rejected_by) {
+                    badgeBg = '#FEE2E2';
+                    badgeText = '#991B1B';
+                    badgeLabel = 'Rejected (Action Required)';
+                    remarksText = req.rejection_remarks || '—';
+                  }
+                  return (
+                    <tr key={req.id}>
+                      <td className="col-cell-mono">
+                        <button type="button" className="col-booking-link" style={{ fontWeight: 700 }} onClick={() => onSelectBooking(req.id)}>
+                          {req.booking_number}
+                        </button>
+                      </td>
+                      <td>
+                        <div className="col-cell-primary">{req.customer_name}</div>
+                        <div className="col-cell-secondary">{req.project_name}</div>
+                      </td>
+                      <td style={{ fontSize: 12 }}>{req.cancel_reason || '—'}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 12,
+                          fontSize: 11, fontWeight: 700, background: badgeBg, color: badgeText
+                        }}>
+                          {badgeLabel}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={remarksText}>
+                        {remarksText}
+                      </td>
+                      <td>
+                        <button className="col-btn col-btn-primary col-btn-sm" onClick={() => onSelectBooking(req.id)}>
+                          Resolve
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Stat Cards */}
       <div className="col-stat-grid-new">
         {kpiCards.map((card) => {

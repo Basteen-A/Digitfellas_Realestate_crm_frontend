@@ -9,7 +9,8 @@ import usePagination from '../../../hooks/usePagination';
 const SalesManagerVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('upcoming'); // upcoming, completed, cancelled
+  const [filter, setFilter] = useState('upcoming'); // upcoming, completed, cancelled, all
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [completingVisit, setCompletingVisit] = useState(null);
   const [feedbackForm, setFeedbackForm] = useState({
     feedback: '',
@@ -64,11 +65,27 @@ const SalesManagerVisits = ({ onNavigate }) => {
     }
   };
 
+  // Extract unique projects for dropdown filter
+  const uniqueProjects = Array.from(
+    new Map(
+      visits
+        .map(v => v.project)
+        .filter(Boolean)
+        .map(p => [p.id, p])
+    ).values()
+  );
+
   const filteredVisits = visits.filter(v => {
-    if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
-    if (filter === 'completed') return v.status === 'Completed';
-    if (filter === 'cancelled') return v.status === 'Cancelled';
-    return true;
+    // Status Filter
+    let statusMatch = true;
+    if (filter === 'upcoming') statusMatch = ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
+    else if (filter === 'completed') statusMatch = v.status === 'Completed';
+    else if (filter === 'cancelled') statusMatch = v.status === 'Cancelled';
+
+    // Project Filter
+    const projectMatch = selectedProjectId ? String(v.project?.id || v.project_id) === String(selectedProjectId) : true;
+
+    return statusMatch && projectMatch;
   });
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredVisits, 25);
@@ -80,15 +97,93 @@ const SalesManagerVisits = ({ onNavigate }) => {
           <h1> Site Visits</h1>
           <p className="hidden sm:block">Track your appointments and buyer feedback</p>
         </div>
-        <div className="page-header-actions flex-wrap">
+        <div className="page-header-actions flex-wrap" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <select
+            value={selectedProjectId}
+            onChange={e => setSelectedProjectId(e.target.value)}
+            className="crm-form-select"
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              border: '1px solid var(--border-primary)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              outline: 'none',
+              cursor: 'pointer',
+              minWidth: 160,
+              height: 'fit-content'
+            }}
+          >
+            <option value="">All Projects</option>
+            {uniqueProjects.map(p => (
+              <option key={p.id} value={p.id}>{p.project_name}</option>
+            ))}
+          </select>
+
           <div className="crm-btn-group">
-           
+            <button className={`crm-btn ${filter === 'upcoming' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('upcoming')}>Upcoming</button>
             <button className={`crm-btn ${filter === 'completed' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('completed')}>Completed</button>
             <button className={`crm-btn ${filter === 'cancelled' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('cancelled')}>Cancelled</button>
+            <button className={`crm-btn ${filter === 'all' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setFilter('all')}>All</button>
           </div>
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadVisits}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
         </div>
       </div>
+
+      {/* Project-wise visits breakdown cards */}
+      {!loading && uniqueProjects.length > 0 && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 12,
+          marginBottom: 16
+        }}>
+          {uniqueProjects.map(p => {
+            const scheduledCount = visits.filter(v => (v.project?.id === p.id || v.project_id === p.id) && ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status)).length;
+            const completedCount = visits.filter(v => (v.project?.id === p.id || v.project_id === p.id) && v.status === 'Completed').length;
+            const cancelledCount = visits.filter(v => (v.project?.id === p.id || v.project_id === p.id) && v.status === 'Cancelled').length;
+
+            return (
+              <div 
+                key={p.id}
+                onClick={() => setSelectedProjectId(selectedProjectId === String(p.id) ? "" : String(p.id))}
+                style={{
+                  background: selectedProjectId === String(p.id) ? 'var(--accent-blue-bg, #eff6ff)' : 'var(--card-bg, #fff)',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  border: selectedProjectId === String(p.id) ? '1.5px solid var(--accent-blue, #3b82f6)' : '1px solid var(--border-light, #e5e7eb)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  🏢 {p.project_name}
+                </div>
+                <div style={{ display: 'flex', gap: 10, fontSize: 11 }}>
+                  <div>
+                    <span style={{ color: 'var(--text-secondary)' }}>Scheduled: </span>
+                    <strong style={{ color: 'var(--accent-blue, #3b82f6)' }}>{scheduledCount}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-secondary)' }}>Completed: </span>
+                    <strong style={{ color: '#15803d' }}>{completedCount}</strong>
+                  </div>
+                  {cancelledCount > 0 && (
+                    <div>
+                      <span style={{ color: 'var(--text-secondary)' }}>Cancelled: </span>
+                      <strong style={{ color: 'var(--accent-red, #dc2626)' }}>{cancelledCount}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 100 }}>

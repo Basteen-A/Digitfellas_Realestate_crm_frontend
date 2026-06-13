@@ -668,6 +668,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                         color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
                       }}>{booking.payment_status}</span>
                     ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>;
+                    
+                    const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
+                    const displayStatusLabel = isCancelApproved ? 'Cancelled' : booking.status_label;
+                    const displayStatusColor = isCancelApproved ? '#DC2626' : booking.status_color;
                     return (
                       <React.Fragment key={booking.id}>
                         <tr>
@@ -701,9 +705,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{pct}%</div>
                           </td>
                           <td className="lead-col-status">
-                            <span className="col-badge" style={{ background: `${booking.status_color}22`, color: booking.status_color }}>
-                              <span className="col-badge-dot" style={{ background: booking.status_color }} />
-                              {booking.status_label}
+                            <span className="col-badge" style={{ background: `${displayStatusColor}22`, color: displayStatusColor }}>
+                              <span className="col-badge-dot" style={{ background: displayStatusColor }} />
+                              {displayStatusLabel}
                             </span>
                           </td>
                           <td className="hide-mobile">{paymentBadge}</td>

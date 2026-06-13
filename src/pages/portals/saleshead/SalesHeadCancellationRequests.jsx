@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
-import bookingStatusApi from '../../../api/bookingStatusApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
@@ -18,8 +17,6 @@ const SalesHeadCancellationRequests = ({ user }) => {
   const [actionMode, setActionMode] = useState(null); // 'approve' | 'reject'
   const [remarks, setRemarks] = useState('');
   const [saving, setSaving] = useState(false);
-  const [statusOptions, setStatusOptions] = useState([]);
-  const [revertStatusId, setRevertStatusId] = useState('');
 
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -34,48 +31,11 @@ const SalesHeadCancellationRequests = ({ user }) => {
   }, []);
 
   useEffect(() => { loadRequests(); }, [loadRequests]);
-  useEffect(() => {
-    bookingStatusApi.getDropdown().then((r) => {
-      setStatusOptions(r.data?.data || r.data || []);
-    }).catch(() => {
-      setStatusOptions([]);
-    });
-  }, []);
-
-  const getRevertStatusOptions = useCallback((bookingRequest) => {
-    if (!bookingRequest) return [];
-
-    const preferredCodes = new Set(['BOOKED', 'REGISTERED', 'EMI']);
-    const nonCancellationStatuses = statusOptions.filter((status) => !['REQUEST_TO_CANCEL', 'CANCEL', 'CANCELLED'].includes(status.status_code));
-    const preferredStatuses = nonCancellationStatuses.filter((status) => preferredCodes.has(status.status_code));
-    const fallbackList = preferredStatuses.length > 0 ? preferredStatuses : nonCancellationStatuses;
-
-    const previousStatusId = bookingRequest.previous_status_id;
-    if (!previousStatusId) return fallbackList;
-
-    const hasPreviousInList = fallbackList.some((status) => String(status.id) === String(previousStatusId));
-    if (hasPreviousInList) return fallbackList;
-
-    const previousStatus = statusOptions.find((status) => String(status.id) === String(previousStatusId));
-    return previousStatus ? [previousStatus, ...fallbackList] : fallbackList;
-  }, [statusOptions]);
 
   const openActionModal = (bookingRequest, mode) => {
     setActionBooking(bookingRequest);
     setActionMode(mode);
     setRemarks('');
-
-    if (mode === 'reject') {
-      const options = getRevertStatusOptions(bookingRequest);
-      const previousStatusId = bookingRequest.previous_status_id ? String(bookingRequest.previous_status_id) : '';
-      if (previousStatusId && options.some((status) => String(status.id) === previousStatusId)) {
-        setRevertStatusId(previousStatusId);
-      } else {
-        setRevertStatusId(options[0] ? String(options[0].id) : '');
-      }
-    } else {
-      setRevertStatusId('');
-    }
   };
 
   const handleApprove = async () => {
@@ -92,12 +52,11 @@ const SalesHeadCancellationRequests = ({ user }) => {
 
   const handleReject = async () => {
     if (!remarks.trim()) { toast.error('Remarks are mandatory'); return; }
-    if (!revertStatusId) { toast.error('Select revert status'); return; }
     setSaving(true);
     try {
-      await bookingApi.rejectCancellation(actionBooking.id, { remarks, previous_status_id: revertStatusId });
-      toast.success('Cancellation rejected — booking reverted');
-      setActionBooking(null); setActionMode(null); setRemarks(''); setRevertStatusId('');
+      await bookingApi.rejectCancellation(actionBooking.id, { remarks });
+      toast.success('Cancellation rejected');
+      setActionBooking(null); setActionMode(null); setRemarks('');
       loadRequests();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
     finally { setSaving(false); }
@@ -226,7 +185,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
 
       {/* Approve/Reject Modal */}
       {actionBooking && actionMode && (
-        <div className="col-modal-overlay" onClick={() => { setActionBooking(null); setActionMode(null); setRevertStatusId(''); }}>
+        <div className="col-modal-overlay" onClick={() => { setActionBooking(null); setActionMode(null); setRemarks(''); }}>
           <div className="qa-modal-panel" style={{maxWidth:500}} onClick={e => e.stopPropagation()}>
             <div className="qa-drawer-handle"/>
             <div className="qa-drawer-header">
@@ -244,7 +203,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
                   <div className="qa-drawer-meta">{actionBooking.booking_number} · {actionBooking.customer?.buyer_name || actionBooking.buyer_name || actionBooking.customer_name}</div>
                 </div>
               </div>
-              <button className="qa-drawer-close" onClick={() => { setActionBooking(null); setActionMode(null); setRevertStatusId(''); }}>×</button>
+              <button className="qa-drawer-close" onClick={() => { setActionBooking(null); setActionMode(null); setRemarks(''); }}>×</button>
             </div>
             <div className="qa-drawer-divider"/>
             <div style={{padding:'16px 20px'}}>
@@ -255,18 +214,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
               )}
               {actionMode === 'reject' && (
                 <div style={{background:'#DBEAFE', border:'1px solid #3B82F644', borderRadius:8, padding:12, marginBottom:16, fontSize:12, color:'#1E40AF'}}>
-                  <strong>ℹ Note:</strong> Rejecting will revert the booking to its previous status. The customer will continue as existing.
-                </div>
-              )}
-              {actionMode === 'reject' && (
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Revert To Status *</label>
-                  <select className="bkd-form-control" value={revertStatusId} onChange={(e) => setRevertStatusId(e.target.value)}>
-                    <option value="">Select status</option>
-                    {getRevertStatusOptions(actionBooking).map((status) => (
-                      <option key={status.id} value={status.id}>{status.status_name}</option>
-                    ))}
-                  </select>
+                  <strong>ℹ Note:</strong> Rejecting will record your remarks. The booking will stay in Request to Cancel. The Collection Manager will discuss with the customer to decide whether to reactivate the booking or resubmit the cancellation.
                 </div>
               )}
               <div className="bkd-form-group">
@@ -281,9 +229,9 @@ const SalesHeadCancellationRequests = ({ user }) => {
                 background: actionMode === 'approve' ? '#22C55E' : '#EF4444',
                 width: '100%', padding: '10px 20px', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                 }}
-                disabled={saving || !remarks.trim() || (actionMode === 'reject' && !revertStatusId)}
+                disabled={saving || !remarks.trim()}
                 onClick={actionMode === 'approve' ? handleApprove : handleReject}>
-                {saving ? 'Processing...' : actionMode === 'approve' ? 'Approve Cancellation' : 'Reject & Revert'}
+                {saving ? 'Processing...' : actionMode === 'approve' ? 'Approve Cancellation' : 'Reject Cancellation'}
               </button>
             </div>
           </div>

@@ -65,6 +65,7 @@ const bookingApi = {
   requestToCancel: (id, data) => api.patch(`/bookings/${id}/request-cancel`, data),
   approveCancellation: (id, data) => api.patch(`/bookings/${id}/approve-cancel`, data),
   rejectCancellation: (id, data) => api.patch(`/bookings/${id}/reject-cancel`, data),
+  revertCancellation: (id, data) => api.patch(`/bookings/${id}/revert-cancel`, data),
   confirmCancel: (id, data) => api.patch(`/bookings/${id}/confirm-cancel`, data || {}),
   processRefund: (id, data) => api.post(`/bookings/${id}/refunds`, data),
   getCancellationRequests: (params) => api.get('/bookings/cancellation-requests', { params }),

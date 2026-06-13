@@ -66,8 +66,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [payStatusPaymentDate, setPayStatusPaymentDate] = useState('');
   const [payStatusRegDate, setPayStatusRegDate] = useState('');
   const [payStatusSaving, setPayStatusSaving] = useState(false);
-  const [awardPointsTo, setAwardPointsTo] = useState(''); // 'sm' | 'sh' | ''
-  const [awardPointsValue, setAwardPointsValue] = useState('');
+  const [smPointsValue, setSmPointsValue] = useState('');
+  const [shPointsValue, setShPointsValue] = useState('');
   // Super-Admin payment editing
   const [editPayment, setEditPayment] = useState(null);
   const [editPayForm, setEditPayForm] = useState({});
@@ -154,6 +154,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [emiSaving, setEmiSaving] = useState(false);
   const [reqCancelSaving, setReqCancelSaving] = useState(false);
   const [confirmCancelSaving, setConfirmCancelSaving] = useState(false);
+  const [revertRemarks, setRevertRemarks] = useState('');
+  const [revertSaving, setRevertSaving] = useState(false);
   const [cancelRefundForm, setCancelRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   const [refundSaving, setRefundSaving] = useState(false);
@@ -174,7 +176,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // payment_category value is kept unchanged (e.g. 'Registration Expenses') so
   // existing payments, per-category buckets, colors, and the backend keep working.
   const CATEGORY_LABELS = {
-    'Registration Expenses': 'Regn Misc. Expenses',
+    'Registration Expenses': 'Registration Expenses',
   };
   const categoryLabel = (cat) => CATEGORY_LABELS[cat] || cat;
 
@@ -278,8 +280,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       setCancelVoice(null);
       setRegisterForm({ registration_date: '', registration_number: '' });
       setRegisterFiles([]);
-      setAwardPointsTo('');
-      setAwardPointsValue('');
+      setSmPointsValue('');
+      setShPointsValue('');
       return;
     }
     if (mode === 'payStatus') {
@@ -660,6 +662,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     acc[cat] = (acc[cat] || 0) + toAmount(p.amount);
     return acc;
   }, {});
+
+  const filteredCategories = PAYMENT_CATEGORIES.filter(cat => {
+    if (cat === 'MODT') {
+      return savedModtEnabled || (paidByCategory['MODT'] > 0);
+    }
+    if (cat === 'Other') {
+      return (paidByCategory['Other'] > 0);
+    }
+    return true;
+  });
   // Registration charges break into three independently-collected buckets (no
   // double-counting — grand total is unchanged):
   //   • Registration            → the base 2% legal charge only.
@@ -710,6 +722,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // Check overdue
   const isOverdue = booking.next_follow_up_at && new Date(booking.next_follow_up_at) < new Date();
   const overdueDays = isOverdue ? Math.floor((Date.now() - new Date(booking.next_follow_up_at).getTime()) / 86400000) : 0;
+
+  // Cancel-approved status override — show "Cancelled" once SH approves the cancellation request
+  const isCancelApproved = (booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
+  const effectiveStatusLabel = isCancelApproved ? 'Cancelled' : booking.status_label;
+  const effectiveStatusColor = isCancelApproved ? '#DC2626' : booking.status_color;
 
   const renderActivityHistory = () => {
     return (
@@ -773,8 +790,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <h1 className="bkd-title">
               Booking Details — {booking.booking_number}{' '}
                 
-        <span className="bkd-status-badge" style={{background:`${booking.status_color}18`,color:booking.status_color,border:`1px solid ${booking.status_color}40`}}>
-          <span style={{width:6,height:6,borderRadius:'50%',background:booking.status_color,display:'inline-block'}}/> {booking.status_label}
+        <span className="bkd-status-badge" style={{background:`${effectiveStatusColor}18`,color:effectiveStatusColor,border:`1px solid ${effectiveStatusColor}40`}}>
+          <span style={{width:6,height:6,borderRadius:'50%',background:effectiveStatusColor,display:'inline-block'}}/> {effectiveStatusLabel}
         </span>
      
             </h1>
@@ -783,14 +800,20 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
         <div className="bkd-header-actions">
           {/* Workflow action buttons */}
-          {['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
+          {!booking.is_cancelled && !isCancelApproved && ['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Request Cancel</button>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
             <button className="bkd-btn bkd-btn-primary" style={{background:'#DC2626'}} onClick={() => setWorkflowMode('confirmCancel')}><XCircleIcon style={{width:14,height:14}}/> Confirm Cancel</button>
           )}
-          {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && (
+          {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && !booking.custom_fields?.cancel_rejected_by && (
             <span style={{fontSize:12, color:'#F59E0B', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting SH Approval</span>
+          )}
+          {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_rejected_by && (
+            <>
+              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#16A34A',color:'#16A34A'}} onClick={() => setWorkflowMode('revertCancel')}><ArrowPathIcon style={{width:14,height:14}}/> Customer Wants to Continue</button>
+              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Resubmit Cancellation</button>
+            </>
           )}
           {booking.is_cancelled && totalPaid > 0 && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#F59E0B',color:'#F59E0B'}} onClick={() => setWorkflowMode('refund')}>
@@ -843,6 +866,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
       )}
 
+      {/* SH Rejection banner */}
+      {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_rejected_by && (
+        <div className="bkd-alert-banner" style={{ background: '#FEF2F2', borderColor: '#FECACA' }}>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0, color: '#DC2626' }} />
+          <div>
+            <span className="bkd-alert-title" style={{ color: '#991B1B' }}>Cancellation Request Rejected by Sales Head</span>
+            <span className="bkd-alert-text">
+              Remarks: {booking.custom_fields?.cancel_rejection_remarks || 'No remarks provided.'}
+              <br />
+              Please consult with the customer. If they want to continue the booking, click <strong>Customer Wants to Continue</strong> above. If they still want to cancel, you can <strong>Resubmit Cancellation</strong>.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Overdue Alert Banner */}
       {isOverdue && balanceDue > 0 && (
         <div className="bkd-alert-banner">
@@ -883,8 +921,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <InfoRow label="Sales Manager" value={salesManager ? getUserLabel(salesManager) : '—'} />
                   <InfoRow label="Sales Head" value={salesHead ? getUserLabel(salesHead) : '—'} />
                   <InfoRow label="Collection Owner" value={leadAssignee ? getUserLabel(leadAssignee) : '—'} />
-                  <InfoRow label="Booking Status" value={booking.status_label} />
+                  <InfoRow label="Booking Status" value={effectiveStatusLabel} color={effectiveStatusColor} />
                   <InfoRow label="Payment Status" value={booking.payment_status || '—'} />
+                  <InfoRow label="Unit Reserved" value={fmtD(booking.created_at || booking.booking_date)} />
                 </div>
               </div>
             </div>
@@ -895,85 +934,112 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="bkd-card-title">Award Points (Optional)</div>
                 </div>
                 <div className="bkd-card-body">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* Sales Manager Row */}
                     {salesManager ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <button
-                          type="button"
-                          style={{
-                            flex: 1, padding: '10px 14px', borderRadius: 8, border: awardPointsTo === 'sm' ? '2px solid #16A34A' : '1px solid #D1D5DB',
-                            background: awardPointsTo === 'sm' ? '#DCFCE7' : '#FFFFFF', color: '#166534', fontWeight: 600, fontSize: 13, cursor: 'pointer'
-                          }}
-                          onClick={() => setAwardPointsTo(awardPointsTo === 'sm' ? '' : 'sm')}
-                        >
-                          Sales Manager ({salesManager.first_name} {salesManager.last_name})
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Manager</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>
+                            {salesManager.first_name} {salesManager.last_name}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input
+                            type="number"
+                            className="bkd-form-control"
+                            placeholder="Points"
+                            value={smPointsValue}
+                            onChange={(e) => setSmPointsValue(e.target.value)}
+                            style={{ width: 80, fontSize: 13, textAlign: 'center' }}
+                          />
+                          <button
+                            type="button"
+                            className="crm-btn crm-btn-primary crm-btn-sm"
+                            disabled={!smPointsValue || statusSaving}
+                            onClick={async () => {
+                              if (!smPointsValue || isNaN(parseInt(smPointsValue)) || parseInt(smPointsValue) === 0) {
+                                toast.error('Enter valid points value');
+                                return;
+                              }
+                              const points = parseInt(smPointsValue, 10);
+                              setStatusSaving(true);
+              try {
+                const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                // Use updatePointsForBooking to replace existing points
+                await userApi.updatePointsForBooking(salesManager.id, points, reason, bookingId, booking.lead?.id);
+                toast.success(`Updated ${points} points for SM`);
+                // Keep the saved value in the input for editing
+                setSmPointsValue(String(points));
+                loadActivities();
+              } catch (err) {
+                toast.error(getErrorMessage(err, 'Failed to award points'));
+              } finally {
+                setStatusSaving(false);
+              }
+                            }}
+                          >
+                            {statusSaving ? '...' : 'Save'}
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 8 }}>
+                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 8 }}>
                         No Sales Manager assigned
                       </div>
                     )}
+
+                    {/* Sales Head Row */}
                     {salesHead ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <button
-                          type="button"
-                          style={{
-                            flex: 1, padding: '10px 14px', borderRadius: 8, border: awardPointsTo === 'sh' ? '2px solid #7C3AED' : '1px solid #D1D5DB',
-                            background: awardPointsTo === 'sh' ? '#EDE9FE' : '#FFFFFF', color: '#6D28D9', fontWeight: 600, fontSize: 13, cursor: 'pointer'
-                          }}
-                          onClick={() => setAwardPointsTo(awardPointsTo === 'sh' ? '' : 'sh')}
-                        >
-                          Sales Head ({salesHead.first_name} {salesHead.last_name})
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Head</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#6D28D9' }}>
+                            {salesHead.first_name} {salesHead.last_name}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input
+                            type="number"
+                            className="bkd-form-control"
+                            placeholder="Points"
+                            value={shPointsValue}
+                            onChange={(e) => setShPointsValue(e.target.value)}
+                            style={{ width: 80, fontSize: 13, textAlign: 'center' }}
+                          />
+                          <button
+                            type="button"
+                            className="crm-btn crm-btn-primary crm-btn-sm"
+                            disabled={!shPointsValue || statusSaving}
+                            onClick={async () => {
+                              if (!shPointsValue || isNaN(parseInt(shPointsValue)) || parseInt(shPointsValue) === 0) {
+                                toast.error('Enter valid points value');
+                                return;
+                              }
+                              const points = parseInt(shPointsValue, 10);
+                              setStatusSaving(true);
+              try {
+                const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                // Use updatePointsForBooking to replace existing points
+                await userApi.updatePointsForBooking(salesHead.id, points, reason, bookingId, booking.lead?.id);
+                toast.success(`Updated ${points} points for SH`);
+                // Keep the saved value in the input for editing
+                setShPointsValue(String(points));
+                loadActivities();
+              } catch (err) {
+                toast.error(getErrorMessage(err, 'Failed to award points'));
+              } finally {
+                setStatusSaving(false);
+              }
+                            }}
+                          >
+                            {statusSaving ? '...' : 'Save'}
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 8 }}>
+                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 8 }}>
                         No Sales Head assigned
-                      </div>
-                    )}
-                    {awardPointsTo && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                        <input
-                          type="number"
-                          className="bkd-form-control"
-                          placeholder="Points (+ or -)"
-                          value={awardPointsValue}
-                          onChange={(e) => setAwardPointsValue(e.target.value)}
-                          style={{ flex: 1, fontSize: 13 }}
-                        />
-                        <button
-                          type="button"
-                          className="crm-btn crm-btn-primary crm-btn-sm"
-                          disabled={!awardPointsValue || statusSaving}
-                          onClick={async () => {
-                            if (!awardPointsValue || isNaN(parseInt(awardPointsValue)) || parseInt(awardPointsValue) === 0) {
-                              toast.error('Enter valid points value');
-                              return;
-                            }
-                            const points = parseInt(awardPointsValue, 10);
-                            const targetUserId = awardPointsTo === 'sm' ? salesManager?.id : salesHead?.id;
-                            if (!targetUserId) {
-                              toast.error('User not found');
-                              return;
-                            }
-                            setStatusSaving(true);
-                            try {
-                              const reason = `Lead conversion / Booking ${booking.booking_number}`;
-                              await userApi.awardPoints(targetUserId, points, reason, bookingId, booking.lead?.id);
-                              toast.success(`${points > 0 ? 'Awarded' : 'Deducted'} ${Math.abs(points)} points to ${awardPointsTo.toUpperCase()}`);
-                              setAwardPointsValue('');
-                              setAwardPointsTo('');
-                              loadActivities();
-                            } catch (err) {
-                              toast.error(getErrorMessage(err, 'Failed to award points'));
-                            } finally {
-                              setStatusSaving(false);
-                            }
-                          }}
-                        >
-                          {statusSaving ? 'Saving...' : 'Save'}
-                        </button>
                       </div>
                     )}
                     {activities.filter((a) => a.activity_type === 'POINTS_AWARDED').length > 0 && (
@@ -1088,21 +1154,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
 
                   <div className="bkd-payment-preview-breakdown-grid">
-                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-total">
+                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-plot">
                       <div className="bkd-payment-preview-breakdown-item-head">
-                        <div className="bkd-payment-preview-breakdown-icon-shell">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-plot">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-plot" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 7l9-4 9 4-9 4-9-4zm0 0v10l9 4 9-4V7" />
                           </svg>
                         </div>
 
                         <div>
-                          <p className="bkd-payment-preview-breakdown-item-label">Plot Value</p>
-                          <p className="bkd-payment-preview-breakdown-item-sub">90% of total</p>
+                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-plot">Plot Value</p>
+                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-plot">90% of total</p>
                         </div>
                       </div>
 
-                      <h3 className="bkd-payment-preview-breakdown-item-value">{fmtFull(plotValue)}</h3>
+                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-plot">{fmtFull(plotValue)}</h3>
                     </div>
 
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-stamp">
@@ -1131,7 +1197,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         </div>
 
                         <div>
-                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-registration">Registration</p>
+                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-registration">Registration Fees</p>
                           <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-registration">Legal Charge</p>
                         </div>
                       </div>
@@ -1194,11 +1260,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div className="bkd-payment-preview-progress">
                   <div className="bkd-payment-preview-progress-head">
                     <h4 className="bkd-payment-preview-progress-title">Collection Progress</h4>
-                    <span className="bkd-payment-preview-progress-percent">{pctCollected}%</span>
+                    <span className="bkd-payment-preview-progress-percent" style={{ color: '#047857' }}>{pctCollected}%</span>
                   </div>
 
                   <div className="bkd-payment-preview-progress-bar">
-                    <div className="bkd-payment-preview-progress-fill" style={{ width: `${pctCollected}%` }} />
+                    <div className="bkd-payment-preview-progress-fill" style={{ width: `${pctCollected}%`, background: '#047857' }} />
                   </div>
 
                   <div className="bkd-payment-preview-progress-foot">
@@ -1603,7 +1669,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <select className="bkd-form-control" value={editPayForm.payment_category}
                   onChange={(e) => setEditPayForm(f => ({ ...f, payment_category: e.target.value }))}>
                   <option value="">Select…</option>
-                  {PAYMENT_CATEGORIES.map(cat => <option key={cat} value={cat}>{categoryLabel(cat)}</option>)}
+                  {filteredCategories.map(cat => <option key={cat} value={cat}>{categoryLabel(cat)}</option>)}
                 </select>
               </div>
               <div className="bkd-form-group">
@@ -1696,7 +1762,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <select className="bkd-form-control" value={payForm.payment_category}
                         onChange={e => setPayForm(p => ({ ...p, payment_category: e.target.value }))}>
                         <option value="">Select what this payment is for</option>
-                        {PAYMENT_CATEGORIES.map((cat) => {
+                        {filteredCategories.map((cat) => {
                           const bucket = categoryBuckets.find(b => b.key === cat);
                           const target = bucket?.target || 0;
                           const paid = bucket?.paid || 0;
@@ -1988,7 +2054,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {actionMode === 'devCost' && (() => {
               const regSplitFields = [
                 { key: 'stamp_commission', label: 'Stamp Commission' },
-                { key: 'registration_expenses', label: 'Regn Misc. Expenses' },
+                { key: 'registration_expenses', label: 'Registration Expenses' },
                 { key: 'writer_expenses', label: 'Writer Expenses' },
                 { key: 'patta_charges', label: 'Patta Charges' },
                 { key: 'other_registration_expenses', label: 'Other Registration Expenses' },
@@ -1997,7 +2063,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 { key: 'stamp_duty', label: 'Stamp Duty' },
                 { key: 'registration_fees', label: 'Registration Fees' },
                 { key: 'stamp_commission', label: 'Stamp Commission' },
-                { key: 'registration_expenses', label: 'Regn Misc. Expenses' },
+                { key: 'registration_expenses', label: 'Registration Expenses' },
                 { key: 'writer_expenses', label: 'Writer Expenses' },
               ];
               const setRegField = (key, val) => setDevCostForm(p => ({
@@ -2063,7 +2129,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
 
                   <div className="qa-drawer-section" style={{ padding: '14px 0 8px' }}>
-                    Regn Misc. Expenses (Detailed Split)
+                    Registration Expenses (Detailed Split)
                     <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
                       Subtotal: {fmtFull(sumSplit(devCostForm.registration_split))}
                     </span>
@@ -2143,15 +2209,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
                 <div className="qa-drawer-avatar" style={{
-                  background: workflowMode === 'register' ? '#22C55E22' : workflowMode === 'emi' ? '#F59E0B22' : '#EF444422',
-                  color: workflowMode === 'register' ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
-                  border: `2px solid ${workflowMode === 'register' ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
+                  background: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#22C55E22' : workflowMode === 'emi' ? '#F59E0B22' : '#EF444422',
+                  color: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
+                  border: `2px solid ${(workflowMode === 'register' || workflowMode === 'revertCancel') ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
                 }}>
-                  {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : workflowMode === 'refund' ? '↩' : '⚠'}
+                  {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : (workflowMode === 'refund' || workflowMode === 'revertCancel') ? '↩' : '⚠'}
                 </div>
                 <div>
                   <div className="qa-drawer-name">
-                    {workflowMode === 'register' ? 'Register Booking' : workflowMode === 'emi' ? 'Move to EMI' : workflowMode === 'confirmCancel' ? 'Confirm Cancellation' : workflowMode === 'refund' ? 'Record Refund' : 'Request to Cancel'}
+                    {workflowMode === 'register' ? 'Register Booking' : workflowMode === 'emi' ? 'Move to EMI' : workflowMode === 'confirmCancel' ? 'Confirm Cancellation' : workflowMode === 'refund' ? 'Record Refund' : workflowMode === 'revertCancel' ? 'Reactivate Booking (Revert)' : 'Request to Cancel'}
                   </div>
                   <div className="qa-drawer-meta">{booking.booking_number} · {booking.customer_name || booking.buyer_name}</div>
                 </div>
@@ -2215,6 +2281,38 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     finally { setEmiSaving(false); }
                   }}>
                     {emiSaving ? 'Saving...' : 'Move to EMI'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {workflowMode === 'revertCancel' && (
+              <div style={{ padding: '16px 20px' }}>
+                <div style={{ background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 12, color: '#166534' }}>
+                  <strong>ℹ Note:</strong> This will reactivate the booking and revert it back to its original active status (<strong>{booking.custom_fields?.previous_status_name || 'Booked'}</strong>).
+                </div>
+                <div className="bkd-form-group">
+                  <label className="bkd-form-label">Remarks / Follow-up Notes</label>
+                  <textarea className="bkd-form-control" rows={3} placeholder="Customer decided to continue because..."
+                    value={revertRemarks} onChange={e => setRevertRemarks(e.target.value)} />
+                </div>
+                <div className="qa-drawer-save-row" style={{ marginTop: 16 }}>
+                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={revertSaving} onClick={async () => {
+                    setRevertSaving(true);
+                    try {
+                      await bookingApi.revertCancellation(bookingId, { remarks: revertRemarks });
+                      toast.success('Booking reactivated successfully');
+                      setWorkflowMode(null);
+                      setRevertRemarks('');
+                      loadBooking();
+                      loadActivities();
+                    } catch (err) {
+                      toast.error(getErrorMessage(err, 'Failed to reactivate booking'));
+                    } finally {
+                      setRevertSaving(false);
+                    }
+                  }}>
+                    {revertSaving ? 'Reactivating...' : 'Confirm Reactivation'}
                   </button>
                 </div>
               </div>

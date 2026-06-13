@@ -24,6 +24,16 @@ const userApi = {
     return data;
   },
 
+  updatePointsForBooking: async (userId, points, reason, bookingId = null, leadId = null) => {
+    const { data } = await api.put(`/users/${userId}/points-for-booking`, {
+      points,
+      reason,
+      booking_id: bookingId,
+      lead_id: leadId,
+    });
+    return data;
+  },
+
   getPointsHistory: async (userId) => {
     const { data } = await api.get(`/users/${userId}/points-history`);
     return data;
