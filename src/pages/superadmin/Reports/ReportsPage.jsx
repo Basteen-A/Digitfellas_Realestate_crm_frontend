@@ -6,10 +6,11 @@ import locationApi from '../../../api/locationApi';
 import { formatCurrency } from '../../../utils/formatters';
 import {
   ChartBarIcon, UsersIcon, BuildingOffice2Icon, ArrowPathIcon,
-  ArrowLeftIcon,
+  ArrowLeftIcon, PresentationChartLineIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import AnalyticsDashboard from './analytics/AnalyticsDashboard';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -40,6 +41,9 @@ const ReportsPage = () => {
           <p className="hidden sm:block">User activity &amp; inventory cost reports</p>
         </div>
         <div className="crm-btn-group">
+          <button className={`crm-btn ${tab === 'analytics' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setTab('analytics')}>
+            <PresentationChartLineIcon style={{ width: 15, height: 15 }} /> Analytics
+          </button>
           <button className={`crm-btn ${tab === 'users' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setTab('users')}>
             <UsersIcon style={{ width: 15, height: 15 }} /> User Activity
           </button>
@@ -49,16 +53,20 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Shared period filter */}
-      <div className="crm-btn-group" style={{ marginBottom: 16 }}>
-        {PERIODS.map((p) => (
-          <button key={p.key} className={`crm-btn ${period === p.key ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setPeriod(p.key)}>
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {/* Shared period filter — Analytics has its own filter bar */}
+      {tab !== 'analytics' && (
+        <div className="crm-btn-group" style={{ marginBottom: 16 }}>
+          {PERIODS.map((p) => (
+            <button key={p.key} className={`crm-btn ${period === p.key ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setPeriod(p.key)}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {tab === 'users' ? <UserActivityReport period={period} /> : <InventoryReport period={period} />}
+      {tab === 'analytics' && <AnalyticsDashboard />}
+      {tab === 'users' && <UserActivityReport period={period} />}
+      {tab === 'inventory' && <InventoryReport period={period} />}
 
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>

@@ -49,6 +49,8 @@ import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inven
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
 import SiteSettings from '../pages/superadmin/SiteSettings';
+import ReallotmentRules from '../pages/superadmin/ReallotmentRules';
+import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -204,6 +206,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/banks" element={<Banks />} />
             <Route path="/super-admin/payment-statuses" element={<PaymentStatuses />} />
             <Route path="/super-admin/site-settings" element={<SiteSettings />} />
+            <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
+            <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

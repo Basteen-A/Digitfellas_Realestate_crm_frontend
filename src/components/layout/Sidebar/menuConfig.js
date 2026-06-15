@@ -111,6 +111,14 @@ const adminSidebar = [
     ],
   },
   {
+    label: 'Auto Reallotment',
+    icon: ArrowPathIcon,
+    children: [
+      { label: 'Reallotment Rules', path: '/super-admin/reallotment-rules' },
+      { label: 'Reallotment Logs', path: '/super-admin/reallotment-logs' },
+    ],
+  },
+  {
     label: 'Configuration',
     icon: Cog6ToothIcon,
     children: [

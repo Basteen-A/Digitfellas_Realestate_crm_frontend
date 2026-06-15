@@ -22,6 +22,7 @@ import bankApi from '../../../api/bankApi';
 import paymentStatusApi from '../../../api/paymentStatusApi';
 import departmentApi from '../../../api/departmentApi';
 import subDepartmentApi from '../../../api/subDepartmentApi';
+import reallotmentRuleApi from '../../../api/reallotmentRuleApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -78,7 +79,74 @@ const commonSimpleColumns = [
   { header: 'Active', path: 'is_active', type: 'boolean' },
 ];
 
+const TRIGGER_BASIS_OPTIONS = [
+  { value: 'MISSED_FOLLOWUP', label: 'Missed Follow-up Date' },
+  { value: 'LAST_SITE_VISIT', label: 'Last Site Visit Done Date' },
+  { value: 'LAST_ACTIVITY', label: 'Last Activity Date' },
+  { value: 'LAST_STATUS_UPDATE', label: 'Last Status Update Date' },
+];
+
+const TRIGGER_BASIS_LABEL = TRIGGER_BASIS_OPTIONS.reduce((acc, o) => ({ ...acc, [o.value]: o.label }), {});
+
 export const masterConfigs = {
+  reallotmentRules: {
+    title: 'Reallotment Rules',
+    api: reallotmentRuleApi,
+    columns: [
+      { header: 'Rule', path: 'rule_name' },
+      { header: 'Role', path: 'userType.type_name' },
+      { header: 'Status', path: 'leadStatus.status_name' },
+      { header: 'Trigger', render: (row) => TRIGGER_BASIS_LABEL[row.trigger_basis] || row.trigger_basis },
+      { header: 'Days', path: 'threshold_days' },
+      { header: 'Max', render: (row) => (row.max_occurrences ? row.max_occurrences : '∞') },
+      { header: 'On Max →', path: 'onMaxStatus.status_name' },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'rule_name', label: 'Rule Name', required: true, placeholder: 'e.g. TC · Follow Up · Missed (14d)' },
+      {
+        name: 'user_type_id',
+        label: 'Role (User Type)',
+        type: 'select',
+        required: true,
+        loadOptions: loadUserTypeOptions,
+      },
+      {
+        name: 'lead_status_id',
+        label: 'Lead Status',
+        type: 'select',
+        required: true,
+        loadOptions: loadLeadStatusIdOptions,
+      },
+      {
+        name: 'trigger_basis',
+        label: 'Trigger Basis (count days from)',
+        type: 'select',
+        required: true,
+        options: TRIGGER_BASIS_OPTIONS,
+        defaultValue: 'MISSED_FOLLOWUP',
+      },
+      { name: 'threshold_days', label: 'Reallot After (Days)', type: 'number', required: true },
+      {
+        name: 'max_occurrences',
+        label: 'Max Reallotments (optional — leave empty for unlimited)',
+        type: 'number',
+        placeholder: 'e.g. 3 for Junk/Spam',
+      },
+      {
+        name: 'on_max_status_id',
+        label: 'On Max Reached → Move To Status',
+        type: 'select',
+        loadOptions: loadLeadStatusIdOptions,
+        required: (formValues) => Number(formValues?.max_occurrences) > 0,
+        showWhen: (formValues) => Number(formValues?.max_occurrences) > 0,
+      },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
   locations: {
     title: 'Locations',
     api: locationApi,

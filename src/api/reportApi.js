@@ -21,6 +21,13 @@ const reportApi = {
     const { data } = await api.get(`/reports/inventory${buildQuery({ period, projectId, locationId })}`);
     return data;
   },
+
+  // Role analytics dashboard. role = TC|SM|SH, period = today|wtd|mtd|all,
+  // optional from/to (YYYY-MM-DD), sourceId, projectId.
+  getRoleAnalytics: async ({ role, period = 'mtd', from, to, sourceId, projectId } = {}) => {
+    const { data } = await api.get(`/reports/analytics${buildQuery({ role, period, from, to, sourceId, projectId })}`);
+    return data;
+  },
 };
 
 export default reportApi;
