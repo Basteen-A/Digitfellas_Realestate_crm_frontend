@@ -161,7 +161,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [refundSaving, setRefundSaving] = useState(false);
 
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
-  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'Development', 'MODT', 'Other'];
+  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT', 'Other'];
   const CATEGORY_COLORS = {
     'Plot Value': { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' },
     'Stamp Duty': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
@@ -176,6 +176,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // payment_category value is kept unchanged (e.g. 'Registration Expenses') so
   // existing payments, per-category buckets, colors, and the backend keep working.
   const CATEGORY_LABELS = {
+    'Registration': 'Registration Fees',
     'Registration Expenses': 'Registration Expenses',
   };
   const categoryLabel = (cat) => CATEGORY_LABELS[cat] || cat;
@@ -668,7 +669,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       return savedModtEnabled || (paidByCategory['MODT'] > 0);
     }
     if (cat === 'Other') {
-      return (paidByCategory['Other'] > 0);
+      return false;
     }
     return true;
   });
@@ -1768,7 +1769,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           const paid = bucket?.paid || 0;
                           const balance = Math.max(target - paid, 0);
                           const suffix = target > 0
-                            ? ` — Balance ${formatCurrency(balance)} of ${formatCurrency(target)}`
+                            ? ` — Balance ${formatCurrency(balance)}`
                             : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
                           return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                         })}

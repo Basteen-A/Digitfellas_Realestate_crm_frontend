@@ -92,7 +92,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [refundSaving, setRefundSaving] = useState(false);
 
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
-  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'Development', 'MODT', 'Other'];
+  const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT', 'Other'];
   const CATEGORY_COLORS = {
     'Plot Value': { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' },
     'Stamp Duty': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
@@ -104,7 +104,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     'Other': { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
   };
   // Display-only label overrides; stored payment_category value is unchanged.
-  const CATEGORY_LABELS = { 'Registration Expenses': 'Regn Misc. Expenses' };
+  const CATEGORY_LABELS = { 'Registration': 'Registration Fees', 'Registration Expenses': 'Regn Misc. Expenses' };
   const categoryLabel = (cat) => CATEGORY_LABELS[cat] || cat;
 
   // Build per-category buckets (target + paid) for the drawer booking
@@ -137,10 +137,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     return [
       { key: 'Plot Value', target: plotTarget, paid: paidByCategory['Plot Value'] || 0 },
       { key: 'Stamp Duty', target: stampTarget, paid: paidByCategory['Stamp Duty'] || 0 },
+      { key: 'Development', target: developmentTarget, paid: paidByCategory['Development'] || 0 },
       { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
       { key: 'Registration Expenses', target: regExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
       { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
-      { key: 'Development', target: developmentTarget, paid: paidByCategory['Development'] || 0 },
       { key: 'MODT', target: modtTarget, paid: paidByCategory['MODT'] || 0 },
       { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
     ];
@@ -1040,13 +1040,18 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             <select className="bkd-form-control" value={payForm.payment_category}
                               onChange={e => setPayForm(p => ({ ...p, payment_category: e.target.value }))}>
                               <option value="">Select what this payment is for</option>
-                              {PAYMENT_CATEGORIES.map((cat) => {
+                              {PAYMENT_CATEGORIES.filter((cat) => {
+                                if (cat === 'Other') return false;
+                                const bucket = buckets.find(b => b.key === cat);
+                                if (cat === 'MODT') return (bucket?.target || 0) > 0 || (bucket?.paid || 0) > 0;
+                                return true;
+                              }).map((cat) => {
                                 const bucket = buckets.find(b => b.key === cat);
                                 const target = bucket?.target || 0;
                                 const paid = bucket?.paid || 0;
                                 const balance = Math.max(target - paid, 0);
                                 const suffix = target > 0
-                                  ? ` — Balance ${formatCurrency(balance)} of ${formatCurrency(target)}`
+                                  ? ` — Balance ${formatCurrency(balance)}`
                                   : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
                                 return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                               })}

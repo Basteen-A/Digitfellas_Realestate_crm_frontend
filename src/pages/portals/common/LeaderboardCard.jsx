@@ -97,9 +97,6 @@ export const TelecallerLeaderboardCard = ({ user }) => {
                   </div>
                   <div className="leaderboard-info">
                     <div className="leaderboard-name">{tc.full_name}</div>
-                    <div className="leaderboard-meta">
-                      {tc.total_leads} leads · {tc.closed_leads} closed
-                    </div>
                   </div>
                   <div className="leaderboard-stats">
                     <div className="leaderboard-value">{tc.sv_completed}</div>
@@ -117,9 +114,6 @@ export const TelecallerLeaderboardCard = ({ user }) => {
                   </div>
                   <div className="leaderboard-info">
                     <div className="leaderboard-name">{currentUserRank.full_name} (You)</div>
-                    <div className="leaderboard-meta">
-                      {currentUserRank.total_leads} leads · {currentUserRank.closed_leads} closed
-                    </div>
                   </div>
                   <div className="leaderboard-stats">
                     <div className="leaderboard-value">{currentUserRank.sv_completed}</div>

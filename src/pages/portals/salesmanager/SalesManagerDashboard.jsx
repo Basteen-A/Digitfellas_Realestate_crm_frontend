@@ -15,21 +15,12 @@ import {
   InboxArrowDownIcon,
   UserGroupIcon,
   CubeIcon,
-  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
 import { TaskDashboardWidget } from '../../tasks';
 import { SalesManagerLeaderboardCard } from '../common/LeaderboardCard';
 import '../collection/CollectionWorkspace.css';
-
-const DATE_FILTER_OPTIONS = [
-  { value: 'today', label: 'Today' },
-  { value: 'this_week', label: 'This Week' },
-  { value: 'this_month', label: 'This Month' },
-  { value: 'last_month', label: 'Last Month' },
-  { value: 'custom', label: 'Custom Range' },
-];
 
 const SalesManagerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -40,12 +31,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
   const [todayFollowUps, setTodayFollowUps] = useState([]);
   const [missedFollowUps, setMissedFollowUps] = useState([]);
 
-  // Date filter state
-  const [dateFilter, setDateFilter] = useState('this_month');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-
-  const load = useCallback(async (filterOverride, startOverride, endOverride) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const now = new Date();
@@ -54,19 +40,8 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
       const endOfDay = new Date(now);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const f = filterOverride || dateFilter;
-      const params = { dateFilter: f };
-      const sDate = startOverride !== undefined ? startOverride : customStartDate;
-      const eDate = endOverride !== undefined ? endOverride : customEndDate;
-
-      if (f === 'custom') {
-        if (!sDate || !eDate) {
-          setLoading(false);
-          return;
-        }
-        params.startDate = sDate;
-        params.endDate = eDate;
-      }
+      // Stat cards show all-time records (no date filtering)
+      const params = { dateFilter: 'all' };
 
       const [statsResp, handoffsResp] = await Promise.all([
         dashboardApi.getSalesManagerStats(params).catch(() => ({ data: {} })),
@@ -127,24 +102,11 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
     } finally {
       setLoading(false);
     }
-  }, [dateFilter, customStartDate, customEndDate]);
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  const handleFilterChange = (val) => {
-    setDateFilter(val);
-    if (val !== 'custom') {
-      load(val);
-    }
-  };
-
-  const handleApplyCustom = () => {
-    if (customStartDate && customEndDate) {
-      load('custom', customStartDate, customEndDate);
-    }
-  };
 
   if (loading) {
     return (
@@ -243,80 +205,6 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
             My Leads →
           </button>
         </div>
-      </div>
-
-      {/* Date Filter Bar */}
-      <div className="col-date-filter-bar" style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '12px 20px',
-        background: 'var(--card-bg, #fff)',
-        borderRadius: 12,
-        border: '1px solid var(--border-light, #e5e7eb)',
-        marginBottom: 16,
-        flexWrap: 'wrap',
-      }}>
-        <CalendarDaysIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)', flexShrink: 0 }} />
-        <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-secondary, #64748b)', marginRight: 4 }}>Filter:</span>
-        {DATE_FILTER_OPTIONS.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => handleFilterChange(opt.value)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 8,
-              border: dateFilter === opt.value ? '1.5px solid var(--accent-blue, #3b82f6)' : '1px solid var(--border-light, #e5e7eb)',
-              background: dateFilter === opt.value ? 'var(--accent-blue-light, #eff6ff)' : 'transparent',
-              color: dateFilter === opt.value ? 'var(--accent-blue, #3b82f6)' : 'var(--text-primary, #1e293b)',
-              fontWeight: dateFilter === opt.value ? 700 : 500,
-              fontSize: 13,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
-        {dateFilter === 'custom' && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 8 }}>
-            <input
-              type="date"
-              value={customStartDate}
-              onChange={e => setCustomStartDate(e.target.value)}
-              style={{
-                padding: '5px 10px',
-                border: '1px solid var(--border-light, #e5e7eb)',
-                borderRadius: 8,
-                fontSize: 13,
-                background: 'var(--input-bg, #fff)',
-                color: 'var(--text-primary)',
-              }}
-            />
-            <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>to</span>
-            <input
-              type="date"
-              value={customEndDate}
-              onChange={e => setCustomEndDate(e.target.value)}
-              style={{
-                padding: '5px 10px',
-                border: '1px solid var(--border-light, #e5e7eb)',
-                borderRadius: 8,
-                fontSize: 13,
-                background: 'var(--input-bg, #fff)',
-                color: 'var(--text-primary)',
-              }}
-            />
-            <button
-              onClick={handleApplyCustom}
-              disabled={!customStartDate || !customEndDate}
-              className="crm-btn crm-btn-primary crm-btn-sm"
-              style={{ fontSize: 11, padding: '4px 12px', height: 'fit-content' }}
-            >
-              Apply
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Handoff Banner */}

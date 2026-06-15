@@ -364,8 +364,11 @@
 .app-sidebar--collapsed .app-sidebar__chevron,
 .app-sidebar--collapsed .app-sidebar__section-label { display: none; }
 .app-sidebar--collapsed .app-sidebar__role-badge { justify-content: center; padding: 8px 0; }
+/* Use a definite width (not auto) so both <a> links and <button> groups fill the
+   rail and center their icons identically. A <button> with width:auto shrink-wraps
+   and pushes its icon left of center, breaking the icon column alignment. */
 .app-sidebar--collapsed .app-sidebar__link,
-.app-sidebar--collapsed .app-sidebar__group-button { justify-content: center; padding: 8px; margin: 1px 8px; width: auto; }
+.app-sidebar--collapsed .app-sidebar__group-button { justify-content: center; padding: 8px; margin: 1px 8px; width: calc(100% - 16px); }
 .app-sidebar--collapsed .app-sidebar__subnav { display: none; }
 
 /* ── Hover-to-expand the collapsed rail (portal behaviour) ── */
