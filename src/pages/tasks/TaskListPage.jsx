@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
-  ArrowPathIcon, PlusCircleIcon, MagnifyingGlassIcon, ChevronRightIcon,
+  ArrowPathIcon, PlusCircleIcon, PlusIcon, MagnifyingGlassIcon, ChevronRightIcon,
   PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, FunnelIcon,
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
@@ -200,7 +200,7 @@ const TaskListPage = () => {
   const [departments, setDepartments] = useState([]); // full list for the filter
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
   const [expandedId, setExpandedId] = useState(null);
   const [details, setDetails] = useState({}); // id -> full task detail (lazy)
   const [detailLoading, setDetailLoading] = useState(null);
@@ -263,8 +263,10 @@ const TaskListPage = () => {
   ];
 
   const openView = (id) => setModal({ open: true, mode: 'view', taskId: id });
-  const openCreate = () => setModal({ open: true, mode: 'create', taskId: null });
+  const openCreate = (prefill = null) => setModal({ open: true, mode: 'create', taskId: null, prefill });
   const closeModal = () => setModal({ open: false, mode: 'view', taskId: null });
+
+
 
   // Expand a row's inline drawer and lazily fetch its full detail (description,
   // attachments, full activity with status + author) the first time it opens.
@@ -285,7 +287,7 @@ const TaskListPage = () => {
   };
 
   const toggleGroup = (key) => {
-    setCollapsedGroups((prev) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
@@ -809,24 +811,46 @@ const TaskListPage = () => {
 
                 {/* Grouped */}
                 {!loading && groupBy !== 'none' && groups.map(([key, tasks]) => {
-                  const collapsed = collapsedGroups.has(`${groupBy}:${key}`);
+                  const groupKey = `${groupBy}:${key}`;
+                  const isExpanded = expandedGroups.has(groupKey);
                   const done = tasks.filter((t) => t.status === 'completed' || t.status === 'closed').length;
                   const over = tasks.filter((t) => t.is_overdue).length;
                   return (
                     <React.Fragment key={key}>
-                      <tr onClick={() => toggleGroup(`${groupBy}:${key}`)} style={{ background: 'var(--bg-primary, #f1f5f9)', cursor: 'pointer' }}>
-                        <td colSpan={6} style={{ maxWidth: 'none', whiteSpace: 'normal' }}>
+                      <tr style={{ background: 'var(--bg-primary, #f1f5f9)' }}>
+                        <td colSpan={6} style={{ maxWidth: 'none', whiteSpace: 'normal', padding: '10px 14px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <ChevronRightIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)', transform: collapsed ? 'none' : 'rotate(90deg)', transition: 'transform .15s' }} />
-                            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{key}</span>
+                            {/* Plus Icon - expands/collapses the task list */}
+                            <button
+                              type="button"
+                              title={isExpanded ? 'Collapse to hide tasks' : 'Expand to show tasks'}
+                              aria-label={isExpanded ? 'Collapse to hide tasks' : 'Expand to show tasks'}
+                              onClick={() => toggleGroup(groupKey)}
+                              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', border: '1px solid var(--border-primary)', background: isExpanded ? 'var(--accent-blue, #2563eb)' : 'var(--bg-card)', color: isExpanded ? '#fff' : 'var(--accent-blue, #2563eb)', cursor: 'pointer', flexShrink: 0, transition: 'all .15s' }}
+                            >
+                              <PlusIcon style={{ width: 14, height: 14, transform: isExpanded ? 'rotate(45deg)' : 'none', transition: 'transform .15s' }} />
+                            </button>
+                            
+                            {/* Group Name - clickable to toggle */}
+                            <span 
+                              onClick={() => toggleGroup(groupKey)}
+                              style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', userSelect: 'none' }}
+                            >
+                              {key}
+                            </span>
+                            
+                            {/* Task Count */}
                             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-blue, #2563eb)', background: 'rgba(37,99,235,0.1)', borderRadius: 999, padding: '1px 8px' }}>{tasks.length}</span>
+                            
+                            {/* Stats */}
                             <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                               {done}/{tasks.length} done{over > 0 && <span style={{ color: '#dc2626' }}> · {over} overdue</span>}
                             </span>
                           </div>
                         </td>
                       </tr>
-                      {!collapsed && tasks.map((t) => {
+                      {/* Task rows - shown when expanded */}
+                      {isExpanded && tasks.map((t) => {
                         const groupedClass = groupBy === 'department' ? 'task-row--grouped-department' : 
                                            groupBy === 'project' ? 'task-row--grouped-project' :
                                            groupBy === 'status' ? 'task-row--grouped-status' : 'task-row--grouped';
@@ -845,16 +869,41 @@ const TaskListPage = () => {
             {!loading && records === 0 && <div className="task-cards-msg">No tasks found for current filters</div>}
             {!loading && groupBy === 'none' && pagedRows.map(renderTaskCard)}
             {!loading && groupBy !== 'none' && groups.map(([key, tasks]) => {
+              const groupKey = `${groupBy}:${key}`;
+              const isExpanded = expandedGroups.has(groupKey);
               const done = tasks.filter((t) => t.status === 'completed' || t.status === 'closed').length;
               const over = tasks.filter((t) => t.is_overdue).length;
               return (
                 <div key={key} className="task-cards-group">
                   <div className="task-cards-group__head">
-                    <span className="task-cards-group__name">{key}</span>
+                    {/* Plus Icon - expands/collapses the task list */}
+                    <button
+                      type="button"
+                      title={isExpanded ? 'Collapse to hide tasks' : 'Expand to show tasks'}
+                      aria-label={isExpanded ? 'Collapse to hide tasks' : 'Expand to show tasks'}
+                      onClick={() => toggleGroup(groupKey)}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', border: '1px solid var(--border-primary)', background: isExpanded ? 'var(--accent-blue, #2563eb)' : 'var(--bg-card)', color: isExpanded ? '#fff' : 'var(--accent-blue, #2563eb)', cursor: 'pointer', flexShrink: 0, marginRight: 4, transition: 'all .15s' }}
+                    >
+                      <PlusIcon style={{ width: 14, height: 14, transform: isExpanded ? 'rotate(45deg)' : 'none', transition: 'transform .15s' }} />
+                    </button>
+                    
+                    {/* Group Name */}
+                    <span 
+                      className="task-cards-group__name"
+                      onClick={() => toggleGroup(groupKey)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {key}
+                    </span>
+                    
+                    {/* Task Count */}
                     <span className="task-cards-group__count">{tasks.length}</span>
+                    
+                    {/* Stats */}
                     <span className="task-cards-group__stat">{done}/{tasks.length} done{over > 0 && <span style={{ color: '#dc2626' }}> · {over} overdue</span>}</span>
                   </div>
-                  {tasks.map(renderTaskCard)}
+                  {/* Task Cards - shown when expanded */}
+                  {isExpanded && tasks.map(renderTaskCard)}
                 </div>
               );
             })}
@@ -877,6 +926,7 @@ const TaskListPage = () => {
         <TaskModal
           mode={modal.mode}
           taskId={modal.taskId}
+          prefill={modal.prefill}
           onClose={closeModal}
           onSaved={load}
         />

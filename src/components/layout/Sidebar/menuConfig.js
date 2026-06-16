@@ -78,7 +78,16 @@ const adminSidebar = [
       { label: 'Banks', path: '/super-admin/banks' },
     ],
   },
-  { label: 'Reports', path: '/super-admin/reports', icon: ChartBarIcon },
+  {
+    label: 'Reports',
+    icon: ChartBarIcon,
+    children: [
+      { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
+      { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
+      { label: 'Sales Head', path: '/super-admin/reports/sales-head' },
+      { label: 'Organization', path: '/super-admin/reports/organization' },
+    ],
+  },
 
   { section: 'INVENTORY' },
   {

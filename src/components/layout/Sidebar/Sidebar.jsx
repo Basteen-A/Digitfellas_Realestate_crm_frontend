@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { getSidebarMenuForRole, getTaskMenuItem } from './menuConfig';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
+import { getSidebarMenuForRole, getTaskMenuItem, ROLE_LABELS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
-import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { logout } from '../../../redux/slices/authSlice';
+import { XMarkIcon, ChevronRightIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './Sidebar.css';
 
@@ -24,7 +26,21 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const user = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(user);
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { siteTitle, logoFull, logoMark } = useSiteSettings();
+
+  const fullName = user?.fullName || user?.full_name
+    || `${user?.firstName || user?.first_name || ''} ${user?.lastName || user?.last_name || ''}`.trim()
+    || 'User';
+  const initials = (`${(user?.firstName || user?.first_name || '')[0] || ''}${(user?.lastName || user?.last_name || '')[0] || ''}`).toUpperCase() || 'U';
+  const roleLabel = ROLE_LABELS[roleCode] || user?.userType || '';
+
+  const handleLogout = async () => {
+    try { await dispatch(logout()); } catch { /* ignore */ }
+    toast.success('Logged out');
+    navigate('/login');
+  };
 
   // Determine which group contains the current path so it auto-opens
   const menu = React.useMemo(() => {
@@ -85,20 +101,20 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   return (
     <>
       {isMobile && isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        <div
+          className="fixed inset-0 bg-black/50 z-[450] md:hidden"
           onClick={onMobileClose}
         />
       )}
-      <aside className={`app-sidebar ${isCollapsed ? 'app-sidebar--collapsed' : ''} ${isMobile ? 'fixed left-0 top-0 z-50 w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
+      <aside className={`app-sidebar ${isCollapsed ? 'app-sidebar--collapsed' : ''} ${isMobile ? 'fixed left-0 top-0 z-[460] w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
         {isMobile && (
           <button
             type="button"
             onClick={onMobileClose}
-            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 md:hidden"
+            className="app-sidebar__close"
             aria-label="Close sidebar"
           >
-            <XMarkIcon className="sidebar-icon" />
+            <XMarkIcon style={{ width: 20, height: 20 }} />
           </button>
         )}
       {/* Brand — same as the portal sidebar: full logo when expanded, square
@@ -164,6 +180,26 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         })}
       </nav>
 
+      {/* Footer — profile + logout (mirrors the header user menu) */}
+      <div className="app-sidebar__footer">
+        <div className="app-sidebar__profile">
+          <NavLink
+            to="/profile"
+            onClick={handleLinkClick}
+            className={({ isActive }) => `app-sidebar__profile-link ${isActive ? 'is-active' : ''}`}
+            title={fullName}
+          >
+            <span className="app-sidebar__profile-avatar">{initials}</span>
+            <span className="app-sidebar__profile-info">
+              <span className="app-sidebar__profile-name">{fullName}</span>
+              {roleLabel && <span className="app-sidebar__profile-role">{roleLabel}</span>}
+            </span>
+          </NavLink>
+          <button type="button" className="app-sidebar__logout-btn" onClick={handleLogout} title="Logout" aria-label="Logout">
+            <ArrowRightOnRectangleIcon className="sidebar-icon" />
+          </button>
+        </div>
+      </div>
 
     </aside>
     </>

@@ -1,17 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import reportApi from '../../../api/reportApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import { formatCurrency } from '../../../utils/formatters';
 import {
-  ChartBarIcon, UsersIcon, BuildingOffice2Icon, ArrowPathIcon,
-  ArrowLeftIcon, PresentationChartLineIcon,
+  ChartBarIcon, ArrowPathIcon, ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
 import AnalyticsDashboard from './analytics/AnalyticsDashboard';
+import './Reports.css';
 
+const VIEWS = [
+  { key: 'analytics', label: 'Analytics' },
+  { key: 'users', label: 'User Activity' },
+  { key: 'inventory', label: 'Inventory' },
+];
 const PERIODS = [
   { key: 'today', label: 'Today' },
   { key: 'wtd', label: 'Week to Date' },
@@ -24,51 +30,53 @@ const ROLES = [
   { code: 'COL', label: 'Collection' },
 ];
 
+// URL slug → analytics module-role mapping (Reports submenu under the SA sidebar)
+const MODULE_TO_ROLE = { telecaller: 'TC', 'sales-manager': 'SM', 'sales-head': 'SH', organization: 'ORG' };
+
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 const fullName = (f, l) => `${f || ''} ${l || ''}`.trim() || '—';
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)' };
 
 const ReportsPage = () => {
-  const [tab, setTab] = useState('users');      // 'users' | 'inventory'
+  const { module } = useParams();
+  const moduleRole = MODULE_TO_ROLE[module] || null;
+  // A module slug in the URL pins the view to Analytics for that role module.
+  const [tab, setTab] = useState('analytics');  // 'analytics' | 'users' | 'inventory'
   const [period, setPeriod] = useState('today');
 
+  useEffect(() => { if (moduleRole) setTab('analytics'); }, [moduleRole]);
+
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div className="reports-page">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1><ChartBarIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Reports</h1>
           <p className="hidden sm:block">User activity &amp; inventory cost reports</p>
         </div>
-        <div className="crm-btn-group">
-          <button className={`crm-btn ${tab === 'analytics' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setTab('analytics')}>
-            <PresentationChartLineIcon style={{ width: 15, height: 15 }} /> Analytics
-          </button>
-          <button className={`crm-btn ${tab === 'users' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setTab('users')}>
-            <UsersIcon style={{ width: 15, height: 15 }} /> User Activity
-          </button>
-          <button className={`crm-btn ${tab === 'inventory' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setTab('inventory')}>
-            <BuildingOffice2Icon style={{ width: 15, height: 15 }} /> Inventory
-          </button>
+        <div className="reports-filter" style={{ flex: '0 1 220px' }}>
+          <label className="reports-filter__label" htmlFor="reports-view">View</label>
+          <select id="reports-view" className="reports-select" value={tab} onChange={(e) => setTab(e.target.value)}>
+            {VIEWS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+          </select>
         </div>
       </div>
 
       {/* Shared period filter — Analytics has its own filter bar */}
       {tab !== 'analytics' && (
-        <div className="crm-btn-group" style={{ marginBottom: 16 }}>
-          {PERIODS.map((p) => (
-            <button key={p.key} className={`crm-btn ${period === p.key ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setPeriod(p.key)}>
-              {p.label}
-            </button>
-          ))}
+        <div className="reports-filter-bar">
+          <div className="reports-filter" style={{ flex: '0 1 200px' }}>
+            <label className="reports-filter__label" htmlFor="reports-period">Period</label>
+            <select id="reports-period" className="reports-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
+              {PERIODS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+          </div>
         </div>
       )}
 
-      {tab === 'analytics' && <AnalyticsDashboard />}
+      {tab === 'analytics' && <AnalyticsDashboard moduleRole={moduleRole} />}
       {tab === 'users' && <UserActivityReport period={period} />}
       {tab === 'inventory' && <InventoryReport period={period} />}
-
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>
   );
 };
@@ -110,11 +118,16 @@ const UserActivityReport = ({ period }) => {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-        <select className="crm-form-select" style={{ width: 220 }} value={role} onChange={(e) => setRole(e.target.value)}>
-          {ROLES.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
-        </select>
-        <button className="crm-btn crm-btn-ghost" onClick={loadList}><ArrowPathIcon style={{ width: 15, height: 15 }} /> Refresh</button>
+      <div className="reports-filter-bar">
+        <div className="reports-filter" style={{ flex: '0 1 220px' }}>
+          <label className="reports-filter__label" htmlFor="ua-role">Role</label>
+          <select id="ua-role" className="reports-select" value={role} onChange={(e) => setRole(e.target.value)}>
+            {ROLES.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
+          </select>
+        </div>
+        <div className="reports-filter-actions">
+          <button className="crm-btn crm-btn-ghost" onClick={loadList}><ArrowPathIcon style={{ width: 15, height: 15 }} /> Refresh</button>
+        </div>
       </div>
 
       <div className="crm-card" style={{ overflowX: 'auto' }}>
@@ -353,16 +366,24 @@ const InventoryReport = ({ period }) => {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-        <select className="crm-form-select" style={{ minWidth: 180 }} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-          <option value="">All Projects</option>
-          {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name || p.name}</option>)}
-        </select>
-        <select className="crm-form-select" style={{ minWidth: 180 }} value={locationId} onChange={(e) => setLocationId(e.target.value)}>
-          <option value="">All Locations</option>
-          {locations.map((l) => <option key={l.id} value={l.id}>{l.location_name || l.name}</option>)}
-        </select>
-        <button className="crm-btn crm-btn-ghost" onClick={load}><ArrowPathIcon style={{ width: 15, height: 15 }} /> Refresh</button>
+      <div className="reports-filter-bar">
+        <div className="reports-filter">
+          <label className="reports-filter__label" htmlFor="inv-project">Project</label>
+          <select id="inv-project" className="reports-select" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <option value="">All Projects</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name || p.name}</option>)}
+          </select>
+        </div>
+        <div className="reports-filter">
+          <label className="reports-filter__label" htmlFor="inv-location">Location</label>
+          <select id="inv-location" className="reports-select" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+            <option value="">All Locations</option>
+            {locations.map((l) => <option key={l.id} value={l.id}>{l.location_name || l.name}</option>)}
+          </select>
+        </div>
+        <div className="reports-filter-actions">
+          <button className="crm-btn crm-btn-ghost" onClick={load}><ArrowPathIcon style={{ width: 15, height: 15 }} /> Refresh</button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>

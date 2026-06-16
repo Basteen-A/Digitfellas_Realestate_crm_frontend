@@ -200,6 +200,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
             <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
             <Route path="/super-admin/reports" element={<Reports />} />
+            <Route path="/super-admin/reports/:module" element={<Reports />} />
             <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
             <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
             <Route path="/super-admin/payment-modes" element={<PaymentModes />} />

@@ -242,3 +242,17 @@
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .inventory-dashboard__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .inventory-dashboard__header h1 { font-size: 19px; }
+}
+
+@media (max-width: 480px) {
+  .inv-project-card__stats { grid-template-columns: repeat(2, 1fr); }
+}

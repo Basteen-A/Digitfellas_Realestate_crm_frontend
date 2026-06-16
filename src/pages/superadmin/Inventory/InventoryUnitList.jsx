@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import locationApi from '../../../api/locationApi';
 import projectApi from '../../../api/projectApi';
@@ -534,7 +535,7 @@ const InventoryUnitList = () => {
           <div className="inv-modal__panel">
             <header className="inv-modal__header">
               <h2>{modal.mode === 'create' ? 'Add Unit' : 'Edit Unit'}</h2>
-              <button onClick={closeModal}>✕</button>
+              <button onClick={closeModal} aria-label="Close"><XMarkIcon style={{ width: 18, height: 18 }} /></button>
             </header>
 
             <form className="inv-form" onSubmit={handleSubmit}>
@@ -768,7 +769,7 @@ const InventoryUnitList = () => {
           <div className="inv-modal__panel" style={{ maxWidth: 640 }}>
             <header className="inv-modal__header">
               <h2>Manage Phases</h2>
-              <button onClick={closePhaseManager}>✕</button>
+              <button onClick={closePhaseManager} aria-label="Close"><XMarkIcon style={{ width: 18, height: 18 }} /></button>
             </header>
             <div style={{ padding: '16px 20px' }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>

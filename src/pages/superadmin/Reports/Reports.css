@@ -1,0 +1,110 @@
+/* ============================================================ */
+/* REPORTS — shared filter bar, dropdowns & responsive layout    */
+/* ============================================================ */
+
+.reports-page {
+  animation: reportsFadeIn 0.3s ease-out;
+}
+
+@keyframes reportsFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Filter bar: a responsive row of labelled dropdowns ── */
+.reports-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.reports-filter-bar--card {
+  padding: 12px 14px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.reports-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 170px;
+}
+
+.reports-filter__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.reports-select,
+.reports-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.reports-select:focus,
+.reports-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-blue-bg);
+}
+
+/* Actions (refresh / export) pinned to the end of the bar. */
+.reports-filter-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+/* ── KPI / metric card rows ── */
+.reports-metric-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* ── Charts grid: collapses to one column on narrow screens ── */
+.reports-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .reports-filter-bar {
+    gap: 10px;
+  }
+  .reports-filter {
+    flex: 1 1 100%;
+  }
+  .reports-filter-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .reports-filter-actions .crm-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

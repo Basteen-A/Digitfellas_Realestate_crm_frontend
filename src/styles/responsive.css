@@ -212,3 +212,37 @@
     font-size: 11px !important;
   }
 }
+
+/* ============================================================
+   GLOBAL MOBILE — applies to ADMIN (MainLayout) pages too, not
+   just the portals. Fixes iOS tap-to-zoom + sideways scroll.
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Prevent iOS Safari auto-zoom on focus: it fires whenever the focused
+     control's font-size is < 16px. The .portal-content rule above only covered
+     portal screens — this covers the admin Reports / masters pages as well. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* No page should scroll sideways on a phone. */
+  .main-layout__right,
+  .main-layout__content {
+    overflow-x: hidden;
+    min-width: 0;
+  }
+  .main-layout__content { padding: 14px; }
+
+  /* Admin tables stay readable via horizontal scroll inside their card. */
+  .main-layout__content .crm-card table { min-width: max-content; }
+
+  /* Stack admin page headers consistently. */
+  .main-layout__content .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .main-layout__content .page-header h1 { font-size: 18px; }
+}

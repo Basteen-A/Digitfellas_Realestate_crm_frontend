@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { CubeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
 import projectApi from '../../../api/projectApi';
@@ -259,7 +260,7 @@ const InventoryDashboard = () => {
 
       {projects.length === 0 ? (
         <div className="inv-empty">
-          <div className="inv-empty__icon">📦</div>
+          <div className="inv-empty__icon"><CubeIcon style={{ width: 40, height: 40 }} /></div>
           <div className="inv-empty__text">No inventory units found</div>
           <div className="inv-empty__sub">
             Go to a project and add units to start tracking inventory
@@ -391,7 +392,7 @@ const InventoryDashboard = () => {
                 <div style={{ fontSize: 16, fontWeight: 700 }}>Manage Phases</div>
                 <div style={{ fontSize: 12, color: '#6b7280' }}>{phaseModal.project_name}</div>
               </div>
-              <button onClick={closePhaseModal} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+              <button onClick={closePhaseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'inline-flex', padding: 4 }} aria-label="Close"><XMarkIcon style={{ width: 20, height: 20 }} /></button>
             </header>
 
             <div style={{ padding: '16px 20px' }}>

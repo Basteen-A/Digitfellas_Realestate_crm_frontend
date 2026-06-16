@@ -225,9 +225,16 @@ const MasterCrudPage = ({ config }) => {
     }
   };
 
+  // Fields that need the full row: long text, multi-value pickers, or explicit opt-in.
+  const isFullWidthField = (field) =>
+    field.fullWidth || field.type === 'textarea' || field.type === 'multiselect';
+
+  const fieldClass = (field, base = 'master-form__field') =>
+    `${base}${isFullWidthField(field) ? ' master-form__field--full' : ''}`;
+
   const renderField = (field) => {
     const value = formValues[field.name];
-    const isRequired = typeof field.required === 'function' 
+    const isRequired = typeof field.required === 'function'
       ? field.required(formValues, fieldOptions, modal)
       : field.required;
 
@@ -246,7 +253,7 @@ const MasterCrudPage = ({ config }) => {
 
     if (field.type === 'textarea') {
       return (
-        <label className="master-form__field" key={field.name}>
+        <label className={fieldClass(field)} key={field.name}>
           <span>{field.label}</span>
           <textarea
             value={value || ''}
@@ -264,7 +271,7 @@ const MasterCrudPage = ({ config }) => {
         ? field.filterOptions(baseOptions, formValues)
         : baseOptions;
       return (
-        <label className="master-form__field" key={field.name}>
+        <label className={fieldClass(field)} key={field.name}>
           <span>{field.label}</span>
           <select
             value={value || ''}
@@ -292,18 +299,18 @@ const MasterCrudPage = ({ config }) => {
           .filter((option) => !searchText || String(option.label || '').toLowerCase().includes(searchText));
 
       return (
-        <label className="master-form__field" key={field.name}>
+        <label className={fieldClass(field)} key={field.name}>
           <span>{field.label}</span>
 
           <input
             type="text"
+            className="master-form__multiselect-search"
             value={multiSelectSearch[field.name] || ''}
             placeholder={`Search ${field.label}`}
             onChange={(e) => {
               const nextValue = e.target.value;
               setMultiSelectSearch((prev) => ({ ...prev, [field.name]: nextValue }));
             }}
-            style={{ marginBottom: 8 }}
           />
 
           <select
@@ -331,15 +338,15 @@ const MasterCrudPage = ({ config }) => {
           </select>
 
           {selectedValues.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            <div className="master-form__chips">
               {selectedValues.map((selectedId) => {
                 const option = availableOptions.find((opt) => String(opt.value) === String(selectedId));
                 return (
-                  <span key={selectedId} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 12, background: '#eef2ff', color: '#3730a3', fontSize: 12, fontWeight: 600 }}>
+                  <span key={selectedId} className="master-form__chip">
                     {option?.label || selectedId}
                     <button
                       type="button"
-                      style={{ border: 'none', background: 'transparent', color: '#3730a3', cursor: 'pointer', fontWeight: 700, padding: 0, lineHeight: 1 }}
+                      className="master-form__chip-remove"
                       onClick={() => {
                         setFormValues((prev) => {
                           const existing = Array.isArray(prev[field.name]) ? prev[field.name].map((item) => String(item)) : [];
@@ -359,8 +366,8 @@ const MasterCrudPage = ({ config }) => {
     }
 
     return (
-      <label className="master-form__field" key={field.name}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <label className={fieldClass(field)} key={field.name}>
+        <div className="master-form__label-row">
           <span>{field.label}</span>
           {field.name === 'password' && modal.mode === 'edit' && (
             <div 
@@ -535,13 +542,15 @@ const MasterCrudPage = ({ config }) => {
             </header>
 
             <form className="master-form" onSubmit={handleSubmit}>
-              {visibleFields.map(renderField)}
+              <div className="master-form__grid">
+                {visibleFields.map(renderField)}
+              </div>
 
               <footer className="master-form__footer">
                 <button type="button" className="master-page__secondary" onClick={closeModal}>
                   Cancel
                 </button>
-                <button type="submit" className="master-page__primary" disabled={submitting} style={{ backgroundColor: '#625afa' }}>
+                <button type="submit" className="master-page__primary" disabled={submitting}>
                   {submitting ? 'Saving...' : 'Save'}
                 </button>
               </footer>

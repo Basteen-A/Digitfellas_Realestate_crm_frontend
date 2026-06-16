@@ -55,7 +55,7 @@ const emptyForm = {
   assignee_ids: [],
 };
 
-const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
+const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSaved }) => {
   const currentUser = useSelector((state) => state.auth.user);
 
   const [task, setTask] = useState(null);
@@ -234,6 +234,9 @@ const TaskModal = ({ mode = 'view', taskId = null, onClose, onSaved }) => {
   useEffect(() => {
     loadOptions();
     if (!isCreate) loadTask();
+    // New task opened from a group header: pre-fill that group's field
+    // (department_id / project_id) so it lands in the same bucket.
+    else if (prefill) setForm((p) => ({ ...p, ...prefill }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 

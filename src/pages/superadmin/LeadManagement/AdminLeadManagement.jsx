@@ -17,6 +17,7 @@ import {
   MapPinIcon,
   ArrowsRightLeftIcon,
   TrashIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import './AdminLeadManagement.css';
@@ -681,41 +682,22 @@ const AdminLeadManagement = () => {
 
       {/* ── Bulk Transfer Modal ── */}
       {transferOpen && (
-        <div
-          onClick={closeTransfer}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#fff', borderRadius: 12, width: '560px', maxWidth: '92vw',
-              maxHeight: '88vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-            }}
-          >
-            <header style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '14px 20px', borderBottom: '1px solid #e5e7eb',
-            }}>
+        <div className="alm-modal" onClick={closeTransfer}>
+          <div className="alm-modal__panel alm-modal__panel--wide" onClick={(e) => e.stopPropagation()}>
+            <header className="alm-modal__header">
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>Transfer Leads</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                <div className="alm-modal__title">Transfer Leads</div>
+                <div className="alm-modal__sub">
                   Move every lead from one user to another — status, site visits, telecaller history and timeline all carry over.
                 </div>
               </div>
-              <button onClick={closeTransfer} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+              <button className="alm-modal__close" onClick={closeTransfer} aria-label="Close"><XMarkIcon style={{ width: 18, height: 18 }} /></button>
             </header>
 
-            <div style={{ padding: '16px 20px', display: 'grid', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>From user (source)</label>
-                <select
-                  value={transferFrom}
-                  onChange={(e) => setTransferFrom(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
-                >
+            <div className="alm-modal__body">
+              <div className="alm-field">
+                <label>From user (source)</label>
+                <select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
                   <option value="">Select source user…</option>
                   {allUserGroups.map((g) => (
                     <optgroup key={g.label} label={g.label}>
@@ -727,40 +709,39 @@ const AdminLeadManagement = () => {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div className="alm-field">
+                <label>
                   <span>To user(s){transferTo.length > 0 ? ` · ${transferTo.length} selected` : ''}</span>
                   {transferTo.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setTransferTo([])}
-                      style={{ background: 'none', border: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
                     >
                       Clear
                     </button>
                   )}
                 </label>
-                <div style={{ border: '1px solid #d1d5db', borderRadius: 6, maxHeight: 220, overflowY: 'auto', padding: 6 }}>
+                <div className="alm-userpick">
                   {activeUserGroups.map((g) => {
                     const selectable = g.users.filter((u) => u.id !== transferFrom);
                     if (selectable.length === 0) return null;
                     return (
                       <div key={g.label} style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', color: '#6b7280', padding: '4px 6px' }}>{g.label}</div>
+                        <div className="alm-userpick__group-label">{g.label}</div>
                         {selectable.map((u) => {
                           const checked = transferTo.includes(u.id);
                           return (
                             <label
                               key={u.id}
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: checked ? '#EEF2FF' : 'transparent' }}
+                              className={`alm-userpick__row${checked ? ' alm-userpick__row--checked' : ''}`}
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleTransferTo(u.id)}
-                                style={{ width: 16, height: 16, accentColor: '#4338CA', cursor: 'pointer' }}
                               />
-                              <span style={{ fontSize: 14, color: '#111827' }}>{u.name}</span>
+                              <span>{u.name}</span>
                             </label>
                           );
                         })}
@@ -769,56 +750,45 @@ const AdminLeadManagement = () => {
                   })}
                 </div>
                 {transferTo.length > 1 && (
-                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                  <div className="alm-hint">
                     Leads will be split evenly across the {transferTo.length} selected users in round-robin order.
                   </div>
                 )}
               </div>
 
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Note (optional)</label>
+              <div className="alm-field">
+                <label>Note (optional)</label>
                 <input
                   value={transferNote}
                   onChange={(e) => setTransferNote(e.target.value)}
                   placeholder="Reason for transfer"
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
                 />
               </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <div className="alm-modal__footer alm-modal__footer--split">
+              <button
+                type="button"
+                className="alm-mbtn alm-mbtn--danger"
+                onClick={handleDeleteUser}
+                disabled={!transferFrom || deletingUser}
+                title="Soft-delete the source user (transfer their leads first)"
+              >
+                <TrashIcon style={{ width: 16, height: 16 }} />
+                {deletingUser ? 'Deleting…' : 'Delete source user'}
+              </button>
+              <div className="alm-modal__footer-group">
+                <button type="button" className="alm-mbtn alm-mbtn--ghost" onClick={closeTransfer}>
+                  Cancel
+                </button>
                 <button
                   type="button"
-                  onClick={handleDeleteUser}
-                  disabled={!transferFrom || deletingUser}
-                  title="Soft-delete the source user (transfer their leads first)"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '8px 14px', border: '1px solid #FCA5A5', background: '#FEF2F2',
-                    color: '#B91C1C', borderRadius: 6, fontWeight: 600,
-                    cursor: (!transferFrom || deletingUser) ? 'not-allowed' : 'pointer',
-                    opacity: (!transferFrom || deletingUser) ? 0.6 : 1,
-                  }}
+                  className="alm-mbtn alm-mbtn--primary"
+                  onClick={handleBulkTransfer}
+                  disabled={transferring}
                 >
-                  <TrashIcon style={{ width: 16, height: 16 }} />
-                  {deletingUser ? 'Deleting…' : 'Delete source user'}
+                  {transferring ? 'Transferring…' : 'Transfer all leads'}
                 </button>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={closeTransfer}
-                    style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleBulkTransfer}
-                    disabled={transferring}
-                    style={{ padding: '8px 14px', border: 'none', background: '#4338CA', color: '#fff', borderRadius: 6, fontWeight: 600, cursor: transferring ? 'not-allowed' : 'pointer' }}
-                  >
-                    {transferring ? 'Transferring…' : 'Transfer all leads'}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -827,41 +797,22 @@ const AdminLeadManagement = () => {
 
       {/* ── Single-Lead Move Modal ── */}
       {moveLead && (
-        <div
-          onClick={closeMove}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#fff', borderRadius: 12, width: '480px', maxWidth: '92vw',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-            }}
-          >
-            <header style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '14px 20px', borderBottom: '1px solid #e5e7eb',
-            }}>
+        <div className="alm-modal" onClick={closeMove}>
+          <div className="alm-modal__panel" onClick={(e) => e.stopPropagation()}>
+            <header className="alm-modal__header">
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>Move Lead</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                <div className="alm-modal__title">Move Lead</div>
+                <div className="alm-modal__sub">
                   {moveLead.leadNumber || moveLead.fullName || 'Lead'} · currently {moveLead.assignedToUserName || 'Unassigned'}
                 </div>
               </div>
-              <button onClick={closeMove} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+              <button className="alm-modal__close" onClick={closeMove} aria-label="Close"><XMarkIcon style={{ width: 18, height: 18 }} /></button>
             </header>
 
-            <div style={{ padding: '16px 20px', display: 'grid', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Move to user</label>
-                <select
-                  value={moveTo}
-                  onChange={(e) => setMoveTo(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
-                >
+            <div className="alm-modal__body">
+              <div className="alm-field">
+                <label>Move to user</label>
+                <select value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
                   <option value="">Select user…</option>
                   {activeUserGroups.map((g) => (
                     <optgroup key={g.label} label={g.label}>
@@ -873,33 +824,28 @@ const AdminLeadManagement = () => {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Note (optional)</label>
+              <div className="alm-field">
+                <label>Note (optional)</label>
                 <input
                   value={moveNote}
                   onChange={(e) => setMoveNote(e.target.value)}
                   placeholder="Reason for move"
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 16 }}
                 />
               </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={closeMove}
-                  style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleMoveLead}
-                  disabled={moving}
-                  style={{ padding: '8px 14px', border: 'none', background: '#4338CA', color: '#fff', borderRadius: 6, fontWeight: 600, cursor: moving ? 'not-allowed' : 'pointer' }}
-                >
-                  {moving ? 'Moving…' : 'Move lead'}
-                </button>
-              </div>
+            <div className="alm-modal__footer alm-modal__footer--end">
+              <button type="button" className="alm-mbtn alm-mbtn--ghost" onClick={closeMove}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="alm-mbtn alm-mbtn--primary"
+                onClick={handleMoveLead}
+                disabled={moving}
+              >
+                {moving ? 'Moving…' : 'Move lead'}
+              </button>
             </div>
           </div>
         </div>
