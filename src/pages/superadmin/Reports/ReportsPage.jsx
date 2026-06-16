@@ -10,18 +10,14 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
-import AnalyticsDashboard from './analytics/AnalyticsDashboard';
+import AnalyticsDashboard, { ReportBrowser, firstKey } from './analytics/AnalyticsDashboard';
 import './Reports.css';
 
-const VIEWS = [
-  { key: 'analytics', label: 'Analytics' },
-  { key: 'users', label: 'User Activity' },
-  { key: 'inventory', label: 'Inventory' },
-];
 const PERIODS = [
   { key: 'today', label: 'Today' },
   { key: 'wtd', label: 'Week to Date' },
   { key: 'mtd', label: 'Month to Date' },
+  { key: 'all', label: 'All Time' },
 ];
 const ROLES = [
   { code: 'TC', label: 'Telecaller' },
@@ -46,19 +42,14 @@ const ReportsPage = () => {
   const [period, setPeriod] = useState('today');
 
   useEffect(() => { if (moduleRole) setTab('analytics'); }, [moduleRole]);
+  
 
   return (
     <div className="reports-page">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1><ChartBarIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Reports</h1>
+          <h1><ChartBarIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Reports - {moduleRole}</h1>
           <p className="hidden sm:block">User activity &amp; inventory cost reports</p>
-        </div>
-        <div className="reports-filter" style={{ flex: '0 1 220px' }}>
-          <label className="reports-filter__label" htmlFor="reports-view">View</label>
-          <select id="reports-view" className="reports-select" value={tab} onChange={(e) => setTab(e.target.value)}>
-            {VIEWS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
-          </select>
         </div>
       </div>
 
@@ -114,7 +105,7 @@ const UserActivityReport = ({ period }) => {
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(users, 25);
 
-  if (detail) return <UserDetail detail={detail} isCol={isCol} loading={detailLoading} onBack={() => setDetail(null)} />;
+  if (detail) return <UserDetail detail={detail} isCol={isCol} role={role} period={period} loading={detailLoading} onBack={() => setDetail(null)} />;
 
   return (
     <>
@@ -211,7 +202,7 @@ const Metric = ({ label, value, color }) => (
   </div>
 );
 
-const UserDetail = ({ detail, isCol, loading, onBack }) => {
+const UserDetail = ({ detail, isCol, role, period, loading, onBack }) => {
   const s = detail.summary || {};
   // Pair LOGIN/LOGOUT events into sessions
   const sessions = [];
@@ -331,6 +322,53 @@ const UserDetail = ({ detail, isCol, loading, onBack }) => {
           </div>
         )}
       </div>
+
+      {/* Per-user performance analytics (non-collection roles) */}
+      {!isCol && <UserReportBrowser userId={s.id} role={role} period={period} />}
+    </div>
+  );
+};
+
+// ── PER-USER REPORT BROWSER ──────────────────────────────────────────────────────
+// Embeds the role-specific analytics sidebar (Telecaller / Sales Manager / Sales
+// Head report catalogue) into the User Activity detail view, scoped to the
+// selected user via getRoleAnalytics(userId). Same sidebar + panels as the
+// Analytics dashboard, so a TC user shows TC reports, an SM user SM reports, etc.
+const UserReportBrowser = ({ userId, role, period }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(() => firstKey(role));
+
+  // Reset the active report when switching to a user of a different role.
+  useEffect(() => { setSelected(firstKey(role)); }, [role]);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+    let active = true;
+    setLoading(true);
+    reportApi.getRoleAnalytics({ role, period, userId })
+      .then((res) => { if (active) setData(res?.data || null); })
+      .catch((err) => { if (active) { setData(null); toast.error(err?.response?.data?.message || 'Failed to load performance'); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [userId, role, period]);
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700 }}>Performance</h3>
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-muted)' }}>
+        Scoped to this user · {period === 'today' ? 'Today' : period === 'wtd' ? 'Week to date' : period === 'all' ? 'All time' : 'Month to date'}
+      </p>
+      <ReportBrowser
+        role={role}
+        d={data}
+        loading={loading}
+        hasData={!!data}
+        selected={selected}
+        setSelected={setSelected}
+        loadingLabel="Loading performance…"
+        emptyLabel="No performance data for this user."
+      />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import TelecallerCallLog from './TelecallerCallLog';
 import TelecallerPullRequests from './TelecallerPullRequests';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
 import HandoffLeadsPage from '../common/HandoffLeadsPage';
+import PortalReports from '../common/PortalReports';
 import { TaskListPage } from '../../tasks';
 import { telecallerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
@@ -81,6 +82,9 @@ const TelecallerWorkspace = () => {
             )}
             {activeScreen === 'tasks' && (
               <TaskListPage />
+            )}
+            {activeScreen === 'reports' && (
+              <PortalReports role="TC" />
             )}
           </>
         );

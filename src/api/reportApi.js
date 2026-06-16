@@ -23,9 +23,10 @@ const reportApi = {
   },
 
   // Role analytics dashboard. role = TC|SM|SH, period = today|wtd|mtd|all,
-  // optional from/to (YYYY-MM-DD), sourceId, projectId.
-  getRoleAnalytics: async ({ role, period = 'mtd', from, to, sourceId, projectId } = {}) => {
-    const { data } = await api.get(`/reports/analytics${buildQuery({ role, period, from, to, sourceId, projectId })}`);
+  // optional from/to (YYYY-MM-DD), sourceId, projectId. Pass userId to scope the
+  // whole report to a single user (User Activity detail view).
+  getRoleAnalytics: async ({ role, period = 'mtd', from, to, sourceId, projectId, userId } = {}) => {
+    const { data } = await api.get(`/reports/analytics${buildQuery({ role, period, from, to, sourceId, projectId, userId })}`);
     return data;
   },
 };

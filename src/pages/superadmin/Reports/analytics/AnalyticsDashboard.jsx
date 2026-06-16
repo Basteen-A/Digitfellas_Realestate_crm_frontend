@@ -6,6 +6,7 @@ import {
   ScaleIcon, XCircleIcon, MapPinIcon, ExclamationTriangleIcon,
   PhoneArrowUpRightIcon, ClockIcon, Squares2X2Icon, UsersIcon, FunnelIcon,
   ChatBubbleLeftRightIcon, BanknotesIcon, ArrowsRightLeftIcon, ChevronDownIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import reportApi from '../../../../api/reportApi';
 import leadSourceApi from '../../../../api/leadSourceApi';
@@ -24,6 +25,7 @@ const PERIODS = [
   { key: 'today', label: 'Today' },
   { key: 'wtd', label: 'Week' },
   { key: 'mtd', label: 'Month' },
+  { key: 'all', label: 'All Time' },
 ];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -92,7 +94,27 @@ const ROLES = {
     ],
   },
 };
-const firstKey = (role) => ROLES[role].groups[0].keys[0];
+export const firstKey = (role) => ROLES[role].groups[0].keys[0];
+
+// Curated report sets for the self-service portal view (TC / SM / SH seeing only
+// their OWN data). Leaderboards and per-other-user breakdowns are intentionally
+// excluded — those expose other people's numbers.
+export const SELF_REPORT_GROUPS = {
+  TC: [
+    { label: 'Performance', keys: ['qualification', 'svratio', 'calls', 'hourly'] },
+    { label: 'Inventory', keys: ['svproject'] },
+  ],
+  SM: [
+    { label: 'Conversion', keys: ['booking', 'negotiation', 'svbooking', 'svneg'] },
+    { label: 'Activity', keys: ['calls', 'hourly', 'bookingsqft'] },
+    { label: 'Inventory', keys: ['inventory'] },
+  ],
+  SH: [
+    { label: 'Conversion', keys: ['booking', 'cancelratio'] },
+    { label: 'Activity & Inventory', keys: ['calls', 'hourly', 'bookingsqft', 'inventory'] },
+  ],
+};
+export const selfFirstKey = (role) => (SELF_REPORT_GROUPS[role] || ROLES[role].groups)[0].keys[0];
 
 // ── presentational pieces ──────────────────────────────────────────────────────
 const KpiCard = ({ label, value, sub, color, icon: Icon }) => (
@@ -241,6 +263,89 @@ const bookingByProject = (d) => {
   return Array.from(map.values()).sort((a, b) => b.booked - a.booked || b.sv - a.sv);
 };
 
+// Completed site visits grouped by project (or by user, for the admin all-users
+// view), each group expandable to its leads — mirrors the Task List page's
+// group-by drill-down.
+const fmtVisitDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const ProjectSiteVisitGroups = ({ details }) => {
+  const [open, setOpen] = useState(() => new Set());
+  const [groupBy, setGroupBy] = useState('project'); // 'project' | 'user'
+
+  // Offer the user toggle only when more than one person's visits are present
+  // (TC self-service has a single owner, so grouping by user is meaningless).
+  const multiUser = useMemo(
+    () => new Set((details || []).map((r) => r.owner_name || 'Unassigned')).size > 1,
+    [details]
+  );
+  const by = multiUser ? groupBy : 'project';
+
+  const groups = useMemo(() => {
+    const map = new Map();
+    (details || []).forEach((r) => {
+      const k = (by === 'user' ? r.owner_name : r.project_name) || 'Unassigned';
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(r);
+    });
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  }, [details, by]);
+
+  if (!(details || []).length) {
+    return <div className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>No completed site visits for this period.</div>;
+  }
+  const toggle = (k) => setOpen((p) => { const n = new Set(p); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  // Secondary column adapts: grouping by project shows who handled it; grouping
+  // by user shows which project the visit was for.
+  const secondHead = by === 'user' ? 'Project' : 'Handled By';
+
+  return (
+    <div>
+      {multiUser && (
+        <div className="flex items-center gap-2 px-4 py-2.5" style={{ borderTop: '1px solid var(--border-primary)' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Group by</span>
+          {[{ k: 'project', l: 'Project' }, { k: 'user', l: 'User' }].map((o) => {
+            const on = by === o.k;
+            return (
+              <button key={o.k} type="button" onClick={() => { setGroupBy(o.k); setOpen(new Set()); }}
+                className="h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors"
+                style={on ? { background: COLORS.primary, color: '#fff', border: `1px solid ${COLORS.primary}` } : { background: 'var(--bg-card)', color: 'var(--text-secondary, #555)', border: '1px solid var(--border-input)' }}>
+                {o.l}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {groups.map(([name, leads]) => {
+        const gKey = `${by}:${name}`;
+        const isOpen = open.has(gKey);
+        return (
+          <div key={gKey} style={{ borderTop: '1px solid var(--border-primary)' }}>
+            <div className="flex items-center gap-2.5 px-4 py-3 cursor-pointer" onClick={() => toggle(gKey)} style={{ background: 'var(--bg-hover, #FAFAFA)' }}>
+              <span className="inline-flex items-center justify-center flex-shrink-0" style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border-primary)', background: isOpen ? COLORS.siteVisit : 'var(--bg-card)', color: isOpen ? '#fff' : COLORS.siteVisit }}>
+                <PlusIcon style={{ width: 13, height: 13, transform: isOpen ? 'rotate(45deg)' : 'none', transition: 'transform .15s' }} />
+              </span>
+              <span className="font-semibold text-[13px]" style={{ color: 'var(--text-primary)' }}>{name}</span>
+              <span className="text-[11px] font-bold" style={{ color: COLORS.siteVisit, background: `${COLORS.siteVisit}1a`, borderRadius: 999, padding: '1px 8px' }}>{leads.length}</span>
+              <span className="ml-auto text-[12px]" style={{ color: 'var(--text-muted)' }}>{leads.length} site visit{leads.length === 1 ? '' : 's'}</span>
+            </div>
+            {isOpen && (
+              <Table head={['Lead', secondHead, 'Visit Date', 'Status']} colSpan={4} empty={leads.length === 0}>
+                {leads.map((r, i) => (
+                  <Tr key={r.lead_id || i}>
+                    <Td bold>{r.lead_name || '—'}</Td>
+                    <Td color="var(--text-muted)">{(by === 'user' ? r.project_name : r.owner_name) || '—'}</Td>
+                    <Td color="var(--text-muted)">{fmtVisitDate(r.visit_date)}</Td>
+                    <Td><Pill tone="green">{r.status || 'Completed'}</Pill></Td>
+                  </Tr>
+                ))}
+              </Table>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // ── panels ──────────────────────────────────────────────────────────────────
 const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
   const f = d?.funnel || {};
@@ -293,20 +398,20 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
     }
     case 'svproject': {
       const proj = (d?.projectWiseSiteVisit || []).map((p) => ({ project_name: p.project_name, site_visits: num(p.site_visits) }));
+      const details = d?.siteVisitDetails || [];
+      const totalSV = proj.reduce((a, p) => a + p.site_visits, 0);
       return (
         <>
           <KpiRow>
-            <KpiCard label="Total Site Visits" value={num(f.siteVisits)} sub="Across all projects" color={COLORS.qualified} icon={MapPinIcon} />
+            <KpiCard label="Total Site Visits" value={totalSV} sub="Completed in this period" color={COLORS.qualified} icon={MapPinIcon} />
             <KpiCard label="Projects with Visits" value={proj.length} sub="Active projects" color={COLORS.negotiation} icon={Squares2X2Icon} />
             <KpiCard label="Top Project" value={proj[0]?.project_name || '—'} sub={proj[0] ? `${proj[0].site_visits} visits` : ''} color={COLORS.siteVisit} icon={TrophyIcon} />
           </KpiRow>
           <ChartCard title="Project-wise Site Visits" subtitle="Completed visits per project" chartKey="svproject" registerRef={registerRef}>
             <SimpleBar data={proj} xKey="project_name" bars={[{ key: 'site_visits', name: 'Site Visits', color: COLORS.siteVisit }]} />
           </ChartCard>
-          <Card title="Site Visits by Project">
-            <Table head={['Project', 'Site Visits']} colSpan={2} empty={proj.length === 0}>
-              {proj.map((p, i) => <Tr key={i}><Td bold>{p.project_name}</Td><Td bold color={COLORS.siteVisit}>{p.site_visits}</Td></Tr>)}
-            </Table>
+          <Card title="Site Visits by Project" sub="Expand a project to see its leads" right={`${details.length} lead${details.length === 1 ? '' : 's'}`}>
+            <ProjectSiteVisitGroups details={details} />
           </Card>
         </>
       );
@@ -634,6 +739,88 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
   }
 };
 
+// ── report browser (role sidebar + selected panel) ───────────────────────────
+// Shared by the full Analytics dashboard and the per-user drill-down in the
+// User Activity detail view. `d` is the getRoleAnalytics payload (optionally
+// scoped to one user). orgCalls/orgHourly/registerRef are only needed for the
+// org-wide dashboard and export; the embedded user view omits them.
+export const ReportBrowser = ({
+  role, d, loading, hasData, selected, setSelected,
+  orgCalls, orgHourly, registerRef, groups,
+  loadingLabel = 'Loading analytics…', emptyLabel = 'No analytics available.',
+}) => {
+  // `groups` lets a caller show a curated subset of reports (e.g. the self-service
+  // portal view, which hides leaderboards / other users' data).
+  const grp = groups || ROLES[role].groups;
+  const cfg = R[selected] || R[firstKey(role)];
+  const Icon = cfg.icon;
+  const roleAccent = ROLES[role].accent;
+
+  return (
+    <>
+      {/* Mobile report picker */}
+      <div className="lg:hidden mb-3">
+        <label className="reports-filter__label" htmlFor="an-report">Report</label>
+        <select id="an-report" className="reports-select mt-1" value={selected} onChange={(e) => setSelected(e.target.value)}>
+          {grp.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.keys.map((k) => <option key={k} value={k}>{R[k].title}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:block lg:w-60 lg:flex-shrink-0">
+          <div className="crm-card" style={{ padding: 8 }}>
+            {grp.map((g) => (
+              <div key={g.label} className="mb-1">
+                <div className="px-2.5 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{g.label}</div>
+                {g.keys.map((k) => {
+                  const r = R[k]; const RIcon = r.icon; const on = selected === k;
+                  return (
+                    <button key={k} type="button" onClick={() => setSelected(k)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
+                      style={on ? { background: `${r.accent}1a` } : {}}>
+                      <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${r.accent}1f`, color: r.accent }}>
+                        <RIcon className="w-[15px] h-[15px]" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[12.5px] font-medium truncate" style={{ color: on ? r.accent : 'var(--text-primary)' }}>{r.title}</span>
+                        <span className="block text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{r.rs}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* Report panel */}
+        <main className="flex-1 min-w-0 w-full">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${cfg.accent}1f`, color: cfg.accent }}>
+              <Icon className="w-5 h-5" />
+            </span>
+            <div className="min-w-0">
+              <div className="text-[17px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{cfg.title}</div>
+              <div className="text-[12.5px] truncate" style={{ color: 'var(--text-muted)' }}>{cfg.sub}</div>
+            </div>
+          </div>
+
+          {loading && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{loadingLabel}</div>}
+          {!loading && !hasData && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{emptyLabel}</div>}
+          {!loading && hasData && (
+            <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} />
+          )}
+        </main>
+      </div>
+    </>
+  );
+};
+
 // ── main component ─────────────────────────────────────────────────────────────
 const AnalyticsDashboard = ({ moduleRole }) => {
   const [role, setRole] = useState(moduleRole && ROLES[moduleRole] ? moduleRole : 'TC');
@@ -689,13 +876,10 @@ const AnalyticsDashboard = ({ moduleRole }) => {
 
   useEffect(() => { load(); }, [load]);
 
-  const cfg = R[selected] || R[firstKey(role)];
   const orgCalls = useMemo(() => mergeCallsPerDay(roleData), [roleData]);
   const orgHourly = useMemo(() => mergeHourly(roleData), [roleData]);
   const d = role === 'ORG' ? roleData.SH : roleData[role];
   const hasData = role === 'ORG' ? (roleData.TC || roleData.SM || roleData.SH) : !!roleData[role];
-  const Icon = cfg.icon;
-  const roleAccent = ROLES[role].accent;
 
   const chipBase = 'h-7 px-3 rounded-full text-[12.5px] font-medium transition-colors whitespace-nowrap';
   const activeChip = { background: COLORS.primary, color: '#fff', border: `1px solid ${COLORS.primary}` };
@@ -786,65 +970,11 @@ const AnalyticsDashboard = ({ moduleRole }) => {
         )}
       </div>
 
-      {/* Mobile report picker */}
-      <div className="lg:hidden mb-3">
-        <label className="reports-filter__label" htmlFor="an-report">Report</label>
-        <select id="an-report" className="reports-select mt-1" value={selected} onChange={(e) => setSelected(e.target.value)}>
-          {ROLES[role].groups.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.keys.map((k) => <option key={k} value={k}>{R[k].title}</option>)}
-            </optgroup>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:block lg:w-60 lg:flex-shrink-0">
-          <div className="crm-card" style={{ padding: 8 }}>
-            {ROLES[role].groups.map((g) => (
-              <div key={g.label} className="mb-1">
-                <div className="px-2.5 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{g.label}</div>
-                {g.keys.map((k) => {
-                  const r = R[k]; const RIcon = r.icon; const on = selected === k;
-                  return (
-                    <button key={k} type="button" onClick={() => setSelected(k)}
-                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
-                      style={on ? { background: `${r.accent}1a` } : {}}>
-                      <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${r.accent}1f`, color: r.accent }}>
-                        <RIcon className="w-[15px] h-[15px]" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-[12.5px] font-medium truncate" style={{ color: on ? r.accent : 'var(--text-primary)' }}>{r.title}</span>
-                        <span className="block text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{r.rs}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {/* Report panel */}
-        <main className="flex-1 min-w-0 w-full">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${cfg.accent}1f`, color: cfg.accent }}>
-              <Icon className="w-5 h-5" />
-            </span>
-            <div className="min-w-0">
-              <div className="text-[17px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{cfg.title}</div>
-              <div className="text-[12.5px] truncate" style={{ color: 'var(--text-muted)' }}>{cfg.sub}</div>
-            </div>
-          </div>
-
-          {loading && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>Loading analytics…</div>}
-          {!loading && !hasData && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>No analytics available.</div>}
-          {!loading && hasData && (
-            <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} />
-          )}
-        </main>
-      </div>
+      <ReportBrowser
+        role={role} d={d} loading={loading} hasData={hasData}
+        selected={selected} setSelected={setSelected}
+        orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef}
+      />
     </div>
   );
 };

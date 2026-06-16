@@ -9,6 +9,7 @@ import SalesManagerPullLead from './SalesManagerPullLead';
 import SalesManagerPushLeads from './SalesManagerPushLeads';
 import LeadWorkspacePage from '../common/LeadWorkspacePage';
 import HandoffLeadsPage from '../common/HandoffLeadsPage';
+import PortalReports from '../common/PortalReports';
 import { TaskListPage } from '../../tasks';
 import { salesManagerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
@@ -40,6 +41,7 @@ const SalesManagerWorkspace = () => {
           {activeScreen === 'push' && <SalesManagerPushLeads onNavigate={setActiveScreen} />}
           {activeScreen === 'sitevisits' && <SalesManagerSiteVisits onNavigate={setActiveScreen} />}
           {activeScreen === 'tasks' && <TaskListPage />}
+          {activeScreen === 'reports' && <PortalReports role="SM" />}
         </>
       )}
     </PortalLayout>

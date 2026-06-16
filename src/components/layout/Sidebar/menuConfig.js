@@ -216,6 +216,7 @@ export const telecallerMenu = [
   { label: 'Performance Tracker', key: 'pipeline', icon: TrophyIcon, badge: null },
   { label: 'Call Log', key: 'calllog', icon: PhoneArrowDownLeftIcon, badge: null },
   // { label: 'Pull Requests', key: 'pullrequests', icon: InboxArrowDownIcon, badgeColor: 'red' },
+  { label: 'Reports', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 
 export const salesManagerMenu = [
@@ -226,6 +227,7 @@ export const salesManagerMenu = [
   { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   { label: 'Incoming Leads', key: 'incoming', icon: BoltIcon, badgeColor: 'orange' },
   // { label: 'Pull Lead', key: 'pull', icon: MagnifyingGlassIcon, badge: null },
+  { label: 'Reports', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 
 export const salesHeadMenu = [
@@ -237,6 +239,7 @@ export const salesHeadMenu = [
   { label: 'Cancel Requests', key: 'cancellations', icon: XCircleIcon, badgeColor: 'red' },
   { group: 'Overview' },
   { label: 'SM Team', key: 'smteam', icon: UsersIcon, badge: null },
+  { label: 'Reports', key: 'reports', icon: ChartBarIcon, badge: null },
   // { label: 'Site Visits', key: 'sitevisits', icon: HomeModernIcon, badge: null },
   // { label: 'Team Metrics', key: 'team', icon: BriefcaseIcon, badge: null },
 ];
