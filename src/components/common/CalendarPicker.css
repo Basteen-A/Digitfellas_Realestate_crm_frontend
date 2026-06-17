@@ -52,12 +52,21 @@
   left: 0;
   z-index: 100;
   width: 300px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
   background: var(--bg-card, var(--bg-secondary, #ffffff));
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-lg, 0 10px 25px rgba(0,0,0,0.1));
   padding: 16px;
   animation: cpFadeIn 0.2s ease-out;
+}
+
+/* When the field sits in the right half of its container, anchor the popup to the
+   right edge so a 300px panel doesn't push off-screen. */
+.cp-popup.cp-popup-right {
+  left: auto;
+  right: 0;
 }
 
 @keyframes cpFadeIn {
@@ -276,4 +285,57 @@
   border: none !important;
   padding: 0 !important;
   box-shadow: none !important;
+}
+
+/* ── Mobile: render the popup as a full-width bottom sheet so it never overflows
+   the viewport, with larger touch targets. ── */
+@media (max-width: 480px) {
+  .cp-popup,
+  .cp-popup.cp-popup-right {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 1000;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+    animation: cpSlideUp 0.25s ease-out;
+  }
+
+  .cp-day {
+    height: 40px;
+    font-size: 15px;
+  }
+
+  .cp-nav-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cp-time-input {
+    width: 48px;
+    padding: 8px 6px;
+    font-size: 15px;
+  }
+
+  .cp-ampm-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+
+  .cp-btn-ghost,
+  .cp-btn-primary {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+}
+
+@keyframes cpSlideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
 }

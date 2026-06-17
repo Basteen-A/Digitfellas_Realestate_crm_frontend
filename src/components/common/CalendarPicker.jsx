@@ -32,9 +32,21 @@ const CalendarPicker = ({
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(() => parseCalendarValue(value));
   const wrapperRef = useRef(null);
+
+  // Open the popup, anchoring it to the right edge of the field when a 300px panel
+  // anchored left would overflow the viewport (mobile uses a bottom sheet via CSS).
+  const togglePopup = () => {
+    if (disabled) return;
+    if (!isOpen && wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setAlignRight(rect.left + 300 > window.innerWidth - 8);
+    }
+    setIsOpen((prev) => !prev);
+  };
   const minD = minDate ? new Date(minDate) : null;
   const maxD = maxDate ? new Date(maxDate) : null;
 
@@ -168,16 +180,16 @@ const CalendarPicker = ({
 
   return (
     <div className={`cp-wrapper ${className}`} ref={wrapperRef}>
-      <div 
+      <div
         className={`cp-input ${disabled ? 'disabled' : ''} ${isOpen ? 'active' : ''}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={togglePopup}
       >
         <div className="cp-value">{displayValue || <span className="cp-placeholder">{placeholder}</span>}</div>
         <div className="cp-icon"><CalendarDaysIcon style={{ width: 16, height: 16 }} /></div>
       </div>
 
       {isOpen && (
-        <div className="cp-popup">
+        <div className={`cp-popup ${alignRight ? 'cp-popup-right' : ''}`}>
           <div className="cp-header">
             <button type="button" className="cp-nav-btn" onClick={() => changeMonth(-1)}><ChevronLeftIcon style={{ width: 14, height: 14 }} /></button>
             <div className="cp-month-label">
