@@ -5,7 +5,7 @@ import reportApi from '../../../api/reportApi';
 import {
   ReportBrowser, SELF_REPORT_GROUPS, selfFirstKey,
 } from '../../superadmin/Reports/analytics/AnalyticsDashboard';
-import { COLORS } from '../../superadmin/Reports/analytics/palette';
+
 import '../../superadmin/Reports/Reports.css';
 
 const PERIODS = [
@@ -36,9 +36,7 @@ const PortalReports = ({ role }) => {
     return () => { active = false; };
   }, [role, period]);
 
-  const chipBase = 'h-7 px-3 rounded-full text-[12.5px] font-medium transition-colors whitespace-nowrap';
-  const activeChip = { background: COLORS.primary, color: '#fff', border: `1px solid ${COLORS.primary}` };
-  const idleChip = { background: 'var(--bg-card)', color: 'var(--text-secondary, #555)', border: '1px solid var(--border-input)' };
+  const chipBase = 'reports-chip';
 
   return (
     <div className="reports-page">
@@ -54,7 +52,7 @@ const PortalReports = ({ role }) => {
           <span className="text-[11px] font-semibold uppercase tracking-wide mr-1" style={{ color: 'var(--text-muted)' }}>Period</span>
           {PERIODS.map((p) => (
             <button key={p.key} type="button" onClick={() => setPeriod(p.key)}
-              className={chipBase} style={period === p.key ? activeChip : idleChip}>
+              className={`${chipBase} ${period === p.key ? 'reports-chip--active' : ''}`}>
               {p.label}
             </button>
           ))}

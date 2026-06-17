@@ -308,7 +308,7 @@ const ProjectSiteVisitGroups = ({ details }) => {
             const on = by === o.k;
             return (
               <button key={o.k} type="button" onClick={() => { setGroupBy(o.k); setOpen(new Set()); }}
-                className="h-6 px-2.5 rounded-full text-[12px] font-medium transition-colors"
+                className="h-6 px-2 rounded-full text-[12px] font-medium transition-colors"
                 style={on ? { background: COLORS.primary, color: '#fff', border: `1px solid ${COLORS.primary}` } : { background: 'var(--bg-card)', color: 'var(--text-secondary, #555)', border: '1px solid var(--border-input)' }}>
                 {o.l}
               </button>
@@ -883,9 +883,7 @@ const AnalyticsDashboard = ({ moduleRole }) => {
   const d = role === 'ORG' ? roleData.SH : roleData[role];
   const hasData = role === 'ORG' ? (roleData.TC || roleData.SM || roleData.SH) : !!roleData[role];
 
-  const chipBase = 'h-6 px-2.5 rounded-full text-[12px] font-medium leading-none inline-flex items-center transition-colors whitespace-nowrap';
-  const activeChip = { background: COLORS.primary, color: '#fff', border: `1px solid ${COLORS.primary}` };
-  const idleChip = { background: 'var(--bg-card)', color: 'var(--text-secondary, #555)', border: '1px solid var(--border-input)' };
+  const chipBase = 'reports-chip';
   const customActive = !!(from || to);
 
   const doExport = async (kind) => {
@@ -914,18 +912,18 @@ const AnalyticsDashboard = ({ moduleRole }) => {
             const active = !from && !to && period === p.key;
             return (
               <button key={p.key} type="button" onClick={() => { setFrom(''); setTo(''); setPeriod(p.key); }}
-                className={chipBase} style={active ? activeChip : idleChip}>
+                className={`${chipBase} ${active ? 'reports-chip--active' : ''}`}>
                 {p.label}
               </button>
             );
           })}
           {/* Custom date range — opens the accordion to pick From / To */}
-          <button type="button" onClick={() => setFiltersOpen(true)} className={chipBase} style={customActive ? activeChip : idleChip}>
+          <button type="button" onClick={() => setFiltersOpen(true)} className={`${chipBase} ${customActive ? 'reports-chip--active' : ''}`}>
             Custom
           </button>
           {/* Accordion toggle for the remaining filters + actions */}
           <button type="button" onClick={() => setFiltersOpen((o) => !o)}
-            className={`${chipBase} ml-auto inline-flex items-center gap-1.5`} style={idleChip} aria-expanded={filtersOpen}>
+            className={`${chipBase} ml-auto`} aria-expanded={filtersOpen}>
             <FunnelIcon className="w-3.5 h-3.5" /> Filters
             <ChevronDownIcon className="w-3.5 h-3.5 transition-transform" style={{ transform: filtersOpen ? 'rotate(180deg)' : 'none' }} />
           </button>
