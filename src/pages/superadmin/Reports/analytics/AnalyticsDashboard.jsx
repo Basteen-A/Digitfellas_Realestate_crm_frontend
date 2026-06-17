@@ -14,7 +14,7 @@ import projectApi from '../../../../api/projectApi';
 import { COLORS } from './palette';
 import { formatCurrency } from '../../../../utils/formatters';
 import {
-  ChartCard, HourlyCallsBar, CallsPerDayLine, SimpleBar, FunnelDonut,
+  ChartCard, HourlyCallsBar, CallsPerDayLine, SimpleBar, FunnelDonut, SalesFunnel,
 } from './charts/Charts';
 import { exportPlainData, exportAnalytics } from './exportExcel';
 import '../Reports.css';
@@ -117,13 +117,15 @@ export const SELF_REPORT_GROUPS = {
 export const selfFirstKey = (role) => (SELF_REPORT_GROUPS[role] || ROLES[role].groups)[0].keys[0];
 
 // ── presentational pieces ──────────────────────────────────────────────────────
-const KpiCard = ({ label, value, sub, color, icon: Icon }) => (
+// `valueSize` lets name-based KPI cards (e.g. Top Performer) use a smaller,
+// truncating value so long names don't overflow the card.
+const KpiCard = ({ label, value, sub, color, icon: Icon, valueSize = 26 }) => (
   <div className="crm-card flex-1 min-w-[150px]" style={{ borderTop: `3px solid ${color}`, padding: '14px 16px' }}>
     <div className="flex items-center justify-between gap-2">
       <span className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</span>
       {Icon && <Icon className="w-4 h-4 flex-shrink-0" style={{ color }} />}
     </div>
-    <div className="mt-2 font-extrabold leading-none" style={{ color: 'var(--text-primary)', fontSize: 26 }}>{value}</div>
+    <div className="mt-2 font-extrabold leading-none truncate" style={{ color: 'var(--text-primary)', fontSize: valueSize }} title={typeof value === 'string' ? value : undefined}>{value}</div>
     {sub && <div className="mt-1.5 text-[11.5px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>}
   </div>
 );
@@ -212,7 +214,7 @@ const FunnelBars = ({ steps }) => (
 );
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
-const hourLabel = (h) => (h === 12 ? '12p' : h > 12 ? `${h - 12}p` : `${h}a`);
+const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`;
 const Heatmap = ({ hourly, base }) => {
   const cells = HOURS.map((h) => ({ h, v: num(hourly[h]?.answered) + num(hourly[h]?.unanswered) }));
   const max = Math.max(1, ...cells.map((c) => c.v));
@@ -361,7 +363,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
             <KpiCard label="Total Leads" value={num(f.totalLeads)} sub="All sources" color={COLORS.leads} icon={UsersIcon} />
             <KpiCard label="Qualified" value={num(f.qualified)} sub={`${r.pct || 0}% qualification rate`} color={COLORS.qualified} icon={CheckBadgeIcon} />
             <KpiCard label="Not Qualified" value={num(f.totalLeads) - num(f.qualified)} sub={`${100 - (r.pct || 0)}% rejected`} color={COLORS.cancelled} icon={XCircleIcon} />
-            <KpiCard label="Top Performer" value={best ? fullName(best) : '—'} sub={best ? `${pct(num(best.qualified), num(best.leads))}% qual.` : ''} color={COLORS.siteVisit} icon={TrophyIcon} />
+            <KpiCard label="Top Performer" value={best ? fullName(best) : '—'} sub={best ? `${pct(num(best.qualified), num(best.leads))}% qual.` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
           <Card title="Member-wise Qualification Ratio">
             <Table head={['Member', 'Total Leads', 'Qualified', 'Not Qualified', 'Ratio']} colSpan={5} empty={lb.length === 0}>
@@ -405,7 +407,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
           <KpiRow>
             <KpiCard label="Total Site Visits" value={totalSV} sub="Completed in this period" color={COLORS.qualified} icon={MapPinIcon} />
             <KpiCard label="Projects with Visits" value={proj.length} sub="Active projects" color={COLORS.negotiation} icon={Squares2X2Icon} />
-            <KpiCard label="Top Project" value={proj[0]?.project_name || '—'} sub={proj[0] ? `${proj[0].site_visits} visits` : ''} color={COLORS.siteVisit} icon={TrophyIcon} />
+            <KpiCard label="Top Project" value={proj[0]?.project_name || '—'} sub={proj[0] ? `${proj[0].site_visits} visits` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
           <ChartCard title="Project-wise Site Visits" subtitle="Completed visits per project" chartKey="svproject" registerRef={registerRef}>
             <SimpleBar data={proj} xKey="project_name" bars={[{ key: 'site_visits', name: 'Site Visits', color: COLORS.siteVisit }]} />
@@ -696,7 +698,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
             <KpiCard label="Bookings" value={num(f.bookings)} sub={`${num(f.bookingsSqft).toLocaleString('en-IN')} sq ft`} color={COLORS.booking} icon={ArrowTrendingUpIcon} />
           </KpiRow>
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,360px),1fr))' }}>
-            <ChartCard title="Conversion Funnel" subtitle="Qualified → SV → Negotiation → Booking" chartKey="funnel" registerRef={registerRef}><FunnelDonut data={donut} /></ChartCard>
+            <ChartCard title="Conversion Funnel" subtitle="Qualified → SV → Negotiation → Booking" chartKey="funnel" registerRef={registerRef}><SalesFunnel data={donut} /></ChartCard>
             <Card title="Funnel Steps">
               <FunnelBars steps={[
                 { label: 'Qualified', value: f.qualified, color: COLORS.qualified },
@@ -881,7 +883,7 @@ const AnalyticsDashboard = ({ moduleRole }) => {
   const d = role === 'ORG' ? roleData.SH : roleData[role];
   const hasData = role === 'ORG' ? (roleData.TC || roleData.SM || roleData.SH) : !!roleData[role];
 
-  const chipBase = 'h-7 px-3 rounded-full text-[12.5px] font-medium transition-colors whitespace-nowrap';
+  const chipBase = 'h-6 px-2.5 rounded-full text-[12px] font-medium leading-none inline-flex items-center transition-colors whitespace-nowrap';
   const activeChip = { background: COLORS.primary, color: '#fff', border: `1px solid ${COLORS.primary}` };
   const idleChip = { background: 'var(--bg-card)', color: 'var(--text-secondary, #555)', border: '1px solid var(--border-input)' };
   const customActive = !!(from || to);

@@ -823,7 +823,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
             {/* ── BOOKING STATUS UPDATE MODE ── */}
             {drawerMode === 'status' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
@@ -1021,7 +1021,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
             {/* ── RECORD PAYMENT MODE ── */}
             {drawerMode === 'pay' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
                     <div>Net: <strong>{formatCurrency(getComputedTotalValue(drawerBooking))}</strong></div>

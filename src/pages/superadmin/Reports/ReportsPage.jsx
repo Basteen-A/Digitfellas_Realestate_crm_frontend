@@ -28,6 +28,9 @@ const ROLES = [
 
 // URL slug → analytics module-role mapping (Reports submenu under the SA sidebar)
 const MODULE_TO_ROLE = { telecaller: 'TC', 'sales-manager': 'SM', 'sales-head': 'SH', organization: 'ORG' };
+// Role → page title. ORG is the org-wide Analytics view; the rest are per-role
+// Performance views, selected from the sidebar Performance dropdown.
+const ROLE_LABEL = { TC: 'Telecaller', SM: 'Sales Manager', SH: 'Sales Head', ORG: 'Organization' };
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 const fullName = (f, l) => `${f || ''} ${l || ''}`.trim() || '—';
@@ -36,20 +39,24 @@ const td = { padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)', b
 
 const ReportsPage = () => {
   const { module } = useParams();
-  const moduleRole = MODULE_TO_ROLE[module] || null;
-  // A module slug in the URL pins the view to Analytics for that role module.
+  // A module slug in the URL deep-links to a specific role tab; otherwise the
+  // page opens on Telecaller. Role is switched in-place via the tab strip.
+  const [activeRole, setActiveRole] = useState(MODULE_TO_ROLE[module] || 'TC');
   const [tab, setTab] = useState('analytics');  // 'analytics' | 'users' | 'inventory'
   const [period, setPeriod] = useState('today');
 
-  useEffect(() => { if (moduleRole) setTab('analytics'); }, [moduleRole]);
-  
+  // Keep the active role in sync when navigating directly to a module slug.
+  useEffect(() => { if (module && MODULE_TO_ROLE[module]) { setActiveRole(MODULE_TO_ROLE[module]); setTab('analytics'); } }, [module]);
+
+  const isOrg = activeRole === 'ORG';
+  const heading = isOrg ? 'Analytics' : `Performance — ${ROLE_LABEL[activeRole] || ''}`;
 
   return (
     <div className="reports-page">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1><ChartBarIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Reports - {moduleRole}</h1>
-          <p className="hidden sm:block">User activity &amp; inventory cost reports</p>
+          <h1><ChartBarIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />{heading}</h1>
+          <p className="hidden sm:block">{isOrg ? 'Org-wide funnel, calls, bookings, revenue & inventory' : 'User activity & inventory cost reports'}</p>
         </div>
       </div>
 
@@ -65,7 +72,7 @@ const ReportsPage = () => {
         </div>
       )}
 
-      {tab === 'analytics' && <AnalyticsDashboard moduleRole={moduleRole} />}
+      {tab === 'analytics' && <AnalyticsDashboard moduleRole={activeRole} />}
       {tab === 'users' && <UserActivityReport period={period} />}
       {tab === 'inventory' && <InventoryReport period={period} />}
     </div>

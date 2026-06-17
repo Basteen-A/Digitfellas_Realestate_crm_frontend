@@ -48,6 +48,8 @@ import PaymentStatuses from '../pages/superadmin/PaymentStatuses';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
+import FinanceRevenue from '../pages/superadmin/Finance/FinanceRevenue';
+import FinanceCollections from '../pages/superadmin/Finance/FinanceCollections';
 import SiteSettings from '../pages/superadmin/SiteSettings';
 import ReallotmentRules from '../pages/superadmin/ReallotmentRules';
 import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
@@ -201,6 +203,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
             <Route path="/super-admin/reports" element={<Reports />} />
             <Route path="/super-admin/reports/:module" element={<Reports />} />
+            <Route path="/super-admin/finance/revenue" element={<FinanceRevenue />} />
+            <Route path="/super-admin/finance/collections" element={<FinanceCollections />} />
             <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
             <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
             <Route path="/super-admin/payment-modes" element={<PaymentModes />} />

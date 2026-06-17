@@ -59,28 +59,31 @@ export const getSidebarMenuForRole = (roleCode) => {
 };
 
 // ── Admin / Super Admin ──
-// Grouped into WORKSPACE / INVENTORY / ADMINISTRATION sections. `{ section }`
-// items render as non-clickable uppercase group labels (see Sidebar.jsx).
+// Restructured IA: WORKSPACE / INSIGHTS / INVENTORY / FINANCE / AUTOMATION /
+// CONFIGURATION. `{ section }` items render as non-clickable uppercase group
+// labels (see Sidebar.jsx). The sidebar renders only two levels (group →
+// flat child links), so the "Data Masters" umbrella is expressed as grouped
+// master sets under the CONFIGURATION section.
+//
+// Mapping notes (target IA → existing screens; net-new sub-views omitted):
+//   Leads / Tasks / Bookings sub-views (Pipeline, Segmentation, My/Team/Overdue,
+//     History) have no backing screen yet → single entry to the existing screen.
+//   INSIGHTS › Analytics    → org-wide analytics (Reports ORG tab)
+//   INSIGHTS › Performance  → per-role analytics tabs (Reports, TC default)
+//   Org & Access › Roles & Permissions → User Types ; Org Settings → Site Settings
+//   Workflows (no screen), Org Structure, Activity Logs → omitted (no screen yet)
 const adminSidebar = [
   { section: 'WORKSPACE' },
   { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
   { label: 'Leads', path: '/super-admin/lead-management', icon: UsersIcon },
   { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
-   { label: 'Bookings', path: '/super-admin/booking-approvals' ,icon: CreditCardIcon},
+  { label: 'Bookings', path: '/super-admin/booking-approvals', icon: CreditCardIcon },
+
+  { section: 'INSIGHTS' },
+  { label: 'Analytics', path: '/super-admin/reports/organization', icon: ChartBarIcon },
   {
-    label: 'Finance',
-    icon: BanknotesIcon,
-    children: [
-      { label: 'Payment Types', path: '/super-admin/payment-types' },
-      { label: 'Payment Plans', path: '/super-admin/payment-plans' },
-      { label: 'Payment Modes', path: '/super-admin/payment-modes' },
-      { label: 'Payment Statuses', path: '/super-admin/payment-statuses' },
-      { label: 'Banks', path: '/super-admin/banks' },
-    ],
-  },
-  {
-    label: 'Reports',
-    icon: ChartBarIcon,
+    label: 'Performance',
+    icon: TrophyIcon,
     children: [
       { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
       { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
@@ -102,37 +105,29 @@ const adminSidebar = [
   { label: 'Units & Plots', path: '/super-admin/units', icon: HomeModernIcon },
   { label: 'Locations', path: '/super-admin/locations', icon: MapPinIcon },
 
-  { section: 'ADMINISTRATION' },
+  { section: 'FINANCE' },
+  { label: 'Revenue', path: '/super-admin/finance/revenue', icon: BanknotesIcon },
+  { label: 'Collections', path: '/super-admin/finance/collections', icon: CreditCardIcon },
+
+  { section: 'AUTOMATION' },
+  { label: 'Workflow Actions', path: '/super-admin/workflow-actions', icon: BoltIcon },
+  { label: 'Reallocation Rules', path: '/super-admin/reallotment-rules', icon: ArrowsRightLeftIcon },
+  { label: 'Reallocation History', path: '/super-admin/reallotment-logs', icon: ArrowPathIcon },
+
+  { section: 'CONFIGURATION' },
   {
-    label: 'Users & Access',
+    label: 'Org & Access',
     icon: UserGroupIcon,
     children: [
       { label: 'Users', path: '/super-admin/users' },
-      { label: 'User Types', path: '/super-admin/user-types' },
+      { label: 'Roles & Permissions', path: '/super-admin/user-types' },
+      { label: 'Org Settings', path: '/super-admin/site-settings' },
     ],
   },
   {
-    label: 'Workflows',
-    icon: ArrowsRightLeftIcon,
-    children: [
-      { label: 'Workflow Actions', path: '/super-admin/workflow-actions' },
-      { label: 'Score Master', path: '/super-admin/score-master' },
-    ],
-  },
-  {
-    label: 'Auto Reallotment',
-    icon: ArrowPathIcon,
-    children: [
-      { label: 'Reallotment Rules', path: '/super-admin/reallotment-rules' },
-      { label: 'Reallotment Logs', path: '/super-admin/reallotment-logs' },
-    ],
-  },
-  {
-    label: 'Configuration',
+    label: 'Lead Masters',
     icon: Cog6ToothIcon,
     children: [
-      { label: 'Departments', path: '/super-admin/departments' },
-      { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
       { label: 'Lead Types', path: '/super-admin/lead-types' },
       { label: 'Lead Sources', path: '/super-admin/lead-sources' },
       { label: 'Lead Sub-Sources', path: '/super-admin/lead-sub-sources' },
@@ -141,12 +136,31 @@ const adminSidebar = [
       { label: 'Quick Remarks', path: '/super-admin/status-remarks' },
       { label: 'Motivations', path: '/super-admin/motivations' },
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
-      { label: 'Customer Types', path: '/super-admin/customer-types' },
-       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
-      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
+      { label: 'Score Master', path: '/super-admin/score-master' },
     ],
   },
-  { label: 'Site Settings', path: '/super-admin/site-settings', icon: BuildingStorefrontIcon },
+  {
+    label: 'Booking & Finance Masters',
+    icon: BanknotesIcon,
+    children: [
+      { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
+      { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
+      { label: 'Payment Types', path: '/super-admin/payment-types' },
+      { label: 'Payment Plans', path: '/super-admin/payment-plans' },
+      { label: 'Payment Modes', path: '/super-admin/payment-modes' },
+      { label: 'Payment Statuses', path: '/super-admin/payment-statuses' },
+      { label: 'Banks', path: '/super-admin/banks' },
+    ],
+  },
+  {
+    label: 'Other Masters',
+    icon: Cog6ToothIcon,
+    children: [
+      { label: 'Customer Types', path: '/super-admin/customer-types' },
+      { label: 'Departments', path: '/super-admin/departments' },
+      { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
+    ],
+  },
 ];
 
 // ── Telecaller ──

@@ -7,12 +7,18 @@ import {
   CreditCardIcon, ChartBarIcon, CheckCircleIcon, ClockIcon,
   XCircleIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
+import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
 import './CollectionWorkspace.css';
+
+// Pending/unverified, non-refund, non-bounced payments can be edited with the
+// rich Record-Payment modal; everything else opens the same modal read-only.
+const canEditPayment = (p) => !!p && !p.is_verified && !p.is_bounced && !p.is_refund;
 
 const CollectionPayments = ({ user, onSelectBooking }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [activePayment, setActivePayment] = useState(null); // { bookingId, paymentId, readOnly }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,7 +93,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
       </div>
 
       {loading ? (
-        <div className="col-empty"><div className="col-empty-icon"><ArrowPathIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">Loading payments...</div></div>
+        <div className="simple-loader"><div className="simple-spinner" /><p>Loading...</p></div>
       ) : filtered.length === 0 ? (
         <div className="col-section"><div className="col-empty"><div className="col-empty-icon"><CreditCardIcon style={{ width: 32, height: 32, color: 'var(--text-muted)' }} /></div><div className="col-empty-title">No payments found</div><div className="col-empty-desc">Payments will appear here when recorded against bookings</div></div></div>
       ) : (
@@ -102,9 +108,9 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
               </thead>
               <tbody>
                 {filtered.map(p => (
-                  <tr key={p.id} className={p.is_bounced ? 'col-payment-bounced' : ''}>
+                  <tr key={p.id} className={p.is_bounced ? 'col-payment-bounced' : ''} style={{ cursor: 'pointer' }} onClick={() => setActivePayment({ bookingId: p.booking_id, paymentId: p.id, readOnly: !canEditPayment(p) })} title={canEditPayment(p) ? 'Edit payment' : 'View payment details'}>
                     <td style={{ fontWeight: 600 }}>{p.payment_number}</td>
-                    <td style={{ color: 'var(--accent-blue)', fontWeight: 600, cursor: onSelectBooking ? 'pointer' : undefined, textDecoration: onSelectBooking ? 'underline' : undefined }} onClick={() => onSelectBooking && onSelectBooking(p.booking_id)}>{p.booking_number}</td>
+                    <td style={{ color: 'var(--accent-blue)', fontWeight: 600, cursor: onSelectBooking ? 'pointer' : undefined, textDecoration: onSelectBooking ? 'underline' : undefined }} onClick={(e) => { if (onSelectBooking) { e.stopPropagation(); onSelectBooking(p.booking_id); } }}>{p.booking_number}</td>
                     <td>{p.customer_name}</td>
                     <td>{p.payment_type}</td>
                     <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
@@ -121,6 +127,16 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
             </table>
           </div>
         </div>
+      )}
+
+      {activePayment && (
+        <RecordPaymentModal
+          bookingId={activePayment.bookingId}
+          paymentId={activePayment.paymentId}
+          readOnly={activePayment.readOnly}
+          onClose={() => setActivePayment(null)}
+          onSaved={load}
+        />
       )}
     </div>
   );

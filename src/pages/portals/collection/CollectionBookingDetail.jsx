@@ -7,6 +7,7 @@ import paymentPlanApi from '../../../api/paymentPlanApi';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import userApi from '../../../api/userApi';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
+import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
@@ -68,10 +69,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [payStatusSaving, setPayStatusSaving] = useState(false);
   const [smPointsValue, setSmPointsValue] = useState('');
   const [shPointsValue, setShPointsValue] = useState('');
-  // Super-Admin payment editing
-  const [editPayment, setEditPayment] = useState(null);
-  const [editPayForm, setEditPayForm] = useState({});
-  const [editPaySaving, setEditPaySaving] = useState(false);
+  // Payment editing — reuses the rich Record-Payment modal, prefilled. Only
+  // pending/unverified (and non-refund/non-bounced) payments are editable.
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
+  // Verified / rejected / refund payments aren't editable, but can be opened
+  // read-only in the same rich modal (matches the Payments page view).
+  const [viewPaymentId, setViewPaymentId] = useState(null);
   // Super-Admin approve / reject (from the detail page)
   const [approvalAction, setApprovalAction] = useState(null); // 'approve' | 'reject'
   const [approvalRemarks, setApprovalRemarks] = useState('');
@@ -297,6 +300,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       return;
     }
     if (mode === 'pay') {
+      setEditingPaymentId(null);
       setPayForm({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
       return;
     }
@@ -317,7 +321,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
   };
 
-  const closeActionModal = () => setActionMode(null);
+  const closeActionModal = () => { setActionMode(null); setEditingPaymentId(null); };
 
   // Send a draft "Booking Open" booking to the Super Admin for approval.
   const [sendingApproval, setSendingApproval] = useState(false);
@@ -359,12 +363,14 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
     setPaySaving(true);
     try {
-      await bookingApi.addPayment(bookingId, {
-        ...payForm,
-        payment_mode: selectedModeName,
-        amount: parseFloat(payForm.amount),
-      });
-      toast.success('Payment recorded');
+      const payload = { ...payForm, payment_mode: selectedModeName, amount: parseFloat(payForm.amount) };
+      if (editingPaymentId) {
+        await bookingApi.updatePayment(bookingId, editingPaymentId, payload);
+        toast.success('Payment updated');
+      } else {
+        await bookingApi.addPayment(bookingId, payload);
+        toast.success('Payment recorded');
+      }
       closeActionModal();
       setPayForm({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
       loadBooking();
@@ -373,39 +379,25 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     finally { setPaySaving(false); }
   };
 
+  // Only pending/unverified, non-refund, non-bounced payments can be edited.
+  const canEditThisPayment = (p) => !!p && !p.is_refund && !p.is_bounced && !p.is_verified;
+
+  // Edit reuses the rich Record-Payment modal, prefilled with the payment.
   const openEditPayment = (p) => {
-    setEditPayment(p);
-    setEditPayForm({
-      amount: p.amount ?? '',
-      payment_category: p.payment_category || '',
+    if (!canEditThisPayment(p)) return;
+    setEditingPaymentId(p.id);
+    setActionMode('pay');
+    setPayForm({
       payment_type: p.payment_type || '',
+      payment_category: p.payment_category || '',
       payment_mode_id: p.payment_mode_id || '',
       payment_mode: p.payment_mode || '',
+      amount: p.amount ?? '',
       payment_date: p.payment_date ? String(p.payment_date).slice(0, 10) : '',
       transaction_ref: p.transaction_ref || p.utr_number || p.cheque_dd_number || '',
       bank_id: p.bank_id || '',
       remarks: p.remarks || '',
     });
-  };
-
-  const handleEditPaymentSave = async () => {
-    if (!editPayment) return;
-    if (editPayForm.amount === '' || parseFloat(editPayForm.amount) < 0) {
-      toast.error('Enter a valid amount');
-      return;
-    }
-    setEditPaySaving(true);
-    try {
-      await bookingApi.updatePayment(bookingId, editPayment.id, editPayForm);
-      toast.success('Payment updated');
-      setEditPayment(null);
-      loadBooking();
-      loadActivities();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update payment'));
-    } finally {
-      setEditPaySaving(false);
-    }
   };
 
   const handleApproveBooking = async () => {
@@ -1362,8 +1354,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 const c = isRefund
                   ? { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }
                   : (CATEGORY_COLORS[catKey] || CATEGORY_COLORS.Other);
+                const editable = canEditThisPayment(p);
                 return (
-                <tr key={p.id} className={p.is_bounced ? 'bkd-row-bounced' : ''}>
+                <tr key={p.id} className={p.is_bounced ? 'bkd-row-bounced' : ''}
+                  style={{ cursor: 'pointer' }}
+                  title={editable ? 'Click to edit this payment' : 'Click to view this payment'}
+                  onClick={editable ? () => openEditPayment(p) : () => setViewPaymentId(p.id)}>
                   <td>{fmtD(p.payment_date)}</td>
                   <td>
                     <span style={{
@@ -1384,11 +1380,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     : p.is_verified ? <span className="bkd-badge bkd-badge-neutral">Verified</span>
                     : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
                   <td>
-                    {canEditPayments && !isRefund ? (
-                      <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => openEditPayment(p)}>
+                    {editable ? (
+                      <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
                         <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
                       </button>
-                    ) : '—'}
+                    ) : (
+                      <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
+                        <EyeIcon style={{ width: 13, height: 13 }} /> View
+                      </button>
+                    )}
                   </td>
                 </tr>
                 );
@@ -1396,6 +1396,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </tbody></table>
           )}</div>
         </div>
+      )}
+
+      {viewPaymentId && (
+        <RecordPaymentModal
+          bookingId={bookingId}
+          paymentId={viewPaymentId}
+          readOnly
+          onClose={() => setViewPaymentId(null)}
+          onSaved={loadBooking}
+        />
       )}
 
       {activeTab === 'activity-log' && (
@@ -1644,83 +1654,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
       )}
 
-      {/* ── SUPER ADMIN: Edit Payment ── */}
-      {editPayment && (
-        <div className="col-modal-overlay" onClick={() => !editPaySaving && setEditPayment(null)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-card, #fff)', borderRadius: 14, width: 'min(100%, 560px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                Edit Payment {editPayment.payment_number ? `· ${editPayment.payment_number}` : ''}
-              </h3>
-              <button className="qa-drawer-close" onClick={() => setEditPayment(null)} disabled={editPaySaving}>×</button>
-            </div>
-            <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div className="bkd-form-group">
-                <label className="bkd-form-label">Amount</label>
-                <input type="number" className="bkd-form-control" value={editPayForm.amount}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, amount: e.target.value }))} />
-              </div>
-              <div className="bkd-form-group">
-                <label className="bkd-form-label">Payment Date</label>
-                <input type="date" className="bkd-form-control" value={editPayForm.payment_date}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, payment_date: e.target.value }))} />
-              </div>
-              <div className="bkd-form-group">
-                <label className="bkd-form-label">Paid For</label>
-                <select className="bkd-form-control" value={editPayForm.payment_category}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, payment_category: e.target.value }))}>
-                  <option value="">Select…</option>
-                  {filteredCategories.map(cat => <option key={cat} value={cat}>{categoryLabel(cat)}</option>)}
-                </select>
-              </div>
-              <div className="bkd-form-group">
-                <label className="bkd-form-label">Type</label>
-                <select className="bkd-form-control" value={editPayForm.payment_type}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, payment_type: e.target.value }))}>
-                  <option value="">Select…</option>
-                  {paymentTypeOptions.map(pt => <option key={pt.id} value={pt.type_name}>{pt.type_name}</option>)}
-                </select>
-              </div>
-              <div className="bkd-form-group">
-                <label className="bkd-form-label">Mode</label>
-                <select className="bkd-form-control" value={editPayForm.payment_mode_id}
-                  onChange={(e) => {
-                    const m = paymentModeOptions.find(x => String(x.id) === String(e.target.value));
-                    setEditPayForm(f => ({ ...f, payment_mode_id: e.target.value, payment_mode: m?.mode_name || '' }));
-                  }}>
-                  <option value="">{editPayForm.payment_mode || 'Select…'}</option>
-                  {paymentModeOptions.map(m => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
-                </select>
-              </div>
-              <div className="bkd-form-group">
-                <label className="bkd-form-label">Bank</label>
-                <select className="bkd-form-control" value={editPayForm.bank_id}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, bank_id: e.target.value }))}>
-                  <option value="">None</option>
-                  {bankOptions.map(b => <option key={b.id} value={b.id}>{b.bank_name}</option>)}
-                </select>
-              </div>
-              <div className="bkd-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label className="bkd-form-label">Reference / UTR / Cheque No.</label>
-                <input type="text" className="bkd-form-control" value={editPayForm.transaction_ref}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, transaction_ref: e.target.value }))} />
-              </div>
-              <div className="bkd-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label className="bkd-form-label">Remarks</label>
-                <textarea className="bkd-form-control" rows={2} value={editPayForm.remarks}
-                  onChange={(e) => setEditPayForm(f => ({ ...f, remarks: e.target.value }))} />
-              </div>
-            </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button type="button" className="bkd-btn bkd-btn-outline" onClick={() => setEditPayment(null)} disabled={editPaySaving}>Cancel</button>
-              <button type="button" className="bkd-btn bkd-btn-primary" onClick={handleEditPaymentSave} disabled={editPaySaving}>
-                {editPaySaving ? 'Saving…' : 'Save Payment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {actionMode && (
         <div className="col-modal-overlay" onClick={closeActionModal}>
           <div className="qa-modal-panel" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
@@ -1744,7 +1677,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <div className="qa-drawer-divider" />
 
             {actionMode === 'pay' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   {/* Inline budget summary for Record Payment */}
                   <div style={{
@@ -1756,7 +1689,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(liveTotalValue - totalPaid)}</strong></div>
                   </div>
 
-                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
+                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{editingPaymentId ? 'Edit Payment' : 'Record New Payment'}</div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group" style={{ flex: 1 }}>
                       <label className="bkd-form-label">Payment For (Category) *</label>
@@ -1833,14 +1766,14 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
                   <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
-                    {paySaving ? 'Saving...' : 'Submit Payment'}
+                    {paySaving ? 'Saving...' : (editingPaymentId ? 'Update Payment' : 'Submit Payment')}
                   </button>
                 </div>
               </div>
             )}
 
             {actionMode === 'status' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '520px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>

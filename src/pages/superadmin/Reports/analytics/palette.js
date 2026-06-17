@@ -1,16 +1,19 @@
 // Shared color palette for the analytics dashboard + Excel export, so the
-// workbook fills/series match the on-screen charts.
+// workbook fills/series match the on-screen charts. The four pipeline-stage
+// colors come from the app-wide canonical source so funnels, stage chips and
+// Finance screens stay consistent (see utils/stageColors.js).
+import { STAGE_COLORS } from '../../../../utils/stageColors';
 
 export const COLORS = {
   primary: '#4f46e5',   // indigo
   answered: '#22c55e',  // green
   unanswered: '#ef4444', // red
   leads: '#6366f1',
-  qualified: '#0ea5e9',
-  siteVisit: '#f59e0b',
-  negotiation: '#a855f7',
-  booking: '#16a34a',
-  cancelled: '#dc2626',
+  qualified: STAGE_COLORS.qualified,
+  siteVisit: STAGE_COLORS.siteVisit,
+  negotiation: STAGE_COLORS.negotiation,
+  booking: STAGE_COLORS.booking,
+  cancelled: STAGE_COLORS.cancelled,
   available: '#22c55e',
   booked: '#f59e0b',
   blocked: '#ef4444',
