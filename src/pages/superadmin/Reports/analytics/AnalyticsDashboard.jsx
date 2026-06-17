@@ -11,10 +11,11 @@ import {
 import reportApi from '../../../../api/reportApi';
 import leadSourceApi from '../../../../api/leadSourceApi';
 import projectApi from '../../../../api/projectApi';
+import inventoryUnitApi from '../../../../api/inventoryUnitApi';
 import { COLORS } from './palette';
 import { formatCurrency } from '../../../../utils/formatters';
 import {
-  ChartCard, HourlyCallsBar, CallsPerDayLine, SimpleBar, FunnelDonut, SalesFunnel,
+  ChartCard, CallsPerDayLine, SimpleBar, FunnelDonut, SalesFunnel,
 } from './charts/Charts';
 import { exportPlainData, exportAnalytics } from './exportExcel';
 import '../Reports.css';
@@ -173,7 +174,13 @@ const Table = ({ head, children, colSpan, empty }) => (
     </table>
   </div>
 );
-const Tr = ({ children }) => <tr style={{ borderTop: '1px solid var(--border-primary)' }}>{children}</tr>;
+const Tr = ({ children, onClick }) => (
+  <tr
+    onClick={onClick}
+    className={onClick ? 'transition-colors hover:bg-[var(--bg-hover,#FAFAFA)]' : undefined}
+    style={{ borderTop: '1px solid var(--border-primary)', cursor: onClick ? 'pointer' : undefined }}
+  >{children}</tr>
+);
 const Td = ({ children, bold, color, className = '' }) => <td className={`px-3 py-2.5 text-[13px] ${bold ? 'font-semibold' : ''} ${className}`} style={color ? { color } : undefined}>{children}</td>;
 
 const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
@@ -190,7 +197,7 @@ const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
             <div className="text-[13px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{fullName(r)}</div>
             <div className="text-[11.5px] truncate" style={{ color: 'var(--text-muted)' }}>{subFn(r)}</div>
           </div>
-          <div className="ml-auto text-[14px] font-bold flex-shrink-0" style={{ color: COLORS.booking, fontVariantNumeric: 'tabular-nums' }}>{num(metric(r))} {metricLabel}</div>
+          <div className="ml-auto text-[14px] font-bold flex-shrink-0" style={{ color: COLORS.booking, fontVariantNumeric: 'tabular-nums' }}>{num(metric(r)).toLocaleString('en-IN')} {metricLabel}</div>
         </div>
       ))}
     </div>
@@ -213,7 +220,7 @@ const FunnelBars = ({ steps }) => (
   </div>
 );
 
-const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`;
 const Heatmap = ({ hourly, base }) => {
   const cells = HOURS.map((h) => ({ h, v: num(hourly[h]?.answered) + num(hourly[h]?.unanswered) }));
@@ -254,10 +261,12 @@ const mergeHourly = (roleData) => {
   }));
   return out;
 };
-// combine SV-per-project + bookings-per-project into one table dataset
-const bookingByProject = (d) => {
+// combine SV-per-project + bookings-per-project into one table dataset.
+// svKey selects the SV source: 'projectWiseSiteVisit' (Completed visits, default)
+// or 'projectWiseSiteVisitAssigned' (all assigned visits, Booking-Ratio screen).
+const bookingByProject = (d, svKey = 'projectWiseSiteVisit') => {
   const map = new Map();
-  (d?.projectWiseSiteVisit || []).forEach((p) => map.set(p.project_name, { project_name: p.project_name, sv: num(p.site_visits), booked: 0 }));
+  (d?.[svKey] || []).forEach((p) => map.set(p.project_name, { project_name: p.project_name, sv: num(p.site_visits), booked: 0 }));
   (d?.projectWiseBooking || []).forEach((p) => {
     const cur = map.get(p.project_name) || { project_name: p.project_name, sv: 0, booked: 0 };
     cur.booked = num(p.booked); map.set(p.project_name, cur);
@@ -345,6 +354,92 @@ const ProjectSiteVisitGroups = ({ details }) => {
         );
       })}
     </div>
+  );
+};
+
+// ── Available-plots drawer (opens from the Inventory Summary table) ───────────
+const AvailablePlotsModal = ({ project, units, loading, onClose }) => {
+  const fmtArea = (u) => (u.unit_area ? `${num(u.unit_area).toLocaleString('en-IN')} ${u.area_unit || 'sq.ft.'}` : '—');
+  const value = (u) => (u.total_price ? formatCurrency(u.total_price) : u.guided_value ? formatCurrency(u.guided_value) : '—');
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(15,23,42,0.45)' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="crm-card w-full max-w-3xl overflow-hidden flex flex-col"
+        style={{ maxHeight: '80vh' }}
+      >
+        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+          <div>
+            <div className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>{project.project_name}</div>
+            <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Available plots</div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-xl leading-none px-2" style={{ color: 'var(--text-muted)' }}>×</button>
+        </div>
+        <div className="overflow-auto">
+          {loading ? (
+            <div className="px-4 py-12 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>Loading available plots…</div>
+          ) : (
+            <Table head={['Unit', 'Phase', 'Configuration', 'Area', 'Facing', 'Value']} colSpan={6} empty={units.length === 0}>
+              {units.map((u) => (
+                <Tr key={u.id}>
+                  <Td bold>{u.unit_number}{u.tower_block ? ` · ${u.tower_block}` : ''}</Td>
+                  <Td>{u.phase?.phase_name || '—'}</Td>
+                  <Td>{u.configuration || '—'}</Td>
+                  <Td>{fmtArea(u)}</Td>
+                  <Td>{u.facing || '—'}</Td>
+                  <Td bold>{value(u)}</Td>
+                </Tr>
+              ))}
+            </Table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Inventory summary table — each project row opens the list of available plots.
+const InventorySummaryTable = ({ inv }) => {
+  const [active, setActive] = useState(null);
+  const [units, setUnits] = useState([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+
+  const openUnits = async (p) => {
+    if (!p.project_id || p.available <= 0) return;
+    setActive(p);
+    setUnits([]);
+    setLoadingUnits(true);
+    try {
+      const resp = await inventoryUnitApi.getAll({ project_id: p.project_id, unit_status: 'Available', limit: 200 });
+      setUnits(resp.data || []);
+    } catch {
+      toast.error('Failed to load available plots');
+      setActive(null);
+    } finally {
+      setLoadingUnits(false);
+    }
+  };
+
+  return (
+    <>
+      <Card title="All Projects — Inventory Summary">
+        <Table head={['Project', 'Total', 'Available', 'Booked', 'Blocked', 'Sold %']} colSpan={6} empty={inv.length === 0}>
+          {inv.map((p, i) => { const sold = pct(p.booked, p.total); return (
+            <Tr key={i} onClick={p.available > 0 ? () => openUnits(p) : undefined}>
+              <Td bold>{p.project_name}</Td><Td bold>{p.total}</Td><Td bold color={COLORS.booking}>{p.available}</Td>
+              <Td bold color={COLORS.qualified}>{p.booked}</Td><Td bold color={COLORS.cancelled}>{p.blocked}</Td><Td><Pill tone={ratioTone(sold)}>{sold}%</Pill></Td>
+            </Tr>
+          ); })}
+        </Table>
+      </Card>
+      {active && (
+        <AvailablePlotsModal project={active} units={units} loading={loadingUnits} onClose={() => setActive(null)} />
+      )}
+    </>
   );
 };
 
@@ -452,17 +547,27 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
             <KpiCard label="Total Calls" value={hourly.reduce((a, h) => a + num(h.answered) + num(h.unanswered), 0)} sub="Across the day" color={COLORS.qualified} icon={PhoneArrowUpRightIcon} />
           </KpiRow>
           <Card title="Hourly Call Heatmap" sub="Darker = more calls"><Heatmap hourly={hourly} base={accent} /></Card>
-          <ChartCard title="Answered vs Not Answered by Hour" chartKey="hourly" registerRef={registerRef}><HourlyCallsBar data={hourly} /></ChartCard>
+          <Card title="Answered vs Not Answered by Hour" sub="9 AM – 8 PM" registerRef={registerRef} chartKey="hourly">
+            <Table head={['Time', 'Answered', 'Unanswered']} colSpan={3} empty={false}>
+              {HOURS.map((h) => { const row = hourly[h] || {}; return (
+                <Tr key={h}>
+                  <Td bold>{hourLabel(h)}</Td>
+                  <Td bold color={COLORS.answered}>{num(row.answered)}</Td>
+                  <Td bold color={COLORS.unanswered}>{num(row.unanswered)}</Td>
+                </Tr>
+              ); })}
+            </Table>
+          </Card>
         </>
       );
     }
     case 'leaderboard': {
       const isTC = role === 'TC';
       return (
-        <Card title={`${ROLES[role].label} Leaderboard`} sub={isTC ? 'Ranked by site visits' : 'Ranked by bookings'}>
+        <Card title={`${ROLES[role].label} Leaderboard`} sub={isTC ? 'Ranked by site visits' : 'Ranked by booked sq ft'}>
           <LeaderList rows={lb}
-            metric={(r) => (isTC ? r.site_visits : r.bookings)} metricLabel={isTC ? 'SV' : 'bookings'}
-            subFn={(r) => (isTC ? `${num(r.leads)} leads · ${pct(num(r.qualified), num(r.leads))}% qual.` : `${num(r.site_visits)} SV · ${num(r.leads)} leads`)} />
+            metric={(r) => (isTC ? r.site_visits : Math.round(num(r.booked_sqft)))} metricLabel={isTC ? 'SV' : 'sq ft'}
+            subFn={(r) => (isTC ? `${num(r.leads)} leads · ${pct(num(r.qualified), num(r.leads))}% qual.` : `${num(r.bookings)} bookings · ${num(r.site_visits)} SV`)} />
         </Card>
       );
     }
@@ -476,22 +581,29 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
 
     case 'booking': {
       const r = d?.bookingRatio || {};
-      const proj = bookingByProject(d);
+      // "SV Done" = total site visits assigned (all statuses), not just Completed.
+      const svDone = num(f.siteVisitsAssigned);
+      const proj = bookingByProject(d, 'projectWiseSiteVisitAssigned');
       return (
         <>
           <KpiRow>
-            <KpiCard label="Site Visits Done" value={num(f.siteVisits)} sub="Period" color={COLORS.qualified} icon={BuildingOffice2Icon} />
+            <KpiCard label="Site Visits Done" value={svDone} sub="Assigned" color={COLORS.qualified} icon={BuildingOffice2Icon} />
             <KpiCard label="Bookings" value={num(f.bookings)} sub="Closed" color={COLORS.booking} icon={CheckBadgeIcon} />
             <KpiCard label="Booking Ratio" value={`${r.pct || 0}%`} sub="SV → Booking" color={COLORS.siteVisit} icon={ScaleIcon} />
-            <KpiCard label="Dropped Post-SV" value={Math.max(0, num(f.siteVisits) - num(f.bookings))} sub={`${100 - (r.pct || 0)}% not converted`} color={COLORS.cancelled} icon={XCircleIcon} />
+            <KpiCard label="Dropped Post-SV" value={Math.max(0, svDone - num(f.bookings))} sub={`${Math.round((100 - (r.pct || 0)) * 10) / 10}% not converted`} color={COLORS.cancelled} icon={XCircleIcon} />
           </KpiRow>
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,340px),1fr))' }}>
             <Card title="SV → Booking Funnel">
-              <FunnelBars steps={[
-                { label: 'Site Visits Done', value: f.siteVisits, color: COLORS.qualified },
-                { label: 'Bookings Closed', value: f.bookings, color: COLORS.booking },
-                { label: 'Did Not Convert', value: Math.max(0, num(f.siteVisits) - num(f.bookings)), color: COLORS.cancelled },
-              ]} />
+              <Table head={['Stage', 'Count']} colSpan={2} empty={false}>
+                {[
+                  { label: 'SV Done', value: svDone, color: COLORS.qualified },
+                  { label: 'Bookings', value: f.bookings, color: COLORS.booking },
+                  { label: 'Under Nego', value: f.negotiation, color: COLORS.negotiation },
+                  { label: 'SM Leads', value: f.totalLeads, color: COLORS.siteVisit },
+                ].map((s) => (
+                  <Tr key={s.label}><Td bold color={s.color}>{s.label}</Td><Td bold>{num(s.value)}</Td></Tr>
+                ))}
+              </Table>
             </Card>
             <Card title="Booking Ratio by Project">
               <Table head={['Project', 'SV Done', 'Booked', 'Ratio']} colSpan={4} empty={proj.length === 0}>
@@ -572,10 +684,10 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
             <KpiCard label="Booking Value" value={formatCurrency(totalValue)} sub="Sum of net amount" color={COLORS.negotiation} icon={BanknotesIcon} />
           </KpiRow>
           <Card title="Bookings Detail" right={`${rows.length} bookings`}>
-            <Table head={['Customer', 'Project', 'Sq Ft', 'Value', 'Booking Date']} colSpan={5} empty={rows.length === 0}>
+            <Table head={['Customer', 'Project', 'Sq Ft', 'Booking Date']} colSpan={4} empty={rows.length === 0}>
               {rows.map((r, i) => (
                 <Tr key={i}><Td bold>{r.buyer_name || '—'}</Td><Td color="var(--text-muted)">{r.project_name}</Td>
-                  <Td bold>{num(r.sqft).toLocaleString('en-IN')}</Td><Td bold>{r.value != null ? formatCurrency(r.value) : '—'}</Td>
+                  <Td bold>{num(r.sqft).toLocaleString('en-IN')}</Td>
                   <Td color="var(--text-muted)">{fmtDate(r.booking_date)}</Td></Tr>
               ))}
             </Table>
@@ -605,21 +717,22 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
     }
     case 'svstatus': {
       const rows = d?.smWiseSiteVisit || [];
-      const chart = rows.map((s) => ({ project_name: fullName(s), total: num(s.total_visits), completed: num(s.completed) }));
+      const chart = rows.map((s) => ({ project_name: fullName(s), total: num(s.total_visits), bookings: num(s.bookings), negotiation: num(s.negotiation) }));
       return (
         <>
           <Card title="SM-wise Site Visit Status" right="Per Sales Manager">
-            <Table head={['Sales Manager', 'Total Visits', 'Completed', 'Show Rate']} colSpan={4} empty={rows.length === 0}>
-              {rows.map((s) => { const p = pct(num(s.completed), num(s.total_visits)); return (
-                <Tr key={s.id}><Td bold>{fullName(s)}</Td><Td bold>{num(s.total_visits)}</Td><Td bold color={COLORS.booking}>{num(s.completed)}</Td><Td><Pill tone={ratioTone(p)}>{p}%</Pill></Td></Tr>
-              ); })}
+            <Table head={['Sales Manager', 'Total SV', 'Bookings', 'Under Nego']} colSpan={4} empty={rows.length === 0}>
+              {rows.map((s) => (
+                <Tr key={s.id}><Td bold>{fullName(s)}</Td><Td bold>{num(s.total_visits)}</Td><Td bold color={COLORS.booking}>{num(s.bookings)}</Td><Td bold color={COLORS.negotiation}>{num(s.negotiation)}</Td></Tr>
+              ))}
             </Table>
           </Card>
           {chart.length > 0 && (
-            <ChartCard title="Visits by Sales Manager" subtitle="Total vs completed" chartKey="smSV" registerRef={registerRef}>
+            <ChartCard title="Visits by Sales Manager" subtitle="Total SV · Bookings · Under Nego" chartKey="smSV" registerRef={registerRef}>
               <SimpleBar data={chart} xKey="project_name" bars={[
-                { key: 'total', name: 'Total', color: COLORS.muted, stack: 'a' },
-                { key: 'completed', name: 'Completed', color: COLORS.siteVisit, stack: 'a' },
+                { key: 'total', name: 'Total SV', color: COLORS.siteVisit },
+                { key: 'bookings', name: 'Bookings', color: COLORS.booking },
+                { key: 'negotiation', name: 'Under Nego', color: COLORS.negotiation },
               ]} />
             </ChartCard>
           )}
@@ -653,7 +766,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
       );
     }
     case 'inventory': {
-      const inv = (d?.projectWiseInventory || []).map((p) => ({ project_name: p.project_name, available: num(p.available), booked: num(p.booked), blocked: num(p.blocked), total: num(p.total_units) }));
+      const inv = (d?.projectWiseInventory || []).map((p) => ({ project_id: p.project_id, project_name: p.project_name, available: num(p.available), booked: num(p.booked), blocked: num(p.blocked), total: num(p.total_units) }));
       const t = inv.reduce((a, p) => ({ available: a.available + p.available, booked: a.booked + p.booked, blocked: a.blocked + p.blocked, total: a.total + p.total }), { available: 0, booked: 0, blocked: 0, total: 0 });
       return (
         <>
@@ -670,14 +783,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
               { key: 'blocked', name: 'Blocked', color: COLORS.blocked, stack: 'a' },
             ]} />
           </ChartCard>
-          <Card title="All Projects — Inventory Summary">
-            <Table head={['Project', 'Total', 'Available', 'Booked', 'Blocked', 'Sold %']} colSpan={6} empty={inv.length === 0}>
-              {inv.map((p, i) => { const sold = pct(p.booked, p.total); return (
-                <Tr key={i}><Td bold>{p.project_name}</Td><Td bold>{p.total}</Td><Td bold color={COLORS.booking}>{p.available}</Td>
-                  <Td bold color={COLORS.qualified}>{p.booked}</Td><Td bold color={COLORS.cancelled}>{p.blocked}</Td><Td><Pill tone={ratioTone(sold)}>{sold}%</Pill></Td></Tr>
-              ); })}
-            </Table>
-          </Card>
+          <InventorySummaryTable inv={inv} />
         </>
       );
     }

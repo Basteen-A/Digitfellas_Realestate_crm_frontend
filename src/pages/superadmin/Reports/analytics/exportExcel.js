@@ -53,7 +53,7 @@ const BLOCKS = (role) => {
     hourlyCalls: { title: 'Hourly Calls', columns: [{ header: 'Hour', key: 'hour' }, { header: 'Answered', key: 'answered' }, { header: 'Unanswered', key: 'unanswered' }] },
     projectWiseSiteVisit: { title: 'Project-wise Site Visits', columns: [{ header: 'Project', key: 'project_name' }, { header: 'Site Visits', key: 'site_visits' }] },
     projectWiseInventory: { title: 'Project-wise Inventory', columns: [{ header: 'Project', key: 'project_name' }, { header: 'Total', key: 'total_units' }, { header: 'Available', key: 'available' }, { header: 'Booked', key: 'booked' }, { header: 'Blocked', key: 'blocked' }] },
-    smWiseSiteVisit: { title: 'SM-wise Site Visits', columns: [{ header: 'Sales Manager', key: 'name' }, { header: 'Total Visits', key: 'total_visits' }, { header: 'Completed', key: 'completed' }], name: true },
+    smWiseSiteVisit: { title: 'SM-wise Site Visits', columns: [{ header: 'Sales Manager', key: 'name' }, { header: 'Total SV', key: 'total_visits' }, { header: 'Bookings', key: 'bookings' }, { header: 'Under Nego', key: 'negotiation' }], name: true },
     smWiseMissedFollowups: { title: 'SM-wise Missed Follow-ups', columns: [{ header: 'Sales Manager', key: 'name' }, { header: 'Missed', key: 'missed' }], name: true },
   };
 };
