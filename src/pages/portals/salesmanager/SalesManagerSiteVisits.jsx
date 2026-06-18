@@ -120,6 +120,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
   const [expandedLead, setExpandedLead] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [selectedVisitLoading, setSelectedVisitLoading] = useState(false);
@@ -236,9 +239,27 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   }, []);
 
   const filteredVisits = visits.filter(v => {
+    // Status filter
     if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
     if (filter === 'completed') return v.status === 'Completed';
     if (filter === 'cancelled') return v.status === 'Cancelled';
+    
+    // Date range filter
+    const visitDate = v.scheduled_date || v.actual_visit_date || v.completed_at;
+    if (dateFrom && visitDate) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      if (new Date(visitDate) < fromDate) return false;
+    }
+    if (dateTo && visitDate) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      if (new Date(visitDate) > toDate) return false;
+    }
+    
+    // Project filter
+    if (projectFilter && v.project_id !== projectFilter) return false;
+    
     return true;
   });
 
@@ -525,6 +546,11 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const fieldLabelStyle = { display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 };
   const fieldInputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, background: 'var(--bg-card, #fff)', color: 'var(--text-primary)' };
 
+  // Calculate SV Done count (completed visits)
+  const svDoneCount = useMemo(() => {
+    return filteredVisits.filter(v => v.status === 'Completed').length;
+  }, [filteredVisits]);
+
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -542,6 +568,88 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
           </div>
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadVisits}><ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh</button>
           <button className="crm-btn crm-btn-primary" onClick={handleOpenCreate}>+ Add Site Visit</button>
+        </div>
+      </div>
+
+      {/* Filters & Stats Row */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 20, alignItems: 'flex-end' }}>
+        {/* Date From */}
+        <div style={{ minWidth: 160 }}>
+          <label style={{ ...fieldLabelStyle, marginBottom: 6 }}>From Date</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            style={fieldInputStyle}
+          />
+        </div>
+        
+        {/* Date To */}
+        <div style={{ minWidth: 160 }}>
+          <label style={{ ...fieldLabelStyle, marginBottom: 6 }}>To Date</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            style={fieldInputStyle}
+          />
+        </div>
+        
+        {/* Project Filter */}
+        <div style={{ minWidth: 200 }}>
+          <label style={{ ...fieldLabelStyle, marginBottom: 6 }}>Project</label>
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            style={fieldInputStyle}
+          >
+            <option value="">All Projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.project_name}</option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Clear Filters */}
+        <button
+          className="crm-btn crm-btn-ghost"
+          onClick={() => {
+            setDateFrom('');
+            setDateTo('');
+            setProjectFilter('');
+            setFilter('all');
+          }}
+          style={{ height: 40 }}
+        >
+          Clear Filters
+        </button>
+        
+        {/* SV Done Count Card */}
+        <div style={{ 
+          marginLeft: 'auto', 
+          background: 'var(--bg-card)', 
+          border: '1px solid var(--border-primary)', 
+          borderRadius: 12, 
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12
+        }}>
+          <div style={{ 
+            width: 48, 
+            height: 48, 
+            borderRadius: '50%', 
+            background: 'var(--accent-green-bg)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}>
+            <CheckCircleIcon style={{ width: 24, height: 24, color: '#15803d' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>{svDoneCount}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>SV Done</div>
+          </div>
         </div>
       </div>
 

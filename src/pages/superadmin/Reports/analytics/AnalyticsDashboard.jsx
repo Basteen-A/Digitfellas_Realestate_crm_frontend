@@ -451,7 +451,9 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
   switch (rkey) {
     case 'qualification': {
       const r = d?.qualificationRatio || {};
-      const best = [...lb].sort((a, b) => pct(num(b.qualified), num(b.leads)) - pct(num(a.qualified), num(a.leads)))[0];
+      // Filter out Unassigned/Others from Top Performer calculation
+      const userLeaderboard = lb.filter((u) => u.id !== 'unassigned');
+      const best = [...userLeaderboard].sort((a, b) => pct(num(b.qualified), num(b.leads)) - pct(num(a.qualified), num(a.leads)))[0];
       return (
         <>
           <KpiRow>
@@ -461,12 +463,30 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
             <KpiCard label="Top Performer" value={best ? fullName(best) : '—'} sub={best ? `${pct(num(best.qualified), num(best.leads))}% qual.` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
           <Card title="Member-wise Qualification Ratio">
-            <Table head={['Member', 'Total Leads', 'Qualified', 'Not Qualified', 'Ratio']} colSpan={5} empty={lb.length === 0}>
+            <Table head={['Member', 'Leads Created', 'Total Leads', 'Qualified', 'Not Qualified', 'Ratio']} colSpan={6} empty={lb.length === 0}>
               {lb.map((u) => { const p = pct(num(u.qualified), num(u.leads)); return (
-                <Tr key={u.id}><Td bold>{fullName(u)}</Td><Td bold>{num(u.leads)}</Td>
+                <Tr key={u.id}><Td bold>{fullName(u)}</Td><Td bold>{num(u.leads_created)}</Td><Td bold>{num(u.leads)}</Td>
                   <Td bold color={COLORS.booking}>{num(u.qualified)}</Td><Td bold color={COLORS.cancelled}>{num(u.leads) - num(u.qualified)}</Td>
                   <Td><Pill tone={ratioTone(p)}>{p}%</Pill></Td></Tr>
               ); })}
+              {/* Total row */}
+              {(() => {
+                const totalCreated = lb.reduce((sum, u) => sum + num(u.leads_created), 0);
+                const totalLeads = lb.reduce((sum, u) => sum + num(u.leads), 0);
+                const totalQualified = lb.reduce((sum, u) => sum + num(u.qualified), 0);
+                const totalNotQualified = totalLeads - totalQualified;
+                const totalPct = pct(totalQualified, totalLeads);
+                return (
+                  <Tr key="total" style={{ borderTop: '2px solid var(--border-color, #e5e7eb)', backgroundColor: 'var(--bg-secondary, #f9fafb)' }}>
+                    <Td bold style={{ fontWeight: 'bold' }}>TOTAL</Td>
+                    <Td bold style={{ fontWeight: 'bold' }}>{totalCreated}</Td>
+                    <Td bold style={{ fontWeight: 'bold' }}>{totalLeads}</Td>
+                    <Td bold style={{ fontWeight: 'bold', color: COLORS.booking }}>{totalQualified}</Td>
+                    <Td bold style={{ fontWeight: 'bold', color: COLORS.cancelled }}>{totalNotQualified}</Td>
+                    <Td><Pill tone={ratioTone(totalPct)}>{totalPct}%</Pill></Td>
+                  </Tr>
+                );
+              })()}
             </Table>
           </Card>
         </>
