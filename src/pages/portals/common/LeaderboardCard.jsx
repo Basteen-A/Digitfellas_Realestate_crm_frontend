@@ -9,6 +9,7 @@ const DATE_FILTER_OPTIONS = [
   { value: 'this_week', label: 'This Week' },
   { value: 'this_month', label: 'This Month' },
   { value: 'last_month', label: 'Last Month' },
+  { value: 'all_time', label: 'All Time' },
 ];
 
 // Format sqft nicely
@@ -220,13 +221,10 @@ export const SalesManagerLeaderboardCard = ({ user }) => {
                   </div>
                   <div className="leaderboard-info">
                     <div className="leaderboard-name">{sm.full_name}</div>
-                    <div className="leaderboard-meta">
-                      {sm.plots_booked} plots · {formatSqft(sm.total_sqft)} sqft
-                    </div>
                   </div>
                   <div className="leaderboard-stats">
-                    <div className="leaderboard-value">{sm.total_bookings}</div>
-                    <div className="leaderboard-label">Bookings</div>
+                    <div className="leaderboard-value"> {(sm.total_sqft)} sqft</div>
+                    <div className="leaderboard-label"> {sm.plots_booked} plots </div>
                   </div>
                 </div>
               ))}
@@ -334,7 +332,7 @@ export const SalesHeadLeaderboardCard = ({ user }) => {
             <div className="leaderboard-list">
               {displayData.map((sh) => (
                 <div
-                  key={sh.id}
+                  key={sh.id}             
                   className={`leaderboard-item ${sh.id === user?.id ? 'is-current-user' : ''}`}
                 >
                   <div className={`leaderboard-rank ${sh.rank <= 3 ? 'top-three' : ''}`}>
@@ -349,13 +347,11 @@ export const SalesHeadLeaderboardCard = ({ user }) => {
                   </div>
                   <div className="leaderboard-info">
                     <div className="leaderboard-name">{sh.full_name}</div>
-                    <div className="leaderboard-meta">
-                      {sh.plots_booked} plots · {formatSqft(sh.total_sqft)} sqft
-                    </div>
+                  
                   </div>
                   <div className="leaderboard-stats">
-                    <div className="leaderboard-value">{sh.total_bookings}</div>
-                    <div className="leaderboard-label">Bookings</div>
+                    <div className="leaderboard-value">{(sh.total_sqft)} sqft</div>
+                    <div className="leaderboard-label">{sh.plots_booked} plots</div>
                   </div>
                 </div>
               ))}

@@ -37,35 +37,43 @@ const statusChipColor = (statusName, fallbackColor) => {
   return fallbackColor || '#6B7280';
 };
 
-const isLostHandoffRow = (row) => {
-  const statusCode = String(row?.statusCode || row?.status_code || '').trim().toUpperCase();
-  const statusName = String(row?.statusName || row?.status_name || '').trim().toUpperCase();
-  return statusCode === 'LOST' || statusCode === 'COLD_LOST' || statusName === 'LOST' || statusName === 'COLD LOST';
-};
-
 const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false, stageCode = null, currentOnly = false }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, incomingOnPage: 0, outgoingOnPage: 0, pendingOnPage: 0 });
   const [filters, setFilters] = useState({ type: defaultType, search: '' });
 
-  const stats = useMemo(() => {
-    const current = rows.filter((row) => row.isCurrent).length;
-    const outgoing = meta.outgoingOnPage || 0;
-    const pending = meta.pendingOnPage || 0;
-    const svDone = workspaceRole === 'TC' ? outgoing - pending : outgoing;
-    return {
-      total: meta.total || 0,
-      incoming: meta.incomingOnPage || 0,
-      outgoing: svDone,
-      pending: pending,
-      current,
-    };
-  }, [meta, rows, workspaceRole]);
+  // One row per lead (rows arrive newest-first, so the first occurrence is the
+  // latest handoff). The metric is "leads this user shared to the next role", so a
+  // lead is kept even if it was later marked LOST or re-handed-off — the share
+  // still happened and must keep counting. Every stat below is derived from THIS
+  // list, so the count cards always equal the rows actually shown.
+  const visibleRows = useMemo(() => {
+    const seen = new Set();
+    const deduped = [];
+    for (const row of rows) {
+      const key = row.leadId || row.lead_id || row.id;
+      if (key == null || seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(row);
+    }
+    return deduped;
+  }, [rows]);
 
-  const visibleRows = useMemo(() => workspaceRole === 'SM' ? rows : rows.filter((row) => !isLostHandoffRow(row)), [rows, workspaceRole]);
+  const stats = useMemo(() => {
+    const pending = visibleRows.filter((row) => row.pendingAcceptance).length;
+    const total = visibleRows.length;
+    return {
+      total,
+      incoming: visibleRows.filter((row) => row.direction === 'incoming').length,
+      // TC "SV Done (Accepted)" = leads shared minus those still awaiting SM acceptance.
+      outgoing: workspaceRole === 'TC' ? Math.max(0, total - pending) : visibleRows.filter((row) => row.direction === 'outgoing').length,
+      pending,
+      current: visibleRows.filter((row) => row.isCurrent).length,
+    };
+  }, [visibleRows, workspaceRole]);
+
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(visibleRows, 25);
 
   const isTC = workspaceRole === 'TC';
@@ -87,7 +95,6 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
       });
 
       setRows(response.data || []);
-      setMeta(response.meta || { total: 0, incomingOnPage: 0, outgoingOnPage: 0, pendingOnPage: 0 });
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load handoff leads'));
     } finally {

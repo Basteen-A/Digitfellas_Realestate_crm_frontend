@@ -457,7 +457,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
           <KpiRow>
             <KpiCard label="Total Leads" value={num(f.totalLeads)} sub="All sources" color={COLORS.leads} icon={UsersIcon} />
             <KpiCard label="Qualified" value={num(f.qualified)} sub={`${r.pct || 0}% qualification rate`} color={COLORS.qualified} icon={CheckBadgeIcon} />
-            <KpiCard label="Not Qualified" value={num(f.totalLeads) - num(f.qualified)} sub={`${100 - (r.pct || 0)}% rejected`} color={COLORS.cancelled} icon={XCircleIcon} />
+            <KpiCard label="Not Qualified" value={num(f.totalLeads) - num(f.qualified)} sub={`${100 - (r.pct || 0)}% `} color={COLORS.cancelled} icon={XCircleIcon} />
             <KpiCard label="Top Performer" value={best ? fullName(best) : '—'} sub={best ? `${pct(num(best.qualified), num(best.leads))}% qual.` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
           <Card title="Member-wise Qualification Ratio">
@@ -496,11 +496,13 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
     case 'svproject': {
       const proj = (d?.projectWiseSiteVisit || []).map((p) => ({ project_name: p.project_name, site_visits: num(p.site_visits) }));
       const details = d?.siteVisitDetails || [];
-      const totalSV = proj.reduce((a, p) => a + p.site_visits, 0);
+      // Headline uses the canonical distinct-leads-visited total (funnel.siteVisits)
+      // so it matches the SV Ratio screen and the leaderboard. The per-project table
+      // below may sum higher when a lead visited more than one project.
       return (
         <>
           <KpiRow>
-            <KpiCard label="Total Site Visits" value={totalSV} sub="Completed in this period" color={COLORS.qualified} icon={MapPinIcon} />
+            <KpiCard label="Total Site Visits" value={num(f.siteVisits)} sub="Completed in this period" color={COLORS.qualified} icon={MapPinIcon} />
             <KpiCard label="Projects with Visits" value={proj.length} sub="Active projects" color={COLORS.negotiation} icon={Squares2X2Icon} />
             <KpiCard label="Top Project" value={proj[0]?.project_name || '—'} sub={proj[0] ? `${proj[0].site_visits} visits` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
@@ -516,17 +518,28 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
     case 'calls': {
       const series = role === 'ORG' ? orgCalls : (d?.callsPerDay || []).map((x) => ({ day: x.day, answered: num(x.answered), unanswered: num(x.unanswered), total: num(x.total) }));
       const t = series.reduce((a, r) => ({ total: a.total + num(r.total), answered: a.answered + num(r.answered), unanswered: a.unanswered + num(r.unanswered) }), { total: 0, answered: 0, unanswered: 0 });
+      const callLeaderboard = [...lb].sort((a, b) => num(b.calls) - num(a.calls));
+      const callBest = callLeaderboard[0];
       return (
         <>
           <KpiRow>
             <KpiCard label="Total Calls" value={t.total} sub={role === 'ORG' ? 'All agents · period' : 'Period total'} color={COLORS.qualified} icon={PhoneArrowUpRightIcon} />
             <KpiCard label="Answered" value={t.answered} sub={`${pct(t.answered, t.total)}% answer rate`} color={COLORS.booking} icon={CheckBadgeIcon} />
             <KpiCard label="Not Answered" value={t.unanswered} sub={`${pct(t.unanswered, t.total)}% missed`} color={COLORS.cancelled} icon={XCircleIcon} />
-            <KpiCard label="Active Days" value={series.length} sub="Days with calls" color={COLORS.siteVisit} icon={ClockIcon} />
+            <KpiCard label="Top Caller" value={callBest ? fullName(callBest) : '—'} sub={callBest ? `${num(callBest.calls)} calls` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
           <ChartCard title="Calls per Day" subtitle="Answered vs unanswered" chartKey="calls" registerRef={registerRef}>
             <CallsPerDayLine data={series} />
           </ChartCard>
+          <Card title="Member-wise Call Activity">
+            <Table head={['Member', 'Total Calls', 'Answered', 'Not Answered', 'Answer Rate']} colSpan={5} empty={lb.length === 0}>
+              {callLeaderboard.map((u) => { const total = num(u.calls); const answered = num(u.calls_answered); const rate = pct(answered, total); return (
+                <Tr key={u.id}><Td bold>{fullName(u)}</Td><Td bold>{total}</Td>
+                  <Td bold color={COLORS.booking}>{answered}</Td><Td bold color={COLORS.cancelled}>{total - answered}</Td>
+                  <Td><Pill tone={ratioTone(rate)}>{rate}%</Pill></Td></Tr>
+              ); })}
+            </Table>
+          </Card>
         </>
       );
     }
