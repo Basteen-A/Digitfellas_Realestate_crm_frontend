@@ -414,7 +414,7 @@ const SalesHeadBookingSummary = () => {
         />
         <AggCard
           icon={<CheckCircleIcon />}
-          label="SV Done (w/ Time Spent)"
+          label="SV Done"
           value={data.totalSVDone}
           gradient="linear-gradient(135deg, #10b981 0%, #047857 100%)"
           shadow="rgba(16, 185, 129, 0.28)"

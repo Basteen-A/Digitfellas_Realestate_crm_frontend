@@ -682,7 +682,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
                   { label: 'SV Done', value: svDone, color: COLORS.qualified },
                   { label: 'Bookings', value: f.bookings, color: COLORS.booking },
                   { label: 'Under Nego', value: f.negotiation, color: COLORS.negotiation },
-                  { label: 'SM Leads', value: f.totalLeads, color: COLORS.siteVisit },
+                  { label: 'SM Leads', value: f.smLeads ?? f.totalLeads, color: COLORS.siteVisit },
                 ].map((s) => (
                   <Tr key={s.label}><Td bold color={s.color}>{s.label}</Td><Td bold>{num(s.value)}</Td></Tr>
                 ))}
@@ -895,7 +895,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
             <KpiCard label="Bookings" value={num(f.bookings)} sub={`${num(f.bookingsSqft).toLocaleString('en-IN')} sq ft`} color={COLORS.booking} icon={ArrowTrendingUpIcon} />
           </KpiRow>
           <Card title="Conversion Funnel" sub="Qualified → SV → Negotiation → Booking" registerRef={registerRef} chartKey="funnel">
-            <SalesFunnel data={donut} />
+            <SalesFunnel data={donut} total={num(f.totalLeads)} />
           </Card>
         </>
       );

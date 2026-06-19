@@ -183,7 +183,7 @@ export const FunnelDonut = ({ data }) => {
 // Proper sales funnel (descending trapezoids) with the stage name, count and
 // % of the top stage labelled inside each band — the Qualified → Site Visit →
 // Negotiation → Booking flow reads as a real conversion funnel.
-export const SalesFunnel = ({ data }) => {
+export const SalesFunnel = ({ data, total }) => {
   const isMobile = useIsMobile();
   const num = (v) => Number(v) || 0;
   const top = num(data?.[0]?.value) || 0;
@@ -197,13 +197,35 @@ export const SalesFunnel = ({ data }) => {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: isMobile ? '12px 8px' : '16px 12px 12px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 480 }}>
+        {total != null && (
+          <>
+            <div
+              style={{
+                width: '100%',
+                background: COLORS.leads,
+                padding: isMobile ? '10px 0' : '14px 0',
+                textAlign: 'center',
+                borderRadius: '6px 6px 0 0',
+              }}
+            >
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: isMobile ? 11 : 13 }}>Total Leads</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: isMobile ? 14 : 18, marginTop: 1 }}>
+                {num(total).toLocaleString('en-IN')}
+              </div>
+            </div>
+            {data.length > 0 && (
+              <div style={{ textAlign: 'center', fontSize: isMobile ? 10 : 11, padding: '3px 0', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>
+                ▼ {num(total) > 0 ? Math.round((num(data[0].value) / num(total)) * 100) : 0}%
+              </div>
+            )}
+          </>
+        )}
         {data.map((entry, i) => {
           const topW = widths[i];
           const botW = i < data.length - 1 ? widths[i + 1] : topW * 0.82;
           const topInset = (100 - topW) / 2;
           const botInset = (100 - botW) / 2;
           const v = num(entry.value);
-          const p = top > 0 ? Math.round((v / top) * 100) : 0;
           return (
             <React.Fragment key={entry.name}>
               <div
@@ -218,7 +240,7 @@ export const SalesFunnel = ({ data }) => {
               >
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: isMobile ? 11 : 13 }}>{entry.name}</div>
                 <div style={{ color: '#fff', fontWeight: 800, fontSize: isMobile ? 14 : 18, marginTop: 1 }}>
-                  {v.toLocaleString('en-IN')} · {p}%
+                  {v.toLocaleString('en-IN')}
                 </div>
               </div>
               {i < data.length - 1 && (
