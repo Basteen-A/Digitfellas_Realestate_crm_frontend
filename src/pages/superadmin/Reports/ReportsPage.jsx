@@ -130,7 +130,7 @@ const UserActivityReport = ({ period }) => {
 
       <div className="crm-card" style={{ overflowX: 'auto' }}>
         {loading ? (
-          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
+          <div className="simple-loader"><div className="simple-spinner" /><p>Loading…</p></div>
         ) : users.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>No users found for this role.</div>
         ) : (
@@ -306,7 +306,7 @@ const UserDetail = ({ detail, isCol, role, period, loading, onBack }) => {
       <div className="crm-card" style={{ marginTop: 16 }}>
         <div style={{ padding: '12px 14px', fontWeight: 700, fontSize: 14, borderBottom: '1px solid var(--border-primary)' }}>Recent Activity (A→Z)</div>
         {loading ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
+          <div className="simple-loader"><div className="simple-spinner" /><p>Loading…</p></div>
         ) : (detail.activities || []).length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No activity in this period.</div>
         ) : (
@@ -441,7 +441,7 @@ const InventoryReport = ({ period }) => {
       </div>
 
       {loading ? (
-        <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
+        <div className="simple-loader"><div className="simple-spinner" /><p>Loading…</p></div>
       ) : (
         <>
           <RollupTable title="By Project" rows={data?.byProject} nameKey="project_name" />

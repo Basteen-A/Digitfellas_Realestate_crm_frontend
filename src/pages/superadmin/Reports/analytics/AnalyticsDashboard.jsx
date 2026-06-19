@@ -213,21 +213,54 @@ const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
   );
 };
 
-const FunnelBars = ({ steps }) => (
-  <div className="p-5">
-    {steps.map((s, i) => (
-      <React.Fragment key={s.label}>
-        <div className="flex items-center justify-between rounded-lg px-4 py-3.5" style={{ background: `${s.color}1a` }}>
-          <span className="font-medium" style={{ color: s.color }}>{s.label}</span>
-          <span className="text-[22px] font-bold" style={{ color: s.color }}>{num(s.value)}</span>
-        </div>
-        {i < steps.length - 1 && (
-          <div className="text-center text-[11px] py-1" style={{ color: 'var(--text-muted)' }}>↓ {pct(num(steps[i + 1].value), num(s.value))}%</div>
-        )}
-      </React.Fragment>
-    ))}
-  </div>
-);
+const FunnelBars = ({ steps }) => {
+  // Compute widths: first step is 100%, each subsequent step narrows
+  // proportionally, with a minimum of 40% so labels stay readable.
+  const maxVal = Math.max(1, ...steps.map((s) => num(s.value)));
+  const widths = steps.map((s) => {
+    const ratio = num(s.value) / maxVal;
+    return 40 + ratio * 60; // range: 40% → 100%
+  });
+  // Force the first bar to always be 100%
+  widths[0] = 100;
+
+  return (
+    <div className="p-5" style={{ display: 'flex', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 480 }}>
+        {steps.map((s, i) => {
+          const topW = widths[i];
+          const botW = i < steps.length - 1 ? widths[i + 1] : topW * 0.85;
+          // Trapezoid via clip-path: top-left, top-right, bottom-right, bottom-left
+          const topInset = (100 - topW) / 2;
+          const botInset = (100 - botW) / 2;
+          return (
+            <React.Fragment key={s.label}>
+              <div
+                style={{
+                  width: '100%',
+                  position: 'relative',
+                  clipPath: `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - botInset}% 100%, ${botInset}% 100%)`,
+                  background: s.color,
+                  padding: '12px 0',
+                  textAlign: 'center',
+                  transition: 'clip-path 0.3s ease',
+                }}
+              >
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 12 }}>{s.label}</div>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: 18, marginTop: 2 }}>{num(s.value)}</div>
+              </div>
+              {i < steps.length - 1 && (
+                <div className="text-center text-[11px] py-1.5" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                  ▼ {pct(num(steps[i + 1].value), num(s.value))}%
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`;
@@ -861,17 +894,9 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
             <KpiCard label="Negotiation" value={num(f.negotiation)} color={COLORS.negotiation} icon={ChatBubbleLeftRightIcon} />
             <KpiCard label="Bookings" value={num(f.bookings)} sub={`${num(f.bookingsSqft).toLocaleString('en-IN')} sq ft`} color={COLORS.booking} icon={ArrowTrendingUpIcon} />
           </KpiRow>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,360px),1fr))' }}>
-            <ChartCard title="Conversion Funnel" subtitle="Qualified → SV → Negotiation → Booking" chartKey="funnel" registerRef={registerRef}><SalesFunnel data={donut} /></ChartCard>
-            <Card title="Funnel Steps">
-              <FunnelBars steps={[
-                { label: 'Qualified', value: f.qualified, color: COLORS.qualified },
-                { label: 'Site Visits', value: f.siteVisits, color: COLORS.siteVisit },
-                { label: 'Negotiation', value: f.negotiation, color: COLORS.negotiation },
-                { label: 'Bookings', value: f.bookings, color: COLORS.booking },
-              ]} />
-            </Card>
-          </div>
+          <Card title="Conversion Funnel" sub="Qualified → SV → Negotiation → Booking" registerRef={registerRef} chartKey="funnel">
+            <SalesFunnel data={donut} />
+          </Card>
         </>
       );
     }
@@ -976,7 +1001,7 @@ export const ReportBrowser = ({
             </div>
           </div>
 
-          {loading && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{loadingLabel}</div>}
+          {loading && <div className="simple-loader"><div className="simple-spinner" /><p>{loadingLabel}</p></div>}
           {!loading && !hasData && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{emptyLabel}</div>}
           {!loading && hasData && (
             <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} selfView={selfView} />

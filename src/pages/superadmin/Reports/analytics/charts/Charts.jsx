@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ResponsiveContainer, BarChart, Bar, Line, Area, ComposedChart,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  FunnelChart, Funnel, LabelList, Label,
+  LabelList, Label,
 } from 'recharts';
 import { COLORS, SERIES } from '../palette';
 
@@ -185,31 +185,52 @@ export const FunnelDonut = ({ data }) => {
 // Negotiation → Booking flow reads as a real conversion funnel.
 export const SalesFunnel = ({ data }) => {
   const isMobile = useIsMobile();
-  const top = Number(data?.[0]?.value) || 0;
-  const renderLabel = ({ x, y, width, height, index }) => {
-    const entry = data[index] || {};
-    const p = top > 0 ? Math.round(((Number(entry.value) || 0) / top) * 100) : 0;
-    const cx = x + width / 2;
-    const cy = y + height / 2;
-    if (height < 22) return null; // too thin to label legibly
-    return (
-      <g style={{ pointerEvents: 'none' }}>
-        <text x={cx} y={cy - 5} textAnchor="middle" fill="#fff" fontSize={isMobile ? 12 : 13} fontWeight={700}>{entry.name}</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fill="#fff" fontSize={isMobile ? 11 : 12} fontWeight={600} opacity={0.95}>
-          {(Number(entry.value) || 0).toLocaleString('en-IN')} · {p}%
-        </text>
-      </g>
-    );
-  };
+  const num = (v) => Number(v) || 0;
+  const top = num(data?.[0]?.value) || 0;
+  const maxVal = Math.max(1, ...data.map((d) => num(d.value)));
+  const widths = data.map((d) => {
+    const ratio = num(d.value) / maxVal;
+    return 35 + ratio * 65; // range: 35% → 100%
+  });
+  widths[0] = 100;
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <FunnelChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-        <Tooltip content={<ChartTooltip total={top} />} />
-        <Funnel dataKey="value" nameKey="name" data={data} isAnimationActive lastShapeType="rectangle" stroke="var(--bg-card, #fff)" strokeWidth={2}>
-          {data.map((entry, i) => <Cell key={entry.name} fill={entry.color || SERIES[i % SERIES.length]} />)}
-          <LabelList position="center" content={renderLabel} />
-        </Funnel>
-      </FunnelChart>
-    </ResponsiveContainer>
+    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: isMobile ? '12px 8px' : '16px 12px 12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 480 }}>
+        {data.map((entry, i) => {
+          const topW = widths[i];
+          const botW = i < data.length - 1 ? widths[i + 1] : topW * 0.82;
+          const topInset = (100 - topW) / 2;
+          const botInset = (100 - botW) / 2;
+          const v = num(entry.value);
+          const p = top > 0 ? Math.round((v / top) * 100) : 0;
+          return (
+            <React.Fragment key={entry.name}>
+              <div
+                style={{
+                  width: '100%',
+                  clipPath: `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - botInset}% 100%, ${botInset}% 100%)`,
+                  background: entry.color || '#7C3AED',
+                  padding: isMobile ? '10px 0' : '14px 0',
+                  textAlign: 'center',
+                  transition: 'clip-path 0.3s ease',
+                }}
+              >
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: isMobile ? 11 : 13 }}>{entry.name}</div>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: isMobile ? 14 : 18, marginTop: 1 }}>
+                  {v.toLocaleString('en-IN')} · {p}%
+                </div>
+              </div>
+              {i < data.length - 1 && (
+                <div style={{ textAlign: 'center', fontSize: isMobile ? 10 : 11, padding: '3px 0', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>
+                  ▼ {top > 0 ? Math.round((num(data[i + 1].value) / v) * 100) : 0}%
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
   );
 };
+
