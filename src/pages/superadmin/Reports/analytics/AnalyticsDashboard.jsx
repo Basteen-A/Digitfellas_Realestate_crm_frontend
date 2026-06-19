@@ -119,8 +119,9 @@ export const selfFirstKey = (role) => (SELF_REPORT_GROUPS[role] || ROLES[role].g
 
 // ── presentational pieces ──────────────────────────────────────────────────────
 // `valueSize` lets name-based KPI cards (e.g. Top Performer) use a smaller,
-// truncating value so long names don't overflow the card.
-const KpiCard = ({ label, value, sub, color, icon: Icon, valueSize = 26 }) => (
+// truncating value so long names don't overflow the card. Default 22px matches the
+// portal dashboard stat cards (.col-stat-value-new) so the two screens look consistent.
+const KpiCard = ({ label, value, sub, color, icon: Icon, valueSize = 22 }) => (
   <div className="crm-card flex-1 min-w-[150px]" style={{ borderTop: `3px solid ${color}`, padding: '14px 16px' }}>
     <div className="flex items-center justify-between gap-2">
       <span className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</span>
@@ -182,6 +183,14 @@ const Tr = ({ children, onClick }) => (
   >{children}</tr>
 );
 const Td = ({ children, bold, color, className = '' }) => <td className={`px-3 py-2.5 text-[13px] ${bold ? 'font-semibold' : ''} ${className}`} style={color ? { color } : undefined}>{children}</td>;
+// Summed footer row for per-project tables. `label` fills the first column; `cells`
+// fills the rest (one entry per remaining column), all rendered bold and emphasised.
+const TotalRow = ({ cells, label = 'Total' }) => (
+  <tr style={{ borderTop: '2px solid var(--border-primary)', background: 'var(--bg-hover, #FAFAFA)' }}>
+    <Td bold>{label}</Td>
+    {cells.map((c, i) => <Td key={i} bold>{c}</Td>)}
+  </tr>
+);
 
 const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
   if (!rows || rows.length === 0) return <div className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>No data for this period.</div>;
@@ -262,8 +271,9 @@ const mergeHourly = (roleData) => {
   return out;
 };
 // combine SV-per-project + bookings-per-project into one table dataset.
-// svKey selects the SV source: 'projectWiseSiteVisit' (Completed visits, default)
-// or 'projectWiseSiteVisitAssigned' (all assigned visits, Booking-Ratio screen).
+// svKey selects the SV source: 'projectWiseSiteVisit' (default) or
+// 'projectWiseSiteVisitAssigned' (Booking-Ratio screen). Both are now distinct leads
+// with a Completed, owner-attributed visit, so per-project rows sum to the headline.
 const bookingByProject = (d, svKey = 'projectWiseSiteVisit') => {
   const map = new Map();
   (d?.[svKey] || []).forEach((p) => map.set(p.project_name, { project_name: p.project_name, sv: num(p.site_visits), booked: 0 }));
@@ -444,7 +454,7 @@ const InventorySummaryTable = ({ inv }) => {
 };
 
 // ── panels ──────────────────────────────────────────────────────────────────
-const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
+const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfView = false }) => {
   const f = d?.funnel || {};
   const lb = d?.teamLeaderboard || [];
 
@@ -546,7 +556,11 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
             <KpiCard label="Total Calls" value={t.total} sub={role === 'ORG' ? 'All agents · period' : 'Period total'} color={COLORS.qualified} icon={PhoneArrowUpRightIcon} />
             <KpiCard label="Answered" value={t.answered} sub={`${pct(t.answered, t.total)}% answer rate`} color={COLORS.booking} icon={CheckBadgeIcon} />
             <KpiCard label="Not Answered" value={t.unanswered} sub={`${pct(t.unanswered, t.total)}% missed`} color={COLORS.cancelled} icon={XCircleIcon} />
-            <KpiCard label="Top Caller" value={callBest ? fullName(callBest) : '—'} sub={callBest ? `${num(callBest.calls)} calls` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
+            {/* "Top Caller" is a leaderboard card — pointless in a self-only portal view
+                (it's always the logged-in user), so hide it there. */}
+            {!selfView && (
+              <KpiCard label="Top Caller" value={callBest ? fullName(callBest) : '—'} sub={callBest ? `${num(callBest.calls)} calls` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
+            )}
           </KpiRow>
           <ChartCard title="Calls per Day" subtitle="Answered vs unanswered" chartKey="calls" registerRef={registerRef}>
             <CallsPerDayLine data={series} />
@@ -614,13 +628,16 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
 
     case 'booking': {
       const r = d?.bookingRatio || {};
-      // "SV Done" = total site visits assigned (all statuses), not just Completed.
+      // "SV Done" = distinct leads with a Completed visit, attributed to the SM who
+      // recorded/attended it (one per lead, revisits collapsed, cancelled excluded).
       const svDone = num(f.siteVisitsAssigned);
       const proj = bookingByProject(d, 'projectWiseSiteVisitAssigned');
+      const totSV = proj.reduce((a, p) => a + num(p.sv), 0);
+      const totBooked = proj.reduce((a, p) => a + num(p.booked), 0);
       return (
         <>
           <KpiRow>
-            <KpiCard label="Site Visits Done" value={svDone} sub="Assigned" color={COLORS.qualified} icon={BuildingOffice2Icon} />
+            <KpiCard label="Site Visits Done" value={svDone} sub="Completed" color={COLORS.qualified} icon={BuildingOffice2Icon} />
             <KpiCard label="Bookings" value={num(f.bookings)} sub="Closed" color={COLORS.booking} icon={CheckBadgeIcon} />
             <KpiCard label="Booking Ratio" value={`${r.pct || 0}%`} sub="SV → Booking" color={COLORS.siteVisit} icon={ScaleIcon} />
             <KpiCard label="Dropped Post-SV" value={Math.max(0, svDone - num(f.bookings))} sub={`${Math.round((100 - (r.pct || 0)) * 10) / 10}% not converted`} color={COLORS.cancelled} icon={XCircleIcon} />
@@ -643,6 +660,9 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
                 {proj.map((p, i) => { const pr = pct(p.booked, p.sv); return (
                   <Tr key={i}><Td bold>{p.project_name}</Td><Td bold>{p.sv}</Td><Td bold color={COLORS.booking}>{p.booked}</Td><Td><Pill tone={ratioTone(pr * 2)}>{pr}%</Pill></Td></Tr>
                 ); })}
+                {proj.length > 0 && (
+                  <TotalRow cells={[totSV, <span style={{ color: COLORS.booking }}>{totBooked}</span>, <Pill tone={ratioTone(pct(totBooked, totSV) * 2)}>{pct(totBooked, totSV)}%</Pill>]} />
+                )}
               </Table>
             </Card>
           </div>
@@ -672,6 +692,8 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
     case 'svbooking': {
       const avg = num(f.bookings) > 0 ? (num(f.siteVisits) / num(f.bookings)).toFixed(1) : '—';
       const proj = bookingByProject(d);
+      const totSV = proj.reduce((a, p) => a + num(p.sv), 0);
+      const totBooked = proj.reduce((a, p) => a + num(p.booked), 0);
       return (
         <>
           <KpiRow>
@@ -682,6 +704,9 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
           <Card title="Visits Required Per Booking by Project">
             <Table head={['Project', 'SV Done', 'Booked', 'Avg SV / Booking']} colSpan={4} empty={proj.length === 0}>
               {proj.map((p, i) => <Tr key={i}><Td bold>{p.project_name}</Td><Td bold>{p.sv}</Td><Td bold color={COLORS.booking}>{p.booked}</Td><Td bold>{p.booked > 0 ? (p.sv / p.booked).toFixed(1) : '—'}</Td></Tr>)}
+              {proj.length > 0 && (
+                <TotalRow cells={[totSV, <span style={{ color: COLORS.booking }}>{totBooked}</span>, totBooked > 0 ? (totSV / totBooked).toFixed(1) : '—']} />
+              )}
             </Table>
           </Card>
         </>
@@ -887,7 +912,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef }) => {
 // org-wide dashboard and export; the embedded user view omits them.
 export const ReportBrowser = ({
   role, d, loading, hasData, selected, setSelected,
-  orgCalls, orgHourly, registerRef, groups,
+  orgCalls, orgHourly, registerRef, groups, selfView = false,
   loadingLabel = 'Loading analytics…', emptyLabel = 'No analytics available.',
 }) => {
   // `groups` lets a caller show a curated subset of reports (e.g. the self-service
@@ -954,7 +979,7 @@ export const ReportBrowser = ({
           {loading && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{loadingLabel}</div>}
           {!loading && !hasData && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{emptyLabel}</div>}
           {!loading && hasData && (
-            <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} />
+            <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} selfView={selfView} />
           )}
         </main>
       </div>

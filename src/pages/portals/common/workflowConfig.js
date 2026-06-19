@@ -74,7 +74,6 @@ const FALLBACK_ACTIONS = {
     { code: 'SH_NEGOTIATION_COLD', label: 'Negotiation Cold', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'NEGOTIATION_COLD', needsFollowUp: true },
     { code: 'SH_FOLLOW_UP', label: 'Follow up', tone: 'secondary', targetStageCode: 'OPPORTUNITY', targetStatusCode: 'FOLLOW_UP', needsFollowUp: true },
     { code: 'SH_BOOKING', label: 'Booking (Token Received)', tone: 'success', targetStageCode: 'BOOKING', targetStatusCode: 'BOOKED', needsCustomerProfile: true, needsAssignee: true, assigneeRole: 'COL' },
-    { code: 'SH_LOST', label: 'Lost/Cold', tone: 'danger', targetStageCode: 'CLOSED_LOST', targetStatusCode: 'CLOSED_LOST', needsReason: true, reasonCategory: 'COLD', needsFollowUp: false },
   ],
   COL: [
     { code: 'COL_PAYMENT_UPDATE', label: 'Update Payment Milestone', tone: 'secondary', targetStatusCode: 'BOOKED' },
@@ -139,22 +138,31 @@ export const getActionsForRole = (actions = {}, roleCode) => {
   
   const fallbacks = FALLBACK_ACTIONS[roleCode] || [];
 
+  // Actions explicitly hidden for a role even if the backend config still returns them.
+  // Sales Head has no Lost/Cold closure action — a cold lead is handed back to the SM
+  // (via SH_NEGOTIATION_COLD), it is never closed-lost by the SH.
+  const HIDDEN_ACTIONS_BY_ROLE = { SH: ['SH_LOST'] };
+  const hidden = new Set(HIDDEN_ACTIONS_BY_ROLE[roleCode] || []);
+
+  let result;
   if (fromConfig.length) {
     // Merge required fallback actions if they are missing from config
     const requiredCodesByRole = {
       TC: ['TC_REASSIGN'],
       SM: ['SM_FOLLOW_UP', 'SM_LOST'],
-      SH: ['SH_FOLLOW_UP', 'SH_NEGOTIATION_HOT', 'SH_NEGOTIATION_WARM', 'SH_NEGOTIATION_COLD', 'SH_LOST'],
+      SH: ['SH_FOLLOW_UP', 'SH_NEGOTIATION_HOT', 'SH_NEGOTIATION_WARM', 'SH_NEGOTIATION_COLD'],
       COL: ['COL_LOST'],
     };
     const existingCodes = new Set(fromConfig.map((a) => a.code));
     const requiredCodes = requiredCodesByRole[roleCode] || [];
     const missingRequired = fallbacks.filter((a) => requiredCodes.includes(a.code) && !existingCodes.has(a.code));
 
-    return [...fromConfig, ...missingRequired];
+    result = [...fromConfig, ...missingRequired];
+  } else {
+    result = fallbacks;
   }
 
-  return fallbacks;
+  return result.filter((a) => !hidden.has(a.code));
 };
 
 /**

@@ -146,7 +146,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
   };
 
   const kpiCards = [
-    { label: 'Total Active Site Visits', value: stats?.svScheduled ?? stats?.todaysVisits ?? 0, sub: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} completed`, icon: HomeModernIcon, variant: 'info' },
+    { label: 'Total Active Site Visits', value: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} `,sub:`completed`, icon: HomeModernIcon, variant: 'info' },
     { label: 'Booked Leads', value: stats?.bookedLeads ?? 0, sub: 'booked customers', icon: UserGroupIcon, variant: 'success' },
     { label: 'Under Negotiations', value: stats?.negotiations ?? 0, sub: 'in negotiation', icon: ChartBarIcon, variant: '' },
     { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, sub: 'pending revisit', icon: ArrowPathIcon, variant: 'warning' },

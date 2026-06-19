@@ -67,6 +67,7 @@ const PortalReports = ({ role }) => {
         selected={selected}
         setSelected={setSelected}
         groups={SELF_REPORT_GROUPS[role]}
+        selfView
         loadingLabel="Loading your reports…"
         emptyLabel="No report data for this period yet."
       />

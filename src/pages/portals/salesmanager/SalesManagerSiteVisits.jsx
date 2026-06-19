@@ -215,6 +215,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const loadVisits = useCallback(async () => {
     setLoading(true);
     try {
+      // Fetch visits for leads assigned to this SM (includes historical)
       const resp = await siteVisitApi.getMyLeadVisits({ limit: 200 });
       const data = resp.data?.data || resp.data?.rows || resp.data || [];
       setVisits(Array.isArray(data) ? data : []);
@@ -239,6 +240,11 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   }, []);
 
   const filteredVisits = visits.filter(v => {
+    // A site visit belongs to this SM by OWNERSHIP (who recorded/attended it), not by
+    // the lead's current assignment. getMyLeadVisits already scopes to this SM's
+    // recorded/attended visits, so we must NOT drop a visit once its lead moves on to
+    // a Sales Head or is marked Lost — the SM's SV count + details have to persist.
+
     // Status filter
     if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
     if (filter === 'completed') return v.status === 'Completed';
@@ -546,9 +552,18 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   const fieldLabelStyle = { display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 };
   const fieldInputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, background: 'var(--bg-card, #fff)', color: 'var(--text-primary)' };
 
-  // Calculate SV Done count (completed visits)
+  // SV Done = DISTINCT LEADS with at least one COMPLETED site visit.
+  // One lead counts once regardless of revisits, and it stays counted even after the
+  // lead is handed to a Sales Head or marked Lost (ownership-based, see filteredVisits).
   const svDoneCount = useMemo(() => {
-    return filteredVisits.filter(v => v.status === 'Completed').length;
+    const uniqueLeadIds = new Set();
+    filteredVisits.forEach(v => {
+      const leadId = v.lead?.id || v.lead_id;
+      if (leadId && v.status === 'Completed') {
+        uniqueLeadIds.add(leadId);
+      }
+    });
+    return uniqueLeadIds.size;
   }, [filteredVisits]);
 
   return (
