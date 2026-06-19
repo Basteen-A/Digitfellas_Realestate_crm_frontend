@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
 export const ROLE_CODES = {
   SUPER_ADMIN: 'SA',
   ADMIN: 'ADM',
+  ORGANIZATION_HEAD: 'OH',
   SALES_HEAD: 'SH',
   SALES_MANAGER: 'SM',
   TELECALLER: 'TC',

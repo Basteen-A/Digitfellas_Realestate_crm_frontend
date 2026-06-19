@@ -25,6 +25,7 @@ import {
   PhoneArrowDownLeftIcon,
   PaperAirplaneIcon,
 } from '@heroicons/react/24/outline';
+import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
 
 /**
  * Returns the sidebar menu based on the user's role code.
@@ -34,7 +35,7 @@ import {
  * SH     → Sales Head sidebar (negotiations, bookings)
  * COL    → Collection sidebar
  */
-export const getSidebarMenuForRole = (roleCode) => {
+export const getSidebarMenuForRole = (roleCode, user = null) => {
   switch (roleCode) {
     case 'SA':
       return adminSidebar;
@@ -43,6 +44,8 @@ export const getSidebarMenuForRole = (roleCode) => {
       return adminSidebar.map((item) => (item.children
         ? { ...item, children: item.children.filter((c) => c.path !== '/super-admin/booking-approvals') }
         : item));
+    case 'OH':
+      return buildOrganizationHeadSidebar(user);
     case 'TC':
       return telecallerSidebar;
     case 'SM':
@@ -56,6 +59,23 @@ export const getSidebarMenuForRole = (roleCode) => {
     default:
       return telecallerSidebar;
   }
+};
+
+// ── Organization Head ──
+// Grant-driven menu — only the modules the Super Admin ticked on the user form
+// (Reports / Booking Approvals / Tasks) appear. Reuses the existing admin pages.
+const buildOrganizationHeadSidebar = (user) => {
+  const menu = [{ section: 'WORKSPACE' }];
+  if (canViewAllReports(user)) {
+    menu.push({ label: 'Reports', path: '/super-admin/reports/organization', icon: ChartBarIcon });
+  }
+  if (canAccessBookingApprovals(user)) {
+    menu.push({ label: 'Booking Approvals', path: '/super-admin/booking-approvals', icon: CreditCardIcon });
+  }
+  if (hasTaskPortalAccess(user)) {
+    menu.push({ label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon });
+  }
+  return menu;
 };
 
 // ── Admin / Super Admin ──
@@ -278,6 +298,7 @@ export const accountsMenu = [
 export const ROLE_LABELS = {
   SA: 'Super Admin',
   ADM: 'Admin',
+  OH: 'Organization Head',
   SH: 'Sales Head',
   SM: 'Sales Manager',
   TC: 'Telecaller',

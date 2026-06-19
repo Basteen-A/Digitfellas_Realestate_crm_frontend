@@ -502,14 +502,19 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
           <KpiRow>
             <KpiCard label="Total Leads" value={num(f.totalLeads)} sub="All sources" color={COLORS.leads} icon={UsersIcon} />
             <KpiCard label="Qualified" value={num(f.qualified)} sub={`${r.pct || 0}% qualification rate`} color={COLORS.qualified} icon={CheckBadgeIcon} />
-            <KpiCard label="Not Qualified" value={num(f.totalLeads) - num(f.qualified)} sub={`${100 - (r.pct || 0)}% `} color={COLORS.cancelled} icon={XCircleIcon} />
-            <KpiCard label="Top Performer" value={best ? fullName(best) : '—'} sub={best ? `${pct(num(best.qualified), num(best.leads))}% qual.` : ''} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={17} />
+            <KpiCard label="RNR" value={num(f.rnr)} sub={`${pct(num(f.rnr), num(f.totalLeads))}% RNR rate`} color={COLORS.siteVisit} icon={PhoneArrowUpRightIcon} />
+            <KpiCard label="Unqualified" value={num(f.unqualified)} sub={`${pct(num(f.unqualified), num(f.totalLeads))}% unqualified rate`} color={COLORS.cancelled} icon={XCircleIcon} />
+            <KpiCard label="Unassigned" value={num(f.unassigned)} sub={`${pct(num(f.unassigned), num(f.totalLeads))}% unassigned rate`} color={COLORS.muted} icon={ClockIcon} />
+            <KpiCard label="Top Performer" value={best ? fullName(best) : '—'} sub={best ? `${pct(num(best.qualified), num(best.leads))}% qual.` : ''} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
           <Card title="Member-wise Qualification Ratio">
-            <Table head={['Member', 'Leads Created', 'Total Leads', 'Qualified', 'Not Qualified', 'Ratio']} colSpan={6} empty={lb.length === 0}>
+            <Table head={['Member', 'Leads Created', 'Total Leads', 'Qualified', 'RNR', 'Unqualified', 'Unassigned', 'Ratio']} colSpan={8} empty={lb.length === 0}>
               {lb.map((u) => { const p = pct(num(u.qualified), num(u.leads)); return (
                 <Tr key={u.id}><Td bold>{fullName(u)}</Td><Td bold>{num(u.leads_created)}</Td><Td bold>{num(u.leads)}</Td>
-                  <Td bold color={COLORS.booking}>{num(u.qualified)}</Td><Td bold color={COLORS.cancelled}>{num(u.leads) - num(u.qualified)}</Td>
+                  <Td bold color={COLORS.qualified}>{num(u.qualified)}</Td>
+                  <Td bold color={COLORS.siteVisit}>{num(u.rnr)}</Td>
+                  <Td bold color={COLORS.cancelled}>{num(u.unqualified)}</Td>
+                  <Td bold color={COLORS.muted}>{num(u.unassigned)}</Td>
                   <Td><Pill tone={ratioTone(p)}>{p}%</Pill></Td></Tr>
               ); })}
               {/* Total row */}
@@ -517,15 +522,19 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
                 const totalCreated = lb.reduce((sum, u) => sum + num(u.leads_created), 0);
                 const totalLeads = lb.reduce((sum, u) => sum + num(u.leads), 0);
                 const totalQualified = lb.reduce((sum, u) => sum + num(u.qualified), 0);
-                const totalNotQualified = totalLeads - totalQualified;
+                const totalRnr = lb.reduce((sum, u) => sum + num(u.rnr), 0);
+                const totalUnqualified = lb.reduce((sum, u) => sum + num(u.unqualified), 0);
+                const totalUnassigned = lb.reduce((sum, u) => sum + num(u.unassigned), 0);
                 const totalPct = pct(totalQualified, totalLeads);
                 return (
                   <Tr key="total" style={{ borderTop: '2px solid var(--border-color, #e5e7eb)', backgroundColor: 'var(--bg-secondary, #f9fafb)' }}>
                     <Td bold style={{ fontWeight: 'bold' }}>TOTAL</Td>
                     <Td bold style={{ fontWeight: 'bold' }}>{totalCreated}</Td>
                     <Td bold style={{ fontWeight: 'bold' }}>{totalLeads}</Td>
-                    <Td bold style={{ fontWeight: 'bold', color: COLORS.booking }}>{totalQualified}</Td>
-                    <Td bold style={{ fontWeight: 'bold', color: COLORS.cancelled }}>{totalNotQualified}</Td>
+                    <Td bold style={{ fontWeight: 'bold', color: COLORS.qualified }}>{totalQualified}</Td>
+                    <Td bold style={{ fontWeight: 'bold', color: COLORS.siteVisit }}>{totalRnr}</Td>
+                    <Td bold style={{ fontWeight: 'bold', color: COLORS.cancelled }}>{totalUnqualified}</Td>
+                    <Td bold style={{ fontWeight: 'bold', color: COLORS.muted }}>{totalUnassigned}</Td>
                     <Td><Pill tone={ratioTone(totalPct)}>{totalPct}%</Pill></Td>
                   </Tr>
                 );

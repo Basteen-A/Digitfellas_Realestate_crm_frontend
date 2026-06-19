@@ -29,10 +29,38 @@ export const hasTaskPortalAccess = (user) => {
   if (!user) return false;
   const code = getRoleCode(user);
   if (code === 'SA' || code === 'ADM' || code === 'SE') return true;
-  return user.taskPortalAccess === true || user.task_portal_access === true;
+  // Per-user grant: legacy task_portal_access OR the Organization Head tasks read/write grant.
+  return user.taskPortalAccess === true || user.task_portal_access === true
+    || user.tasksReadWrite === true || user.tasks_read_write === true;
 };
 
 export const isTaskAdmin = (user) => ['SA', 'ADM'].includes(getRoleCode(user));
+
+// ── Per-module access grants (Organization Head). Helpers tolerate both the login
+// payload (camelCase) and the /auth/me payload (snake_case). Each = the base role
+// that always had access OR the matching grant. Mirrors server/src/utils/accessGrants.js.
+const hasGrant = (user, camel, snake) => user?.[camel] === true || user?.[snake] === true;
+
+// Reports — view all reports like a Super Admin (SA/ADM always; granted OH users too).
+export const canViewAllReports = (user) => {
+  const code = getRoleCode(user);
+  return code === 'SA' || code === 'ADM' || hasGrant(user, 'reportsAccess', 'reports_access');
+};
+
+// Tasks — All Access: see / edit / delete EVERY task.
+export const canManageAllTasks = (user) => {
+  const code = getRoleCode(user);
+  return code === 'SA' || code === 'ADM' || hasGrant(user, 'tasksAllAccess', 'tasks_all_access');
+};
+
+// Booking Approval — view queue + approve/reject. SA-only by design (Admin cannot approve)
+// plus granted OH users.
+export const canAccessBookingApprovals = (user) =>
+  getRoleCode(user) === 'SA' || hasGrant(user, 'bookingApprovalReadWrite', 'booking_approval_read_write');
+
+// Booking Approval — All Access: act on EVERY booking.
+export const canApproveAllBookings = (user) =>
+  getRoleCode(user) === 'SA' || hasGrant(user, 'bookingApprovalAllAccess', 'booking_approval_all_access');
 
 export const isAdminLevel = (user) => hasAnyRole(user, ROLE_GROUPS.ADMIN_LEVEL);
 

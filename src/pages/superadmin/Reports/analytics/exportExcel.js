@@ -37,7 +37,19 @@ const autoWidth = (sheet) => {
 
 // Map of payload key → { title, columns:[{header,key}] } for tabular blocks.
 const BLOCKS = (role) => {
-  const leaderCols = [
+  const leaderCols = role === 'TC' ? [
+    { header: 'Name', key: 'name' },
+    { header: 'Leads Created', key: 'leads_created' },
+    { header: 'Total Leads', key: 'leads' },
+    { header: 'Qualified', key: 'qualified' },
+    { header: 'RNR', key: 'rnr' },
+    { header: 'Unqualified', key: 'unqualified' },
+    { header: 'Unassigned', key: 'unassigned' },
+    { header: 'Site Visits', key: 'site_visits' },
+    { header: 'Bookings', key: 'bookings' },
+    { header: 'Calls', key: 'calls' },
+    { header: 'Answered', key: 'calls_answered' },
+  ] : [
     { header: 'Name', key: 'name' },
     { header: 'Leads', key: 'leads' },
     { header: 'Qualified', key: 'qualified' },

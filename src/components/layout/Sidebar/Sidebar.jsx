@@ -44,7 +44,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
   // Determine which group contains the current path so it auto-opens
   const menu = React.useMemo(() => {
-    const base = getSidebarMenuForRole(roleCode);
+    const base = getSidebarMenuForRole(roleCode, user);
     // SA/ADM now have Tasks + Departments/Sub-Departments directly in their admin
     // sidebar (and the task dashboard embedded on their main Dashboard), so no
     // standalone-portal link for them. Standard Executive still uses /task-portal.
@@ -52,7 +52,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       return [...base, getTaskMenuItem(roleCode)];
     }
     return base;
-  }, [roleCode]);
+  }, [roleCode, user]);
 
   const getInitialOpenGroups = useCallback(() => {
     const initial = {};

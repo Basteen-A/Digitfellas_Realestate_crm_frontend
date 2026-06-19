@@ -52,6 +52,15 @@ const loadUserTypeOptions = async () => {
   return asOptions(response.data, (item) => `${item.type_name}${item.short_code ? ` (${item.short_code})` : ''}`);
 };
 
+// True when the user-form's selected User Type is the Organization Head (OH) — used to
+// reveal the per-module access checkboxes only for that role.
+const isOrgHeadSelected = (formValues, optionsMap) => {
+  const selectedType = (optionsMap?.user_type_id || []).find(
+    (opt) => String(opt.value) === String(formValues?.user_type_id)
+  );
+  return String(selectedType?.raw?.short_code || '').toUpperCase() === 'OH';
+};
+
 const loadLeadStageOptions = async () => {
   const response = await leadStageApi.getDropdown();
   return asOptions(response.data, (item) => `${item.stage_name} (${item.stage_code})`, 'stage_code');
@@ -378,6 +387,49 @@ export const masterConfigs = {
         defaultValue: false,
         getInitialValue: (row) =>
           row?.task_portal_access === true || row?.taskPortalAccess === true,
+      },
+      // ── Module Access (Organization Head only) ──
+      // Reports = view all reports like Super Admin. Tasks / Booking Approval each get
+      // Read/Write (open + act) and All Access (every task / every booking).
+      {
+        name: 'reports_access',
+        label: 'Reports — View all reports (like Super Admin)',
+        type: 'checkbox',
+        defaultValue: false,
+        showWhen: isOrgHeadSelected,
+        getInitialValue: (row) => row?.reports_access === true || row?.reportsAccess === true,
+      },
+      {
+        name: 'tasks_read_write',
+        label: 'Task Module — Read / Write (open module, create & edit)',
+        type: 'checkbox',
+        defaultValue: false,
+        showWhen: isOrgHeadSelected,
+        getInitialValue: (row) => row?.tasks_read_write === true || row?.tasksReadWrite === true,
+      },
+      {
+        name: 'tasks_all_access',
+        label: 'Task Module — All Access (see, edit & delete ANY task)',
+        type: 'checkbox',
+        defaultValue: false,
+        showWhen: isOrgHeadSelected,
+        getInitialValue: (row) => row?.tasks_all_access === true || row?.tasksAllAccess === true,
+      },
+      {
+        name: 'booking_approval_read_write',
+        label: 'Booking Approval — Read / Write (view + approve / reject)',
+        type: 'checkbox',
+        defaultValue: false,
+        showWhen: isOrgHeadSelected,
+        getInitialValue: (row) => row?.booking_approval_read_write === true || row?.bookingApprovalReadWrite === true,
+      },
+      {
+        name: 'booking_approval_all_access',
+        label: 'Booking Approval — All Access (act on ANY booking)',
+        type: 'checkbox',
+        defaultValue: false,
+        showWhen: isOrgHeadSelected,
+        getInitialValue: (row) => row?.booking_approval_all_access === true || row?.bookingApprovalAllAccess === true,
       },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],

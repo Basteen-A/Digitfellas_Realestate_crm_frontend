@@ -5,7 +5,10 @@ import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 import RoleRoute from './RoleRoute';
 import TaskAccessRoute from './TaskAccessRoute';
-import { getRoleCode } from '../utils/permissions';
+import GrantRoute from './GrantRoute';
+import {
+  getRoleCode, canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess,
+} from '../utils/permissions';
 
 import AuthLayout from '../components/layout/AuthLayout/AuthLayout';
 import MainLayout from '../components/layout/MainLayout/MainLayout';
@@ -75,6 +78,13 @@ const RoleHomeRedirect = () => {
   if (roleCode === 'SH') return <Navigate to="/sales-head/leads" replace />;
   if (roleCode === 'COL') return <Navigate to="/collection/leads" replace />;
   if (roleCode === 'ACCT') return <Navigate to="/accounts/dashboard" replace />;
+
+  // Organization Head lands on the first module they were granted.
+  if (roleCode === 'OH') {
+    if (canViewAllReports(user)) return <Navigate to="/super-admin/reports" replace />;
+    if (canAccessBookingApprovals(user)) return <Navigate to="/super-admin/booking-approvals" replace />;
+    if (hasTaskPortalAccess(user)) return <Navigate to="/super-admin/tasks" replace />;
+  }
 
   return <Navigate to="/dashboard" replace />;
 };
@@ -171,8 +181,8 @@ const AppRoutes = () => {
 
           <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
             <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />
-            {/* Task Management for Super Admin — pages live in the admin layout */}
-            <Route path="/super-admin/tasks" element={<TaskListPage />} />
+            {/* Task Management — Departments/Sub-Departments stay SA/ADM only; the Tasks
+                list moves below so grant-holding Organization Heads can reach it too. */}
             <Route path="/super-admin/departments" element={<TaskDepartments />} />
             <Route path="/super-admin/sub-departments" element={<TaskSubDepartments />} />
             <Route path="/super-admin/locations" element={<Locations />} />
@@ -187,10 +197,6 @@ const AppRoutes = () => {
             <Route path="/super-admin/score-master" element={<ScoreMaster />} />
             <Route path="/super-admin/lead-statuses" element={<LeadStatuses />} />
             <Route path="/super-admin/booking-statuses" element={<BookingStatuses />} />
-            {/* Booking approvals — Super Admin only (Admin cannot approve) */}
-            <Route element={<RoleRoute allowedRoles={['SA']} />}>
-              <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />
-            </Route>
             <Route path="/super-admin/lead-stages" element={<LeadStages />} />
             <Route path="/super-admin/closed-lost-reasons" element={<ClosedLostReasons />} />
             <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />
@@ -201,8 +207,6 @@ const AppRoutes = () => {
             <Route path="/super-admin/units" element={<InventoryUnitList />} />
             <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
             <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
-            <Route path="/super-admin/reports" element={<Reports />} />
-            <Route path="/super-admin/reports/:module" element={<Reports />} />
             <Route path="/super-admin/finance/revenue" element={<FinanceRevenue />} />
             <Route path="/super-admin/finance/collections" element={<FinanceCollections />} />
             <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
@@ -213,6 +217,20 @@ const AppRoutes = () => {
             <Route path="/super-admin/site-settings" element={<SiteSettings />} />
             <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
             <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
+          </Route>
+
+          {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization
+              Heads. The predicate already admits the base roles where applicable
+              (Reports = SA/ADM; Booking Approvals = SA only, per the original gate). */}
+          <Route element={<GrantRoute check={canViewAllReports} />}>
+            <Route path="/super-admin/reports" element={<Reports />} />
+            <Route path="/super-admin/reports/:module" element={<Reports />} />
+          </Route>
+          <Route element={<GrantRoute check={canAccessBookingApprovals} />}>
+            <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />
+          </Route>
+          <Route element={<GrantRoute check={hasTaskPortalAccess} />}>
+            <Route path="/super-admin/tasks" element={<TaskListPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
