@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
+import PortalRoute from './PortalRoute';
 import RoleRoute from './RoleRoute';
 import TaskAccessRoute from './TaskAccessRoute';
 import GrantRoute from './GrantRoute';
@@ -111,36 +112,39 @@ const AppRoutes = () => {
       {/* Portal routes — no app sidebar, portals have their own sidebar */}
       <Route element={<PrivateRoute />}>
         <Route element={<PortalLayoutRoute />}>
-          {/* Standard Executive task portal — now uses the shared PortalLayout
-              shell so it matches the look of every other role portal. */}
-          <Route element={<TaskAccessRoute />}>
-            <Route path="/task-portal" element={<Navigate to="/task-portal/dashboard" replace />} />
-            <Route path="/task-portal/dashboard" element={<TaskWorkspace defaultScreen="dashboard" />} />
-            <Route path="/task-portal/tasks" element={<TaskWorkspace defaultScreen="tasks" />} />
-            <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
-              <Route path="/task-portal/departments" element={<TaskWorkspace defaultScreen="departments" />} />
-              <Route path="/task-portal/sub-departments" element={<TaskWorkspace defaultScreen="sub-departments" />} />
+          {/* PortalRoute ensures users can only access their own role's portal */}
+          <Route element={<PortalRoute />}>
+            {/* Standard Executive task portal — now uses the shared PortalLayout
+                shell so it matches the look of every other role portal. */}
+            <Route element={<TaskAccessRoute />}>
+              <Route path="/task-portal" element={<Navigate to="/task-portal/dashboard" replace />} />
+              <Route path="/task-portal/dashboard" element={<TaskWorkspace defaultScreen="dashboard" />} />
+              <Route path="/task-portal/tasks" element={<TaskWorkspace defaultScreen="tasks" />} />
+              <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
+                <Route path="/task-portal/departments" element={<TaskWorkspace defaultScreen="departments" />} />
+                <Route path="/task-portal/sub-departments" element={<TaskWorkspace defaultScreen="sub-departments" />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route element={<RoleRoute allowedRoles={['TC', 'SA', 'ADM']} />}>
-            <Route path="/telecaller/leads" element={<TelecallerWorkspace />} />
-          </Route>
+            <Route element={<RoleRoute allowedRoles={['TC', 'SA', 'ADM']} />}>
+              <Route path="/telecaller/leads" element={<TelecallerWorkspace />} />
+            </Route>
 
-          <Route element={<RoleRoute allowedRoles={['SM', 'SH', 'SA', 'ADM']} />}>
-            <Route path="/sales-manager/leads" element={<SalesManagerWorkspace />} />
-          </Route>
+            <Route element={<RoleRoute allowedRoles={['SM', 'SH', 'SA', 'ADM']} />}>
+              <Route path="/sales-manager/leads" element={<SalesManagerWorkspace />} />
+            </Route>
 
-          <Route element={<RoleRoute allowedRoles={['SH', 'SA', 'ADM']} />}>
-            <Route path="/sales-head/leads" element={<SalesHeadWorkspace />} />
-          </Route>
+            <Route element={<RoleRoute allowedRoles={['SH', 'SA', 'ADM']} />}>
+              <Route path="/sales-head/leads" element={<SalesHeadWorkspace />} />
+            </Route>
 
-          <Route element={<RoleRoute allowedRoles={['COL', 'SA', 'ADM']} />}>
-            <Route path="/collection/leads" element={<CollectionWorkspace />} />
-          </Route>
+            <Route element={<RoleRoute allowedRoles={['COL', 'SA', 'ADM']} />}>
+              <Route path="/collection/leads" element={<CollectionWorkspace />} />
+            </Route>
 
-          <Route element={<RoleRoute allowedRoles={['ACCT', 'SA', 'ADM']} />}>
-            <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
+            <Route element={<RoleRoute allowedRoles={['ACCT', 'SA', 'ADM']} />}>
+              <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
+            </Route>
           </Route>
 
           <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'SA', 'ADM', 'SE']} />}>
