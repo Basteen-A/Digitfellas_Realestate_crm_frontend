@@ -51,7 +51,7 @@ const PortalRoute = ({ children }) => {
     return children || <Outlet />;
   }
   
-  const [portalPath, allowedRoles] = portalMatch;
+  const [, allowedRoles] = portalMatch;
   
   // Check if user's role matches the portal they're trying to access
   if (!allowedRoles.includes(userRoleCode)) {
