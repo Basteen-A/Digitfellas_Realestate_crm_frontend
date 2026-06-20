@@ -7,6 +7,7 @@ import projectPhaseApi from '../../../api/projectPhaseApi';
 import projectApi from '../../../api/projectApi';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { formatLocation } from '../../../utils/formatters';
 import './InventoryDashboard.css';
 
 const InventoryDashboard = () => {
@@ -304,7 +305,7 @@ const InventoryDashboard = () => {
                   </span>
                 </div>
                 <div className="inv-project-card__location">
-                  {[proj.location_name, proj.city].filter(Boolean).join(', ') || 'No location'}
+                  {formatLocation(proj.location_name, proj.city) || 'No location'}
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <button

@@ -5,7 +5,7 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import userApi from '../../../api/userApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
-import { formatDateTime } from '../../../utils/formatters';
+import { formatDateTime, cleanRepeatingLocation } from '../../../utils/formatters';
 import {
   MagnifyingGlassIcon,
   CalendarDaysIcon,
@@ -439,7 +439,7 @@ const AdminLeadManagement = () => {
           >
             <option value="">All Locations</option>
             {locations.map((l) => (
-              <option key={l.id} value={l.id}>{l.location_name || l.city}</option>
+              <option key={l.id} value={l.id}>{l.location_name}</option>
             ))}
           </select>
         </div>
@@ -621,7 +621,7 @@ const AdminLeadManagement = () => {
                 <td>
                   <div className="alm-project-cell">
                     <span>{lead.project || '—'}</span>
-                    {lead.location && <span className="alm-location">{lead.location}</span>}
+                    {lead.location && <span className="alm-location">{cleanRepeatingLocation(lead.location)}</span>}
                   </div>
                 </td>
                 <td>

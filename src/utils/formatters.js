@@ -92,3 +92,23 @@ export const formatName = (firstName, lastName) => {
 };
 
 export const formatBoolean = (value) => (value ? 'Yes' : 'No');
+
+export const formatLocation = (locationName, city) => {
+  if (!locationName && !city) return '';
+  const loc = String(locationName || '').trim();
+  const c = String(city || '').trim();
+  if (!loc) return c;
+  if (!c) return loc;
+  if (loc.toLowerCase() === c.toLowerCase()) return loc;
+  return `${loc}, ${c}`;
+};
+
+export const cleanRepeatingLocation = (str) => {
+  if (!str) return '';
+  const parts = str.split(',').map((s) => s.trim());
+  if (parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+    return parts[0];
+  }
+  return str;
+};
+

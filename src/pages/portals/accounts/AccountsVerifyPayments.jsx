@@ -315,6 +315,14 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
                 <span className="acct-detail-value">{selected.project_name || '—'}</span>
               </div>
               <div className="acct-detail-item">
+                <span className="acct-detail-label">Phase</span>
+                <span className="acct-detail-value">{selected.phase_name || '—'}</span>
+              </div>
+              <div className="acct-detail-item">
+                <span className="acct-detail-label">Plot</span>
+                <span className="acct-detail-value">{selected.unit_number || '—'}</span>
+              </div>
+              <div className="acct-detail-item">
                 <span className="acct-detail-label">Payment Mode</span>
                 <span className="acct-detail-value">{selected.payment_mode}</span>
               </div>

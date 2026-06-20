@@ -7,6 +7,7 @@ import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
+import { formatLocation } from '../../../utils/formatters';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -278,7 +279,7 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
   const selectedLocationNames = useMemo(
     () => (form.location_ids || []).map((id) => {
       const l = locationOptions.find((loc) => loc.id === id);
-      return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
+      return l ? l.location_name : null;
     }).filter(Boolean),
     [form.location_ids, locationOptions]
   );
@@ -327,7 +328,7 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
         source: selectedSource?.source_name || null,
         project: selectedProject?.project_name || null,
         location: selectedLocation
-          ? `${selectedLocation.location_name}${selectedLocation.city ? `, ${selectedLocation.city}` : ''}`
+          ? formatLocation(selectedLocation.location_name, selectedLocation.city)
           : null,
         nextFollowUpAt: form.nextFollowUpAt ? new Date(form.nextFollowUpAt).toISOString() : null,
         lead_status_id: form.lead_status_id || null,
@@ -486,7 +487,7 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <input type="checkbox" checked={(form.location_ids || []).includes(loc.id)} onChange={() => toggleLocation(loc.id)} />
-                          {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
+                          {loc.location_name}
                         </label>
                       ))}
                       {filteredLocationOptions.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No locations found</div>}

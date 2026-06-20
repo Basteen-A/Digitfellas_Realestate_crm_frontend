@@ -34,7 +34,7 @@ const asOptions = (items, labelBuilder, valueKey = 'id') =>
 
 const loadLocationOptions = async () => {
   const response = await locationApi.getDropdown();
-  return asOptions(response.data, (item) => [item.location_name, item.city].filter(Boolean).join(', '));
+  return asOptions(response.data, (item) => item.location_name);
 };
 
 const loadProjectTypeOptions = async () => {

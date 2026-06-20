@@ -7,6 +7,7 @@ import locationApi from '../../../api/locationApi';
 import projectApi from '../../../api/projectApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
 import Pagination from '../../../components/common/Pagination';
+import { formatLocation } from '../../../utils/formatters';
 import './InventoryUnitList.css';
 
 const formatCurrency = (val) => {
@@ -392,7 +393,7 @@ const InventoryUnitList = () => {
           <div>
             <div className="inv-project-info__name">{projectInfo.project_name}</div>
             <div className="inv-project-info__detail">
-              {[projectInfo.location?.location_name, projectInfo.location?.city].filter(Boolean).join(', ')}
+              {formatLocation(projectInfo.location?.location_name, projectInfo.location?.city)}
               {projectInfo.projectType ? ` • ${projectInfo.projectType.type_name}` : ''}
             </div>
           </div>
@@ -573,7 +574,7 @@ const InventoryUnitList = () => {
                         <option value="">Select Location</option>
                         {locations.map((loc) => (
                           <option key={loc.id} value={loc.id}>
-                            {[loc.location_name, loc.city].filter(Boolean).join(', ')}
+                            {loc.location_name}
                           </option>
                         ))}
                       </select>

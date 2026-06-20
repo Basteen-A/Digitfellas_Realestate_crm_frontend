@@ -20,7 +20,7 @@ import paymentPlanApi from '../../../api/paymentPlanApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
 
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone, formatLocation, cleanRepeatingLocation } from '../../../utils/formatters';
 import { getRoleCode } from '../../../utils/permissions';
 import { getActionsForRole } from './workflowConfig';
 import {
@@ -520,11 +520,11 @@ const LeadDetailsPage = () => {
       return lead.interestedLocations
         .map((lid) => {
           const loc = locationOptions.find((item) => item.id === lid);
-          return loc ? `${loc.location_name}${loc.city ? `, ${loc.city}` : ''}` : null;
+          return loc ? formatLocation(loc.location_name, loc.city) : null;
         })
         .filter(Boolean);
     }
-    return lead.location ? [lead.location] : [];
+    return lead.location ? [cleanRepeatingLocation(lead.location)] : [];
   }, [lead, locationOptions]);
 
   const getSourceMediumLabel = useMemo(() => {
@@ -2384,7 +2384,7 @@ const LeadDetailsPage = () => {
                                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                       <input type="radio" checked={String(quickMissingLocationId) === String(loc.id)} onChange={() => { setQuickMissingLocationId(String(loc.id)); setQuickMissingProjectIds([]); setQuickLocationDropdownOpen(false); setQuickLocationSearch(''); }} />
-                                      {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
+                                      {loc.location_name}
                                     </label>
                                   ))}
                                   {filteredLocations.length === 0 && <div style={{ padding: '12px', color: 'var(--text-secondary, #94a3b8)', fontSize: 13, textAlign: 'center' }}>No locations found</div>}
@@ -2775,7 +2775,7 @@ const LeadDetailsPage = () => {
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '', bookingPhaseId: '', inventoryUnitId: '' })); setBookingPhases([]); setAvailableUnits([]); }}>
                             <option value="">— Select Location —</option>
                             {locationOptions.filter(l => l.is_active !== false).map(loc => (
-                              <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                              <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                             ))}
                           </select>
                         </div>

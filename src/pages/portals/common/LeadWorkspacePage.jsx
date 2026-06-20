@@ -15,7 +15,7 @@ import projectPhaseApi from '../../../api/projectPhaseApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
 // userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
 // customerTypeApi removed — Customer Type field removed from TC lead creation
-import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone } from '../../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone, formatLocation, cleanRepeatingLocation } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 
@@ -2097,7 +2097,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         location_ids: newLeadForm.location_ids?.length ? newLeadForm.location_ids : undefined,
         source: selectedSource?.source_name || (workspaceRole === 'SM' ? 'Walk In' : null),
         project: selectedProject?.project_name || null,
-        location: selectedLocation ? `${selectedLocation.location_name}${selectedLocation.city ? `, ${selectedLocation.city}` : ''}` : null,
+        location: selectedLocation ? formatLocation(selectedLocation.location_name, selectedLocation.city) : null,
         nextFollowUpAt: newLeadForm.nextFollowUpAt ? new Date(newLeadForm.nextFollowUpAt).toISOString() : undefined,
         lead_status_id: newLeadForm.lead_status_id || undefined,
         callResult: workspaceRole === 'SM' ? undefined : newLeadForm.callResult,
@@ -3344,7 +3344,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             {(() => {
               const locText = lead.interestedLocations?.length > 0
                 ? lead.interestedLocations.map((lid) => locationOptions.find((l) => l.id === lid)?.location_name).filter(Boolean).join(', ')
-                : lead.location;
+                : cleanRepeatingLocation(lead.location);
               return locText ? (
                 <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Location: {locText}</small>
               ) : null;
@@ -4008,16 +4008,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           {(selectedLead.interestedLocations?.length > 0
                             ? selectedLead.interestedLocations.map((lid) => {
                               const l = locationOptions.find((loc) => loc.id === lid);
-                              return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
+                              return l ? formatLocation(l.location_name, l.city) : null;
                             }).filter(Boolean)
-                            : [selectedLead.location].filter(Boolean)
+                            : [cleanRepeatingLocation(selectedLead.location)].filter(Boolean)
                           ).length > 0
                             ? (selectedLead.interestedLocations?.length > 0
                               ? selectedLead.interestedLocations.map((lid) => {
                                 const l = locationOptions.find((loc) => loc.id === lid);
-                                return l ? `${l.location_name}${l.city ? ', ' + l.city : ''}` : null;
+                                return l ? formatLocation(l.location_name, l.city) : null;
                               }).filter(Boolean)
-                              : [selectedLead.location].filter(Boolean)
+                              : [cleanRepeatingLocation(selectedLead.location)].filter(Boolean)
                             ).map((name, i) => (
                               <span key={i} style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{name}</span>
                             ))
@@ -5481,7 +5481,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <select value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }} style={{ width: '100%', marginTop: 4 }}>
                     <option value="">— Select Location —</option>
                     {locationOptions.filter(l => l.is_active !== false).map(loc => (
-                      <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                      <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                     ))}
                   </select>
                 </label>
@@ -5970,7 +5970,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                       <input type="radio" checked={String(quickWorkflowForm.locationId) === String(loc.id)} onChange={() => { setQuickWorkflowForm(prev => ({ ...prev, locationId: String(loc.id), projectIds: [] })); setQuickMissingLocationId(String(loc.id)); setQuickMissingProjectIds([]); setQuickLocationDropdownOpen(false); setQuickLocationSearch(''); }} />
-                                      {loc.location_name}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` (${loc.state})` : ''}
+                                      {loc.location_name}
                                     </label>
                                   ))}
                                 </div>
@@ -6287,7 +6287,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }}>
                             <option value="">— Select Location —</option>
                             {locationOptions.filter(l => l.is_active !== false).map(loc => (
-                              <option key={loc.id} value={loc.id}>{loc.location_name}{loc.city ? `, ${loc.city}` : ''}</option>
+                              <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                             ))}
                           </select>
                         </div>

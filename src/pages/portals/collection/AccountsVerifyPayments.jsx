@@ -319,6 +319,14 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
                 <span style={{ color: 'var(--col-text-secondary)' }}>Project</span>
                 <span>{selected.project_name || '—'}</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--col-text-secondary)' }}>Phase</span>
+                <span>{selected.phase_name || '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--col-text-secondary)' }}>Plot</span>
+                <span>{selected.unit_number || '—'}</span>
+              </div>
               <hr style={{ border: 'none', borderTop: '1px solid var(--col-border)' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Amount</span>
