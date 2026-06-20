@@ -150,6 +150,14 @@ const InventoryDashboard = () => {
   const submitPhase = async (e) => {
     e?.preventDefault?.();
     if (!phaseForm.phase_name.trim()) { toast.error('Phase name is required'); return; }
+    // Guideline value per sq.ft. is mandatory when creating a phase.
+    if (phaseModal.mode !== 'edit') {
+      const gv = phaseForm.guideline_value_per_sqft;
+      if (gv === '' || gv === null || Number(gv) <= 0 || Number.isNaN(Number(gv))) {
+        toast.error('Guideline value per sq.ft. is required');
+        return;
+      }
+    }
     setPhaseSaving(true);
     try {
       if (phaseModal.mode === 'edit' && phaseModal.row) {
@@ -486,9 +494,10 @@ const InventoryDashboard = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Guideline Value / sq.ft.</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Guideline Value / sq.ft. <span style={{ color: '#dc2626' }}>*</span></label>
                     <input
                       type="number" min="0" step="0.01" value={phaseForm.guideline_value_per_sqft}
+                      required={phaseModal.mode !== 'edit'}
                       placeholder="e.g. 3500"
                       onChange={(e) => setPhaseForm((p) => ({ ...p, guideline_value_per_sqft: e.target.value }))}
                       style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
@@ -59,6 +59,7 @@ import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
 import {
   TaskWorkspace,
   TaskListPage,
+  TaskDashboard,
   Departments as TaskDepartments,
   SubDepartments as TaskSubDepartments,
 } from '../pages/tasks';
@@ -67,6 +68,13 @@ import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
 import CollectionWorkspace from '../pages/portals/collection';
 import AccountsWorkspace from '../pages/portals/accounts';
+
+// Admin-area task dashboard: reuse the task dashboard, but keep "view all tasks"
+// inside the admin layout (-> /super-admin/tasks) instead of the standalone portal.
+const SuperAdminTaskDashboard = () => {
+  const navigate = useNavigate();
+  return <TaskDashboard onOpenTasks={() => navigate('/super-admin/tasks')} />;
+};
 
 const RoleHomeRedirect = () => {
   const user = useSelector((state) => state.auth.user);
@@ -231,6 +239,7 @@ const AppRoutes = () => {
           </Route>
           <Route element={<GrantRoute check={hasTaskPortalAccess} />}>
             <Route path="/super-admin/tasks" element={<TaskListPage />} />
+            <Route path="/super-admin/tasks/dashboard" element={<SuperAdminTaskDashboard />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

@@ -67,13 +67,31 @@ export const getSidebarMenuForRole = (roleCode, user = null) => {
 const buildOrganizationHeadSidebar = (user) => {
   const menu = [{ section: 'WORKSPACE' }];
   if (canViewAllReports(user)) {
-    menu.push({ label: 'Reports', path: '/super-admin/reports/organization', icon: ChartBarIcon });
+    // Mirror the admin Reports: org-wide Analytics + per-role Performance views.
+    menu.push({
+      label: 'Reports',
+      icon: ChartBarIcon,
+      children: [
+        { label: 'Organization', path: '/super-admin/reports/organization' },
+        { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
+        { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
+        { label: 'Sales Head', path: '/super-admin/reports/sales-head' },
+      ],
+    });
   }
   if (canAccessBookingApprovals(user)) {
     menu.push({ label: 'Booking Approvals', path: '/super-admin/booking-approvals', icon: CreditCardIcon });
   }
   if (hasTaskPortalAccess(user)) {
-    menu.push({ label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon });
+    // Full task module: dashboard (KPIs) + the task list.
+    menu.push({
+      label: 'Tasks',
+      icon: ClipboardDocumentListIcon,
+      children: [
+        { label: 'Task Dashboard', path: '/super-admin/tasks/dashboard' },
+        { label: 'Task List', path: '/super-admin/tasks' },
+      ],
+    });
   }
   return menu;
 };

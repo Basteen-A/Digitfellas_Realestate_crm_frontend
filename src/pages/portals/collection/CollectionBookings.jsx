@@ -238,6 +238,18 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   }, [bookings]);
 
   const quickStatusOptions = statusOptions.filter((status) => QUICK_STATUS_CODES.includes(status.status_code));
+  const isCancelStatusCode = (code) => ['CANCEL', 'CANCELLED'].includes(code);
+  // "Cancelled" is offered in the status grid ONLY once SH has approved (or the
+  // 7-day window auto-approved) the open booking's cancellation request. No direct
+  // cancel — it always goes through the approval gate, and the full collected
+  // amount must be refunded first (enforced below + server-side via confirmCancel).
+  const drawerTotalPaid = parseFloat(drawerBooking?.total_paid || 0);
+  const cancelApprovedForGrid = (drawerBooking?.status_code || drawerBooking?.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL'
+    && !!drawerBooking?.custom_fields?.cancel_approved_by;
+  const cancelStatusOption = statusOptions.find((s) => isCancelStatusCode(s.status_code));
+  const statusGridOptions = cancelApprovedForGrid && cancelStatusOption
+    ? [...quickStatusOptions, cancelStatusOption]
+    : quickStatusOptions;
 
   const renderQuickActions = (booking, mobile = false) => (
     <div className={`col-qa-actions ${mobile ? 'col-qa-actions--mobile' : ''}`} onClick={mobile ? (e) => e.stopPropagation() : undefined}>
@@ -308,6 +320,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     // Reset register form so REGISTERED inline form starts clean
     setRegisterForm({ registration_date: '', registration_number: '' });
     setRegisterFiles([]);
+    setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
     // Load activities
     setActivitiesLoading(true);
     bookingApi.getActivities(booking.id).then(r => setActivities(r.data?.data || r.data || [])).catch(() => {}).finally(() => setActivitiesLoading(false));
@@ -399,8 +412,33 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const handleStatusUpdate = async () => {
     if (!newStatusId || !drawerBooking) return;
 
-    const selectedStatus = quickStatusOptions.find((s) => String(s.id) === newStatusId);
+    const selectedStatus = statusGridOptions.find((s) => String(s.id) === newStatusId);
     if (!selectedStatus) { toast.error('Select a valid status'); return; }
+
+    // ── Cancelled: only from an SH-approved request, only once fully refunded ──
+    // Routed through confirmCancel so the approval + refund gates are enforced
+    // server-side too (never a direct status flip to Cancelled).
+    if (isCancelStatusCode(selectedStatus.status_code)) {
+      const paid = parseFloat(drawerBooking.total_paid || 0);
+      const amt = parseFloat(cancelRefundForm.refund_amount || 0);
+      if (paid > 0.01 && Math.abs(amt - paid) > 0.01) {
+        toast.error(`Outstanding collected amount of ${formatCurrency(paid)} must be fully refunded before cancelling.`);
+        return;
+      }
+      setStatusSaving(true);
+      try {
+        await bookingApi.confirmCancel(drawerBooking.id, amt > 0 ? cancelRefundForm : {});
+        toast.success(amt > 0 ? 'Booking cancelled and refund recorded' : 'Booking cancelled');
+        setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
+        closeDrawer();
+        loadBookings();
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to cancel booking'));
+      } finally {
+        setStatusSaving(false);
+      }
+      return;
+    }
 
     if (selectedStatus.status_code === 'REGISTERED') {
       if (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0) {
@@ -827,11 +865,13 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                    {quickStatusOptions.map(s => (
+                    {statusGridOptions.map(s => (
                       <button key={s.id} className={`qa-drawer-st-btn ${newStatusId === String(s.id) ? 'sel-default' : ''}`}
                         onClick={() => setNewStatusId(String(s.id))}>
                         <div className="qa-drawer-st-icon" style={{ fontSize: 16 }}>
-                          {s.status_code === 'REQUEST_TO_CANCEL' ? (
+                          {isCancelStatusCode(s.status_code) ? (
+                            <XCircleIcon style={{ width: 18, height: 18, color: s.color_code || '#DC2626' }} />
+                          ) : s.status_code === 'REQUEST_TO_CANCEL' ? (
                             <ExclamationTriangleIcon style={{ width: 18, height: 18, color: s.color_code || '#EF4444' }} />
                           ) : (
                             <CheckCircleIcon style={{ width: 18, height: 18, color: s.color_code || 'var(--accent-blue)' }} />
@@ -844,7 +884,62 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
                   {/* Contextual fields by selected booking status */}
                   {(() => {
-                    const sel = quickStatusOptions.find(s => String(s.id) === newStatusId);
+                    const sel = statusGridOptions.find(s => String(s.id) === newStatusId);
+                    if (isCancelStatusCode(sel?.status_code)) {
+                      return (
+                        <div style={{ marginTop: 14 }}>
+                          <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: '#991B1B' }}>
+                            <strong>⚠ Cancelling is permanent.</strong> The unit is released back to <strong>Available</strong> and the lead is moved to <strong>Lost</strong>. {drawerTotalPaid > 0.01 ? 'The full collected amount must be refunded first.' : 'No amount has been collected, so no refund is required.'}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12 }}>
+                            <span>Total Collected</span>
+                            <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(drawerTotalPaid)}</strong>
+                          </div>
+                          {drawerTotalPaid > 0.01 && (
+                            <>
+                              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Refund (required — must equal total collected)</div>
+                              <div className="bkd-form-row">
+                                <div className="bkd-form-group">
+                                  <label className="bkd-form-label">Refund Amount (₹) *</label>
+                                  <input type="number" min="0" max={drawerTotalPaid} className="bkd-form-control"
+                                    placeholder={`Up to ${formatCurrency(drawerTotalPaid)}`}
+                                    value={cancelRefundForm.refund_amount}
+                                    onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
+                                </div>
+                                <div className="bkd-form-group">
+                                  <label className="bkd-form-label">Refund Date</label>
+                                  <input type="date" className="bkd-form-control"
+                                    value={cancelRefundForm.refund_date}
+                                    onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
+                                </div>
+                              </div>
+                              <div className="bkd-form-row">
+                                <div className="bkd-form-group">
+                                  <label className="bkd-form-label">Refund Mode</label>
+                                  <select className="bkd-form-control" value={cancelRefundForm.refund_mode_id}
+                                    onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
+                                    <option value="">Select mode</option>
+                                    {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
+                                  </select>
+                                </div>
+                                <div className="bkd-form-group">
+                                  <label className="bkd-form-label">Reference / UTR</label>
+                                  <input className="bkd-form-control" placeholder="e.g. UTR123456"
+                                    value={cancelRefundForm.refund_reference}
+                                    onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
+                                </div>
+                              </div>
+                              <div className="bkd-form-group">
+                                <label className="bkd-form-label">Remarks</label>
+                                <textarea rows={2} className="bkd-form-control" placeholder="Refund details..."
+                                  value={cancelRefundForm.refund_remarks}
+                                  onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    }
                     if (sel?.status_code === 'EMI') {
                       return (
                         <div style={{ marginTop: 14 }}>
@@ -909,19 +1004,36 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   {renderActivityHistory()}
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button
-                    className="qa-drawer-save-btn"
-                    disabled={
-                      !newStatusId
-                      || statusSaving
-                      || (quickStatusOptions.find(s => String(s.id) === newStatusId)?.status_code === 'REGISTERED' && (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0))
-                      || (quickStatusOptions.find(s => String(s.id) === newStatusId)?.status_code === 'EMI' && !statusRemarks.trim())
-                      || (quickStatusOptions.find(s => String(s.id) === newStatusId)?.status_code === 'REQUEST_TO_CANCEL' && !cancelReasonId)
-                    }
-                    onClick={handleStatusUpdate}
-                  >
-                    {statusSaving ? 'Updating...' : <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Update Booking Status</>}
-                  </button>
+                  {(() => {
+                    const sel = statusGridOptions.find(s => String(s.id) === newStatusId);
+                    const isCancel = isCancelStatusCode(sel?.status_code);
+                    const refundShort = isCancel && drawerTotalPaid > 0.01
+                      && Math.abs(parseFloat(cancelRefundForm.refund_amount || 0) - drawerTotalPaid) > 0.01;
+                    return (
+                      <button
+                        className="qa-drawer-save-btn"
+                        style={isCancel ? { background: '#DC2626' } : undefined}
+                        disabled={
+                          !newStatusId
+                          || statusSaving
+                          || (sel?.status_code === 'REGISTERED' && (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0))
+                          || (sel?.status_code === 'EMI' && !statusRemarks.trim())
+                          || (sel?.status_code === 'REQUEST_TO_CANCEL' && !cancelReasonId)
+                          || refundShort
+                        }
+                        onClick={handleStatusUpdate}
+                      >
+                        {statusSaving ? (isCancel ? 'Cancelling...' : 'Updating...') : (
+                          <>
+                            {isCancel
+                              ? <XCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />
+                              : <CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />}
+                            {isCancel ? 'Cancel Booking' : 'Update Booking Status'}
+                          </>
+                        )}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1146,9 +1258,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
         </div>
       )}
       {/* ══════════ WORKFLOW MODAL ══════════ */}
+      {/* width matches the booking-status modal (680) for a consistent look */}
       {workflowBooking && workflowMode && (
         <div className="col-modal-overlay" onClick={closeWorkflow}>
-          <div className="qa-modal-panel" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+          <div className="qa-modal-panel" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
             <div className="qa-drawer-handle" />
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">

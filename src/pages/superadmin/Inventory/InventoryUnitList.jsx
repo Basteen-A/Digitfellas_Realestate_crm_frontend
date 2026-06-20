@@ -17,10 +17,10 @@ const formatCurrency = (val) => {
   return `₹${num.toLocaleString('en-IN')}`;
 };
 
-// Plot amount derived from the phase's guideline value × the plot's area.
+// Total amount derived from the unit's own guided value × the unit's area.
 // Returns null when either piece is missing so the cell can show a dash.
-const phaseGuidelineAmount = (unit) => {
-  const perSqft = parseFloat(unit.phase?.guideline_value_per_sqft);
+const unitGuidelineAmount = (unit) => {
+  const perSqft = parseFloat(unit.guided_value);
   const area = parseFloat(unit.unit_area);
   if (!perSqft || !area) return null;
   return perSqft * area;
@@ -136,9 +136,10 @@ const InventoryUnitList = () => {
       const params = { ...query };
       if (projectId) params.project_id = projectId;
 
+      // getAll returns the unwrapped response body: { data: rows, meta: {...} }
       const response = await inventoryUnitApi.getAll(params);
-      const rows = response.data?.data || response.data || [];
-      const pageMeta = response.data?.meta || { page: 1, limit: 25, total: 0, totalPages: 1 };
+      const rows = response?.data || [];
+      const pageMeta = response?.meta || { page: 1, limit: query.limit, total: rows.length, totalPages: 1 };
 
       setUnits(rows);
       setMeta(pageMeta);
@@ -213,8 +214,9 @@ const InventoryUnitList = () => {
         next.phase_id = '';
         if (value) ensurePhasesLoaded(value);
       }
-      // When a phase is picked, prefill the per-sqft guided value from the
-      // phase's guideline value (and recompute total price). User can still edit.
+      // Picking a phase only PRE-FILLS the guided value box with the phase's
+      // guideline rate as a convenient default — it stays a per-unit field the
+      // user can edit, and the unit's own guided value is what drives amounts.
       if (name === 'phase_id') {
         const phase = (phasesByProject[prev.project_id] || []).find((p) => String(p.id) === String(value));
         const phaseRate = phase?.guideline_value_per_sqft;
@@ -231,6 +233,14 @@ const InventoryUnitList = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Phase and guided value are mandatory on every add/edit.
+    if (!formValues.phase_id) { toast.error('Phase is required'); return; }
+    if (formValues.guided_value === '' || formValues.guided_value === null || Number(formValues.guided_value) <= 0) {
+      toast.error('Guided value per sqft is required');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -303,6 +313,14 @@ const InventoryUnitList = () => {
   const submitPhase = async (e) => {
     e?.preventDefault?.();
     if (!phaseForm.phase_name.trim()) { toast.error('Phase name is required'); return; }
+    // Guideline value per sq.ft. is mandatory when creating a phase.
+    if (phaseModal.mode !== 'edit') {
+      const gv = phaseForm.guideline_value_per_sqft;
+      if (gv === '' || gv === null || Number(gv) <= 0 || Number.isNaN(Number(gv))) {
+        toast.error('Guideline value per sq.ft. is required');
+        return;
+      }
+    }
     setPhaseSaving(true);
     try {
       if (phaseModal.mode === 'edit' && phaseModal.row) {
@@ -490,9 +508,9 @@ const InventoryUnitList = () => {
                 <td>{unit.unit_area ? `${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : '-'}</td>
                 <td>{unit.guided_value ? `₹${parseFloat(unit.guided_value).toLocaleString('en-IN')}` : '-'}</td>
                 <td>
-                  {phaseGuidelineAmount(unit) != null
-                    ? <span title={`${parseFloat(unit.phase.guideline_value_per_sqft).toLocaleString('en-IN')} /sq.ft. × ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}`}>
-                        {formatCurrency(phaseGuidelineAmount(unit))}
+                  {unitGuidelineAmount(unit) != null
+                    ? <span title={`${parseFloat(unit.guided_value).toLocaleString('en-IN')} /sq.ft. × ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}`}>
+                        {formatCurrency(unitGuidelineAmount(unit))}
                       </span>
                     : <span style={{ color: '#94a3b8' }}>—</span>}
                 </td>
@@ -580,7 +598,7 @@ const InventoryUnitList = () => {
 
                 <div className="inv-form__field">
                   <label>
-                    Phase
+                    Phase <span className="required">*</span>
                     {formValues.project_id && (
                       <button type="button" className="inv-link-btn" style={{ marginLeft: 8, fontSize: 11 }}
                         onClick={() => openPhaseManager(formValues.project_id)}>
@@ -590,10 +608,11 @@ const InventoryUnitList = () => {
                   </label>
                   <select
                     value={formValues.phase_id || ''}
+                    required
                     onChange={(e) => handleFieldChange('phase_id', e.target.value)}
                     disabled={!formValues.project_id}
                   >
-                    <option value="">{formValues.project_id ? '— No phase —' : 'Select project first'}</option>
+                    <option value="">{formValues.project_id ? '— Select phase —' : 'Select project first'}</option>
                     {(phasesByProject[formValues.project_id] || []).map((p) => (
                       <option key={p.id} value={p.id}>{p.phase_name}</option>
                     ))}
@@ -647,11 +666,13 @@ const InventoryUnitList = () => {
                 </div>
 
                 <div className="inv-form__field">
-                  <label>Guided value per sqft (₹)</label>
+                  <label>Guided value per sqft (₹) <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     value={formValues.guided_value}
+                    required
                     placeholder="e.g. 450"
                     onChange={(e) => handleFieldChange('guided_value', e.target.value)}
                   />
@@ -827,8 +848,9 @@ const InventoryUnitList = () => {
                       onChange={(e) => setPhaseForm((p) => ({ ...p, description: e.target.value }))} />
                   </div>
                   <div className="inv-form__field">
-                    <label>Guideline Value / sq.ft. (₹)</label>
+                    <label>Guideline Value / sq.ft. (₹) <span className="required">*</span></label>
                     <input type="number" min="0" step="0.01" value={phaseForm.guideline_value_per_sqft}
+                      required={phaseModal.mode !== 'edit'}
                       placeholder="e.g. 3500 — plot amount = this × area"
                       onChange={(e) => setPhaseForm((p) => ({ ...p, guideline_value_per_sqft: e.target.value }))} />
                   </div>
