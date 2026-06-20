@@ -637,12 +637,13 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
           </KpiRow>
           <Card title="Hourly Call Heatmap" sub="Darker = more calls"><Heatmap hourly={hourly} base={accent} /></Card>
           <Card title="Answered vs Not Answered by Hour" sub="9 AM – 8 PM" registerRef={registerRef} chartKey="hourly">
-            <Table head={['Time', 'Answered', 'Unanswered']} colSpan={3} empty={false}>
-              {HOURS.map((h) => { const row = hourly[h] || {}; return (
+            <Table head={['Time', 'Total Calls', 'Answered', 'Unanswered']} colSpan={4} empty={false}>
+              {HOURS.map((h) => { const row = hourly[h] || {}; const a = num(row.answered); const u = num(row.unanswered); return (
                 <Tr key={h}>
                   <Td bold>{hourLabel(h)}</Td>
-                  <Td bold color={COLORS.answered}>{num(row.answered)}</Td>
-                  <Td bold color={COLORS.unanswered}>{num(row.unanswered)}</Td>
+                  <Td bold>{a + u}</Td>
+                  <Td bold color={COLORS.answered}>{a}</Td>
+                  <Td bold color={COLORS.unanswered}>{u}</Td>
                 </Tr>
               ); })}
             </Table>

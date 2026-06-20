@@ -212,7 +212,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
             <div style={{padding:'16px 20px'}}>
               {actionMode === 'approve' && (
                 <div style={{background:'#FEF3C7', border:'1px solid #F59E0B44', borderRadius:8, padding:12, marginBottom:16, fontSize:12, color:'#92400E'}}>
-                  <strong>⚠ Important:</strong> This will allow the Collection Manager to finalize the cancellation. Make sure you have completed follow-up with the customer.
+                  <strong>⚠ Important:</strong> Approving releases the booked plot to <strong>Available</strong> immediately (even before any refund) and lets the Collection Manager finalize the cancellation. Make sure you have completed follow-up with the customer.
                 </div>
               )}
               {actionMode === 'reject' && (
