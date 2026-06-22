@@ -153,7 +153,7 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
 
   const bookingNumber = safe(booking.booking_number, 'UNKNOWN');
   const bookingDate = booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const builderName = safe(project.builder_name || 'PREMIUM BUILDERS', 'PREMIUM BUILDERS').toUpperCase();
+  const builderName = safe(project.builder_name || 'SUJATHA DEVELOPERS', 'SUJATHA DEVELOPERS').toUpperCase();
 
   // Helper function to draw vertical gold bar + section titles
   const drawSectionHeader = (title, x, targetY) => {
@@ -512,7 +512,7 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
   doc.text('Date: ________________', sigLeftX + sigLineW / 2, sigY + 8, { align: 'center' });
-  doc.text(`For ${safe(project.builder_name, 'Premium Builders')}`, sigRightX + sigLineW / 2, sigY + 8, { align: 'center' });
+  doc.text(`For ${safe(project.builder_name, 'SUJATHA DEVELOPERS')}`, sigRightX + sigLineW / 2, sigY + 8, { align: 'center' });
 
   // ════════════════════════════════════════════════════════════
   // 7. FOOTER
@@ -524,7 +524,7 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
   doc.text('This is a computer-generated booking confirmation and does not require a physical signature.', pageW / 2, footerY, { align: 'center' });
   
   doc.setFont('helvetica', 'normal');
-  doc.text(`${safe(project.builder_name, 'Premium Builders')}  |  Contact: ${customerPhone}  |  Ref: ${bookingNumber}`, pageW / 2, footerY + 3.5, { align: 'center' });
+  doc.text(`${safe(project.builder_name, 'SUJATHA DEVELOPERS')}  |  Contact: ${customerPhone}  |  Ref: ${bookingNumber}`, pageW / 2, footerY + 3.5, { align: 'center' });
 
   // Gold band at the very bottom
   doc.setFillColor(...COLORS.gold);
