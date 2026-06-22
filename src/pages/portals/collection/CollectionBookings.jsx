@@ -79,8 +79,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   // Workflow state
   const [workflowMode, setWorkflowMode] = useState(null); // 'register' | 'emi' | 'requestCancel' | 'confirmCancel'
   const [workflowBooking, setWorkflowBooking] = useState(null);
-  const [registerForm, setRegisterForm] = useState({ registration_date: '', registration_number: '' });
-  const [registerFiles, setRegisterFiles] = useState([]);
+  const [registerForm, setRegisterForm] = useState({ registration_date: '' });
   const [registerSaving, setRegisterSaving] = useState(false);
   const [emiRemarks, setEmiRemarks] = useState('');
   const [emiSaving, setEmiSaving] = useState(false);
@@ -318,8 +317,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setPaymentStatusId(booking.payment_status_id || matched?.id || '');
     setFollowUpDate(''); setPayStatusRemarks(''); setPayStatusPaymentDate(''); setPayStatusRegDate('');
     // Reset register form so REGISTERED inline form starts clean
-    setRegisterForm({ registration_date: '', registration_number: '' });
-    setRegisterFiles([]);
+    setRegisterForm({ registration_date: '' });
     setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
     // Load activities
     setActivitiesLoading(true);
@@ -330,7 +328,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   // ── Workflow helpers ──
   const openWorkflow = (booking, mode) => {
     setWorkflowBooking(booking); setWorkflowMode(mode);
-    setRegisterForm({ registration_date: '', registration_number: '' }); setRegisterFiles([]);
+    setRegisterForm({ registration_date: '' });
     setEmiRemarks(''); setCancelReasonId(''); setCancelRemarks('');
     setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
     setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
@@ -338,15 +336,13 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const closeWorkflow = () => { setWorkflowBooking(null); setWorkflowMode(null); };
 
   const handleRegister = async () => {
-    if (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0) {
-      toast.error('All fields are mandatory: Date, Document Number, and Document file'); return;
+    if (!registerForm.registration_date) {
+      toast.error('Registration date is mandatory'); return;
     }
     setRegisterSaving(true);
     try {
       const formData = new FormData();
-      registerFiles.forEach(f => formData.append('documents', f));
       formData.append('registration_date', registerForm.registration_date);
-      formData.append('registration_number', registerForm.registration_number);
       await bookingApi.registerBooking(workflowBooking.id, formData);
       toast.success('Booking registered successfully'); closeWorkflow(); loadBookings();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to register')); }
@@ -441,8 +437,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     }
 
     if (selectedStatus.status_code === 'REGISTERED') {
-      if (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0) {
-        toast.error('Registration date, document number, and at least one document file are required');
+      if (!registerForm.registration_date) {
+        toast.error('Registration date is required');
         return;
       }
     }
@@ -468,13 +464,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
         toast.success('Cancellation requested — SH will review');
       } else if (selectedStatus.status_code === 'REGISTERED') {
         const formData = new FormData();
-        registerFiles.forEach((f) => formData.append('documents', f));
         formData.append('registration_date', registerForm.registration_date);
-        formData.append('registration_number', registerForm.registration_number);
         await bookingApi.registerBooking(drawerBooking.id, formData);
         toast.success('Booking registered');
-        setRegisterForm({ registration_date: '', registration_number: '' });
-        setRegisterFiles([]);
+        setRegisterForm({ registration_date: '' });
       } else {
         await bookingApi.update(drawerBooking.id, { booking_status_id: newStatusId });
         toast.success('Booking status updated');
@@ -708,8 +701,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>;
                     
                     const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
-                    const displayStatusLabel = isCancelApproved ? 'Cancelled' : booking.status_label;
-                    const displayStatusColor = isCancelApproved ? '#DC2626' : booking.status_color;
+                    const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
+                    const displayStatusColor = isCancelApproved ? '#F59E0B' : booking.status_color;
                     return (
                       <React.Fragment key={booking.id}>
                         <tr>
@@ -953,30 +946,12 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                       return (
                         <div style={{ marginTop: 14 }}>
                           <div style={{ background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, padding: 10, fontSize: 12, color: '#166534', marginBottom: 12 }}>
-                            <strong>Registration requires document upload.</strong> Fill in the details below and attach the registered document file to complete this status.
-                          </div>
-                          <div className="bkd-form-row">
-                            <div className="bkd-form-group">
-                              <label className="bkd-form-label">Date of Registration *</label>
-                              <input type="date" className="bkd-form-control" value={registerForm.registration_date}
-                                onChange={(e) => setRegisterForm((p) => ({ ...p, registration_date: e.target.value }))} />
-                            </div>
-                            <div className="bkd-form-group">
-                              <label className="bkd-form-label">Document Number *</label>
-                              <input type="text" className="bkd-form-control" placeholder="Registration document number"
-                                value={registerForm.registration_number}
-                                onChange={(e) => setRegisterForm((p) => ({ ...p, registration_number: e.target.value }))} />
-                            </div>
+                            <strong>Registration.</strong> Enter the date of registration to complete this status.
                           </div>
                           <div className="bkd-form-group">
-                            <label className="bkd-form-label">Upload Document *</label>
-                            <input type="file" className="bkd-form-control" multiple
-                              onChange={(e) => setRegisterFiles(Array.from(e.target.files || []))} />
-                            {registerFiles.length > 0 && (
-                              <div style={{ fontSize: 11, color: 'var(--accent-green, #166534)', marginTop: 6 }}>
-                                Selected: {registerFiles.map((f) => f.name).join(', ')}
-                              </div>
-                            )}
+                            <label className="bkd-form-label">Date of Registration *</label>
+                            <input type="date" className="bkd-form-control" value={registerForm.registration_date}
+                              onChange={(e) => setRegisterForm((p) => ({ ...p, registration_date: e.target.value }))} />
                           </div>
                         </div>
                       );
@@ -1016,7 +991,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                         disabled={
                           !newStatusId
                           || statusSaving
-                          || (sel?.status_code === 'REGISTERED' && (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0))
+                          || (sel?.status_code === 'REGISTERED' && !registerForm.registration_date)
                           || (sel?.status_code === 'EMI' && !statusRemarks.trim())
                           || (sel?.status_code === 'REQUEST_TO_CANCEL' && !cancelReasonId)
                           || refundShort
@@ -1290,19 +1265,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   <input type="date" className="bkd-form-control" value={registerForm.registration_date}
                     onChange={e => setRegisterForm(p => ({ ...p, registration_date: e.target.value }))} />
                 </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Document Number *</label>
-                  <input type="text" className="bkd-form-control" placeholder="Enter registration document number"
-                    value={registerForm.registration_number} onChange={e => setRegisterForm(p => ({ ...p, registration_number: e.target.value }))} />
-                </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Upload Document *</label>
-                  <input type="file" className="bkd-form-control" multiple
-                    onChange={e => setRegisterFiles(Array.from(e.target.files || []))} />
-                  {registerFiles.length > 0 && <div style={{ fontSize: 11, color: 'var(--accent-green)', marginTop: 4 }}>{registerFiles.map(f => f.name).join(', ')}</div>}
-                </div>
                 <div className="qa-drawer-save-row" style={{ marginTop: 16 }}>
-                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={registerSaving} onClick={handleRegister}>
+                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={registerSaving || !registerForm.registration_date} onClick={handleRegister}>
                     {registerSaving ? 'Saving...' : 'Register Booking'}
                   </button>
                 </div>

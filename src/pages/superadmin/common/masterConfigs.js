@@ -218,6 +218,13 @@ export const masterConfigs = {
       { name: 'is_approved', label: 'Approved', type: 'checkbox', defaultValue: true },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
+    dangerDelete: {
+      entityLabel: 'project',
+      confirmField: 'project_name',
+      confirmLabel: 'project name',
+      extraWarning: 'A project can only be deleted when it has no units.',
+      api: (id) => projectApi.hardDelete(id),
+    },
   },
 
   projectTypes: {

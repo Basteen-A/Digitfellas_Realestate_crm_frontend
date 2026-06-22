@@ -17,6 +17,12 @@ const inventoryUnitApi = {
     const { data } = await api.get(`/inventory-units/project/${projectId}/summary`, { params: { _t: Date.now() } });
     return data;
   },
+
+  /** Permanently delete a unit (only when no booking exists on it) */
+  hardDelete: async (id) => {
+    const { data } = await api.delete(`/inventory-units/${id}/hard`);
+    return data;
+  },
 };
 
 export default inventoryUnitApi;

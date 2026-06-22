@@ -5,6 +5,7 @@ import {
   ArrowsRightLeftIcon, XMarkIcon, CircleStackIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
+import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
 import './MasterCrudPage.css';
 
 const getValueByPath = (row, path) => {
@@ -29,6 +30,7 @@ const MasterCrudPage = ({ config }) => {
   const [formValues, setFormValues] = useState({});
   const [fieldOptions, setFieldOptions] = useState({});
   const [multiSelectSearch, setMultiSelectSearch] = useState({});
+  const [dangerRow, setDangerRow] = useState(null);
 
   const visibleFields = useMemo(
     () =>
@@ -199,6 +201,12 @@ const MasterCrudPage = ({ config }) => {
   };
 
   const handleDelete = async (row) => {
+    // Entities that opt into hard delete go through the danger-zone modal.
+    if (config.dangerDelete) {
+      setDangerRow(row);
+      return;
+    }
+
     const ok = window.confirm(`Delete this ${config.title} record?`);
     if (!ok) return;
 
@@ -557,6 +565,24 @@ const MasterCrudPage = ({ config }) => {
             </form>
           </div>
         </div>
+      )}
+
+      {config.dangerDelete && (
+        <DangerDeleteModal
+          open={Boolean(dangerRow)}
+          entityLabel={config.dangerDelete.entityLabel || 'record'}
+          entityName={dangerRow ? dangerRow[config.dangerDelete.confirmField] : ''}
+          confirmValue={dangerRow ? String(dangerRow[config.dangerDelete.confirmField] ?? '') : ''}
+          confirmLabel={config.dangerDelete.confirmLabel || 'name'}
+          extraWarning={config.dangerDelete.extraWarning || ''}
+          onClose={() => setDangerRow(null)}
+          onConfirm={async () => {
+            await config.dangerDelete.api(dangerRow.id);
+            toast.success(`${config.dangerDelete.entityLabel || 'Record'} permanently deleted`);
+            setDangerRow(null);
+            loadList();
+          }}
+        />
       )}
     </section>
   );

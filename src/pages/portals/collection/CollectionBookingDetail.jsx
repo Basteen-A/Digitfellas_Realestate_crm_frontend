@@ -8,10 +8,12 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import userApi from '../../../api/userApi';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
+import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
 import { ROLE_CODES } from '../../../utils/constants';
+import { generateBookingConfirmationPDF } from '../../../utils/BookingConfirmationPDF';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
   BanknotesIcon, UserIcon, ClockIcon,
@@ -45,6 +47,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [statusOptions, setStatusOptions] = useState([]);
   const [actionMode, setActionMode] = useState(null); // 'pay' | 'status' | 'payStatus' | 'devCost'
   const [activeTab, setActiveTab] = useState('payment-history');
+  const [showDeleteBooking, setShowDeleteBooking] = useState(false);
   const [payForm, setPayForm] = useState({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
   const [paySaving, setPaySaving] = useState(false);
   const [newStatusId, setNewStatusId] = useState('');
@@ -150,8 +153,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   // Workflow state
   const [workflowMode, setWorkflowMode] = useState(null);
-  const [registerForm, setRegisterForm] = useState({ registration_date: '', registration_number: '' });
-  const [registerFiles, setRegisterFiles] = useState([]);
+  const [registerForm, setRegisterForm] = useState({ registration_date: '' });
   const [registerSaving, setRegisterSaving] = useState(false);
   const [emiRemarks, setEmiRemarks] = useState('');
   const [emiSaving, setEmiSaving] = useState(false);
@@ -293,8 +295,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       setCancelReasonId('');
       setCancelRemarks('');
       setCancelVoice(null);
-      setRegisterForm({ registration_date: '', registration_number: '' });
-      setRegisterFiles([]);
+      setRegisterForm({ registration_date: '' });
       setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
       setSmPointsValue('');
       setShPointsValue('');
@@ -478,8 +479,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       return;
     }
     if (selectedStatus.status_code === 'REGISTERED') {
-      if (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0) {
-        toast.error('Registration date, document number, and at least one document file are required');
+      if (!registerForm.registration_date) {
+        toast.error('Registration date is required');
         return;
       }
     }
@@ -504,13 +505,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         toast.success('Cancellation requested');
       } else if (selectedStatus.status_code === 'REGISTERED') {
         const formData = new FormData();
-        registerFiles.forEach((f) => formData.append('documents', f));
         formData.append('registration_date', registerForm.registration_date);
-        formData.append('registration_number', registerForm.registration_number);
         await bookingApi.registerBooking(bookingId, formData);
         toast.success('Booking registered');
-        setRegisterForm({ registration_date: '', registration_number: '' });
-        setRegisterFiles([]);
+        setRegisterForm({ registration_date: '' });
       } else {
         await bookingApi.update(bookingId, { booking_status_id: newStatusId });
         toast.success('Status updated');
@@ -648,6 +646,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return Number.isFinite(n) ? n : 0;
   };
   const totalPaid = toAmount(booking.total_paid);
+  // Once registered, stamp/registration/MODT expenses are cleared server-side.
+  // The flag drives UI hiding of those sections.
+  const isRegistered = ['REGISTERED'].includes(booking.bookingStatus?.status_code || booking.status_code);
   // Derive Plot/Stamp/Registration/Development from guideline × area with ROUNDUP(…, -2),
   // falling back to stored columns — matches Booking Approvals and the dev-cost preview so
   // Registration (2%) no longer shows a stale/zero value.
@@ -659,12 +660,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   let registrationValue;
   if (guidelineRate > 0 && plotAreaSqft > 0) {
     plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100;
-    stampValue = Math.ceil((plotValue * 0.07) / 100) * 100;
-    registrationValue = Math.ceil((plotValue * 0.02) / 100) * 100;
+    stampValue = isRegistered ? 0 : Math.ceil((plotValue * 0.07) / 100) * 100;
+    registrationValue = isRegistered ? 0 : Math.ceil((plotValue * 0.02) / 100) * 100;
   } else {
     plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
-    stampValue = toAmount(booking.stamp_value || booking.stamp_duty);
-    registrationValue = toAmount(booking.registration_exp || booking.registration_charges);
+    stampValue = isRegistered ? 0 : toAmount(booking.stamp_value || booking.stamp_duty);
+    registrationValue = isRegistered ? 0 : toAmount(booking.registration_exp || booking.registration_charges);
   }
   const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
     ? Math.round(plotAreaSqft * perSqftCost * 1.18 * 100) / 100
@@ -677,8 +678,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const savedRegSplit = costBreakdown.registration_split || {};
   const savedModtEnabled = !!costBreakdown.modt_enabled;
   const savedModtSplit = costBreakdown.modt_split || {};
-  const regSplitTotal = sumSplit(savedRegSplit);
-  const modtSplitTotal = savedModtEnabled ? sumSplit(savedModtSplit) : 0;
+  const regSplitTotal = isRegistered ? 0 : sumSplit(savedRegSplit);
+  const modtSplitTotal = (savedModtEnabled && !isRegistered) ? sumSplit(savedModtSplit) : 0;
   const otherChargesTotal = regSplitTotal + modtSplitTotal;
 
   const computedTotalValue = plotValue + stampValue + registrationValue + developmentValue + otherChargesTotal;
@@ -694,7 +695,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return acc;
   }, {});
 
+  // Categories cleared after registration — hidden from Add Payment dropdown and progress bars.
+  const CLEARED_ON_REGISTRATION = ['Stamp Duty', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT'];
   const filteredCategories = PAYMENT_CATEGORIES.filter(cat => {
+    if (isRegistered && CLEARED_ON_REGISTRATION.includes(cat)) return false;
     if (cat === 'MODT') {
       return savedModtEnabled || (paidByCategory['MODT'] > 0);
     }
@@ -711,22 +715,26 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   //                                Writer Expenses, Patta Charges, …) EXCEPT
   //                                "Other Registration Expenses".
   //   • Other Registration Expenses → its own separate bar.
-  const otherRegExpensesTarget = toAmount(savedRegSplit.other_registration_expenses);
-  const regMiscExpensesTarget = regSplitTotal - otherRegExpensesTarget;
+  const otherRegExpensesTarget = isRegistered ? 0 : toAmount(savedRegSplit.other_registration_expenses);
+  const regMiscExpensesTarget = isRegistered ? 0 : (regSplitTotal - toAmount(savedRegSplit.other_registration_expenses));
   const registrationTarget = registrationValue;
   const categoryBuckets = [
     { key: 'Plot Value', target: plotValue, paid: paidByCategory['Plot Value'] || 0 },
-    { key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 },
-     { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
-    { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
-    { key: 'Registration Expenses', target: regMiscExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
-    { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
-    { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
+    ...(isRegistered ? [] : [{ key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 }]),
+    { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
+    ...(isRegistered ? [] : [
+      { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
+      { key: 'Registration Expenses', target: regMiscExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
+      { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
+      { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
+    ]),
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
 
   const isCollectionManager = getRoleCode(user) === ROLE_CODES.COLLECTION;
   const canEditPayments = getRoleCode(user) === ROLE_CODES.SUPER_ADMIN;
+  // Permanent booking delete is restricted to Super Admin / Admin.
+  const canDeleteBooking = [ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user));
   const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
   const devCostPlotAreaValue = toAmount(devCostForm.plot_area || booking.plot_area);
   const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
@@ -754,10 +762,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const isOverdue = booking.next_follow_up_at && new Date(booking.next_follow_up_at) < new Date();
   const overdueDays = isOverdue ? Math.floor((Date.now() - new Date(booking.next_follow_up_at).getTime()) / 86400000) : 0;
 
-  // Cancel-approved status override — show "Cancelled" once SH approves the cancellation request
+  // Cancel-approved status override — show "Cancel Pending" once SH approves the cancellation request
+  // (the booking is only truly "Cancelled" after Collection finalizes the refund/cancellation)
   const isCancelApproved = (booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
-  const effectiveStatusLabel = isCancelApproved ? 'Cancelled' : booking.status_label;
-  const effectiveStatusColor = isCancelApproved ? '#DC2626' : booking.status_color;
+  const effectiveStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
+  const effectiveStatusColor = isCancelApproved ? '#F59E0B' : booking.status_color;
 
   const renderActivityHistory = () => {
     return (
@@ -881,6 +890,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
               <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
             </>
+          )}
+          {canDeleteBooking && (
+            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#DC2626',color:'#DC2626'}} onClick={() => setShowDeleteBooking(true)} title="Permanently delete this booking">
+              <ExclamationTriangleIcon style={{width:14,height:14}}/> Delete Booking
+            </button>
+          )}
+          {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user)) && (
+            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#C19A57',color:'#C19A57'}} onClick={() => generateBookingConfirmationPDF(booking, bankOptions)} title="Download Booking Confirmation PDF">
+              <ArrowDownTrayIcon style={{width:14,height:14}}/> Download PDF
+            </button>
           )}
           <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
         </div>
@@ -1202,6 +1221,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-plot">{fmtFull(plotValue)}</h3>
                     </div>
 
+                    {!isRegistered && (
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-stamp">
                       <div className="bkd-payment-preview-breakdown-item-head">
                         <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-stamp">
@@ -1218,7 +1238,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
                       <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-stamp">{fmtFull(stampValue)}</h3>
                     </div>
+                    )}
 
+                    {!isRegistered && (
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-registration">
                       <div className="bkd-payment-preview-breakdown-item-head">
                         <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-registration">
@@ -1235,6 +1257,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
                       <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-registration">{fmtFull(registrationValue)}</h3>
                     </div>
+                    )}
 
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-development">
                       <div className="bkd-payment-preview-breakdown-item-head">
@@ -1254,7 +1277,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     </div>
                   </div>
 
-                  {(otherChargesTotal > 0) && (
+                  {!isRegistered && (otherChargesTotal > 0) && (
                     <div className="bkd-extra-charges-shell" style={{ marginTop: 14, padding: '12px 14px', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #111827)' }}>Registration Charges</div>
@@ -1908,30 +1931,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       return (
                         <div style={{ marginTop: 14 }}>
                           <div style={{ background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, padding: 10, fontSize: 12, color: '#166534', marginBottom: 12 }}>
-                            <strong>Registration requires document upload.</strong> Fill in the details below and the registered document file to complete this status.
-                          </div>
-                          <div className="bkd-form-row">
-                            <div className="bkd-form-group">
-                              <label className="bkd-form-label">Date of Registration *</label>
-                              <input type="date" className="bkd-form-control" value={registerForm.registration_date}
-                                onChange={(e) => setRegisterForm((p) => ({ ...p, registration_date: e.target.value }))} />
-                            </div>
-                            <div className="bkd-form-group">
-                              <label className="bkd-form-label">Document Number *</label>
-                              <input type="text" className="bkd-form-control" placeholder="Registration document number"
-                                value={registerForm.registration_number}
-                                onChange={(e) => setRegisterForm((p) => ({ ...p, registration_number: e.target.value }))} />
-                            </div>
+                            <strong>Registration.</strong> Enter the date of registration to complete this status.
                           </div>
                           <div className="bkd-form-group">
-                            <label className="bkd-form-label">Upload Document *</label>
-                            <input type="file" className="bkd-form-control" multiple
-                              onChange={(e) => setRegisterFiles(Array.from(e.target.files || []))} />
-                            {registerFiles.length > 0 && (
-                              <div style={{ fontSize: 11, color: 'var(--accent-green, #166534)', marginTop: 6 }}>
-                                Selected: {registerFiles.map((f) => f.name).join(', ')}
-                              </div>
-                            )}
+                            <label className="bkd-form-label">Date of Registration *</label>
+                            <input type="date" className="bkd-form-control" value={registerForm.registration_date}
+                              onChange={(e) => setRegisterForm((p) => ({ ...p, registration_date: e.target.value }))} />
                           </div>
                         </div>
                       );
@@ -1977,7 +1982,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         disabled={
                           !newStatusId
                           || statusSaving
-                          || (sel?.status_code === 'REGISTERED' && (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0))
+                          || (sel?.status_code === 'REGISTERED' && !registerForm.registration_date)
                           || (sel?.status_code === 'EMI' && !statusRemarks.trim())
                           || (sel?.status_code === 'REQUEST_TO_CANCEL' && !cancelReasonId)
                           || refundShort
@@ -2279,26 +2284,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <input type="date" className="bkd-form-control" value={registerForm.registration_date}
                     onChange={e => setRegisterForm(p => ({ ...p, registration_date: e.target.value }))} />
                 </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Document Number *</label>
-                  <input type="text" className="bkd-form-control" placeholder="Enter registration document number"
-                    value={registerForm.registration_number} onChange={e => setRegisterForm(p => ({ ...p, registration_number: e.target.value }))} />
-                </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Upload Document *</label>
-                  <input type="file" className="bkd-form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                    onChange={e => setRegisterFiles(Array.from(e.target.files || []))} />
-                  {registerFiles.length > 0 && <div style={{ fontSize: 11, color: 'var(--accent-green)', marginTop: 4 }}>{registerFiles.map(f => f.name).join(', ')}</div>}
-                </div>
                 <div className="qa-drawer-save-row" style={{ marginTop: 16 }}>
-                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={registerSaving} onClick={async () => {
-                    if (!registerForm.registration_date || !registerForm.registration_number || registerFiles.length === 0) { toast.error('All fields are mandatory'); return; }
+                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={registerSaving || !registerForm.registration_date} onClick={async () => {
+                    if (!registerForm.registration_date) { toast.error('Registration date is mandatory'); return; }
                     setRegisterSaving(true);
                     try {
                       const formData = new FormData();
-                      registerFiles.forEach(f => formData.append('documents', f));
                       formData.append('registration_date', registerForm.registration_date);
-                      formData.append('registration_number', registerForm.registration_number);
                       await bookingApi.registerBooking(bookingId, formData);
                       toast.success('Booking registered'); setWorkflowMode(null); loadBooking(); loadActivities();
                     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
@@ -2553,6 +2545,24 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             )}
           </div>
         </div>
+      )}
+
+      {canDeleteBooking && (
+        <DangerDeleteModal
+          open={showDeleteBooking}
+          entityLabel="booking"
+          entityName={`Booking ${booking.booking_number}`}
+          confirmValue={String(booking.booking_number ?? '')}
+          confirmLabel="Booking ID"
+          extraWarning="All payments, activity history and points for this booking will be removed, and any linked unit will be released back to Available."
+          onClose={() => setShowDeleteBooking(false)}
+          onConfirm={async () => {
+            await bookingApi.hardDelete(booking.id);
+            toast.success('Booking permanently deleted');
+            setShowDeleteBooking(false);
+            onBack?.();
+          }}
+        />
       )}
     </div>
   );

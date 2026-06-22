@@ -7,6 +7,7 @@ import locationApi from '../../../api/locationApi';
 import projectApi from '../../../api/projectApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
 import Pagination from '../../../components/common/Pagination';
+import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
 import { formatLocation } from '../../../utils/formatters';
 import './InventoryUnitList.css';
 
@@ -72,6 +73,7 @@ const InventoryUnitList = () => {
 
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [formValues, setFormValues] = useState({ ...EMPTY_FORM });
+  const [dangerUnit, setDangerUnit] = useState(null);
 
   // Dropdown data for add/edit when no projectId route param
   const [locations, setLocations] = useState([]);
@@ -271,16 +273,17 @@ const InventoryUnitList = () => {
     }
   };
 
-  const handleDelete = async (row) => {
-    if (!window.confirm(`Delete unit "${row.unit_number}"?`)) return;
-    try {
-      await inventoryUnitApi.delete(row.id);
-      toast.success('Unit deleted');
-      loadUnits();
-      loadProjectSummary();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Delete failed');
-    }
+  const handleDelete = (row) => {
+    // Permanent delete via the danger-zone confirmation modal.
+    setDangerUnit(row);
+  };
+
+  const confirmHardDeleteUnit = async () => {
+    await inventoryUnitApi.hardDelete(dangerUnit.id);
+    toast.success('Unit permanently deleted');
+    setDangerUnit(null);
+    loadUnits();
+    loadProjectSummary();
   };
 
   const handleSearch = () => {
@@ -877,6 +880,17 @@ const InventoryUnitList = () => {
           </div>
         </div>
       )}
+
+      <DangerDeleteModal
+        open={Boolean(dangerUnit)}
+        entityLabel="unit"
+        entityName={dangerUnit ? `Unit ${dangerUnit.unit_number}` : ''}
+        confirmValue={dangerUnit ? String(dangerUnit.unit_number ?? '') : ''}
+        confirmLabel="unit number"
+        extraWarning="A unit can only be deleted when no booking has been done on it."
+        onClose={() => setDangerUnit(null)}
+        onConfirm={confirmHardDeleteUnit}
+      />
     </section>
   );
 };

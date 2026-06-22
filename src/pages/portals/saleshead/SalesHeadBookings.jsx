@@ -172,8 +172,8 @@ const SalesHeadBookings = ({ user }) => {
                 <tbody>
                   {pageItems.map(booking => {
                     const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
-                    const displayStatusLabel = isCancelApproved ? 'Cancelled' : booking.status_label;
-                    const displayStatusColor = isCancelApproved ? '#DC2626' : booking.status_color;
+                    const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
+                    const displayStatusColor = isCancelApproved ? '#F59E0B' : booking.status_color;
                     return (
                       <tr key={booking.id} className="is-clickable" onClick={() => openDetail(booking.id)}>
                         <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>

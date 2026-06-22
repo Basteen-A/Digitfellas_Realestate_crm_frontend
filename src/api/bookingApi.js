@@ -7,6 +7,8 @@ const bookingApi = {
   update: (id, data) => api.patch(`/bookings/${id}`, data),
   cancel: (id, data) => api.patch(`/bookings/${id}/cancel`, data),
   remove: (id) => api.delete(`/bookings/${id}`),
+  // Permanently delete a booking + child records (Super Admin / Admin only)
+  hardDelete: (id) => api.delete(`/bookings/${id}/hard`),
 
   // Payment sub-resource
   getPayments: (bookingId) => api.get(`/bookings/${bookingId}/payments`),
