@@ -1,6 +1,6 @@
 // ============================================================
 // UTILITY: Booking Confirmation PDF Generator
-// Generates a branded A4 PDF matching the company template.
+// Generates a corporate-grade, single-page A4 PDF confirmation.
 // Uses jspdf — entirely client-side, no server dependency.
 // ============================================================
 
@@ -9,17 +9,15 @@ import { jsPDF } from 'jspdf';
 /* ── Colour palette ── */
 const COLORS = {
   gold: [193, 154, 87],       // #C19A57 — accent / borders
-  darkBg: [30, 30, 35],       // header background
+  darkBg: [30, 30, 35],       // primary dark charcoal
   white: [255, 255, 255],
   black: [0, 0, 0],
   grey: [100, 100, 100],
-  lightGrey: [200, 200, 200],
-  veryLightGrey: [245, 245, 245],
-  sectionBg: [250, 248, 244], // warm off-white for sections
+  lightGrey: [225, 222, 215],  // thin elegant warm grey
+  veryLightGrey: [250, 248, 244], // warm card background
   green: [34, 139, 34],
-  mutedText: [120, 120, 120],
-  darkText: [40, 40, 40],
-  cardBorder: [220, 215, 205],
+  mutedText: [130, 130, 135],
+  darkText: [40, 40, 45],
 };
 
 /* ── Number → Indian words ── */
@@ -42,11 +40,11 @@ const numberToWords = (num) => {
   return 'Rupees ' + convert(intPart) + ' Only';
 };
 
-/* ── Currency formatter (full, no shortening) ── */
+/* ── Currency formatter (using Rs. prefix to prevent jsPDF Helvetica font mapping bug) ── */
 const fmtINR = (v) => {
   const n = Number(v);
-  if (!Number.isFinite(n) || n === 0) return '₹ 0';
-  return '₹ ' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  if (!Number.isFinite(n) || n === 0) return 'Rs. 0';
+  return 'Rs. ' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 };
 
 /* ── Safe text helper ── */
@@ -66,9 +64,9 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();  // 210
   const pageH = doc.internal.pageSize.getHeight(); // 297
-  const margin = 14;
-  const contentW = pageW - margin * 2;
-  let y = 0;
+  const margin = 12;
+  const contentW = pageW - margin * 2; // 186
+  let y = 12;
 
   // ── Derived data ──
   const customer = booking.customer || {};
@@ -76,7 +74,7 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
   const project = booking.project || {};
   const buyerName = safe(booking.buyer_name || customer.buyer_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(), 'Customer');
 
-  // Title prefix (Mr./Mrs./Ms.) — infer from gender if available
+  // Title prefix (Mr./Mrs./Ms.)
   const genderPrefix = customer.gender === 'Female' ? 'Mrs.' : customer.gender === 'Male' ? 'Mr.' : '';
   const displayBuyerName = genderPrefix ? `${genderPrefix} ${buyerName}` : buyerName;
 
@@ -86,128 +84,212 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
 
   const area = safe(booking.carpet_area || inventoryUnit.unit_area, '—');
   const areaUnit = safe(booking.area_unit || inventoryUnit.area_unit, 'Sq.ft');
-  const facing = safe(inventoryUnit.facing || booking.configuration, '—');
-  const config = safe(inventoryUnit.configuration || booking.configuration, 'Future Construction');
-  // Location from project
-  const location = safe(project.address || project.location?.location_name, '—');
+  const facing = safe(inventoryUnit.facing, '—');
+
+  // Location string using nested project location details
+  const locationParts = [
+    project.location?.location_name,
+    project.location?.city,
+    project.address
+  ].filter(Boolean);
+  const location = locationParts.length > 0 ? locationParts.join(', ') : '—';
+  const locationText = phaseName ? `${phaseName} · ${location}` : location;
 
   const customerPhone = safe(customer.phone, '—');
-  // Address
-  const addressParts = [customer.address_line_1, customer.address_line_2, customer.city, customer.state, customer.pincode].filter(Boolean);
+  
+  // Customer Address
+  const addressParts = [
+    customer.address_line_1,
+    customer.address_line_2,
+    customer.city,
+    customer.state,
+    customer.pincode
+  ].filter(Boolean);
   const customerAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
 
-  // Investment computations (same logic as the booking detail page)
+  // Relation line if available
+  const relationText = customer.buyer_name && customer.buyer_name !== buyerName ? customer.buyer_name : '';
+
+  // Investment computations
   const toAmt = (v) => { const n = parseFloat(v || 0); return Number.isFinite(n) ? n : 0; };
   const guidelineRate = toAmt(booking.guideline_value);
   const plotAreaSqft = toAmt(booking.plot_area);
   const perSqftCost = toAmt(booking.development_cost_per_sqft);
+  const statusCode = booking.bookingStatus?.status_code || booking.status_code || 'BOOKED';
+  const isRegistered = statusCode === 'REGISTERED';
 
-  let plotValue, stampValue, registrationValue;
+  let plotValue = 0, stampValue = 0, registrationValue = 0;
   if (guidelineRate > 0 && plotAreaSqft > 0) {
     plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100;
-    stampValue = Math.ceil((plotValue * 0.07) / 100) * 100;
-    registrationValue = Math.ceil((plotValue * 0.02) / 100) * 100;
+    if (!isRegistered) {
+      stampValue = Math.ceil((plotValue * 0.07) / 100) * 100;
+      registrationValue = Math.ceil((plotValue * 0.02) / 100) * 100;
+    }
   } else {
     plotValue = toAmt(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
-    stampValue = toAmt(booking.stamp_value || booking.stamp_duty);
-    registrationValue = toAmt(booking.registration_exp || booking.registration_charges);
+    if (!isRegistered) {
+      stampValue = toAmt(booking.stamp_value || booking.stamp_duty);
+      registrationValue = toAmt(booking.registration_exp || booking.registration_charges);
+    }
   }
+  
   const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
     ? Math.round(plotAreaSqft * perSqftCost * 1.18 * 100) / 100
     : toAmt(booking.development_charges);
 
-  // Other charges from cost breakdown
+  // Other charges splits
   const costBreakdown = booking.custom_fields?.cost_breakdown || {};
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmt(v), 0);
-  const regSplitTotal = sumSplit(costBreakdown.registration_split);
-  const modtSplitTotal = costBreakdown.modt_enabled ? sumSplit(costBreakdown.modt_split) : 0;
-  const otherChargesTotal = regSplitTotal + modtSplitTotal + toAmt(booking.other_charges);
+  const regSplitTotal = isRegistered ? 0 : sumSplit(costBreakdown.registration_split);
+  const modtSplitTotal = (!isRegistered && costBreakdown.modt_enabled) ? sumSplit(costBreakdown.modt_split) : 0;
+  const otherChargesTotal = isRegistered ? 0 : (regSplitTotal + modtSplitTotal + toAmt(booking.other_charges));
 
-  const documentationCharges = stampValue + developmentValue;
-  const totalInvestment = plotValue + documentationCharges + registrationValue + otherChargesTotal;
+  const totalInvestment = plotValue + developmentValue + stampValue + registrationValue + otherChargesTotal;
 
   // Banks — use first two active banks
   const activeBanks = (banks || []).filter(b => b.is_active !== false);
   const plotBank = activeBanks[0] || {};
   const devBank = activeBanks[1] || activeBanks[0] || {};
 
-  // Status for journey tracker
-  const statusCode = booking.bookingStatus?.status_code || booking.status_code || 'BOOKED';
-
-  // Booking number for filename
   const bookingNumber = safe(booking.booking_number, 'UNKNOWN');
+  const bookingDate = booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const builderName = safe(project.builder_name || 'PREMIUM BUILDERS', 'PREMIUM BUILDERS').toUpperCase();
+
+  // Helper function to draw vertical gold bar + section titles
+  const drawSectionHeader = (title, x, targetY) => {
+    doc.setFillColor(...COLORS.gold);
+    doc.rect(x, targetY, 1.5, 4.5, 'F');
+    doc.setTextColor(...COLORS.darkBg);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, x + 3.5, targetY + 3.3);
+  };
 
   // ════════════════════════════════════════════════════════════
-  // 1. HEADER — Dark background with gold accent
+  // 1. CORPORATE HEADER
   // ════════════════════════════════════════════════════════════
-  const headerH = 28;
-  doc.setFillColor(...COLORS.darkBg);
-  doc.rect(0, 0, pageW, headerH, 'F');
-
-  // Gold accent line
-  doc.setFillColor(...COLORS.gold);
-  doc.rect(0, headerH, pageW, 1.2, 'F');
-
-  // Title text
-  doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('BOOKING CONFIRMATION', pageW / 2, headerH / 2 + 1, { align: 'center' });
-
-  y = headerH + 1.2;
-
-  // ════════════════════════════════════════════════════════════
-  // 2. CONGRATULATIONS BANNER
-  // ════════════════════════════════════════════════════════════
-  y += 6;
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
-  const congratsH = 38;
-  doc.roundedRect(margin, y, contentW, congratsH, 3, 3, 'FD');
-
-  // "Congratulations" text
-  doc.setTextColor(...COLORS.darkText);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Congratulations,', pageW / 2, y + 9, { align: 'center' });
-
-  // Buyer name
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.gold);
-  doc.text(displayBuyerName, pageW / 2, y + 17, { align: 'center' });
-
-  // Property info
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...COLORS.grey);
-  const propertyLine = `Your booking for Plot No. ${plotNo} at`;
-  doc.text(propertyLine, pageW / 2, y + 24, { align: 'center' });
+  doc.text(builderName, margin, y + 4);
 
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.darkText);
-  doc.text(projectName, pageW / 2, y + 31, { align: 'center' });
+  doc.setTextColor(...COLORS.darkBg);
+  doc.text('BOOKING CONFIRMATION', pageW - margin, y + 3.5, { align: 'right' });
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(...COLORS.mutedText);
-  doc.text('Reserved exclusively for you.', pageW / 2, y + 36, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.grey);
+  doc.text(`Ref: ${bookingNumber}  |  Date: ${bookingDate}`, pageW - margin, y + 8, { align: 'right' });
 
-  y += congratsH + 6;
+  // Thin elegant separator line
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.35);
+  doc.line(margin, y + 11, pageW - margin, y + 11);
+
+  y += 15;
 
   // ════════════════════════════════════════════════════════════
-  // 3. JOURNEY TRACKER
+  // 2. WELCOME BANNER
   // ════════════════════════════════════════════════════════════
-  // Section title
-  doc.setFillColor(...COLORS.darkBg);
-  const journeyTitleH = 7;
-  doc.roundedRect(margin, y, contentW, journeyTitleH, 2, 2, 'F');
+  doc.setFillColor(...COLORS.veryLightGrey);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, contentW, 18, 1.5, 1.5, 'FD');
+
+  doc.setFillColor(...COLORS.gold);
+  doc.rect(margin, y, 1.5, 18, 'F');
+
   doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(8);
+  doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text('YOUR JOURNEY', pageW / 2, y + 4.8, { align: 'center' });
-  y += journeyTitleH + 4;
+  doc.text(`Dear ${displayBuyerName},`, margin + 4, y + 5.5);
+
+  doc.setTextColor(...COLORS.darkText);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`We are pleased to confirm your booking for Plot No. ${plotNo} at ${projectName}. The transaction details are summarized below.`, margin + 4, y + 12);
+
+  y += 18 + 5;
+
+  // ════════════════════════════════════════════════════════════
+  // 3. PROPERTY & PURCHASER DETAILS (Side-by-Side Cards)
+  // ════════════════════════════════════════════════════════════
+  const colW = (contentW - 6) / 2; // 90mm
+
+  drawSectionHeader('PROPERTY DETAILS', margin, y);
+  drawSectionHeader('PURCHASER DETAILS', margin + colW + 6, y);
+  y += 6;
+
+  // Cards
+  doc.setFillColor(...COLORS.veryLightGrey);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, colW, 28, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin + colW + 6, y, colW, 28, 1.5, 1.5, 'FD');
+
+  // Property Details Card Content
+  let pY = y + 5;
+  doc.setTextColor(...COLORS.darkText);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(projectName, margin + 4, pY);
+  pY += 5;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.grey);
+  doc.text(`Plot No: ${plotNo}`, margin + 4, pY);
+  pY += 4.5;
+  doc.text(`Area: ${area} ${areaUnit}`, margin + 4, pY);
+  pY += 4.5;
+  doc.text(`Facing: ${facing !== '—' ? `${facing} Facing` : '—'}`, margin + 4, pY);
+  pY += 4.5;
+
+  const locLines = doc.splitTextToSize(locationText, colW - 8);
+  doc.text(locLines[0] || '—', margin + 4, pY);
+
+  // Purchaser Details Card Content
+  let uY = y + 5;
+  doc.setTextColor(...COLORS.darkText);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(buyerName, margin + colW + 10, uY);
+  uY += 5;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.grey);
+
+  if (relationText) {
+    doc.text(relationText, margin + colW + 10, uY);
+    uY += 4.5;
+  }
+
+  doc.text(`Phone: ${customerPhone}`, margin + colW + 10, uY);
+  uY += 4.5;
+
+  // Render multi-line customer address (replaces configuration)
+  const addrLines = doc.splitTextToSize(customerAddress, colW - 14);
+  addrLines.slice(0, 2).forEach((line) => {
+    doc.text(line, margin + colW + 10, uY);
+    uY += 4.2;
+  });
+
+  y += 28 + 5;
+
+  // ════════════════════════════════════════════════════════════
+  // 4. JOURNEY TRACKER
+  // ════════════════════════════════════════════════════════════
+  drawSectionHeader('YOUR JOURNEY STATUS', margin, y);
+  y += 6;
+
+  // Tracker Card
+  doc.setFillColor(...COLORS.veryLightGrey);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, contentW, 16, 1.5, 1.5, 'FD');
 
   const steps = [
     { label: 'BOOKED', codes: ['BOOKED', 'BOOKING_APPROVED', 'BOOKING_PENDING', 'TOKEN_RECEIVED', 'FORM_SUBMITTED'] },
@@ -216,15 +298,14 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
     { label: 'HANDOVER', codes: ['HANDOVER', 'POSSESSION'] },
   ];
 
-  // Determine active step index
   let activeIdx = 0;
   for (let i = steps.length - 1; i >= 0; i--) {
     if (steps[i].codes.includes(statusCode)) { activeIdx = i; break; }
   }
 
   const stepW = contentW / steps.length;
-  const circleR = 4;
-  const stepY = y + circleR + 1;
+  const circleR = 2.5;
+  const stepY = y + 5.5;
 
   steps.forEach((step, i) => {
     const cx = margin + stepW * i + stepW / 2;
@@ -234,7 +315,7 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
     if (i > 0) {
       const prevCx = margin + stepW * (i - 1) + stepW / 2;
       doc.setDrawColor(...(i <= activeIdx ? COLORS.gold : COLORS.lightGrey));
-      doc.setLineWidth(0.8);
+      doc.setLineWidth(0.6);
       doc.line(prevCx + circleR + 1, stepY, cx - circleR - 1, stepY);
     }
 
@@ -242,325 +323,212 @@ export const generateBookingConfirmationPDF = (booking, banks = []) => {
     if (isActive) {
       doc.setFillColor(...COLORS.gold);
       doc.circle(cx, stepY, circleR, 'F');
-      doc.setTextColor(...COLORS.white);
     } else {
       doc.setDrawColor(...COLORS.lightGrey);
       doc.setFillColor(...COLORS.white);
       doc.circle(cx, stepY, circleR, 'FD');
-      doc.setTextColor(...COLORS.lightGrey);
     }
-
-    // Checkmark or number
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
-    doc.text(isActive ? '✓' : String(i + 1), cx, stepY + 1.5, { align: 'center' });
 
     // Label
     doc.setTextColor(...(isActive ? COLORS.darkText : COLORS.mutedText));
     doc.setFontSize(6.5);
     doc.setFont('helvetica', isActive ? 'bold' : 'normal');
-    doc.text(step.label, cx, stepY + circleR + 5, { align: 'center' });
+    doc.text(step.label, cx, stepY + circleR + 4.5, { align: 'center' });
   });
 
-  y = stepY + circleR + 10;
+  y += 16 + 5;
 
   // ════════════════════════════════════════════════════════════
-  // 4. PROPERTY & PURCHASER — Two columns
+  // 5. INVESTMENT SUMMARY & BANK DETAILS (Side-by-Side Grid)
   // ════════════════════════════════════════════════════════════
-  const colW = (contentW - 6) / 2;
+  drawSectionHeader('INVESTMENT SUMMARY', margin, y);
+  drawSectionHeader('BANK PAYMENT INFORMATION', margin + colW + 6, y);
+  y += 6;
 
-  // Section header
-  doc.setFillColor(...COLORS.darkBg);
-  const propTitleH = 7;
-  doc.roundedRect(margin, y, colW, propTitleH, 2, 2, 'F');
-  doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('YOUR PROPERTY', margin + colW / 2, y + 4.8, { align: 'center' });
+  // Cards
+  doc.setFillColor(...COLORS.veryLightGrey);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.setLineWidth(0.2);
 
-  doc.roundedRect(margin + colW + 6, y, colW, propTitleH, 2, 2, 'F');
-  doc.text('PURCHASER', margin + colW + 6 + colW / 2, y + 4.8, { align: 'center' });
-  y += propTitleH + 2;
+  const mainCardH = 46;
+  doc.roundedRect(margin, y, colW, mainCardH, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin + colW + 6, y, colW, mainCardH, 1.5, 1.5, 'FD');
 
-  // Property card
-  const cardStartY = y;
-  const propCardH = 36;
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
-  doc.roundedRect(margin, y, colW, propCardH, 2, 2, 'FD');
-
-  const propX = margin + 5;
-  let propY = y + 7;
-  const propLineH = 6;
-
-  doc.setTextColor(...COLORS.darkText);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(projectName, propX, propY);
-  propY += propLineH;
-
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...COLORS.grey);
-  doc.text(`Plot No. ${plotNo}`, propX, propY);
-  propY += propLineH - 1;
-
-  doc.text(`${area} ${areaUnit}`, propX, propY);
-  propY += propLineH - 1;
-
-  doc.text(`${facing} Facing`, propX, propY);
-  propY += propLineH - 1;
-
-  const locationText = phaseName ? `${phaseName} · ${location}` : location;
-  // Truncate long location
-  const maxLocW = colW - 10;
-  const locLines = doc.splitTextToSize(locationText, maxLocW);
-  doc.text(locLines[0], propX, propY);
-
-  // Purchaser card
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
-  doc.roundedRect(margin + colW + 6, cardStartY, colW, propCardH, 2, 2, 'FD');
-
-  const purchX = margin + colW + 11;
-  let purchY = cardStartY + 7;
-
-  doc.setTextColor(...COLORS.darkText);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(buyerName, purchX, purchY);
-  purchY += propLineH;
-
-  // Relation line (buyer_name from customer may include "W/o" or "S/o")
-  const relationText = customer.buyer_name && customer.buyer_name !== buyerName
-    ? customer.buyer_name : '';
-  if (relationText) {
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.grey);
-    doc.text(relationText, purchX, purchY);
-    purchY += propLineH - 1;
-  } else {
-    purchY += 0;
-  }
-
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...COLORS.grey);
-  doc.text(customerPhone, purchX, purchY);
-  purchY += propLineH - 1;
-
-  doc.text(config, purchX, purchY);
-  purchY += propLineH - 1;
-
-  // Customer address (truncated to fit)
-  const addrLines = doc.splitTextToSize(customerAddress, colW - 10);
-  doc.text(addrLines[0], purchX, purchY);
-
-  y = cardStartY + propCardH + 6;
-
-  // ════════════════════════════════════════════════════════════
-  // 5. INVESTMENT BREAKDOWN
-  // ════════════════════════════════════════════════════════════
-  doc.setFillColor(...COLORS.darkBg);
-  const investTitleH = 7;
-  doc.roundedRect(margin, y, contentW, investTitleH, 2, 2, 'F');
-  doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('YOUR INVESTMENT', pageW / 2, y + 4.8, { align: 'center' });
-  y += investTitleH + 2;
-
-  // Investment table
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
+  // Left: Investment summary table
   const investItems = [
     { label: 'Plot Value', value: plotValue },
-    { label: 'Documentation', value: documentationCharges },
-    { label: 'Registration', value: registrationValue },
+    { label: 'Development Charges', value: developmentValue },
+    { label: 'Stamp Duty & Registration', value: stampValue + registrationValue },
     { label: 'Other Charges', value: otherChargesTotal },
   ].filter(item => item.value > 0 || item.label === 'Plot Value');
 
-  const rowH = 8;
-  const investCardH = (investItems.length + 1) * rowH + 16; // +1 for total row + words
-  doc.roundedRect(margin, y, contentW, investCardH, 2, 2, 'FD');
-
-  let investY = y + 6;
-  const labelX = margin + 8;
-  const valueX = margin + contentW - 8;
-
-  investItems.forEach((item) => {
-    doc.setFontSize(9);
+  let tableY = y + 4;
+  investItems.forEach((item, idx) => {
+    // Draw alternate shaded rows
+    if (idx % 2 === 1) {
+      doc.setFillColor(242, 240, 235);
+      doc.rect(margin + 1, tableY - 3, colW - 2, 6, 'F');
+    }
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.darkText);
-    doc.text(item.label, labelX, investY);
-    doc.setTextColor(...COLORS.grey);
-    doc.text(fmtINR(item.value), valueX, investY, { align: 'right' });
-    investY += rowH;
+    doc.text(item.label, margin + 4, tableY + 1.2);
+    doc.text(fmtINR(item.value), margin + colW - 4, tableY + 1.2, { align: 'right' });
+    tableY += 6;
   });
 
-  // Divider line
+  // Divider
   doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.5);
-  doc.line(labelX, investY - 2, valueX, investY - 2);
-  investY += 2;
+  doc.setLineWidth(0.3);
+  doc.line(margin + 4, tableY - 1, margin + colW - 4, tableY - 1);
+  tableY += 3;
 
-  // Total row
-  doc.setFontSize(11);
+  // Total Row
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.darkText);
-  doc.text('TOTAL INVESTMENT', labelX, investY);
+  doc.text('TOTAL INVESTMENT', margin + 4, tableY + 1);
   doc.setTextColor(...COLORS.gold);
-  doc.text(fmtINR(totalInvestment), valueX, investY, { align: 'right' });
-  investY += 5;
+  doc.text(fmtINR(totalInvestment), margin + colW - 4, tableY + 1, { align: 'right' });
+  tableY += 5.5;
 
-  // Amount in words
-  doc.setFontSize(7);
+  // Words
+  doc.setFontSize(6.5);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...COLORS.mutedText);
   const wordsText = numberToWords(totalInvestment);
-  const wordsLines = doc.splitTextToSize(wordsText, contentW - 16);
-  doc.text(wordsLines, pageW / 2, investY, { align: 'center' });
+  const wordsLines = doc.splitTextToSize(wordsText, colW - 8);
+  wordsLines.slice(0, 2).forEach((line) => {
+    doc.text(line, margin + colW / 2, tableY, { align: 'center' });
+    tableY += 3.5;
+  });
 
-  y += investCardH + 6;
-
-  // ════════════════════════════════════════════════════════════
-  // 6. PAYMENT INFORMATION — Two bank columns
-  // ════════════════════════════════════════════════════════════
-  doc.setFillColor(...COLORS.darkBg);
-  const payTitleH = 7;
-  doc.roundedRect(margin, y, contentW, payTitleH, 2, 2, 'F');
-  doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(8);
+  // Right: Bank Payment Details
+  let bY = y + 4;
+  
+  // Sub-card 1: Plot Amount
+  doc.setFillColor(...COLORS.white);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.roundedRect(margin + colW + 10, bY, colW - 8, 17, 1, 1, 'FD');
+  
+  doc.setFillColor(...COLORS.gold);
+  doc.rect(margin + colW + 10, bY, 1, 17, 'F');
+  
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text('PAYMENT INFORMATION', pageW / 2, y + 4.8, { align: 'center' });
-  y += payTitleH + 2;
-
-  const bankCardH = 34;
-  // Plot Amount bank
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
-  doc.roundedRect(margin, y, colW, bankCardH, 2, 2, 'FD');
-
-  let bY = y + 6;
-  const b1X = margin + 5;
+  doc.setTextColor(...COLORS.gold);
+  doc.text('PLOT AMOUNT ACCOUNT', margin + colW + 13, bY + 3.2);
+  
   doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.gold);
-  doc.text('PLOT AMOUNT', b1X, bY);
-  bY += 5;
-
-  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.darkText);
-  doc.text(safe(plotBank.bank_name, 'Bank Name'), b1X, bY);
-  bY += 4.5;
-
-  doc.setFontSize(7.5);
+  doc.text(safe(plotBank.bank_name, 'SBI'), margin + colW + 13, bY + 6.8);
+  
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(maskAccount(plotBank.account_number), b1X, bY);
-  bY += 4.5;
-  doc.text(`IFSC: ${safe(plotBank.ifsc_code, '—')}`, b1X, bY);
-  bY += 4.5;
-  doc.text(safe(plotBank.branch_name, '—'), b1X, bY);
+  doc.text(`A/c: ${maskAccount(plotBank.account_number)}  |  IFSC: ${safe(plotBank.ifsc_code, '—')}`, margin + colW + 13, bY + 10.5);
+  doc.text(`Branch: ${safe(plotBank.branch_name, '—')}`, margin + colW + 13, bY + 14);
 
-  // Development Charges bank
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
-  doc.roundedRect(margin + colW + 6, y, colW, bankCardH, 2, 2, 'FD');
+  bY += 21;
 
-  bY = y + 6;
-  const b2X = margin + colW + 11;
-  doc.setFontSize(7.5);
+  // Sub-card 2: Dev Charges
+  doc.setFillColor(...COLORS.white);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.roundedRect(margin + colW + 10, bY, colW - 8, 17, 1, 1, 'FD');
+  
+  doc.setFillColor(...COLORS.gold);
+  doc.rect(margin + colW + 10, bY, 1, 17, 'F');
+  
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.gold);
-  doc.text('DEVELOPMENT CHARGES', b2X, bY);
-  bY += 5;
-
-  doc.setFontSize(8);
+  doc.text('DEVELOPMENT CHARGES ACCOUNT', margin + colW + 13, bY + 3.2);
+  
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.darkText);
-  doc.text(safe(devBank.bank_name, 'Bank Name'), b2X, bY);
-  bY += 4.5;
-
-  doc.setFontSize(7.5);
+  doc.text(safe(devBank.bank_name, 'HDFC'), margin + colW + 13, bY + 6.8);
+  
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(maskAccount(devBank.account_number), b2X, bY);
-  bY += 4.5;
-  doc.text(`IFSC: ${safe(devBank.ifsc_code, '—')}`, b2X, bY);
-  bY += 4.5;
-  doc.text(safe(devBank.branch_name, '—'), b2X, bY);
+  doc.text(`A/c: ${maskAccount(devBank.account_number)}  |  IFSC: ${safe(devBank.ifsc_code, '—')}`, margin + colW + 13, bY + 10.5);
+  doc.text(`Branch: ${safe(devBank.branch_name, '—')}`, margin + colW + 13, bY + 14);
 
-  y += bankCardH + 6;
+  y += mainCardH + 5;
 
   // ════════════════════════════════════════════════════════════
-  // 7. IMPORTANT INFORMATION
+  // 6. TERMS & SIGNATURES (Side-by-Side Grid)
   // ════════════════════════════════════════════════════════════
-  doc.setFillColor(...COLORS.darkBg);
-  const infoTitleH = 7;
-  doc.roundedRect(margin, y, contentW, infoTitleH, 2, 2, 'F');
-  doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('IMPORTANT INFORMATION', pageW / 2, y + 4.8, { align: 'center' });
-  y += infoTitleH + 2;
+  drawSectionHeader('IMPORTANT TERMS & CONDITIONS', margin, y);
+  drawSectionHeader('CONFIRMATION & SIGNATURES', margin + colW + 6, y);
+  y += 6;
 
+  const bottomCardH = 34;
+  doc.setFillColor(...COLORS.veryLightGrey);
+  doc.setDrawColor(...COLORS.lightGrey);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, colW, bottomCardH, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin + colW + 6, y, colW, bottomCardH, 1.5, 1.5, 'FD');
+
+  // Left: Terms list
   const terms = [
-    'Complete payment within 30 days from booking.',
-    'Aadhaar & PAN required before registration.',
-    'Registration charges are borne by purchaser.',
+    'Complete payment within 30 days of booking.',
+    'Aadhaar & PAN are mandatory for registration.',
+    'Registration charges are borne by the purchaser.',
     'Cancellation charges apply as per company policy.',
-    'Delayed payments attract interest @ 18% per annum.',
+    'Delayed payments attract interest @ 18% p.a.',
   ];
-
-  doc.setFillColor(...COLORS.sectionBg);
-  doc.setDrawColor(...COLORS.cardBorder);
-  const termsCardH = terms.length * 5.5 + 8;
-  doc.roundedRect(margin, y, contentW, termsCardH, 2, 2, 'FD');
-
-  let termY = y + 6;
+  
+  let termY = y + 4.5;
   terms.forEach((term) => {
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.darkText);
-    doc.text('•', margin + 6, termY);
-    doc.text(term, margin + 10, termY);
+    doc.text('•', margin + 4, termY);
+    doc.text(term, margin + 7, termY);
     termY += 5.5;
   });
 
-  y += termsCardH + 10;
-
-  // ════════════════════════════════════════════════════════════
-  // 8. SIGNATURE LINES
-  // ════════════════════════════════════════════════════════════
-  // Check if we need a new page
-  if (y > pageH - 30) {
-    doc.addPage();
-    y = 20;
-  }
-
-  const sigLineW = 60;
-  const sigLeftX = margin + 10;
-  const sigRightX = pageW - margin - sigLineW - 10;
+  // Right: Signatures
+  let sigY = y + 16;
+  const sigLineW = 34;
+  const sigLeftX = margin + colW + 11;
+  const sigRightX = margin + colW * 2 - sigLineW - 1;
 
   doc.setDrawColor(...COLORS.darkText);
-  doc.setLineWidth(0.3);
-  doc.line(sigLeftX, y, sigLeftX + sigLineW, y);
-  doc.line(sigRightX, y, sigRightX + sigLineW, y);
+  doc.setLineWidth(0.25);
+  doc.line(sigLeftX, sigY, sigLeftX + sigLineW, sigY);
+  doc.line(sigRightX, sigY, sigRightX + sigLineW, sigY);
 
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.darkText);
+  doc.text('Customer Signature', sigLeftX + sigLineW / 2, sigY + 4, { align: 'center' });
+  doc.text('Authorized Signatory', sigRightX + sigLineW / 2, sigY + 4, { align: 'center' });
+
+  doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text('Customer Signature', sigLeftX + sigLineW / 2, y + 5, { align: 'center' });
-  doc.text('Authorized Signatory', sigRightX + sigLineW / 2, y + 5, { align: 'center' });
+  doc.text('Date: ________________', sigLeftX + sigLineW / 2, sigY + 8, { align: 'center' });
+  doc.text(`For ${safe(project.builder_name, 'Premium Builders')}`, sigRightX + sigLineW / 2, sigY + 8, { align: 'center' });
 
   // ════════════════════════════════════════════════════════════
-  // 9. FOOTER — Gold line at bottom
+  // 7. FOOTER
   // ════════════════════════════════════════════════════════════
+  const footerY = pageH - 12;
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(...COLORS.grey);
+  doc.text('This is a computer-generated booking confirmation and does not require a physical signature.', pageW / 2, footerY, { align: 'center' });
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${safe(project.builder_name, 'Premium Builders')}  |  Contact: ${customerPhone}  |  Ref: ${bookingNumber}`, pageW / 2, footerY + 3.5, { align: 'center' });
+
+  // Gold band at the very bottom
   doc.setFillColor(...COLORS.gold);
-  doc.rect(0, pageH - 3, pageW, 3, 'F');
+  doc.rect(0, pageH - 2.5, pageW, 2.5, 'F');
 
   // ── Trigger download ──
   const fileName = `Booking_Confirmation_${bookingNumber}.pdf`;
