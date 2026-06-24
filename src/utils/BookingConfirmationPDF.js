@@ -203,8 +203,8 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   // ============================================================
   // PAGE 1: CONFIRMATION DETAILS & JOURNEY TRACKER
   // ============================================================
-  // Start from 40% height of the page to leave the top portion blank
-  let y = pageH * 0.40;
+  // Start from top, leaving 45mm empty header space for letterhead
+  let y = 45;
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
@@ -242,7 +242,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'normal');
   
-  const bannerText = `We are pleased to confirm your booking for Plot No. ${plotNo} at ${projectName}. The transaction details are summarized below.`;
+  const bannerText = `We are pleased to confirm your booking for Plot No. ${plotNo} at ${projectName}. The booking details are summarized below.`;
   const bannerLines = doc.splitTextToSize(bannerText, contentW - 10);
   bannerLines.forEach((line, idx) => {
     doc.text(line, margin + 5, y + 14 + (idx * 5));
@@ -269,7 +269,10 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(projectName, margin + 5, pY);
+  const displayProjectName = (phaseName && !projectName.toLowerCase().includes(phaseName.toLowerCase()))
+    ? `${projectName} ${phaseName}`
+    : projectName;
+  doc.text(displayProjectName, margin + 5, pY);
   pY += 7;
 
   doc.setFontSize(10);
@@ -280,9 +283,6 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.text(`Area / Extent: ${area} ${areaUnit}`, margin + 5, pY);
   pY += 6;
   doc.text(`Facing: ${facing !== '—' ? `${facing} Facing` : '—'}`, margin + 5, pY);
-  pY += 6;
-  const locLines = doc.splitTextToSize(locationText, colW - 10);
-  doc.text(locLines[0] || '—', margin + 5, pY);
 
   // Purchaser details
   let uY = y + 6.5;
@@ -375,7 +375,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   // PAGE 2: DETAILED COST BREAKDOWN
   // ============================================================
   doc.addPage();
-  y = 22;
+  y = 45;
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
@@ -514,7 +514,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   // PAGE 3: BANK DETAILS, TERMS & CONDITIONS & SIGNATURES
   // ============================================================
   doc.addPage();
-  y = 22;
+  y = 45;
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
