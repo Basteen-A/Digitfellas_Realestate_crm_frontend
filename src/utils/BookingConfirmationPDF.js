@@ -73,7 +73,7 @@ const getBankNameFromIFSC = (ifsc) => {
 };
 
 /* ── Main export ── */
-export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankParam) => {
+export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankParam, termsParam) => {
   if (!booking) return;
 
   // Unpack bank details
@@ -114,7 +114,9 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const locationText = phaseName ? `${phaseName} · ${location}` : location;
 
   const customerPhone = safe(customer.phone, '—');
-  
+  const pan = customer.pan_number ? customer.pan_number.trim() : '';
+  const aadhaar = customer.aadhar_number ? customer.aadhar_number.trim() : '';
+
   // Customer Address
   const addressParts = [
     customer.address_line_1,
@@ -130,7 +132,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const relName = booking.relation_name || customer.relation_name || '';
   let displayRelation = '';
   if (relType && relName) {
-    displayRelation = `${relType} ${relName}`;
+    displayRelation = `${relType.toUpperCase()} ${relName}`;
   } else if (customer.buyer_name && customer.buyer_name !== buyerName) {
     displayRelation = customer.buyer_name;
   }
@@ -252,15 +254,15 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const colW = (contentW - 6) / 2; // 90mm
 
   drawSectionHeader('PROPERTY DETAILS', margin, y);
-  drawSectionHeader('PURCHASER DETAILS', margin + colW + 6, y);
+  drawSectionHeader('CUSTOMER DETAILS', margin + colW + 6, y);
   y += 7;
 
-  // Cards (height increased to 42 for larger fonts)
+  // Cards (height increased to 52 for larger fonts/extra details)
   doc.setFillColor(...COLORS.veryLightGrey);
   doc.setDrawColor(...COLORS.lightGrey);
   doc.setLineWidth(0.25);
-  doc.roundedRect(margin, y, colW, 42, 1.5, 1.5, 'FD');
-  doc.roundedRect(margin + colW + 6, y, colW, 42, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin, y, colW, 52, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin + colW + 6, y, colW, 52, 1.5, 1.5, 'FD');
 
   // Property details
   let pY = y + 6.5;
@@ -305,8 +307,16 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     doc.text(line, margin + colW + 11, uY);
     uY += 5.5;
   });
-
-  y += 42 + 10;
+  if (pan) {
+    doc.text(`PAN: ${pan}`, margin + colW + 11, uY);
+    uY += 5.5;
+  }
+  if (aadhaar) {
+    doc.text(`Aadhaar: ${aadhaar}`, margin + colW + 11, uY);
+    uY += 5.5;
+  }
+  
+  y += 52 + 10;
 
   // Journey Tracker Card
   drawSectionHeader('YOUR JOURNEY STATUS', margin, y);
@@ -632,8 +642,8 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   
   y += 8;
 
-  // The 10 Terms (font size 9.5, spacing 2.5)
-  const terms = [
+  // Dynamic terms & conditions
+  const defaultTerms = [
     'I shall pay the plot amount in 30 days, balance amount in 30 days and shall complete registration 30 days',
     'The Purchaser shall complete all payments before registration. The Purchaser shall provide original copies of the Aadhaar Card and PAN at least 2 working days before the registration of the plot.',
     'The Developer shall provide a sale deed draft to the Purchaser 2 days prior to the date of registration. Only after the confirmation from the Purchaser the Developer shall take printouts of the documents.',
@@ -646,9 +656,19 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     'In case the buyer fails to make the payment as per the agreed terms, an interest of 18% per annum shall be levied on the outstanding amount for the total tenure of the delay'
   ];
 
+  const terms = (termsParam && termsParam.length > 0)
+    ? termsParam.map(t => t.content)
+    : defaultTerms;
+
   let termY = y;
+  const totalLength = terms.reduce((sum, t) => sum + t.length, 0);
+  const useCompact = terms.length > 10 || totalLength > 1000;
+  const fontSize = useCompact ? 8.5 : 9.5;
+  const lineSpacing = useCompact ? 4.5 : 5.2;
+  const paragraphSpacing = useCompact ? 1.5 : 2.5;
+
   terms.forEach((term, idx) => {
-    doc.setFontSize(9.5);
+    doc.setFontSize(fontSize);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...COLORS.black);
     doc.text(`${idx + 1}.`, margin, termY + 3);
@@ -658,9 +678,9 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     const lines = doc.splitTextToSize(term, contentW - 10);
     lines.forEach((line) => {
       doc.text(line, margin + 7, termY + 3);
-      termY += 5.2;
+      termY += lineSpacing;
     });
-    termY += 2.5; // space between terms
+    termY += paragraphSpacing;
   });
 
   // Signatures block positioned securely at the bottom

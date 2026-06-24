@@ -201,6 +201,7 @@ const adminSidebar = [
     icon: Cog6ToothIcon,
     children: [
       { label: 'Customer Types', path: '/super-admin/customer-types' },
+      { label: 'Terms & Conditions', path: '/super-admin/terms-and-conditions' },
       { label: 'Departments', path: '/super-admin/departments' },
       { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
     ],

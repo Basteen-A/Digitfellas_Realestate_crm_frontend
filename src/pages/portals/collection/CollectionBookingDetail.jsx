@@ -14,6 +14,7 @@ import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
 import { ROLE_CODES } from '../../../utils/constants';
 import { generateBookingConfirmationPDF } from '../../../utils/BookingConfirmationPDF';
+import termsAndConditionsApi from '../../../api/termsAndConditionsApi';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
   BanknotesIcon, UserIcon, ClockIcon,
@@ -42,6 +43,7 @@ const InfoRow = ({label,value,mono,color}) => (
 
 const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [booking, setBooking] = useState(null);
+  const [terms, setTerms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [paymentPlans, setPaymentPlans] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
@@ -261,6 +263,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
+    termsAndConditionsApi.getDropdown().then(r => setTerms(r.data?.data || r.data || [])).catch(() => {});
     paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
     bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
     bookingApi.getPaymentFormMasters().then((r) => {
@@ -970,7 +973,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 onClick={() => {
                   const chosenPlotBank = bankOptions.find(b => b.id === selectedPlotBankId);
                   const chosenDevBank = bankOptions.find(b => b.id === selectedDevBankId);
-                  generateBookingConfirmationPDF(booking, chosenPlotBank, chosenDevBank);
+                  generateBookingConfirmationPDF(booking, chosenPlotBank, chosenDevBank, terms);
                 }}
                 title={(selectedPlotBankId && selectedDevBankId) ? "Download Booking Confirmation PDF" : "Please select both bank accounts first"}
               >

@@ -55,6 +55,7 @@ import Reports from '../pages/superadmin/Reports';
 import FinanceRevenue from '../pages/superadmin/Finance/FinanceRevenue';
 import FinanceCollections from '../pages/superadmin/Finance/FinanceCollections';
 import SiteSettings from '../pages/superadmin/SiteSettings';
+import TermsAndConditions from '../pages/superadmin/TermsAndConditions';
 import ReallotmentRules from '../pages/superadmin/ReallotmentRules';
 import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
 import {
@@ -245,6 +246,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/banks" element={<Banks />} />
             <Route path="/super-admin/payment-statuses" element={<PaymentStatuses />} />
             <Route path="/super-admin/site-settings" element={<SiteSettings />} />
+            <Route path="/super-admin/terms-and-conditions" element={<TermsAndConditions />} />
             <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
             <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
           </Route>

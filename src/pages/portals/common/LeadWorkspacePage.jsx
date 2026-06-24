@@ -1002,6 +1002,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
   const [customerProfileForm, setCustomerProfileForm] = useState({
     buyer_name: '',
+    relation_type: '',
+    relation_name: '',
     date_of_birth: '', pan_number: '', aadhar_number: '',
     occupation: '', current_post: '', purchase_type: '', marital_status: '',
     current_address: '', current_area: '', current_city: '', current_state: '', current_pincode: '',
@@ -2480,8 +2482,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         location_id: f.bookingLocationId || undefined,
         project_id: f.bookingProjectId || undefined,
         buyer_name: f.buyer_name || undefined,
+        relation_type: f.relation_type || undefined,
+        relation_name: f.relation_name || undefined,
         customerProfile: {
           buyer_name: f.buyer_name || undefined,
+          relation_type: f.relation_type || undefined,
+          relation_name: f.relation_name || undefined,
           date_of_birth: f.date_of_birth ? new Date(f.date_of_birth).toISOString() : undefined,
           pan_number: f.pan_number,
           aadhar_number: f.aadhar_number,
@@ -6278,6 +6284,23 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Buyer Name</div>
                       <div style={{ marginBottom: 12 }}>
                         <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter buyer name (if different from lead)" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} />
+                      </div>
+                      {/* ── Relation Details ── */}
+                      <div className="qa-drawer-profile-grid" style={{ marginBottom: 12 }}>
+                        <div>
+                          <label className="qa-drawer-field-label">Relation (S/O or W/O)</label>
+                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.relation_type} onChange={(e) => setCustomerProfileForm(p => ({ ...p, relation_type: e.target.value }))}>
+                            <option value="">Select relation...</option>
+                            <option value="S/O">S/O (Son of)</option>
+                            <option value="W/O">W/O (Wife of)</option>
+                            <option value="D/O">D/O (Daughter of)</option>
+                            <option value="C/O">C/O (Care of)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Relative Name</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter relative name" value={customerProfileForm.relation_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, relation_name: e.target.value }))} />
+                        </div>
                       </div>
                       {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>

@@ -23,6 +23,7 @@ import paymentStatusApi from '../../../api/paymentStatusApi';
 import departmentApi from '../../../api/departmentApi';
 import subDepartmentApi from '../../../api/subDepartmentApi';
 import reallotmentRuleApi from '../../../api/reallotmentRuleApi';
+import termsAndConditionsApi from '../../../api/termsAndConditionsApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -989,6 +990,21 @@ export const masterConfigs = {
       { name: 'needs_remarks', label: 'Needs Remarks', type: 'checkbox', defaultValue: false },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
+    ],
+  },
+
+  termsAndConditions: {
+    title: 'Terms & Conditions',
+    api: termsAndConditionsApi,
+    columns: [
+      { header: 'Term & Condition Text', path: 'content', render: (row) => row.content.length > 80 ? row.content.substring(0, 80) + '...' : row.content },
+      { header: 'Sort', path: 'sort_order' },
+      { header: 'Active', path: 'is_active', type: 'boolean' },
+    ],
+    fields: [
+      { name: 'content', label: 'Content', type: 'textarea', required: true, placeholder: 'Enter term text' },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },
