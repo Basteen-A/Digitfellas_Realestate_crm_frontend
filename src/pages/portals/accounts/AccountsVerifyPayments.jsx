@@ -25,6 +25,9 @@ const extractRows = (data) => {
 };
 
 const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
+  const roleCode = user?.userTypeCode || user?.user_type_code || user?.userType?.short_code || null;
+  const isAccountsManager = roleCode && String(roleCode).toUpperCase() === 'AM';
+
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(initialFilter);
@@ -43,14 +46,18 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   const [verifyTxnId, setVerifyTxnId] = useState('');
   const [verifyNote, setVerifyNote] = useState('');
 
-  const normalizedFilter = filter === 'pending' ? 'unverified' : filter;
+  const normalizedFilter = isAccountsManager ? 'verified' : (filter === 'pending' ? 'unverified' : filter);
 
   const matchesFilter = useCallback((p) => {
+    if (isAccountsManager) {
+      if (p?.payment_mode?.toLowerCase() !== 'cash') return false;
+      return isVerifiedPayment(p) && !p.is_bounced;
+    }
     if (normalizedFilter === 'verified') return isVerifiedPayment(p) && !p.is_bounced;
     if (normalizedFilter === 'rejected') return !!p.is_bounced;
     if (normalizedFilter === 'unverified') return !isVerifiedPayment(p) && !p.is_bounced;
     return true;
-  }, [normalizedFilter]);
+  }, [normalizedFilter, isAccountsManager]);
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -75,7 +82,12 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
       if (normalizedFilter === 'verified' && filteredRows.length === 0) {
         const statsResp = await dashboardApi.getAccountsStats();
         const stats = statsResp.data?.data || statsResp.data || {};
-        const fallbackRows = (stats.recentPayments || []).filter((p) => isVerifiedPayment(p) && !p.is_bounced);
+        const fallbackRows = (stats.recentPayments || []).filter((p) => {
+          if (isAccountsManager) {
+            return p?.payment_mode?.toLowerCase() === 'cash' && isVerifiedPayment(p) && !p.is_bounced;
+          }
+          return isVerifiedPayment(p) && !p.is_bounced;
+        });
         if (fallbackRows.length > 0) {
           setPayments(fallbackRows);
           setTotal(fallbackRows.length);
@@ -91,8 +103,12 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
         setTotal(fallbackRows.length);
       } else {
         setPayments(filteredRows);
-        const reportedTotal = data?.pagination?.totalItems || data?.count || rows.length || 0;
-        setTotal(Math.max(reportedTotal, filteredRows.length));
+        if (isAccountsManager) {
+          setTotal(filteredRows.length);
+        } else {
+          const reportedTotal = data?.pagination?.totalItems || data?.count || rows.length || 0;
+          setTotal(Math.max(reportedTotal, filteredRows.length));
+        }
       }
     } catch (err) {
       console.error('Failed to fetch payments:', err);
@@ -100,13 +116,13 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
     } finally {
       setLoading(false);
     }
-  }, [normalizedFilter, page, limit, matchesFilter]);
+  }, [normalizedFilter, page, limit, matchesFilter, isAccountsManager]);
 
   useEffect(() => {
-    setFilter(initialFilter || 'unverified');
+    setFilter(isAccountsManager ? 'verified' : (initialFilter || 'unverified'));
     setPage(1);
     setSelected(null);
-  }, [initialFilter]);
+  }, [initialFilter, isAccountsManager]);
 
   useEffect(() => {
     fetchPayments();
@@ -165,6 +181,10 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   };
 
   const visiblePayments = payments.filter((p) => {
+    if (isAccountsManager) {
+      if (p?.payment_mode?.toLowerCase() !== 'cash') return false;
+      if (!isVerifiedPayment(p) || p.is_bounced) return false;
+    }
     if (!search) return true;
     const s = search.toLowerCase();
     return (
@@ -181,34 +201,38 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
       {/* Page Header */}
       <div className="col-greeting-new">
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-          {filter === 'unverified' ? 'Payment Verification' : filter === 'verified' ? 'Verified Payments' : 'Rejected Payments'}
+          {isAccountsManager ? 'Verified Cash Payments' : (filter === 'unverified' ? 'Payment Verification' : filter === 'verified' ? 'Verified Payments' : 'Rejected Payments')}
         </h1>
         <p style={{ color: 'var(--col-text-secondary)', marginTop: 4, fontSize: '0.875rem' }}>
-          {filter === 'unverified'
+          {isAccountsManager
+            ? 'History of all verified cash payments'
+            : (filter === 'unverified'
             ? 'Review payments submitted by Collection Managers and verify against bank records'
             : filter === 'verified'
             ? 'History of all verified payments'
-            : 'Payments that were rejected during verification'}
+            : 'Payments that were rejected during verification')}
         </p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="acct-verify-tabs">
-        {['unverified', 'verified', 'rejected'].map((f) => (
-          <button
-            key={f}
-            onClick={() => { setFilter(f); setPage(1); setSelected(null); }}
-            className={`acct-verify-tab ${filter === f ? 'active' : ''}`}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {f === 'unverified' && <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />}
-              {f === 'verified' && <CheckCircleIcon style={{ width: 14, height: 14 }} />}
-              {f === 'rejected' && <XCircleIcon style={{ width: 14, height: 14 }} />}
-              {f === 'unverified' ? 'Pending' : f === 'verified' ? 'Verified' : 'Rejected'}
-            </span>
-          </button>
-        ))}
-      </div>
+      {!isAccountsManager && (
+        <div className="acct-verify-tabs">
+          {['unverified', 'verified', 'rejected'].map((f) => (
+            <button
+              key={f}
+              onClick={() => { setFilter(f); setPage(1); setSelected(null); }}
+              className={`acct-verify-tab ${filter === f ? 'active' : ''}`}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {f === 'unverified' && <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />}
+                {f === 'verified' && <CheckCircleIcon style={{ width: 14, height: 14 }} />}
+                {f === 'rejected' && <XCircleIcon style={{ width: 14, height: 14 }} />}
+                {f === 'unverified' ? 'Pending' : f === 'verified' ? 'Verified' : 'Rejected'}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Main Panel — queue + detail sidebar */}
       <div className="acct-verify-layout">

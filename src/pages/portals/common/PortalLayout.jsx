@@ -89,6 +89,9 @@ const getWorkspaceBasePath = (pathname = '') => {
   if (pathname.startsWith('/sales-head/')) return '/sales-head/leads';
   if (pathname.startsWith('/collection/')) return '/collection/leads';
   if (pathname.startsWith('/accounts/')) return '/accounts/dashboard';
+  if (pathname.startsWith('/accounts-manager/')) return '/accounts-manager/verify';
+  if (pathname.startsWith('/collection-exec/')) return '/collection-exec/bookings';
+  if (pathname.startsWith('/record-manager/')) return '/record-manager/bookings';
   if (pathname.startsWith('/task-portal/')) return '/task-portal/dashboard';
   return null;
 };
@@ -122,7 +125,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const location = useLocation();
   const { isDark, toggleTheme } = useThemeContext();
   const roleCode = getRoleCode(user);
-  const canUsePhoneLookup = !['COL', 'ACCT', 'SE'].includes(roleCode);
+  const canUsePhoneLookup = !['COL', 'ACCT', 'SE', 'RM', 'AM', 'CE'].includes(roleCode);
   const isAdmin = ['SA', 'ADM'].includes(roleCode);
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const queryScreen = searchParams.get('screen') || '';

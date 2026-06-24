@@ -10,6 +10,9 @@ const PORTAL_ROLE_MAP = {
   '/sales-head': ['SH'],
   '/collection': ['COL'],
   '/accounts': ['ACCT'],
+  '/accounts-manager': ['AM'],
+  '/collection-exec': ['CE'],
+  '/record-manager': ['RM'],
   '/task-portal': ['SE'],
 };
 
@@ -41,9 +44,10 @@ const PortalRoute = ({ children }) => {
     return children || <Outlet />;
   }
   
-  // Find which portal the user is trying to access
+  // Find which portal the user is trying to access.
+  // Use path + '/' to prevent prefix collisions (e.g. /collection matching /collection-exec).
   const portalMatch = Object.entries(PORTAL_ROLE_MAP).find(([path]) => 
-    pathname.startsWith(path)
+    pathname === path || pathname.startsWith(path + '/')
   );
   
   if (!portalMatch) {
@@ -71,6 +75,15 @@ const PortalRoute = ({ children }) => {
     }
     if (userRoleCode === 'ACCT') {
       return <Navigate to="/accounts/dashboard" replace />;
+    }
+    if (userRoleCode === 'RM') {
+      return <Navigate to="/record-manager/bookings" replace />;
+    }
+    if (userRoleCode === 'AM') {
+      return <Navigate to="/accounts-manager/verify" replace />;
+    }
+    if (userRoleCode === 'CE') {
+      return <Navigate to="/collection-exec/bookings" replace />;
     }
     if (userRoleCode === 'SE') {
       return <Navigate to="/task-portal/dashboard" replace />;

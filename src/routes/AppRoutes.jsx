@@ -69,6 +69,9 @@ import SalesManagerWorkspace from '../pages/portals/salesmanager';
 import SalesHeadWorkspace from '../pages/portals/saleshead';
 import CollectionWorkspace from '../pages/portals/collection';
 import AccountsWorkspace from '../pages/portals/accounts';
+import RecordManagerWorkspace from '../pages/portals/recordmanager';
+import AccountsManagerWorkspace from '../pages/portals/accountsmanager';
+import CollectionExecWorkspace from '../pages/portals/collectionexec';
 
 // Admin-area task dashboard: reuse the task dashboard, but keep "view all tasks"
 // inside the admin layout (-> /super-admin/tasks) instead of the standalone portal.
@@ -87,6 +90,9 @@ const RoleHomeRedirect = () => {
   if (roleCode === 'SH') return <Navigate to="/sales-head/leads" replace />;
   if (roleCode === 'COL') return <Navigate to="/collection/leads" replace />;
   if (roleCode === 'ACCT') return <Navigate to="/accounts/dashboard" replace />;
+  if (roleCode === 'RM') return <Navigate to="/record-manager/bookings" replace />;
+  if (roleCode === 'AM') return <Navigate to="/accounts-manager/verify" replace />;
+  if (roleCode === 'CE') return <Navigate to="/collection-exec/bookings" replace />;
 
   // Organization Head lands on the first module they were granted.
   if (roleCode === 'OH') {
@@ -145,9 +151,21 @@ const AppRoutes = () => {
             <Route element={<RoleRoute allowedRoles={['ACCT', 'SA', 'ADM']} />}>
               <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
             </Route>
+
+            <Route element={<RoleRoute allowedRoles={['RM', 'SA', 'ADM']} />}>
+              <Route path="/record-manager/bookings" element={<RecordManagerWorkspace />} />
+            </Route>
+
+            <Route element={<RoleRoute allowedRoles={['AM', 'SA', 'ADM']} />}>
+              <Route path="/accounts-manager/verify" element={<AccountsManagerWorkspace />} />
+            </Route>
+
+            <Route element={<RoleRoute allowedRoles={['CE', 'SA', 'ADM']} />}>
+              <Route path="/collection-exec/bookings" element={<CollectionExecWorkspace />} />
+            </Route>
           </Route>
 
-          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'SA', 'ADM', 'SE']} />}>
+          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'AM', 'CE', 'RM', 'SA', 'ADM', 'SE']} />}>
             <Route
               path="/portal/lead/:id"
               element={(

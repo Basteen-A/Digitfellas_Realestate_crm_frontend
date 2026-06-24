@@ -112,6 +112,8 @@ const SalesHeadBookings = ({ user }) => {
       payment_plan_id: selectedBooking.payment_plan_id || '',
       payment_type_id: selectedBooking.payment_type_id || '',
       remarks: selectedBooking.remarks || '',
+      relation_type: selectedBooking.relation_type || '',
+      relation_name: selectedBooking.relation_name || '',
     });
     setEditMode(true);
   };
@@ -276,6 +278,25 @@ const SalesHeadBookings = ({ user }) => {
                           {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
                         </select>
                       </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Relation (S/O or W/O)</label>
+                        <select className="col-form-select" value={editForm.relation_type || ''} onChange={e => setEditForm(p => ({ ...p, relation_type: e.target.value }))}>
+                          <option value="">Select relation...</option>
+                          <option value="S/O">S/O (Son of)</option>
+                          <option value="W/O">W/O (Wife of)</option>
+                          <option value="D/O">D/O (Daughter of)</option>
+                          <option value="C/O">C/O (Care of)</option>
+                        </select>
+                      </div>
+                      <div className="col-form-group">
+                        <label className="col-form-label">Relative Name</label>
+                        <input 
+                          className="col-form-input" 
+                          type="text"
+                          value={editForm.relation_name || ''} 
+                          onChange={e => setEditForm(p => ({ ...p, relation_name: e.target.value }))} 
+                        />
+                      </div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 15 }}>
                       <div className="col-form-group">
@@ -307,6 +328,9 @@ const SalesHeadBookings = ({ user }) => {
                     <div className="col-booking-header" style={{ background: 'var(--bg-secondary)', padding: 15, borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div className="col-booking-customer">
                         <div style={{ fontSize: 14 }}>Customer: <strong style={{ color: 'var(--text-primary)' }}>{selectedBooking.customer?.first_name} {selectedBooking.customer?.last_name || ''}</strong></div>
+                        {selectedBooking.relation_type && selectedBooking.relation_name && (
+                          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Relation: <strong>{selectedBooking.relation_type} {selectedBooking.relation_name}</strong></div>
+                        )}
                         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Project: <strong>{selectedBooking.project?.project_name || '-'}</strong> | Unit: <strong>{selectedBooking.unit_number || 'TBD'}</strong></div>
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>

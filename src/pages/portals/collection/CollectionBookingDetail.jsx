@@ -82,6 +82,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [approvalAction, setApprovalAction] = useState(null); // 'approve' | 'reject'
   const [approvalRemarks, setApprovalRemarks] = useState('');
   const [approvalSaving, setApprovalSaving] = useState(false);
+  const [selectedPlotBankId, setSelectedPlotBankId] = useState('');
+  const [selectedDevBankId, setSelectedDevBankId] = useState('');
   const emptyRegSplit = {
     stamp_commission: '',
     registration_expenses: '',
@@ -114,6 +116,33 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
+
+  // ── Assign to Collection Executive (Collection Manager) ──
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [executives, setExecutives] = useState([]);
+  const [selectedExecId, setSelectedExecId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const openAssign = () => {
+    setSelectedExecId(booking?.collection_executive_id || '');
+    setAssignOpen(true);
+    bookingApi.getCollectionExecutives()
+      .then((r) => setExecutives(r.data?.data || r.data || []))
+      .catch(() => setExecutives([]));
+  };
+  const handleAssignExecutive = async () => {
+    setAssigning(true);
+    try {
+      await bookingApi.assignCollectionExecutive(bookingId, { collection_executive_id: selectedExecId || null });
+      toast.success(selectedExecId ? 'Collection Executive assigned' : 'Assignment cleared');
+      setAssignOpen(false);
+      loadBooking();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to assign'));
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   // ── File-type helpers (icon + flag) ──
   const getFileMeta = (mimeType = '', fileName = '') => {
@@ -896,10 +925,58 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <ExclamationTriangleIcon style={{width:14,height:14}}/> Delete Booking
             </button>
           )}
-          {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user)) && (
-            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#C19A57',color:'#C19A57'}} onClick={() => generateBookingConfirmationPDF(booking, bankOptions)} title="Download Booking Confirmation PDF">
-              <ArrowDownTrayIcon style={{width:14,height:14}}/> Download PDF
+          {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user)) && !booking.is_cancelled && (
+            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#6366F1',color:'#6366F1'}} onClick={openAssign} title="Assign this booking to a Collection Executive">
+              <UserIcon style={{width:14,height:14}}/> {booking.collectionExecutive ? `Executive: ${booking.collectionExecutive.first_name}` : 'Assign Executive'}
             </button>
+          )}
+          {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user)) && (booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_APPROVED' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <select
+                className="bkd-btn bkd-btn-outline"
+                style={{ borderColor: '#6B7280', color: '#374151', background: '#F9FAFB', cursor: 'pointer', height: '36px', padding: '0 12px', borderRadius: '4px' }}
+                value={selectedPlotBankId}
+                onChange={(e) => setSelectedPlotBankId(e.target.value)}
+              >
+                <option value="">-- Plot Bank --</option>
+                {bankOptions.filter(b => b.is_active !== false).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.bank_name} ({b.account_number.replace(/\s/g, '').slice(-4)})
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bkd-btn bkd-btn-outline"
+                style={{ borderColor: '#6B7280', color: '#374151', background: '#F9FAFB', cursor: 'pointer', height: '36px', padding: '0 12px', borderRadius: '4px' }}
+                value={selectedDevBankId}
+                onChange={(e) => setSelectedDevBankId(e.target.value)}
+              >
+                <option value="">-- Dev Bank --</option>
+                {bankOptions.filter(b => b.is_active !== false).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.bank_name} ({b.account_number.replace(/\s/g, '').slice(-4)})
+                  </option>
+                ))}
+              </select>
+              <button
+                className="bkd-btn bkd-btn-outline"
+                style={{
+                  borderColor: (selectedPlotBankId && selectedDevBankId) ? '#10B981' : '#D1D5DB',
+                  color: (selectedPlotBankId && selectedDevBankId) ? '#10B981' : '#9CA3AF',
+                  cursor: (selectedPlotBankId && selectedDevBankId) ? 'pointer' : 'not-allowed',
+                  background: (selectedPlotBankId && selectedDevBankId) ? '#ECFDF5' : '#F3F4F6'
+                }}
+                disabled={!selectedPlotBankId || !selectedDevBankId}
+                onClick={() => {
+                  const chosenPlotBank = bankOptions.find(b => b.id === selectedPlotBankId);
+                  const chosenDevBank = bankOptions.find(b => b.id === selectedDevBankId);
+                  generateBookingConfirmationPDF(booking, chosenPlotBank, chosenDevBank);
+                }}
+                title={(selectedPlotBankId && selectedDevBankId) ? "Download Booking Confirmation PDF" : "Please select both bank accounts first"}
+              >
+                <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Download PDF
+              </button>
+            </div>
           )}
           <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
         </div>
@@ -2543,6 +2620,32 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {assignOpen && (
+        <div className="col-modal-overlay" onClick={() => setAssignOpen(false)}>
+          <div className="qa-modal-panel" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+            <div className="qa-drawer-header">
+              <div className="qa-drawer-name">Assign Collection Executive</div>
+              <button className="qa-drawer-close" onClick={() => setAssignOpen(false)}>×</button>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              <label className="bkd-form-label">Collection Executive</label>
+              <select className="bkd-form-control" value={selectedExecId} onChange={(e) => setSelectedExecId(e.target.value)}>
+                <option value="">— Unassigned —</option>
+                {executives.map((ex) => (
+                  <option key={ex.id} value={ex.id}>{`${ex.first_name || ''} ${ex.last_name || ''}`.trim()}{ex.email ? ` · ${ex.email}` : ''}</option>
+                ))}
+              </select>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                The executive can update status, follow-ups and record payments for this booking — without seeing financial summary details.
+              </p>
+              <button className="bkd-btn bkd-btn-primary" style={{ marginTop: 16, width: '100%' }} disabled={assigning} onClick={handleAssignExecutive}>
+                {assigning ? 'Saving…' : (selectedExecId ? 'Assign' : 'Clear Assignment')}
+              </button>
+            </div>
           </div>
         </div>
       )}

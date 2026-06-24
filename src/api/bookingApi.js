@@ -71,6 +71,13 @@ const bookingApi = {
   confirmCancel: (id, data) => api.patch(`/bookings/${id}/confirm-cancel`, data || {}),
   processRefund: (id, data) => api.post(`/bookings/${id}/refunds`, data),
   getCancellationRequests: (params) => api.get('/bookings/cancellation-requests', { params }),
+
+  // Record Manager — record the registration (document) number
+  updateRegistrationDetails: (id, data) => api.patch(`/bookings/${id}/registration-details`, data),
+
+  // Collection Executive assignment (Collection Manager)
+  getCollectionExecutives: () => api.get('/bookings/collection-executives'),
+  assignCollectionExecutive: (id, data) => api.patch(`/bookings/${id}/assign-collection-executive`, data),
 };
 
 export default bookingApi;

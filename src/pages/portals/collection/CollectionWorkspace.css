@@ -2386,3 +2386,39 @@
     font-size: 14px;
   }
 }
+
+/* ── Mobile Responsiveness Additions for New Portals ── */
+@media (max-width: 768px) {
+  .acct-verify-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .acct-verify-sidebar {
+    position: static !important;
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .bkd-info-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .bkd-header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .bkd-header-actions .bkd-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .bkd-header-actions .bkd-btn-ghost {
+    grid-column: span 2 !important;
+  }
+  .bkd-form-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+

@@ -56,6 +56,12 @@ export const getSidebarMenuForRole = (roleCode, user = null) => {
       return collectionSidebar;
     case 'ACCT':
       return accountsSidebar;
+    case 'RM':
+      return recordManagerSidebar;
+    case 'AM':
+      return accountsManagerSidebar;
+    case 'CE':
+      return collectionExecSidebar;
     default:
       return telecallerSidebar;
   }
@@ -239,6 +245,21 @@ const accountsSidebar = [
   { label: 'Verify Payments', path: '/accounts/verify', icon: MagnifyingGlassIcon },
 ];
 
+// ── Record Manager ──
+const recordManagerSidebar = [
+  { label: 'Registered Bookings', path: '/record-manager/bookings', icon: ClipboardDocumentListIcon },
+];
+
+// ── Accounts Manager (cash verification) ──
+const accountsManagerSidebar = [
+  { label: 'Cash Verification', path: '/accounts-manager/verify', icon: BanknotesIcon },
+];
+
+// ── Collection Executive (assigned collections) ──
+const collectionExecSidebar = [
+  { label: 'My Collections', path: '/collection-exec/bookings', icon: ClipboardDocumentListIcon },
+];
+
 // ── Task Management (Standard Executive portal) ──
 // Single entry that opens the standalone Standard Executive portal.
 export const getTaskMenuItem = () => ({
@@ -313,6 +334,22 @@ export const accountsMenu = [
   { label: 'Accounts Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 
+export const recordManagerMenu = [
+  { group: 'Menu' },
+  { label: 'Registered Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+];
+
+export const accountsManagerMenu = [
+  { group: 'Menu' },
+  { label: 'Cash Verification', key: 'verify', icon: BanknotesIcon, badgeColor: 'orange' },
+  { label: 'Cash Report', key: 'reports', icon: ChartBarIcon, badge: null },
+];
+
+export const collectionExecMenu = [
+  { group: 'Menu' },
+  { label: 'My Collections', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+];
+
 export const ROLE_LABELS = {
   SA: 'Super Admin',
   ADM: 'Admin',
@@ -322,5 +359,8 @@ export const ROLE_LABELS = {
   TC: 'Telecaller',
   COL: 'Collection Manager',
   ACCT: 'Accounts Executive',
+  AM: 'Accounts Manager',
+  CE: 'Collection Executive',
+  RM: 'Record Manager',
   CRM: 'CRM Executive',
 };
