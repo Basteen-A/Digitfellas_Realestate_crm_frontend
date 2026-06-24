@@ -104,14 +104,6 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const areaUnit = safe(booking.area_unit || inventoryUnit.area_unit, 'Sq.ft');
   const facing = safe(inventoryUnit.facing, '—');
 
-  // Location string using nested project location details
-  const locationParts = [
-    project.location?.location_name,
-    project.location?.city,
-    project.address
-  ].filter(Boolean);
-  const location = locationParts.length > 0 ? locationParts.join(', ') : '—';
-  const locationText = phaseName ? `${phaseName} · ${location}` : location;
 
   const customerPhone = safe(customer.phone, '—');
   const pan = customer.pan_number ? customer.pan_number.trim() : '';
