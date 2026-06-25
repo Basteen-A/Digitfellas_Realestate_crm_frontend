@@ -119,15 +119,6 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   ].filter(Boolean);
   const customerAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
 
-  // Relation line if available (supports relative columns or customer logic)
-  const relType = booking.relation_type || customer.relation_type || '';
-  const relName = booking.relation_name || customer.relation_name || '';
-  let displayRelation = '';
-  if (relType && relName) {
-    displayRelation = `${relType.toUpperCase()} ${relName}`;
-  } else if (customer.buyer_name && customer.buyer_name !== buyerName) {
-    displayRelation = customer.buyer_name;
-  }
 
   // Investment computations
   const toAmt = (v) => { const n = parseFloat(v || 0); return Number.isFinite(n) ? n : 0; };
@@ -293,10 +284,10 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
 
-  const relType = safe(booking.relation_type || customer.relation_type, '');
-  const relName = safe(booking.relation_name || customer.relation_name, '');
-  if (relType && relName) {
-    doc.text(`Relation: ${relType.toUpperCase()} ${relName}`, margin + colW + 11, uY);
+  const rType = safe(booking.relation_type || customer.relation_type, '');
+  const rName = safe(booking.relation_name || customer.relation_name, '');
+  if (rType && rName) {
+    doc.text(`Relation: ${rType.toUpperCase()} ${rName}`, margin + colW + 11, uY);
     uY += 5.2;
   }
   
