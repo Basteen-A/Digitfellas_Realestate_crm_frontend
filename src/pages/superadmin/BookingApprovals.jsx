@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../api/bookingApi';
+import bookingStatusApi from '../../api/bookingStatusApi';
 import { formatCurrency } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
 import {
@@ -12,15 +13,8 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import CollectionBookingDetail from '../portals/collection/CollectionBookingDetail';
 import './BookingApprovals.css';
 
-// Status filter tabs → matching booking status codes (null = all).
-const STATUS_TABS = [
-  { key: 'all', label: 'All', codes: null },
-  { key: 'open', label: 'Open', codes: ['BOOKING_OPEN'] },
-  { key: 'pending', label: 'Pending', codes: ['BOOKING_PENDING'] },
-  { key: 'approved', label: 'Approved', codes: ['BOOKING_APPROVED', 'BOOKED', 'REGISTERED', 'EMI'] },
-  { key: 'rejected', label: 'Rejected', codes: ['BOOKING_REJECTED'] },
-  { key: 'cancelled', label: 'Cancelled', codes: ['CANCEL', 'REQUEST_TO_CANCEL'] },
-];
+// Status filter tabs are built at runtime from the admin-managed Booking
+// Statuses master (see statusTabs below), so there is no hardcoded list here.
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'top' };
@@ -82,6 +76,20 @@ const computeSummary = (b) => {
 const phaseOf = (b) => b.phase?.phase_name || b.inventoryUnit?.phase?.phase_name || null;
 const unitOf = (b) => b.unit_number || b.inventoryUnit?.unit_number || (b.unit_display && b.unit_display !== 'N/A' ? b.unit_display : null);
 
+// Status badge label/color. The list endpoint (getAll) does NOT flatten
+// status_label/status_color onto the row the way getMyBookings does, so derive
+// them from the bookingStatus association. Mirrors Collection Bookings' display,
+// including the "Cancel Pending" override for an SH-approved cancel request.
+const statusOf = (b) => {
+  const code = b.bookingStatus?.status_code || b.status_code;
+  const cancelApproved = code === 'REQUEST_TO_CANCEL' && !!b.custom_fields?.cancel_approved_by;
+  if (cancelApproved) return { label: 'Cancel Pending', color: '#F59E0B' };
+  return {
+    label: b.status_label || b.bookingStatus?.status_name || '—',
+    color: b.status_color || b.bookingStatus?.color_code || '#6B7280',
+  };
+};
+
 const BookingApprovals = () => {
   const { user } = useAuthContext();
   const [rows, setRows] = useState([]);
@@ -89,6 +97,7 @@ const BookingApprovals = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [statusTab, setStatusTab] = useState('all');
   const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [statusList, setStatusList] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,7 +114,26 @@ const BookingApprovals = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const activeCodes = STATUS_TABS.find((t) => t.key === statusTab)?.codes || null;
+  // Pull the filter tabs from the admin-managed Booking Statuses master so that
+  // adding / renaming / recoloring / reordering / deactivating a status there is
+  // reflected here automatically (getDropdown returns active rows, status_order ASC).
+  useEffect(() => {
+    bookingStatusApi.getDropdown()
+      .then((r) => setStatusList(r.data?.data || r.data || []))
+      .catch(() => {});
+  }, []);
+
+  const statusTabs = useMemo(() => ([
+    { key: 'all', label: 'All', codes: null, color: null },
+    ...statusList.map((s) => ({
+      key: s.status_code,
+      label: s.status_name,
+      codes: [s.status_code],
+      color: s.color_code,
+    })),
+  ]), [statusList]);
+
+  const activeCodes = statusTabs.find((t) => t.key === statusTab)?.codes || null;
   const filteredRows = activeCodes
     ? rows.filter((b) => activeCodes.includes(b.bookingStatus?.status_code || b.status_code))
     : rows;
@@ -215,6 +243,7 @@ const BookingApprovals = () => {
   const renderMobileCard = (b) => {
     const isOpen = expandedId === b.id;
     const summary = computeSummary(b);
+    const st = statusOf(b);
     return (
       <div key={b.id} className={`ba-mobile-card ${isOpen ? 'is-open' : ''}`}>
         <div className="ba-mobile-card__head">
@@ -234,7 +263,7 @@ const BookingApprovals = () => {
             <div className="ba-mobile-card__customer">{customerName(b)}</div>
             <div className="ba-muted">{formatCurrency(summary.totalValue)} total · {Math.round(summary.pct)}% collected</div>
             <div style={{ marginTop: 4 }}>
-              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${b.status_color || '#6B7280'}22`, color: b.status_color || '#6B7280' }}>{b.status_label || '—'}</span>
+              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${st.color}22`, color: st.color }}>{st.label}</span>
             </div>
           </div>
           <div className="ba-mobile-card__actions" onClick={(e) => e.stopPropagation()}>
@@ -271,9 +300,9 @@ const BookingApprovals = () => {
         </button>
       </div>
 
-      {/* Status filter tabs */}
+      {/* Status filter tabs — sourced from the admin Booking Statuses master */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        {STATUS_TABS.map((t) => {
+        {statusTabs.map((t) => {
           const count = t.codes
             ? rows.filter((b) => t.codes.includes(b.bookingStatus?.status_code || b.status_code)).length
             : rows.length;
@@ -284,7 +313,11 @@ const BookingApprovals = () => {
               type="button"
               onClick={() => setStatusTab(t.key)}
               className={`crm-btn crm-btn-sm ${active ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
+              {t.color && (
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.color, flexShrink: 0 }} />
+              )}
               {t.label} <span style={{ opacity: 0.7 }}>({count})</span>
             </button>
           );
@@ -315,6 +348,7 @@ const BookingApprovals = () => {
             )}
             {!loading && pageItems.map((b) => {
               const s = computeSummary(b);
+              const st = statusOf(b);
               const isOpen = expandedId === b.id;
               return (
                 <React.Fragment key={b.id}>
@@ -339,8 +373,8 @@ const BookingApprovals = () => {
                     <td style={td}>
                       <span className="ba-status-badge" style={{
                         display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700,
-                        background: `${b.status_color || '#6B7280'}22`, color: b.status_color || '#6B7280',
-                      }}>{b.status_label || '—'}</span>
+                        background: `${st.color}22`, color: st.color,
+                      }}>{st.label}</span>
                     </td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                       <button

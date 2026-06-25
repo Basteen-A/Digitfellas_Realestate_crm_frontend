@@ -264,9 +264,8 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   
   // Location from project with full address details
   const locationName = safe(project.location?.location_name || booking.project?.location?.location_name || project.location?.name, '—');
-  const cityName = safe(project.location?.city || booking.project?.location?.city, '');
   const stateName = safe(project.location?.state || booking.project?.location?.state, '');
-  const fullLocation = [locationName, cityName, stateName].filter(Boolean).join(', ');
+  const fullLocation = [locationName, stateName].filter(Boolean).join(', ');
   const projectAddress = safe(project.address, '');
   
   doc.text(`Plot Number: ${plotNo}`, margin + 5, pY);
@@ -598,12 +597,12 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   tableY += 3.5;
 
   // Grand Total Row
-  doc.setFontSize(13);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
   doc.text('TOTAL INVESTMENT (NET)', margin + 4, tableY + 1.2);
   doc.text(fmtINR(totalInvestment), pageW - margin - 4, tableY + 1.2, { align: 'right' });
-  tableY += 8.5;
+  tableY += 9.5;
 
   // Words for grand total
   doc.setFontSize(11);
@@ -765,13 +764,75 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     : defaultTerms;
 
   let termY = y;
-  const totalLength = terms.reduce((sum, t) => sum + t.length, 0);
+  const totalLength = terms.reduce((sum, t) => sum + (t?.length || 0), 0);
   const useCompact = terms.length > 10 || totalLength > 1000;
   const fontSize = useCompact ? 8.5 : 9.5;
   const lineSpacing = useCompact ? 4.5 : 5.2;
   const paragraphSpacing = useCompact ? 1.5 : 2.5;
+  const termContentWidth = contentW - 14;
 
   terms.forEach((term, idx) => {
+    // Check if we need to add a new page for terms
+    if (termY > pageH - 60) {
+      doc.addPage();
+      termY = 20;
+      // Redraw header on new page
+      doc.setFillColor(...COLORS.black);
+      doc.rect(margin, termY, 1.5, 5, 'F');
+      doc.setTextColor(...COLORS.black);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS & CONDITIONS (continued)', margin + 3.5, termY + 3.8);
+      termY += 12;
+    }
+
+    // Clean term text - remove HTML tags and decode entities
+    let termText = safe(term, '');
+    if (!termText) return;
+    
+    // Remove HTML tags
+    termText = termText.replace(/<[^>]+>/g, ' ');
+    // Replace HTML entities
+    termText = termText.replace(/&nbsp;/g, ' ')
+                       .replace(/&amp;/g, '&')
+                       .replace(/&lt;/g, '<')
+                       .replace(/&gt;/g, '>')
+                       .replace(/&quot;/g, '"')
+                       .replace(/&#39;/g, "'")
+                       .replace(/&rsquo;/g, "'")
+                       .replace(/&lsquo;/g, "'")
+                       .replace(/&rdquo;/g, '"')
+                       .replace(/&ldquo;/g, '"')
+                       .replace(/&ndash;/g, '-')
+                       .replace(/&mdash;/g, '-')
+                       .replace(/&hellip;/g, '...')
+                       .replace(/&bull;|&#8226;/g, '-');
+    // Normalize raw Unicode typography to ASCII. jsPDF's standard Helvetica is
+    // WinAnsi-encoded: any character outside that set (fancy bullets like
+    // U+25CF/U+25AA, the Rupee sign, etc.) flips the ENTIRE text run into a
+    // broken 2-byte fallback that renders as garbage (e.g. "%I") AND scrambles
+    // the surrounding words. Map the common offenders, then drop anything still
+    // outside the Latin-1 range as a final guard so a stray glyph can never
+    // corrupt a whole term again.
+    termText = termText
+      .replace(/[‘’‚‛]/g, "'")   // smart single quotes -> '
+      .replace(/[“”„‟]/g, '"')   // smart double quotes -> "
+      .replace(/[–—―]/g, '-')         // en/em dashes -> -
+      .replace(/…/g, '...')                     // ellipsis -> ...
+      .replace(/[•‣⁃⁌⁍∙▪●○◦‧․·]/g, '-') // bullets / mid-dots -> -
+      .replace(/₹/g, 'Rs.')                     // rupee sign -> Rs.
+      .replace(/[  -   　]/g, ' ') // unicode spaces -> space
+      .replace(/[​-‍﻿­]/g, '')   // zero-width / soft hyphen -> drop
+      .trim();
+    // Final guard: drop anything above the Latin-1 (WinAnsi) range so a stray glyph
+    // can never flip the whole run into jsPDF's broken 2-byte fallback. Done by code
+    // point (not regex) to stay ASCII-only and handle astral characters correctly.
+    termText = Array.from(termText).filter((ch) => ch.codePointAt(0) <= 0xFF).join('');
+    // Replace multiple spaces with single space
+    termText = termText.replace(/\s+/g, ' ').trim();
+    // Drop a leading bullet/dash artifact so numbered terms read cleanly
+    termText = termText.replace(/^[\s-]+/, '').trim();
+
     doc.setFontSize(fontSize);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...COLORS.black);
@@ -779,13 +840,20 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.black);
-    const lines = doc.splitTextToSize(term, contentW - 10);
+    const lines = doc.splitTextToSize(termText, termContentWidth);
     lines.forEach((line) => {
       doc.text(line, margin + 7, termY + 3);
       termY += lineSpacing;
     });
     termY += paragraphSpacing;
   });
+
+  // Ensure we have room for signatures
+  if (termY > pageH - 50) {
+    doc.addPage();
+    drawFooter(4);
+    termY = 20;
+  }
 
   // Signatures block positioned securely at the bottom
   let sigY = pageH - 40;
