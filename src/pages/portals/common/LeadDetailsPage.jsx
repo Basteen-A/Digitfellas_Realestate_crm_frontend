@@ -1107,11 +1107,6 @@ const LeadDetailsPage = () => {
         current_city: pF.current_city,
         current_state: pF.current_state,
         current_pincode: pF.current_pincode,
-        permanent_address: pF.permanent_address,
-        permanent_area: pF.permanent_area,
-        permanent_city: pF.permanent_city,
-        permanent_state: pF.permanent_state,
-        permanent_pincode: pF.permanent_pincode,
       };
       payload.buyer_name = pF.buyer_name || undefined;
       payload.inventoryUnitId = pF.inventoryUnitId || undefined;
@@ -2933,32 +2928,36 @@ const LeadDetailsPage = () => {
                         </div>
                       </div>
 
-                      <div className="qa-drawer-profile-section"><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
-                      <div>
-                        <label className="qa-drawer-field-label">Address</label>
-                        <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="qa-drawer-field-label">Area / Locality</label>
-                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" />
-                      </div>
-                      <div className="qa-drawer-profile-grid-3">
-                        <div>
-                          <label className="qa-drawer-field-label">City</label>
-                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label className="qa-drawer-field-label">State</label>
-                          <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))}>
-                            <option value="">— Select State —</option>
-                            {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="qa-drawer-field-label">Pincode</label>
-                          <input type="text" className="qa-drawer-field-input" style={{ maxWidth: 120 }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} placeholder="6 digits" />
-                        </div>
-                      </div>
+                      {quickSelectedAction?.code !== 'SH_BOOKING' && (
+                        <>
+                          <div className="qa-drawer-profile-section"><HomeIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Permanent Address</div>
+                          <div>
+                            <label className="qa-drawer-field-label">Address</label>
+                            <textarea className="qa-drawer-remark-ta" rows={2} value={customerProfileForm.permanent_address} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_address: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label className="qa-drawer-field-label">Area / Locality</label>
+                            <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_area} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_area: e.target.value }))} placeholder="e.g. MG Road, Koramangala" />
+                          </div>
+                          <div className="qa-drawer-profile-grid-3">
+                            <div>
+                              <label className="qa-drawer-field-label">City</label>
+                              <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.permanent_city} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_city: e.target.value }))} />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">State</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))}>
+                                <option value="">— Select State —</option>
+                                {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Pincode</label>
+                              <input type="text" className="qa-drawer-field-input" style={{ maxWidth: 120 }} maxLength={6} value={customerProfileForm.permanent_pincode} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_pincode: e.target.value.replace(/\D/g, '') }))} placeholder="6 digits" />
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 

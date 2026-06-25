@@ -249,12 +249,12 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   drawSectionHeader('CUSTOMER DETAILS', margin + colW + 6, y);
   y += 7;
 
-  // Cards (height increased to 52 for larger fonts/extra details)
+  // Cards (height increased to 78 for larger fonts/extra details)
   doc.setFillColor(...COLORS.veryLightGrey);
   doc.setDrawColor(...COLORS.lightGrey);
   doc.setLineWidth(0.25);
-  doc.roundedRect(margin, y, colW, 52, 1.5, 1.5, 'FD');
-  doc.roundedRect(margin + colW + 6, y, colW, 52, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin, y, colW, 78, 1.5, 1.5, 'FD');
+  doc.roundedRect(margin + colW + 6, y, colW, 78, 1.5, 1.5, 'FD');
 
   // Property details
   let pY = y + 6.5;
@@ -270,7 +270,12 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
+  
+  const locationName = safe(booking.location_name || booking.location?.location_name || project.location?.location_name || booking.bookingLocation?.location_name || project.location?.name, '—');
+  
   doc.text(`Plot Number: ${plotNo}`, margin + 5, pY);
+  pY += 6;
+  doc.text(`Location: ${locationName}`, margin + 5, pY);
   pY += 6;
   doc.text(`Area / Extent: ${area} ${areaUnit}`, margin + 5, pY);
   pY += 6;
@@ -284,31 +289,57 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.text(buyerName, margin + colW + 11, uY);
   uY += 7;
 
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
 
-  if (displayRelation) {
-    doc.text(displayRelation, margin + colW + 11, uY);
-    uY += 6;
-  }
-  doc.text(`Phone: ${customerPhone}`, margin + colW + 11, uY);
-  uY += 6;
-  const addrLines = doc.splitTextToSize(customerAddress, colW - 14);
-  addrLines.slice(0, 2).forEach((line) => {
-    doc.text(line, margin + colW + 11, uY);
-    uY += 5.5;
-  });
-  if (pan) {
-    doc.text(`PAN: ${pan}`, margin + colW + 11, uY);
-    uY += 5.5;
-  }
-  if (aadhaar) {
-    doc.text(`Aadhaar: ${aadhaar}`, margin + colW + 11, uY);
-    uY += 5.5;
+  const relType = safe(booking.relation_type || customer.relation_type, '');
+  const relName = safe(booking.relation_name || customer.relation_name, '');
+  if (relType && relName) {
+    doc.text(`Relation: ${relType.toUpperCase()} ${relName}`, margin + colW + 11, uY);
+    uY += 5.2;
   }
   
-  y += 52 + 10;
+  doc.text(`Phone: ${customerPhone}`, margin + colW + 11, uY);
+  uY += 5.2;
+  
+  const customerEmail = safe(customer.email, '—');
+  doc.text(`Email: ${customerEmail}`, margin + colW + 11, uY);
+  uY += 5.2;
+  
+  const dobVal = customer.date_of_birth;
+  const dobFormatted = dobVal 
+    ? new Date(dobVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
+    : '—';
+  doc.text(`DOB: ${dobFormatted}`, margin + colW + 11, uY);
+  uY += 5.2;
+  
+  if (pan) {
+    doc.text(`PAN: ${pan}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  if (aadhaar) {
+    doc.text(`Aadhaar: ${aadhaar}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  doc.text(`Occupation: ${safe(customer.occupation, '—')}`, margin + colW + 11, uY);
+  uY += 5.2;
+  
+  doc.text(`Marital Status: ${safe(customer.marital_status, '—')}`, margin + colW + 11, uY);
+  uY += 5.2;
+  
+  doc.text(`Purchase Type: ${safe(booking.purchase_type || customer.purchase_type, '—')}`, margin + colW + 11, uY);
+  uY += 5.2;
+  
+  const addrLines = doc.splitTextToSize(`Address: ${customerAddress}`, colW - 14);
+  addrLines.slice(0, 2).forEach((line) => {
+    doc.text(line, margin + colW + 11, uY);
+    uY += 4.8;
+  });
+  
+  y += 78 + 10;
 
   // Journey Tracker Card
   drawSectionHeader('YOUR JOURNEY STATUS', margin, y);
