@@ -262,17 +262,29 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
   
-  const locationName = safe(booking.location_name || booking.location?.location_name || project.location?.location_name || booking.bookingLocation?.location_name || project.location?.name, '—');
+  // Location from project with full address details
+  const locationName = safe(project.location?.location_name || booking.project?.location?.location_name || project.location?.name, '—');
+  const cityName = safe(project.location?.city || booking.project?.location?.city, '');
+  const stateName = safe(project.location?.state || booking.project?.location?.state, '');
+  const fullLocation = [locationName, cityName, stateName].filter(Boolean).join(', ');
+  const projectAddress = safe(project.address, '');
   
   doc.text(`Plot Number: ${plotNo}`, margin + 5, pY);
   pY += 6;
-  doc.text(`Location: ${locationName}`, margin + 5, pY);
+  doc.text(`Location: ${fullLocation}`, margin + 5, pY);
   pY += 6;
+  if (projectAddress) {
+    const addrLines = doc.splitTextToSize(`Address: ${projectAddress}`, colW - 10);
+    addrLines.forEach((line) => {
+      doc.text(line, margin + 5, pY);
+      pY += 5;
+    });
+  }
   doc.text(`Area / Extent: ${area} ${areaUnit}`, margin + 5, pY);
   pY += 6;
   doc.text(`Facing: ${facing !== '—' ? `${facing} Facing` : '—'}`, margin + 5, pY);
 
-  // Purchaser details
+  // Purchaser/Customer details - COMPLETE
   let uY = y + 6.5;
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(12);
@@ -284,6 +296,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
 
+  // Gender & Relation
   const rType = safe(booking.relation_type || customer.relation_type, '');
   const rName = safe(booking.relation_name || customer.relation_name, '');
   if (rType && rName) {
@@ -291,20 +304,46 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     uY += 5.2;
   }
   
-  doc.text(`Phone: ${customerPhone}`, margin + colW + 11, uY);
-  uY += 5.2;
+  // Contact Information
+  if (customerPhone && customerPhone !== '—') {
+    doc.text(`Phone: ${customerPhone}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
   
-  const customerEmail = safe(customer.email, '—');
-  doc.text(`Email: ${customerEmail}`, margin + colW + 11, uY);
-  uY += 5.2;
+  const alternatePhone = safe(customer.alternate_phone, '');
+  if (alternatePhone) {
+    doc.text(`Alt. Phone: ${alternatePhone}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
   
+  const whatsappNumber = safe(customer.whatsapp_number, '');
+  if (whatsappNumber) {
+    doc.text(`WhatsApp: ${whatsappNumber}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  const customerEmail = safe(customer.email, '');
+  if (customerEmail) {
+    doc.text(`Email: ${customerEmail}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  // Personal Details
   const dobVal = customer.date_of_birth;
   const dobFormatted = dobVal 
     ? new Date(dobVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
-    : '—';
-  doc.text(`DOB: ${dobFormatted}`, margin + colW + 11, uY);
-  uY += 5.2;
+    : '';
+  if (dobFormatted) {
+    doc.text(`DOB: ${dobFormatted}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
   
+  if (customer.gender) {
+    doc.text(`Gender: ${customer.gender}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  // Identity Documents
   if (pan) {
     doc.text(`PAN: ${pan}`, margin + colW + 11, uY);
     uY += 5.2;
@@ -315,20 +354,71 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     uY += 5.2;
   }
   
-  doc.text(`Occupation: ${safe(customer.occupation, '—')}`, margin + colW + 11, uY);
-  uY += 5.2;
+  const gstNumber = safe(customer.gst_number, '');
+  if (gstNumber) {
+    doc.text(`GST: ${gstNumber}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
   
-  doc.text(`Marital Status: ${safe(customer.marital_status, '—')}`, margin + colW + 11, uY);
-  uY += 5.2;
+  // Professional Details
+  if (customer.occupation) {
+    doc.text(`Occupation: ${customer.occupation}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
   
-  doc.text(`Purchase Type: ${safe(booking.purchase_type || customer.purchase_type, '—')}`, margin + colW + 11, uY);
-  uY += 5.2;
+  const companyName = safe(customer.company_name, '');
+  if (companyName) {
+    doc.text(`Company: ${companyName}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
   
-  const addrLines = doc.splitTextToSize(`Address: ${customerAddress}`, colW - 14);
-  addrLines.slice(0, 2).forEach((line) => {
-    doc.text(line, margin + colW + 11, uY);
-    uY += 4.8;
-  });
+  const designation = safe(customer.designation, '');
+  if (designation) {
+    doc.text(`Designation: ${designation}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  const annualIncome = safe(customer.annual_income, '');
+  if (annualIncome) {
+    doc.text(`Annual Income: ${fmtINR(annualIncome)}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  if (customer.marital_status) {
+    doc.text(`Marital Status: ${customer.marital_status}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  const purchaseType = safe(booking.purchase_type || customer.purchase_type, '');
+  if (purchaseType) {
+    doc.text(`Purchase Type: ${purchaseType}`, margin + colW + 11, uY);
+    uY += 5.2;
+  }
+  
+  // Address Information
+  if (customerAddress && customerAddress !== '—') {
+    const addrLines = doc.splitTextToSize(`Address: ${customerAddress}`, colW - 14);
+    addrLines.slice(0, 3).forEach((line) => {
+      doc.text(line, margin + colW + 11, uY);
+      uY += 4.8;
+    });
+  }
+  
+  // Permanent Address if different
+  const permAddressParts = [
+    customer.perm_address_line_1,
+    customer.perm_address_line_2,
+    customer.perm_city,
+    customer.perm_state,
+    customer.perm_pincode
+  ].filter(Boolean);
+  if (permAddressParts.length > 0 && permAddressParts.join(', ') !== customerAddress) {
+    const permAddrLines = doc.splitTextToSize(`Perm. Address: ${permAddressParts.join(', ')}`, colW - 14);
+    permAddrLines.slice(0, 2).forEach((line) => {
+      doc.text(line, margin + colW + 11, uY);
+      uY += 4.8;
+    });
+  }
   
   y += 78 + 10;
 
