@@ -60,16 +60,7 @@ api.interceptors.request.use(
 
 // ── RESPONSE INTERCEPTOR ──
 api.interceptors.response.use(
-  (response) => {
-    // Log slow requests in development
-    if (process.env.NODE_ENV === 'development' && response.config.metadata) {
-      const duration = Date.now() - response.config.metadata.startTime;
-      if (duration > 2000) {
-        console.warn(`[SLOW API] ${response.config.method?.toUpperCase()} ${response.config.url} — ${duration}ms`);
-      }
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 

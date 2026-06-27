@@ -9,14 +9,14 @@ import { jsPDF } from 'jspdf';
 /* ── Colour palette (Greyscale / Black & White) ── */
 const COLORS = {
   gold: [0, 0, 0],             // pure black
-  darkBg: [0, 0, 0],           // pure black
+  darkBg: [255, 255, 255],     // white background
   white: [255, 255, 255],      // white
   black: [0, 0, 0],            // black
-  grey: [100, 100, 100],        // grey
-  lightGrey: [220, 220, 220],   // light grey border
-  veryLightGrey: [248, 248, 248], // warm card background
+  grey: [0, 0, 0],             // pure black
+  lightGrey: [0, 0, 0],        // pure black border
+  veryLightGrey: [255, 255, 255], // pure white background
   green: [0, 0, 0],            // black
-  mutedText: [120, 120, 120],   // grey
+  mutedText: [0, 0, 0],        // black
   darkText: [0, 0, 0],         // black
 };
 
@@ -149,8 +149,13 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
 
   // Other charges splits
   const costBreakdown = booking.custom_fields?.cost_breakdown || {};
+  const savedRegSplitForCalc = costBreakdown.registration_split || {};
+  const originalOtherRegExp = toAmt(savedRegSplitForCalc.other_registration_expenses);
+  const pdfOtherRegExp = originalOtherRegExp * 5;
+  const otherRegDiff = pdfOtherRegExp - originalOtherRegExp;
+
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmt(v), 0);
-  const regSplitTotal = isRegistered ? 0 : sumSplit(costBreakdown.registration_split);
+  const regSplitTotal = isRegistered ? 0 : (sumSplit(costBreakdown.registration_split) + otherRegDiff);
   const modtSplitTotal = (!isRegistered && costBreakdown.modt_enabled) ? sumSplit(costBreakdown.modt_split) : 0;
   const otherChargesTotal = isRegistered ? 0 : (regSplitTotal + modtSplitTotal + toAmt(booking.other_charges));
 
@@ -161,27 +166,14 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
 
   // Section Header helper
   const drawSectionHeader = (title, x, targetY) => {
-    doc.setFillColor(...COLORS.black);
-    doc.rect(x, targetY, 1.5, 5, 'F');
     doc.setTextColor(...COLORS.black);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, x + 3.5, targetY + 3.8);
+    doc.text(title, x, targetY + 3.8);
   };
 
-  // Footer helper
-  const drawFooter = (pageNo) => {
-    const footerY = pageH - 12;
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(...COLORS.grey);
-    doc.text('This is a computer-generated booking confirmation and does not require a physical signature.', pageW / 2, footerY, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Contact: ${customerPhone}  |  Ref: ${bookingNumber}  |  Page ${pageNo} of 3`, pageW / 2, footerY + 4.5, { align: 'center' });
-    doc.setDrawColor(...COLORS.black);
-    doc.setLineWidth(0.4);
-    doc.line(margin, pageH - 5, pageW - margin, pageH - 5);
-  };
+  // Footer helper (NOOP since footers are rendered dynamically at the end)
+  const drawFooter = () => {};
 
   // ============================================================
   // PAGE 1: CONFIRMATION DETAILS & JOURNEY TRACKER
@@ -198,7 +190,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Ref: ${bookingNumber}  |  Date: ${bookingDate}`, pageW / 2, y, { align: 'center' });
+  doc.text(`${bookingNumber}  |  Date: ${bookingDate}`, pageW / 2, y, { align: 'center' });
   y += 6;
 
   // Thin elegant separator line
@@ -207,31 +199,23 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.line(margin, y, pageW - margin, y);
   y += 8;
 
-  // Welcome Banner (greyscale)
-  doc.setFillColor(...COLORS.veryLightGrey);
-  doc.setDrawColor(...COLORS.lightGrey);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, y, contentW, 25, 1.5, 1.5, 'FD');
-
-  doc.setFillColor(...COLORS.black);
-  doc.rect(margin, y, 1.5, 25, 'F');
-
+  // Welcome Banner text
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Dear ${displayBuyerName},`, margin + 5, y + 7.5);
+  doc.text(`Dear ${displayBuyerName},`, margin, y + 5);
 
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'normal');
   
   const bannerText = `We are pleased to confirm your booking for Plot No. ${plotNo} at ${projectName}. The booking details are summarized below.`;
-  const bannerLines = doc.splitTextToSize(bannerText, contentW - 10);
+  const bannerLines = doc.splitTextToSize(bannerText, contentW);
   bannerLines.forEach((line, idx) => {
-    doc.text(line, margin + 5, y + 14 + (idx * 5));
+    doc.text(line, margin, y + 11 + (idx * 5));
   });
 
-  y += 25 + 10;
+  y += (bannerLines.length * 5) + 15;
 
   // Property & Purchaser details side by side
   const colW = (contentW - 6) / 2; // 90mm
@@ -242,20 +226,15 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
 
   // Cards (height increased to 78 for larger fonts/extra details)
   doc.setFillColor(...COLORS.veryLightGrey);
-  doc.setDrawColor(...COLORS.lightGrey);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, y, colW, 78, 1.5, 1.5, 'FD');
-  doc.roundedRect(margin + colW + 6, y, colW, 78, 1.5, 1.5, 'FD');
-
   // Property details
-  let pY = y + 6.5;
+  let pY = y + 5;
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   const displayProjectName = (phaseName && !projectName.toLowerCase().includes(phaseName.toLowerCase()))
     ? `${projectName} ${phaseName}`
     : projectName;
-  doc.text(displayProjectName, margin + 5, pY);
+  doc.text(displayProjectName, margin, pY);
   pY += 7;
 
   doc.setFontSize(10);
@@ -268,27 +247,27 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const fullLocation = [locationName, stateName].filter(Boolean).join(', ');
   const projectAddress = safe(project.address, '');
   
-  doc.text(`Plot Number: ${plotNo}`, margin + 5, pY);
+  doc.text(`Plot Number: ${plotNo}`, margin, pY);
   pY += 6;
-  doc.text(`Location: ${fullLocation}`, margin + 5, pY);
+  doc.text(`Location: ${fullLocation}`, margin, pY);
   pY += 6;
   if (projectAddress) {
-    const addrLines = doc.splitTextToSize(`Address: ${projectAddress}`, colW - 10);
+    const addrLines = doc.splitTextToSize(`Address: ${projectAddress}`, colW);
     addrLines.forEach((line) => {
-      doc.text(line, margin + 5, pY);
+      doc.text(line, margin, pY);
       pY += 5;
     });
   }
-  doc.text(`Area / Extent: ${area} ${areaUnit}`, margin + 5, pY);
+  doc.text(`Area / Extent: ${area} ${areaUnit}`, margin, pY);
   pY += 6;
-  doc.text(`Facing: ${facing !== '—' ? `${facing} Facing` : '—'}`, margin + 5, pY);
+  doc.text(`Facing: ${facing !== '—' ? `${facing} Facing` : '—'}`, margin, pY);
 
   // Purchaser/Customer details - COMPLETE
-  let uY = y + 6.5;
+  let uY = y + 5;
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(buyerName, margin + colW + 11, uY);
+  doc.text(buyerName, margin + colW + 6, uY);
   uY += 7;
 
   doc.setFontSize(9.5);
@@ -299,31 +278,31 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const rType = safe(booking.relation_type || customer.relation_type, '');
   const rName = safe(booking.relation_name || customer.relation_name, '');
   if (rType && rName) {
-    doc.text(`Relation: ${rType.toUpperCase()} ${rName}`, margin + colW + 11, uY);
+    doc.text(`Relation: ${rType.toUpperCase()} ${rName}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   // Contact Information
   if (customerPhone && customerPhone !== '—') {
-    doc.text(`Phone: ${customerPhone}`, margin + colW + 11, uY);
+    doc.text(`Phone: ${customerPhone}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const alternatePhone = safe(customer.alternate_phone, '');
   if (alternatePhone) {
-    doc.text(`Alt. Phone: ${alternatePhone}`, margin + colW + 11, uY);
+    doc.text(`Alt. Phone: ${alternatePhone}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const whatsappNumber = safe(customer.whatsapp_number, '');
   if (whatsappNumber) {
-    doc.text(`WhatsApp: ${whatsappNumber}`, margin + colW + 11, uY);
+    doc.text(`WhatsApp: ${whatsappNumber}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const customerEmail = safe(customer.email, '');
   if (customerEmail) {
-    doc.text(`Email: ${customerEmail}`, margin + colW + 11, uY);
+    doc.text(`Email: ${customerEmail}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
@@ -333,72 +312,72 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     ? new Date(dobVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
     : '';
   if (dobFormatted) {
-    doc.text(`DOB: ${dobFormatted}`, margin + colW + 11, uY);
+    doc.text(`DOB: ${dobFormatted}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   if (customer.gender) {
-    doc.text(`Gender: ${customer.gender}`, margin + colW + 11, uY);
+    doc.text(`Gender: ${customer.gender}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   // Identity Documents
   if (pan) {
-    doc.text(`PAN: ${pan}`, margin + colW + 11, uY);
+    doc.text(`PAN: ${pan}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   if (aadhaar) {
-    doc.text(`Aadhaar: ${aadhaar}`, margin + colW + 11, uY);
+    doc.text(`Aadhaar: ${aadhaar}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const gstNumber = safe(customer.gst_number, '');
   if (gstNumber) {
-    doc.text(`GST: ${gstNumber}`, margin + colW + 11, uY);
+    doc.text(`GST: ${gstNumber}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   // Professional Details
   if (customer.occupation) {
-    doc.text(`Occupation: ${customer.occupation}`, margin + colW + 11, uY);
+    doc.text(`Occupation: ${customer.occupation}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const companyName = safe(customer.company_name, '');
   if (companyName) {
-    doc.text(`Company: ${companyName}`, margin + colW + 11, uY);
+    doc.text(`Company: ${companyName}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const designation = safe(customer.designation, '');
   if (designation) {
-    doc.text(`Designation: ${designation}`, margin + colW + 11, uY);
+    doc.text(`Designation: ${designation}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const annualIncome = safe(customer.annual_income, '');
   if (annualIncome) {
-    doc.text(`Annual Income: ${fmtINR(annualIncome)}`, margin + colW + 11, uY);
+    doc.text(`Annual Income: ${fmtINR(annualIncome)}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   if (customer.marital_status) {
-    doc.text(`Marital Status: ${customer.marital_status}`, margin + colW + 11, uY);
+    doc.text(`Marital Status: ${customer.marital_status}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   const purchaseType = safe(booking.purchase_type || customer.purchase_type, '');
   if (purchaseType) {
-    doc.text(`Purchase Type: ${purchaseType}`, margin + colW + 11, uY);
+    doc.text(`Purchase Type: ${purchaseType}`, margin + colW + 6, uY);
     uY += 5.2;
   }
   
   // Address Information
   if (customerAddress && customerAddress !== '—') {
-    const addrLines = doc.splitTextToSize(`Address: ${customerAddress}`, colW - 14);
+    const addrLines = doc.splitTextToSize(`Address: ${customerAddress}`, colW);
     addrLines.slice(0, 3).forEach((line) => {
-      doc.text(line, margin + colW + 11, uY);
+      doc.text(line, margin + colW + 6, uY);
       uY += 4.8;
     });
   }
@@ -412,23 +391,20 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     customer.perm_pincode
   ].filter(Boolean);
   if (permAddressParts.length > 0 && permAddressParts.join(', ') !== customerAddress) {
-    const permAddrLines = doc.splitTextToSize(`Perm. Address: ${permAddressParts.join(', ')}`, colW - 14);
+    const permAddrLines = doc.splitTextToSize(`Perm. Address: ${permAddressParts.join(', ')}`, colW);
     permAddrLines.slice(0, 2).forEach((line) => {
-      doc.text(line, margin + colW + 11, uY);
+      doc.text(line, margin + colW + 6, uY);
       uY += 4.8;
     });
   }
   
-  y += 78 + 10;
+  y = Math.max(pY, uY) + 12;
 
   // Journey Tracker Card
   drawSectionHeader('YOUR JOURNEY STATUS', margin, y);
   y += 7;
 
-  doc.setFillColor(...COLORS.veryLightGrey);
-  doc.setDrawColor(...COLORS.lightGrey);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, y, contentW, 20, 1.5, 1.5, 'FD');
+
 
   const steps = [
     { label: 'BOOKED', codes: ['BOOKED', 'BOOKING_APPROVED', 'BOOKING_PENDING', 'TOKEN_RECEIVED', 'FORM_SUBMITTED'] },
@@ -472,7 +448,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     doc.text(step.label, cx, stepY + circleR + 6, { align: 'center' });
   });
 
-  drawFooter(1);
+
 
   // ============================================================
   // PAGE 2: DETAILED COST BREAKDOWN
@@ -489,23 +465,16 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Ref: ${bookingNumber}  |  Date: ${bookingDate}`, pageW / 2, y, { align: 'center' });
+  doc.text(`${bookingNumber}  |  Date: ${bookingDate}`, pageW / 2, y, { align: 'center' });
   y += 6;
 
-  doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pageW - margin, y);
-  y += 8;
 
   // Cost table setup
   let tableY = y;
-  doc.setFillColor(...COLORS.veryLightGrey);
-  doc.rect(margin, tableY, contentW, 8, 'F');
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
   doc.text('Cost Description', margin + 4, tableY + 5.5);
-  doc.text('Rate, Details & Words Description', margin + 65, tableY + 5.5);
   doc.text('Amount (INR)', pageW - margin - 4, tableY + 5.5, { align: 'right' });
   
   doc.setDrawColor(...COLORS.black);
@@ -514,29 +483,73 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   tableY += 9;
 
   const drawRow = (label, details, amount, isBold = false) => {
-    // Label and amount font sizes
-    doc.setFontSize(11);
-    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-    doc.setTextColor(...COLORS.black);
-    doc.text(label, margin + 4, tableY + 5);
-    
-    // Details (with words) font size
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
     const words = numberToWords(amount);
-    const combinedDetails = details ? `${details}\n(${words})` : `(${words})`;
-    const wrappedDetails = doc.splitTextToSize(combinedDetails, 90);
-    doc.text(wrappedDetails, margin + 65, tableY + 5);
     
-    // Amount
-    doc.setFontSize(11);
+    // Column 1 layout (left side, width 100mm)
     doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-    doc.text(fmtINR(amount), pageW - margin - 4, tableY + 5, { align: 'right' });
+    doc.setFontSize(11);
+    doc.setTextColor(...COLORS.black);
+    const labelLines = doc.splitTextToSize(label, 100);
     
-    const rowH = Math.max(wrappedDetails.length * 4.8, 7.5);
+    // Auto-align details indentation to match label's leading spaces (e.g., registration splits)
+    const leadingSpacesMatch = label.match(/^ +/);
+    const leadingSpaces = leadingSpacesMatch ? leadingSpacesMatch[0] : '';
+    const wrapWidth = 100 - (leadingSpaces.length * 1.5);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const detailLines = details 
+      ? doc.splitTextToSize(details, wrapWidth).map(line => leadingSpaces + line) 
+      : [];
+    
+    // Column 2 layout (right side, width 75mm)
+    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+    doc.setFontSize(11);
+    const amountStr = fmtINR(amount);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const wordsStr = `(${words})`;
+    const wordsLines = doc.splitTextToSize(wordsStr, 75);
+    
+    // Print Column 1 (Left aligned)
+    let curY1 = tableY + 5;
+    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+    doc.setFontSize(11);
+    labelLines.forEach((line) => {
+      doc.text(line, margin + 4, curY1);
+      curY1 += 4.8;
+    });
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    detailLines.forEach((line) => {
+      doc.text(line, margin + 4, curY1);
+      curY1 += 4.2;
+    });
+    
+    // Print Column 2 (Right aligned)
+    let curY2 = tableY + 5;
+    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+    doc.setFontSize(11);
+    doc.text(amountStr, pageW - margin - 4, curY2, { align: 'right' });
+    curY2 += 4.8;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    wordsLines.forEach((line) => {
+      doc.text(line, pageW - margin - 4, curY2, { align: 'right' });
+      curY2 += 4.2;
+    });
+    
+    // Determine the final height of this row
+    const rowH = Math.max(curY1 - tableY, curY2 - tableY);
+    
+    // Draw thin bottom border
     doc.setDrawColor(...COLORS.lightGrey);
     doc.setLineWidth(0.2);
     doc.line(margin, tableY + rowH + 1, pageW - margin, tableY + rowH + 1);
+    
     tableY += rowH + 2.5;
   };
 
@@ -553,12 +566,10 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   drawRow('Development Charges (Total)', 'Inclusive of GST', developmentValue, true);
 
   // Documentation Splits
-  doc.setFillColor(...COLORS.veryLightGrey);
-  doc.rect(margin, tableY, contentW, 7, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
-  doc.text('Documentation & Registration Expenses', margin + 4, tableY + 4.8);
-  tableY += 8;
+  doc.text('Documentation & Registration Expenses', margin + 4, tableY + 4);
+  tableY += 6;
 
   const savedRegSplit = costBreakdown.registration_split || {};
   drawRow('  Stamp Value (7%)', '7% of Guideline value', stampValue);
@@ -567,16 +578,14 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   drawRow('  Online / Portal / CD Fees', 'Computer & portal submission fees', toAmt(savedRegSplit.registration_expenses));
   drawRow('  Writer Charges', 'Legal documentation writing charges', toAmt(savedRegSplit.writer_expenses));
   drawRow('  Patta Transfer Charges', 'Revenue record transfer processing fees', toAmt(savedRegSplit.patta_charges));
-  drawRow('  Other Registration Expenses', 'Miscellaneous registration split', toAmt(savedRegSplit.other_registration_expenses));
+  drawRow('  Other Registration Expenses', 'Miscellaneous registration split', pdfOtherRegExp);
 
   // MODT Splits
   if (costBreakdown.modt_enabled) {
-    doc.setFillColor(...COLORS.veryLightGrey);
-    doc.rect(margin, tableY, contentW, 7, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text('MODT Charges Split', margin + 4, tableY + 4.8);
-    tableY += 8;
+    doc.text('MODT Charges Split', margin + 4, tableY + 4);
+    tableY += 6;
 
     const savedModtSplit = costBreakdown.modt_split || {};
     drawRow('  MODT Stamp Duty', 'MODT stamp processing', toAmt(savedModtSplit.stamp_duty));
@@ -590,28 +599,28 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     drawRow('Other Charges', 'Other miscellaneous charges', toAmt(booking.other_charges));
   }
 
-  // Draw double line for total
-  doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.5);
-  doc.line(margin, tableY + 1, pageW - margin, tableY + 1);
-  tableY += 3.5;
 
   // Grand Total Row
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text('TOTAL INVESTMENT (NET)', margin + 4, tableY + 1.2);
-  doc.text(fmtINR(totalInvestment), pageW - margin - 4, tableY + 1.2, { align: 'right' });
-  tableY += 9.5;
+  doc.text('TOTAL INVESTMENT (NET)', margin + 4, tableY + 1.5);
+  doc.text(fmtINR(totalInvestment), pageW - margin - 4, tableY + 1.5, { align: 'right' });
+  tableY += 5;
 
-  // Words for grand total
-  doc.setFontSize(11);
+  // Words for grand total (aligned under amount)
+  const grandTotalWords = numberToWords(totalInvestment);
+  const grandTotalWordsLines = doc.splitTextToSize(`(${grandTotalWords})`, 75);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(numberToWords(totalInvestment), margin + 4, tableY);
-  tableY += 12;
+  grandTotalWordsLines.forEach((line) => {
+    doc.text(line, pageW - margin - 4, tableY, { align: 'right' });
+    tableY += 4.0;
+  });
+  tableY += 6;
 
-  drawFooter(2);
+ 
 
   // ============================================================
   // PAGE 3: BANK DETAILS, TERMS & CONDITIONS & SIGNATURES
@@ -628,120 +637,103 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Ref: ${bookingNumber}  |  Date: ${bookingDate}`, pageW / 2, y, { align: 'center' });
+  doc.text(`${bookingNumber}  |  Date: ${bookingDate}`, pageW / 2, y, { align: 'center' });
   y += 6;
 
-  doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pageW - margin, y);
-  y += 8;
-
-  // Bank Info Cards (height adjusted to 38 for tight fitting)
-  doc.setFillColor(...COLORS.veryLightGrey);
-  doc.setDrawColor(...COLORS.lightGrey);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, y, colW, 38, 1.5, 1.5, 'FD');
-  doc.roundedRect(margin + colW + 6, y, colW, 38, 1.5, 1.5, 'FD');
-
-  doc.setFillColor(...COLORS.black);
-  doc.rect(margin, y, 1, 38, 'F');
-  doc.rect(margin + colW + 6, y, 1, 38, 'F');
 
   // Left card: Plot Amount Account
   let bY = y + 5;
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text('PLOT AMOUNT ACCOUNT', margin + 5, bY);
+  doc.text('PLOT AMOUNT ACCOUNT', margin, bY);
   bY += 6;
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`A/c Name: `, margin + 5, bY);
+  doc.text(`A/c Name: `, margin, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(plotBank.bank_name, '—'), margin + 24, bY);
+  doc.text(safe(plotBank.bank_name, '—'), margin + 19, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`A/c Number: `, margin + 5, bY);
+  doc.text(`A/c Number: `, margin, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(plotBank.account_number, '—'), margin + 24, bY);
+  doc.text(safe(plotBank.account_number, '—'), margin + 19, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Bank Name: `, margin + 5, bY);
+  doc.text(`Bank Name: `, margin, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(getBankNameFromIFSC(plotBank.ifsc_code), margin + 24, bY);
+  doc.text(getBankNameFromIFSC(plotBank.ifsc_code), margin + 19, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`IFSC Code: `, margin + 5, bY);
+  doc.text(`IFSC Code: `, margin, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(plotBank.ifsc_code, '—'), margin + 24, bY);
+  doc.text(safe(plotBank.ifsc_code, '—'), margin + 19, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Branch: `, margin + 5, bY);
+  doc.text(`Branch: `, margin, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(plotBank.branch_name, '—'), margin + 24, bY);
+  doc.text(safe(plotBank.branch_name, '—'), margin + 19, bY);
 
   // Right card: Dev Amount Account
   bY = y + 5;
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text('DEVELOPMENT CHARGES ACCOUNT', margin + colW + 11, bY);
+  doc.text('DEVELOPMENT CHARGES ACCOUNT', margin + colW + 6, bY);
   bY += 6;
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`A/c Name: `, margin + colW + 11, bY);
+  doc.text(`A/c Name: `, margin + colW + 6, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(devBank.bank_name, '—'), margin + colW + 30, bY);
+  doc.text(safe(devBank.bank_name, '—'), margin + colW + 25, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`A/c Number: `, margin + colW + 11, bY);
+  doc.text(`A/c Number: `, margin + colW + 6, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(devBank.account_number, '—'), margin + colW + 30, bY);
+  doc.text(safe(devBank.account_number, '—'), margin + colW + 25, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Bank Name: `, margin + colW + 11, bY);
+  doc.text(`Bank Name: `, margin + colW + 6, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(getBankNameFromIFSC(devBank.ifsc_code), margin + colW + 30, bY);
+  doc.text(getBankNameFromIFSC(devBank.ifsc_code), margin + colW + 25, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`IFSC Code: `, margin + colW + 11, bY);
+  doc.text(`IFSC Code: `, margin + colW + 6, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(devBank.ifsc_code, '—'), margin + colW + 30, bY);
+  doc.text(safe(devBank.ifsc_code, '—'), margin + colW + 25, bY);
   bY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.grey);
-  doc.text(`Branch: `, margin + colW + 11, bY);
+  doc.text(`Branch: `, margin + colW + 6, bY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.black);
-  doc.text(safe(devBank.branch_name, '—'), margin + colW + 30, bY);
+  doc.text(safe(devBank.branch_name, '—'), margin + colW + 25, bY);
 
   y += 38 + 8;
 
   // Terms and conditions header
-  doc.setFillColor(...COLORS.black);
-  doc.rect(margin, y, 1.5, 5, 'F');
   doc.setTextColor(...COLORS.black);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('TERMS & CONDITIONS', margin + 3.5, y + 3.8);
+  doc.text('TERMS & CONDITIONS', margin, y + 3.8);
   
   y += 8;
 
@@ -759,9 +751,29 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
     'In case the buyer fails to make the payment as per the agreed terms, an interest of 18% per annum shall be levied on the outstanding amount for the total tenure of the delay'
   ];
 
-  const terms = (termsParam && termsParam.length > 0)
+  // Flat map and split each term by newlines/paragraphs to support block text inputs from the backend
+  const rawTerms = (termsParam && termsParam.length > 0)
     ? termsParam.map(t => t.content)
     : defaultTerms;
+
+  const terms = [];
+  rawTerms.forEach((term) => {
+    if (!term) return;
+    // Replace HTML paragraph/break tags with newlines
+    let normalized = term
+      .replace(/<\/p>/g, '\n')
+      .replace(/<p>/g, '')
+      .replace(/<br\s*\/?>/g, '\n');
+    
+    // Split by newlines
+    const parts = normalized.split(/\r?\n/);
+    parts.forEach((part) => {
+      const trimmed = part.trim();
+      if (trimmed) {
+        terms.push(trimmed);
+      }
+    });
+  });
 
   let termY = y;
   const totalLength = terms.reduce((sum, t) => sum + (t?.length || 0), 0);
@@ -769,20 +781,17 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const fontSize = useCompact ? 8.5 : 9.5;
   const lineSpacing = useCompact ? 4.5 : 5.2;
   const paragraphSpacing = useCompact ? 1.5 : 2.5;
-  const termContentWidth = contentW - 14;
 
   terms.forEach((term, idx) => {
     // Check if we need to add a new page for terms
     if (termY > pageH - 60) {
       doc.addPage();
       termY = 20;
-      // Redraw header on new page
-      doc.setFillColor(...COLORS.black);
-      doc.rect(margin, termY, 1.5, 5, 'F');
+      // Redraw header on new page (no rect box)
       doc.setTextColor(...COLORS.black);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('TERMS & CONDITIONS (continued)', margin + 3.5, termY + 3.8);
+      doc.text('TERMS & CONDITIONS (continued)', margin, termY + 3.8);
       termY += 12;
     }
 
@@ -807,13 +816,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
                        .replace(/&mdash;/g, '-')
                        .replace(/&hellip;/g, '...')
                        .replace(/&bull;|&#8226;/g, '-');
-    // Normalize raw Unicode typography to ASCII. jsPDF's standard Helvetica is
-    // WinAnsi-encoded: any character outside that set (fancy bullets like
-    // U+25CF/U+25AA, the Rupee sign, etc.) flips the ENTIRE text run into a
-    // broken 2-byte fallback that renders as garbage (e.g. "%I") AND scrambles
-    // the surrounding words. Map the common offenders, then drop anything still
-    // outside the Latin-1 range as a final guard so a stray glyph can never
-    // corrupt a whole term again.
+    // Normalize raw Unicode typography to ASCII.
     termText = termText
       .replace(/[‘’‚‛]/g, "'")   // smart single quotes -> '
       .replace(/[“”„‟]/g, '"')   // smart double quotes -> "
@@ -824,25 +827,24 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
       .replace(/[  -   　]/g, ' ') // unicode spaces -> space
       .replace(/[​-‍﻿­]/g, '')   // zero-width / soft hyphen -> drop
       .trim();
-    // Final guard: drop anything above the Latin-1 (WinAnsi) range so a stray glyph
-    // can never flip the whole run into jsPDF's broken 2-byte fallback. Done by code
-    // point (not regex) to stay ASCII-only and handle astral characters correctly.
+    // Final guard: drop anything above the Latin-1 (WinAnsi) range
     termText = Array.from(termText).filter((ch) => ch.codePointAt(0) <= 0xFF).join('');
     // Replace multiple spaces with single space
     termText = termText.replace(/\s+/g, ' ').trim();
-    // Drop a leading bullet/dash artifact so numbered terms read cleanly
-    termText = termText.replace(/^[\s-]+/, '').trim();
+
+    // Check if the term text already has a numbering or list marker
+    const hasListMarker = /^\d+[\s.)-]+\s*/.test(termText) || 
+                          /^[a-zA-Z][.)-]\s+/.test(termText) || 
+                          /^[•‣⁃⁌⁍∙▪●○◦‧․·*-]\s+/.test(termText);
+    
+    const fullTermText = hasListMarker ? termText : `${idx + 1}. ${termText}`;
 
     doc.setFontSize(fontSize);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...COLORS.black);
-    doc.text(`${idx + 1}.`, margin, termY + 3);
-    
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.black);
-    const lines = doc.splitTextToSize(termText, termContentWidth);
+    const lines = doc.splitTextToSize(fullTermText, contentW);
     lines.forEach((line) => {
-      doc.text(line, margin + 7, termY + 3);
+      doc.text(line, margin, termY + 3);
       termY += lineSpacing;
     });
     termY += paragraphSpacing;
@@ -862,7 +864,7 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   const sigRightX = pageW - margin - sigLineW - 10;
 
   doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.4);
+  
   doc.line(sigLeftX, sigY, sigLeftX + sigLineW, sigY);
   doc.line(sigRightX, sigY, sigRightX + sigLineW, sigY);
 
@@ -878,7 +880,19 @@ export const generateBookingConfirmationPDF = (booking, plotBankParam, devBankPa
   doc.text('Date: ________________', sigLeftX + sigLineW / 2, sigY + 10.5, { align: 'center' });
   doc.text('For Company', sigRightX + sigLineW / 2, sigY + 10.5, { align: 'center' });
 
-  drawFooter(3);
+  // Loop through all pages to draw the footer dynamically at the end
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const footerY = pageH - 12;
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.black);
+    doc.text(`${bookingNumber}  |  Page ${i} of ${totalPages}`, pageW / 2, footerY + 4.5, { align: 'center' });
+    doc.setDrawColor(...COLORS.black);
+    
+    
+  }
 
   // ── Trigger download ──
   const fileName = `Booking_Confirmation_${bookingNumber}.pdf`;

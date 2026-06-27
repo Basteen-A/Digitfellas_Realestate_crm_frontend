@@ -242,6 +242,9 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const loadNotifications = useCallback(async () => {
     setNotifLoading(true);
     try {
+      // Only the unread items. Reading one keeps it on the list, but closing the
+      // panel marks everything read and clears it, so it reopens empty until new
+      // notifications arrive.
       const resp = await notificationApi.getAll({ limit: 20, unread: 'true' });
       const rows = resp.data?.data || [];
       setNotifications(rows);
@@ -289,14 +292,18 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   }, [loadNotifUnread]);
 
   const handleMarkAllNotifRead = useCallback(async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setNotifUnread(0);
     try { await notificationApi.markAllAsRead(); } catch { /* silent */ }
   }, []);
 
+  // Closing the panel clears it: everything that was shown is marked read and
+  // wiped, so the next open starts empty until new notifications come in.
   const clearNotifications = useCallback(async () => {
     setNotifications([]);
     setNotifUnread(0);
-    await handleMarkAllNotifRead();
-  }, [handleMarkAllNotifRead]);
+    try { await notificationApi.markAllAsRead(); } catch { /* silent */ }
+  }, []);
 
   const closeNotif = useCallback(async () => {
     setNotifOpen(false);
@@ -327,11 +334,13 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   };
 
   const handleNotifClick = async (n) => {
+    // Reading one just marks it read — the rest stay on the list until you close.
     if (!n.is_read) {
       setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
       setNotifUnread((c) => Math.max(0, c - 1));
       try { await notificationApi.markAsRead(n.id); } catch { /* silent */ }
     }
+    // Opening a link dismisses the panel → clear it like any other close.
     if (n.link && String(n.link).startsWith('/')) {
       await clearNotifications();
       setNotifOpen(false);

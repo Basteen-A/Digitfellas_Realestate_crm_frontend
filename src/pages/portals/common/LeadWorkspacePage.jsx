@@ -18,6 +18,7 @@ import paymentPlanApi from '../../../api/paymentPlanApi';
 import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone, formatLocation, cleanRepeatingLocation } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
+import { canUseVoiceNotes } from '../../../utils/voiceNotes';
 
 import {
   getWorkspaceTitle,
@@ -6584,8 +6585,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))}
                       placeholder="What was discussed? What's the next step?"
                     />
-                    {/* Voice note (record + transcribe + translate) — SM/SH only. */}
-                    {(workspaceRole === 'SM' || workspaceRole === 'SH') && (
+                    {/* Voice note (record + transcribe + translate).
+                        Roles are controlled in utils/voiceNotes.js. */}
+                    {canUseVoiceNotes(workspaceRole) && (
                       <VoiceNoteField
                         voice={quickVoice}
                         onVoiceChange={setQuickVoice}

@@ -48,6 +48,7 @@ import {
 } from '@heroicons/react/24/outline';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
+import { canUseVoiceNotes } from '../../../utils/voiceNotes';
 import './LeadDetailsPage.css';
 
 const QUICK_REMARKS = [
@@ -3040,8 +3041,9 @@ const LeadDetailsPage = () => {
                       onChange={(e) => setQuickActionForm((p) => ({ ...p, note: e.target.value }))}
                       placeholder="What was discussed? What's the next step?"
                     />
-                    {/* Voice note (record + transcribe + translate) — SM/SH only. */}
-                    {(roleCode === 'SM' || roleCode === 'SH') && (
+                    {/* Voice note (record + transcribe + translate).
+                        Roles are controlled in utils/voiceNotes.js. */}
+                    {canUseVoiceNotes(roleCode) && (
                       <VoiceNoteField
                         voice={quickVoice}
                         onVoiceChange={setQuickVoice}
