@@ -321,6 +321,9 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+  /* Border matches the badge's own text colour (status colour set inline),
+     so every status badge gets an outline like the task status chip. */
+  border: 1px solid currentColor;
 }
 
 .col-badge-dot {
@@ -1220,6 +1223,9 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+  /* Outline follows the variant's text colour so verification/payment status
+     badges get a border consistent with the task status chip. */
+  border: 1px solid currentColor;
 }
 .col-badge-new::before {
   content: '';
@@ -1602,7 +1608,7 @@
 .bkd-alert-text { font-size:13px; margin-left:6px; }
 
 /* Status badge */
-.bkd-status-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+.bkd-status-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; border:1px solid currentColor; }
 
 /* Cards */
 .bkd-card { background:var(--col-surface,#fff); border:1px solid var(--col-border,#e5e7eb); border-radius:10px; margin-bottom:16px; overflow:hidden; }

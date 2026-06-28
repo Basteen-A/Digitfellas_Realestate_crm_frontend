@@ -374,8 +374,8 @@ const SalesHeadBookings = ({ user }) => {
                                   <td>{formatDate(payment.payment_date)}</td>
                                   <td>
                                     <span className="col-badge" style={{ 
-                                      background: payment.management_approved ? '#10b98122' : '#f59e0b22', 
-                                      color: payment.management_approved ? '#10b981' : '#f59e0b' 
+                                      background: payment.management_approved ? '#16a34a22' : '#f59e0b22',
+                                      color: payment.management_approved ? '#16a34a' : '#f59e0b'
                                     }}>
                                       {payment.management_approved ? 'Verified' : 'Pending Verification'}
                                     </span>

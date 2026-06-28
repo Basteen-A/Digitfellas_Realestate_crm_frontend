@@ -273,7 +273,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       </button>
       {['BOOKED', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.status_code) && (
         <>
-          <button className="col-qa-btn" title="Register" style={{ color: '#22C55E' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'register'); }}>
+          <button className="col-qa-btn" title="Register" style={{ color: '#16A34A' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'register'); }}>
             <DocumentTextIcon style={{ width: 15, height: 15 }} />
           </button>
           <button className="col-qa-btn" title="EMI" style={{ color: '#F59E0B' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'emi'); }}>
@@ -1241,9 +1241,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
                 <div className="qa-drawer-avatar" style={{
-                  background: workflowMode === 'register' ? '#22C55E22' : workflowMode === 'emi' ? '#F59E0B22' : '#EF444422',
-                  color: workflowMode === 'register' ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
-                  border: `2px solid ${workflowMode === 'register' ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
+                  background: workflowMode === 'register' ? '#16A34A22' : workflowMode === 'emi' ? '#F59E0B22' : '#EF444422',
+                  color: workflowMode === 'register' ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
+                  border: `2px solid ${workflowMode === 'register' ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
                 }}>
                   {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : workflowMode === 'refund' ? '↩' : '⚠'}
                 </div>
@@ -1266,7 +1266,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     onChange={e => setRegisterForm(p => ({ ...p, registration_date: e.target.value }))} />
                 </div>
                 <div className="qa-drawer-save-row" style={{ marginTop: 16 }}>
-                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={registerSaving || !registerForm.registration_date} onClick={handleRegister}>
+                  <button className="qa-drawer-save-btn" style={{ background: '#16A34A' }} disabled={registerSaving || !registerForm.registration_date} onClick={handleRegister}>
                     {registerSaving ? 'Saving...' : 'Register Booking'}
                   </button>
                 </div>

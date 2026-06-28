@@ -297,7 +297,7 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                             <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
                             <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
                             <td style={{ fontSize: 12 }}>{formatDate(p.payment_date)}</td>
-                            <td><span className="col-badge" style={{ background: (p.is_bounced ? '#ef4444' : p.management_approved ? '#10b981' : p.accounts_approved ? '#3b82f6' : '#f59e0b') + '22', color: p.is_bounced ? '#ef4444' : p.management_approved ? '#10b981' : p.accounts_approved ? '#3b82f6' : '#f59e0b' }}>{p.is_bounced ? 'Bounced' : p.management_approved ? 'Approved' : p.accounts_approved ? 'Accounts OK' : 'Pending'}</span></td>
+                            <td><span className="col-badge" style={{ background: (p.is_bounced ? '#ef4444' : p.management_approved ? '#16a34a' : p.accounts_approved ? '#3b82f6' : '#f59e0b') + '22', color: p.is_bounced ? '#ef4444' : p.management_approved ? '#16a34a' : p.accounts_approved ? '#3b82f6' : '#f59e0b' }}>{p.is_bounced ? 'Bounced' : p.management_approved ? 'Approved' : p.accounts_approved ? 'Accounts OK' : 'Pending'}</span></td>
                           </tr>
                         ))}
                       </tbody>

@@ -862,7 +862,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <h1 className="bkd-title">
               Booking Details — {booking.booking_number}{' '}
                 
-        <span className="bkd-status-badge" style={{background:`${effectiveStatusColor}18`,color:effectiveStatusColor,border:`1px solid ${effectiveStatusColor}40`}}>
+        <span className="bkd-status-badge" style={{background:`${effectiveStatusColor}18`,color:effectiveStatusColor,border:`1px solid ${effectiveStatusColor}`}}>
           <span style={{width:6,height:6,borderRadius:'50%',background:effectiveStatusColor,display:'inline-block'}}/> {effectiveStatusLabel}
         </span>
      
@@ -2340,9 +2340,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
                 <div className="qa-drawer-avatar" style={{
-                  background: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#22C55E22' : workflowMode === 'emi' ? '#F59E0B22' : '#EF444422',
-                  color: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
-                  border: `2px solid ${(workflowMode === 'register' || workflowMode === 'revertCancel') ? '#22C55E' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
+                  background: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#16A34A22' : workflowMode === 'emi' ? '#F59E0B22' : '#EF444422',
+                  color: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
+                  border: `2px solid ${(workflowMode === 'register' || workflowMode === 'revertCancel') ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
                 }}>
                   {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : (workflowMode === 'refund' || workflowMode === 'revertCancel') ? '↩' : '⚠'}
                 </div>
@@ -2365,7 +2365,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     onChange={e => setRegisterForm(p => ({ ...p, registration_date: e.target.value }))} />
                 </div>
                 <div className="qa-drawer-save-row" style={{ marginTop: 16 }}>
-                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={registerSaving || !registerForm.registration_date} onClick={async () => {
+                  <button className="qa-drawer-save-btn" style={{ background: '#16A34A' }} disabled={registerSaving || !registerForm.registration_date} onClick={async () => {
                     if (!registerForm.registration_date) { toast.error('Registration date is mandatory'); return; }
                     setRegisterSaving(true);
                     try {
@@ -2415,7 +2415,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     value={revertRemarks} onChange={e => setRevertRemarks(e.target.value)} />
                 </div>
                 <div className="qa-drawer-save-row" style={{ marginTop: 16 }}>
-                  <button className="qa-drawer-save-btn" style={{ background: '#22C55E' }} disabled={revertSaving} onClick={async () => {
+                  <button className="qa-drawer-save-btn" style={{ background: '#16A34A' }} disabled={revertSaving} onClick={async () => {
                     setRevertSaving(true);
                     try {
                       await bookingApi.revertCancellation(bookingId, { remarks: revertRemarks });

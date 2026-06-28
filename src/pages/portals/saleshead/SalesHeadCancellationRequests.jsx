@@ -65,7 +65,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
   const getDaysBadge = (req) => {
     if (req.cancel_approved) {
       const label = req.cancel_auto_approved ? '✓ Auto-approved' : '✓ Approved';
-      return <span style={{...badgeStyle, background:'#10B98122', color:'#10B981'}}>{label}</span>;
+      return <span style={{...badgeStyle, background:'#16A34A22', color:'#16A34A'}}>{label}</span>;
     }
     if (req.cancel_rejected) {
       return <span style={{...badgeStyle, background:'#EF444422', color:'#EF4444'}}>Rejected — no auto-approve</span>;
@@ -158,7 +158,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
                           </button>
                         </div>
                       ) : (
-                        <span style={{fontSize:11,color:'#10B981',fontWeight:600}}>Approved ✓</span>
+                        <span style={{fontSize:11,color:'#16A34A',fontWeight:600}}>Approved ✓</span>
                       )}
                     </td>
                   </tr>
@@ -180,9 +180,9 @@ const SalesHeadCancellationRequests = ({ user }) => {
       {!loading && requests.length > 0 && (
         <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <span><strong>{requests.length}</strong> total requests</span>
-          <span><strong style={{color:'#22C55E'}}>{requests.filter(r => !r.cancel_approved).length}</strong> pending decision</span>
+          <span><strong style={{color:'#16A34A'}}>{requests.filter(r => !r.cancel_approved).length}</strong> pending decision</span>
           <span><strong style={{color:'#F59E0B'}}>{requests.filter(r => !r.cancel_approved && (r.days_until_auto_approve ?? 7) <= 2).length}</strong> auto-approving soon</span>
-          <span><strong style={{color:'#10B981'}}>{requests.filter(r => r.cancel_approved).length}</strong> approved</span>
+          <span><strong style={{color:'#16A34A'}}>{requests.filter(r => r.cancel_approved).length}</strong> approved</span>
         </div>
       )}
 
@@ -194,9 +194,9 @@ const SalesHeadCancellationRequests = ({ user }) => {
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
                 <div className="qa-drawer-avatar" style={{
-                  background: actionMode === 'approve' ? '#22C55E22' : '#EF444422',
-                  color: actionMode === 'approve' ? '#22C55E' : '#EF4444',
-                  border: `2px solid ${actionMode === 'approve' ? '#22C55E' : '#EF4444'}`,
+                  background: actionMode === 'approve' ? '#16A34A22' : '#EF444422',
+                  color: actionMode === 'approve' ? '#16A34A' : '#EF4444',
+                  border: `2px solid ${actionMode === 'approve' ? '#16A34A' : '#EF4444'}`,
                   width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                 }}>
                   {actionMode === 'approve' ? '✓' : '✕'}
@@ -229,7 +229,7 @@ const SalesHeadCancellationRequests = ({ user }) => {
             </div>
             <div style={{padding:'16px 20px', borderTop:'1px solid var(--border-primary)'}}>
               <button className="qa-drawer-save-btn" style={{
-                background: actionMode === 'approve' ? '#22C55E' : '#EF4444',
+                background: actionMode === 'approve' ? '#16A34A' : '#EF4444',
                 width: '100%', padding: '10px 20px', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                 }}
                 disabled={saving || !remarks.trim()}

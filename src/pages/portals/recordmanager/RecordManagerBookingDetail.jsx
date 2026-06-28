@@ -146,7 +146,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
           <div>
             <h1 className="bkd-title">
               Booking {booking.booking_number}{' '}
-              <span className="bkd-status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}40` }}>
+              <span className="bkd-status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}` }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, display: 'inline-block' }} />
                 {booking.status_label || 'Registered'}
               </span>

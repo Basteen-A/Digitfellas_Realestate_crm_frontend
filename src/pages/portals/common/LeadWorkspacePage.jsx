@@ -3968,7 +3968,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                     <span className="crm-badge-dot" style={{ background: selectedLead.stageColor }} />
                     {selectedLead.stageLabel}
                   </span>
-                  <span className="crm-badge" style={{ backgroundColor: selectedLead.statusColor + '22', color: selectedLead.statusColor, border: `1px solid ${selectedLead.statusColor}33` }}>
+                  <span className="crm-badge" style={{ backgroundColor: selectedLead.statusColor + '22', color: selectedLead.statusColor, border: `1px solid ${selectedLead.statusColor}` }}>
                     {selectedLead.statusIcon || ''} {selectedLead.statusLabel}
                   </span>
                   <button type="button" onClick={() => setSelectedLeadId(null)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
