@@ -58,6 +58,8 @@ import SiteSettings from '../pages/superadmin/SiteSettings';
 import TermsAndConditions from '../pages/superadmin/TermsAndConditions';
 import ReallotmentRules from '../pages/superadmin/ReallotmentRules';
 import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
+import MarketingAllocationRules from '../pages/superadmin/MarketingAllocation/MarketingAllocationRules';
+import MarketingAllocationHistory from '../pages/superadmin/MarketingAllocation/MarketingAllocationHistory';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -249,6 +251,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/terms-and-conditions" element={<TermsAndConditions />} />
             <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
             <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
+            <Route path="/super-admin/marketing-allocation" element={<MarketingAllocationRules />} />
+            <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
           </Route>
 
           {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization

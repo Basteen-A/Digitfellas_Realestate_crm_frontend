@@ -24,6 +24,7 @@ import {
   TrophyIcon,
   PhoneArrowDownLeftIcon,
   PaperAirplaneIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
 
@@ -157,6 +158,8 @@ const adminSidebar = [
   { label: 'Workflow Actions', path: '/super-admin/workflow-actions', icon: BoltIcon },
   { label: 'Reallocation Rules', path: '/super-admin/reallotment-rules', icon: ArrowsRightLeftIcon },
   { label: 'Reallocation History', path: '/super-admin/reallotment-logs', icon: ArrowPathIcon },
+  { label: 'Marketing Allocation', path: '/super-admin/marketing-allocation', icon: MegaphoneIcon },
+  { label: 'Allocation History', path: '/super-admin/marketing-allocation-history', icon: PhoneArrowDownLeftIcon },
 
   { section: 'CONFIGURATION' },
   {
