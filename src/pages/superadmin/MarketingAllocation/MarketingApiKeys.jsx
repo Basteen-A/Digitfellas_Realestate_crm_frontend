@@ -4,11 +4,14 @@ import {
   KeyIcon, PlusIcon, TrashIcon, ArrowPathIcon, ClipboardDocumentIcon, CheckIcon,
 } from '@heroicons/react/24/outline';
 import marketingApiKeyApi from '../../../api/marketingApiKeyApi';
+import leadSourceApi from '../../../api/leadSourceApi';
+import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
+const selectStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer' };
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never');
 
@@ -17,6 +20,10 @@ const MarketingApiKeys = () => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [selectedSourceId, setSelectedSourceId] = useState('');
+  const [selectedSubSourceId, setSelectedSubSourceId] = useState('');
+  const [sources, setSources] = useState([]);
+  const [subSources, setSubSources] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   // The one-time plaintext reveal after create/regenerate.
   const [revealed, setRevealed] = useState(null); // { name, api_key }
@@ -34,16 +41,57 @@ const MarketingApiKeys = () => {
     }
   }, []);
 
+  const loadSources = useCallback(async () => {
+    try {
+      const resp = await leadSourceApi.getWithSubSources();
+      setSources(resp.data || []);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to load lead sources'));
+    }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { 
+    if (showCreate) {
+      loadSources();
+    }
+  }, [showCreate, loadSources]);
+
+  // Load sub-sources when source changes
+  useEffect(() => {
+    const loadSubSources = async () => {
+      if (!selectedSourceId) {
+        setSubSources([]);
+        setSelectedSubSourceId('');
+        return;
+      }
+      try {
+        const resp = await leadSubSourceApi.getBySource(selectedSourceId);
+        setSubSources(resp.data || []);
+        setSelectedSubSourceId('');
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to load sub-sources'));
+      }
+    };
+    loadSubSources();
+  }, [selectedSourceId]);
 
   const create = async () => {
     if (!newName.trim()) { toast.error('Enter a name for the integration'); return; }
+    if (!selectedSourceId) { toast.error('Select a lead source'); return; }
     setCreating(true);
     try {
-      const resp = await marketingApiKeyApi.create({ name: newName.trim() });
+      const payload = { 
+        name: newName.trim(),
+        lead_source_id: selectedSourceId || null,
+        lead_sub_source_id: selectedSubSourceId || null,
+      };
+      const resp = await marketingApiKeyApi.create(payload);
       setRevealed({ name: resp.data.name, api_key: resp.data.api_key });
       setCopied(false);
       setNewName('');
+      setSelectedSourceId('');
+      setSelectedSubSourceId('');
       setShowCreate(false);
       load();
     } catch (err) {
@@ -95,6 +143,12 @@ const MarketingApiKeys = () => {
     }
   };
 
+  const selectedSource = sources.find(s => s.id === selectedSourceId);
+  const sourceLabel = selectedSource?.source_name || 'Any';
+  const subSourceLabel = selectedSubSourceId 
+    ? subSources.find(ss => ss.id === selectedSubSourceId)?.sub_source_name || 'Any'
+    : (selectedSourceId ? 'All sub-sources' : 'Any');
+
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -106,7 +160,7 @@ const MarketingApiKeys = () => {
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={load} disabled={loading}>
             <ArrowPathIcon style={{ width: 15, height: 15 }} /> {loading ? 'Refreshing…' : 'Refresh'}
           </button>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { setShowCreate(true); setNewName(''); }}>
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { setShowCreate(true); setNewName(''); setSelectedSourceId(''); setSelectedSubSourceId(''); }}>
             <PlusIcon style={{ width: 16, height: 16 }} /> New Key
           </button>
         </div>
@@ -118,7 +172,10 @@ const MarketingApiKeys = () => {
           Send each website's key in the <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>X-API-Key</code> header to{' '}
           <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>POST /api/v1/marketing/leads</code>.
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-            Body fields: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ source, sub_source?, name, phone, email?, project?, location?, campaign_name? }'}</code>
+            Body fields: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ name, phone, email?, project?, location?, campaign_name? }'}</code>
+          </div>
+          <div style={{ fontSize: 12, color: '#2563eb', marginTop: 6, fontWeight: 600 }}>
+            Source/sub-source are automatically set based on the API key configuration — no need to include them in the body.
           </div>
         </div>
       </div>
@@ -127,7 +184,7 @@ const MarketingApiKeys = () => {
       {revealed && (
         <div className="crm-card" style={{ padding: 16, marginBottom: 14, border: '1px solid #16A34A', background: '#f0fdf4' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 8 }}>
-            Key for “{revealed.name}” — copy it now. It will not be shown again.
+            Key for "{revealed.name}" — copy it now. It will not be shown again.
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <code style={{ flex: 1, minWidth: 280, background: '#fff', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 12px', fontSize: 13, wordBreak: 'break-all', color: '#111' }}>
@@ -144,11 +201,13 @@ const MarketingApiKeys = () => {
 
       <div className="crm-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead>
               <tr>
                 <th style={th}>Integration</th>
                 <th style={th}>Key</th>
+                <th style={th}>Source</th>
+                <th style={th}>Sub-Source</th>
                 <th style={th}>Last Used</th>
                 <th style={th}>Requests</th>
                 <th style={th}>Status</th>
@@ -157,15 +216,25 @@ const MarketingApiKeys = () => {
             </thead>
             <tbody>
               {loading && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>Loading…</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>Loading…</td></tr>
               )}
               {!loading && keys.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No API keys yet. Create one per website / app.</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>No API keys yet. Create one per website / app.</td></tr>
               )}
               {!loading && keys.map((k) => (
                 <tr key={k.id}>
                   <td style={td}><span style={{ fontWeight: 600 }}>{k.name}</span></td>
                   <td style={td}><code style={{ fontSize: 12, color: 'var(--text-muted)' }}>{k.key_prefix}…</code></td>
+                  <td style={td}>
+                    <span style={{ fontSize: 12, color: k.leadSource ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {k.leadSource?.source_name || 'Any'}
+                    </span>
+                  </td>
+                  <td style={td}>
+                    <span style={{ fontSize: 12, color: k.leadSubSource ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {k.leadSubSource?.sub_source_name || (k.leadSource ? 'All' : 'Any')}
+                    </span>
+                  </td>
                   <td style={td}>{fmtDateTime(k.last_used_at)}</td>
                   <td style={td}>{k.usage_count ?? 0}</td>
                   <td style={td}>
@@ -204,24 +273,69 @@ const MarketingApiKeys = () => {
           onClick={() => !creating && setShowCreate(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20 }}
         >
-          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 460, marginTop: 60, padding: 0, background: 'var(--bg-primary)' }}>
+          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 500, marginTop: 60, padding: 0, background: 'var(--bg-primary)' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>New API Key</h2>
             </div>
             <div style={{ padding: 20 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Integration Name</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Integration Name *</label>
               <input
                 style={inputStyle}
                 autoFocus
                 placeholder="e.g. Company Website, Facebook Ads App"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') create(); }}
               />
+              
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Lead Source *</label>
+              <select
+                style={selectStyle}
+                value={selectedSourceId}
+                onChange={(e) => setSelectedSourceId(e.target.value)}
+              >
+                <option value="">Select a source...</option>
+                {sources.map((source) => (
+                  <option key={source.id} value={source.id}>{source.source_name}</option>
+                ))}
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Leads from this key must match this source
+              </div>
+              
+              {selectedSourceId && (
+                <>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Lead Sub-Source (Optional)</label>
+                  <select
+                    style={selectStyle}
+                    value={selectedSubSourceId}
+                    onChange={(e) => setSelectedSubSourceId(e.target.value)}
+                    disabled={!selectedSourceId}
+                  >
+                    <option value="">All sub-sources</option>
+                    {subSources.map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.sub_source_name}</option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Optionally restrict to a specific sub-source
+                  </div>
+                </>
+              )}
+              
+              <div style={{ marginTop: 20, padding: 12, background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>Key Configuration Summary</div>
+                <div style={{ fontSize: 12, color: '#0c4a6e' }}>
+                  Source: <strong>{sourceLabel}</strong><br/>
+                  Sub-Source: <strong>{subSourceLabel}</strong>
+                </div>
+                <div style={{ fontSize: 11, color: '#0369a1', marginTop: 6 }}>
+                  These values will be automatically applied to all leads posted with this key
+                </div>
+              </div>
             </div>
             <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button className="crm-btn crm-btn-ghost" onClick={() => setShowCreate(false)} disabled={creating}>Cancel</button>
-              <button className="crm-btn crm-btn-primary" onClick={create} disabled={creating}>{creating ? 'Creating…' : 'Create Key'}</button>
+              <button className="crm-btn crm-btn-primary" onClick={create} disabled={creating || !newName.trim() || !selectedSourceId}>{creating ? 'Creating…' : 'Create Key'}</button>
             </div>
           </div>
         </div>
