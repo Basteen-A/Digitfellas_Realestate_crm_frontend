@@ -60,6 +60,7 @@ import ReallotmentRules from '../pages/superadmin/ReallotmentRules';
 import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
 import MarketingAllocationRules from '../pages/superadmin/MarketingAllocation/MarketingAllocationRules';
 import MarketingAllocationHistory from '../pages/superadmin/MarketingAllocation/MarketingAllocationHistory';
+import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingApiKeys';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -253,6 +254,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
             <Route path="/super-admin/marketing-allocation" element={<MarketingAllocationRules />} />
             <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
+            <Route path="/super-admin/marketing-api-keys" element={<MarketingApiKeys />} />
           </Route>
 
           {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization

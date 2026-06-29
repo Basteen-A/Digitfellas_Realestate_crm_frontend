@@ -245,9 +245,11 @@ const MarketingAllocationRules = () => {
           External sources push leads to{' '}
           <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>POST /api/v1/marketing/leads</code>{' '}
           with header{' '}
-          <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>X-API-Key: &lt;MARKETING_INGEST_API_KEY&gt;</code>.
+          <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>X-API-Key: &lt;website key&gt;</code>.
+          {' '}Each website/app gets its own key — manage them under{' '}
+          <a href="/super-admin/marketing-api-keys" style={{ color: '#2563eb', fontWeight: 600 }}>Marketing API Keys</a>.
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-            Body: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ "source": "Facebook", "sub_source": "Lead Form", "name": "...", "phone": "...", "email": "...", "campaign_name": "..." }'}</code>
+            Body: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ "source": "Facebook", "sub_source": "Lead Form", "name": "...", "phone": "...", "email": "...", "project": "...", "location": "...", "campaign_name": "..." }'}</code>
             {' '}— the lead is created and auto-assigned to the next telecaller in the matching rule below (a sub-source rule wins over the whole-source rule).
           </div>
         </div>

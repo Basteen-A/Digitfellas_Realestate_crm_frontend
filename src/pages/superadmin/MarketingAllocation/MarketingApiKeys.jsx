@@ -1,0 +1,233 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
+import {
+  KeyIcon, PlusIcon, TrashIcon, ArrowPathIcon, ClipboardDocumentIcon, CheckIcon,
+} from '@heroicons/react/24/outline';
+import marketingApiKeyApi from '../../../api/marketingApiKeyApi';
+import { getErrorMessage } from '../../../utils/helpers';
+
+const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
+const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
+const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
+
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never');
+
+const MarketingApiKeys = () => {
+  const [keys, setKeys] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  // The one-time plaintext reveal after create/regenerate.
+  const [revealed, setRevealed] = useState(null); // { name, api_key }
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await marketingApiKeyApi.getAll({ limit: 100 });
+      setKeys(resp.data || []);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to load API keys'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const create = async () => {
+    if (!newName.trim()) { toast.error('Enter a name for the integration'); return; }
+    setCreating(true);
+    try {
+      const resp = await marketingApiKeyApi.create({ name: newName.trim() });
+      setRevealed({ name: resp.data.name, api_key: resp.data.api_key });
+      setCopied(false);
+      setNewName('');
+      setShowCreate(false);
+      load();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to create key'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const regenerate = async (k) => {
+    if (!window.confirm(`Regenerate the key for "${k.name}"? The current key will stop working immediately.`)) return;
+    try {
+      const resp = await marketingApiKeyApi.regenerate(k.id);
+      setRevealed({ name: resp.data.name, api_key: resp.data.api_key });
+      setCopied(false);
+      load();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to regenerate key'));
+    }
+  };
+
+  const toggle = async (k) => {
+    try {
+      await marketingApiKeyApi.toggleStatus(k.id);
+      load();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update key'));
+    }
+  };
+
+  const remove = async (k) => {
+    if (!window.confirm(`Delete the key "${k.name}"? This integration will lose access permanently.`)) return;
+    try {
+      await marketingApiKeyApi.delete(k.id);
+      toast.success('Key deleted');
+      load();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete key'));
+    }
+  };
+
+  const copyKey = async () => {
+    try {
+      await navigator.clipboard.writeText(revealed.api_key);
+      setCopied(true);
+      toast.success('Key copied to clipboard');
+    } catch {
+      toast.error('Could not copy — select and copy manually');
+    }
+  };
+
+  return (
+    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+      <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="page-header-left">
+          <h1><KeyIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Marketing API Keys</h1>
+          <p className="hidden sm:block">One key per website / application — revoke any integration without affecting the others</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={load} disabled={loading}>
+            <ArrowPathIcon style={{ width: 15, height: 15 }} /> {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { setShowCreate(true); setNewName(''); }}>
+            <PlusIcon style={{ width: 16, height: 16 }} /> New Key
+          </button>
+        </div>
+      </div>
+
+      {/* Usage hint */}
+      <div className="crm-card" style={{ padding: 14, marginBottom: 14, borderLeft: '4px solid #2563eb' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+          Send each website's key in the <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>X-API-Key</code> header to{' '}
+          <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>POST /api/v1/marketing/leads</code>.
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+            Body fields: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ source, sub_source?, name, phone, email?, project?, location?, campaign_name? }'}</code>
+          </div>
+        </div>
+      </div>
+
+      {/* One-time reveal banner */}
+      {revealed && (
+        <div className="crm-card" style={{ padding: 16, marginBottom: 14, border: '1px solid #16A34A', background: '#f0fdf4' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 8 }}>
+            Key for “{revealed.name}” — copy it now. It will not be shown again.
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <code style={{ flex: 1, minWidth: 280, background: '#fff', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 12px', fontSize: 13, wordBreak: 'break-all', color: '#111' }}>
+              {revealed.api_key}
+            </code>
+            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={copyKey}>
+              {copied ? <CheckIcon style={{ width: 15, height: 15 }} /> : <ClipboardDocumentIcon style={{ width: 15, height: 15 }} />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setRevealed(null)}>Done</button>
+          </div>
+        </div>
+      )}
+
+      <div className="crm-card">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+            <thead>
+              <tr>
+                <th style={th}>Integration</th>
+                <th style={th}>Key</th>
+                <th style={th}>Last Used</th>
+                <th style={th}>Requests</th>
+                <th style={th}>Status</th>
+                <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>Loading…</td></tr>
+              )}
+              {!loading && keys.length === 0 && (
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No API keys yet. Create one per website / app.</td></tr>
+              )}
+              {!loading && keys.map((k) => (
+                <tr key={k.id}>
+                  <td style={td}><span style={{ fontWeight: 600 }}>{k.name}</span></td>
+                  <td style={td}><code style={{ fontSize: 12, color: 'var(--text-muted)' }}>{k.key_prefix}…</code></td>
+                  <td style={td}>{fmtDateTime(k.last_used_at)}</td>
+                  <td style={td}>{k.usage_count ?? 0}</td>
+                  <td style={td}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(k)}
+                      className="crm-btn crm-btn-sm"
+                      style={{
+                        background: k.is_active ? '#dcfce7' : '#fee2e2',
+                        color: k.is_active ? '#166534' : '#991b1b',
+                        border: `1px solid ${k.is_active ? '#bbf7d0' : '#fecaca'}`,
+                        fontWeight: 700,
+                      }}
+                      title="Click to toggle"
+                    >
+                      {k.is_active ? 'Active' : 'Revoked'}
+                    </button>
+                  </td>
+                  <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => regenerate(k)} title="Regenerate key">
+                      <ArrowPathIcon style={{ width: 15, height: 15 }} />
+                    </button>
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => remove(k)} title="Delete" style={{ color: '#dc2626' }}>
+                      <TrashIcon style={{ width: 15, height: 15 }} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showCreate && (
+        <div
+          onClick={() => !creating && setShowCreate(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 460, marginTop: 60, padding: 0, background: 'var(--bg-primary)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>New API Key</h2>
+            </div>
+            <div style={{ padding: 20 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Integration Name</label>
+              <input
+                style={inputStyle}
+                autoFocus
+                placeholder="e.g. Company Website, Facebook Ads App"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') create(); }}
+              />
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button className="crm-btn crm-btn-ghost" onClick={() => setShowCreate(false)} disabled={creating}>Cancel</button>
+              <button className="crm-btn crm-btn-primary" onClick={create} disabled={creating}>{creating ? 'Creating…' : 'Create Key'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MarketingApiKeys;
