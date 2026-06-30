@@ -271,13 +271,13 @@ const MarketingApiKeys = () => {
       {showCreate && (
         <div
           onClick={() => !creating && setShowCreate(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20, overflowY: 'auto' }}
         >
-          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 500, marginTop: 60, padding: 0, background: 'var(--bg-primary)' }}>
+          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 640, margin: '20px auto', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, background: 'var(--bg-primary)' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>New API Key</h2>
             </div>
-            <div style={{ padding: 20 }}>
+            <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Integration Name *</label>
               <input
                 style={inputStyle}

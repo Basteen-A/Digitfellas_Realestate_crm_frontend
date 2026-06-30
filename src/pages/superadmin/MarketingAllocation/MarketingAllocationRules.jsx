@@ -330,14 +330,14 @@ const MarketingAllocationRules = () => {
           <div
             onClick={(e) => e.stopPropagation()}
             className="crm-card"
-            style={{ width: '100%', maxWidth: 560, marginTop: 40, padding: 0, background: 'var(--bg-primary)' }}
+            style={{ width: '100%', maxWidth: 640, margin: '20px auto', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, background: 'var(--bg-primary)' }}
           >
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{form.id ? 'Edit Allocation Rule' : 'New Allocation Rule'}</h2>
               <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={closeModal}>✕</button>
             </div>
 
-            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', flex: 1 }}>
               <div>
                 <label style={labelStyle}>Rule Name</label>
                 <input

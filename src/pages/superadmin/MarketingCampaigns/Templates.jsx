@@ -176,11 +176,11 @@ const Templates = () => {
 
       {showModal && (
         <div onClick={() => !saving && setShowModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20, overflowY: 'auto' }}>
-          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 640, marginTop: 40, marginBottom: 40, padding: 0, background: 'var(--bg-primary)' }}>
+          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 640, margin: '20px auto', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, background: 'var(--bg-primary)' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{editing ? 'Edit Template' : 'New Template'}</h2>
             </div>
-            <div style={{ padding: 20 }}>
+            <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Template Name *</label>
