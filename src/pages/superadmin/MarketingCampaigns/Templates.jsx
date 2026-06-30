@@ -132,10 +132,105 @@ const Templates = () => {
   const nameInvalid = form.name.length > 0 && !TEMPLATE_NAME_RE.test(form.name);
   const canSave = form.name.trim() && !nameInvalid && form.category && !saving;
 
+  const validateTemplateForm = (f) => {
+    if (!f.name.trim()) return 'Template name is required';
+    if (!TEMPLATE_NAME_RE.test(f.name.trim())) return TEMPLATE_NAME_MSG;
+    if (f.name.trim().length > 512) return 'Template name cannot exceed 512 characters';
+    
+    if (!f.language_code.trim()) return 'Language code is required';
+    if (!/^[a-zA-Z_]{2,10}$/.test(f.language_code.trim())) return 'Language code must contain only letters and underscores (e.g. en, en_US)';
+    
+    if (!f.category) return 'Template category is required';
+    
+    if (!f.body_text.trim()) return 'Template body text is required';
+    if (f.body_text.length > 1024) return 'Template body text cannot exceed 1024 characters';
+
+    // Validate body placeholders and mapping
+    const matches = [...f.body_text.matchAll(/\{\{\s*(\d+)\s*\}\}/g)];
+    const indices = matches.map(m => parseInt(m[1], 10));
+    const uniqueIndices = [...new Set(indices)].sort((a, b) => a - b);
+    const N = uniqueIndices.length;
+
+    for (let i = 0; i < N; i++) {
+      if (uniqueIndices[i] !== i + 1) {
+        return `Placeholders in body text must be sequential starting from 1 (found {{${uniqueIndices[i]}}}, but expected {{${i + 1}}})`;
+      }
+    }
+
+    const bodyParams = f.body_params || [];
+    if (bodyParams.length !== N) {
+      return `Template body has ${N} placeholder(s), but ${bodyParams.length} mapping(s) were configured`;
+    }
+
+    for (let i = 0; i < bodyParams.length; i++) {
+      const p = bodyParams[i];
+      const idx = i + 1;
+      if (p.source === 'lead_field') {
+        if (!p.field) return `Placeholder {{${idx}}} is mapped to lead field, but no field is selected`;
+      } else if (p.source === 'static') {
+        if (p.value === undefined || p.value === null || String(p.value).trim() === '') {
+          return `Placeholder {{${idx}}} is mapped to static text, but the value is empty`;
+        }
+      } else {
+        return `Placeholder {{${idx}}} mapping source is invalid`;
+      }
+    }
+
+    // Header validation
+    const headerType = f.header_type || 'NONE';
+    if (headerType === 'TEXT') {
+      if (!f.header_text.trim()) return 'Header text is required when template type is Text';
+      if (f.header_text.length > 60) return 'Header text cannot exceed 60 characters';
+      if (/\{\{\s*\d+\s*\}\}/.test(f.header_text)) return 'Header text cannot contain placeholders';
+    } else if (['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerType)) {
+      if (!f.sample_header_url || !f.sample_header_url.trim()) {
+        return `Sample header URL/media is required for media header type ${headerType.toLowerCase()}`;
+      }
+      if (!/^https?:\/\/[^\s$.?#].[^\s]*$/i.test(f.sample_header_url.trim())) {
+        return 'Sample header media must be a valid http:// or https:// URL';
+      }
+    }
+
+    // Footer validation
+    if (f.footer_text && f.footer_text.trim().length > 60) {
+      return 'Footer text cannot exceed 60 characters';
+    }
+
+    // Buttons validation
+    const buttons = f.buttons || [];
+    if (buttons.length > 3) return 'Templates cannot contain more than 3 buttons';
+    
+    const seenTexts = new Set();
+    for (let i = 0; i < buttons.length; i++) {
+      const b = buttons[i];
+      if (!b.text.trim()) return `Button ${i + 1} text is required`;
+      const cleanText = b.text.trim();
+      if (cleanText.length > 25) return `Button ${i + 1} text cannot exceed 25 characters`;
+      if (seenTexts.has(cleanText)) return `Duplicate button text detected: "${cleanText}"`;
+      seenTexts.add(cleanText);
+
+      if (b.type === 'URL') {
+        if (!b.url || !b.url.trim()) return `URL is required for URL button "${cleanText}"`;
+        if (!/^https?:\/\/[^\s$.?#].[^\s]*$/i.test(b.url.trim())) {
+          return `URL for button "${cleanText}" must be a valid http:// or https:// URL`;
+        }
+      } else if (b.type === 'PHONE_NUMBER') {
+        if (!b.phone_number || !b.phone_number.trim()) return `Phone number is required for phone button "${cleanText}"`;
+        if (!/^\+?[0-9\s\-()]{7,20}$/.test(b.phone_number.trim())) {
+          return `Phone number for button "${cleanText}" is invalid`;
+        }
+      }
+    }
+
+    return null;
+  };
+
   const save = async () => {
-    if (!form.name.trim()) { toast.error('Template name is required'); return; }
-    if (nameInvalid) { toast.error(TEMPLATE_NAME_MSG); return; }
-    if (!form.category) { toast.error('Select a category'); return; }
+    const errorMsg = validateTemplateForm(form);
+    if (errorMsg) {
+      toast.error(errorMsg);
+      return;
+    }
     setSaving(true);
     try {
       const payload = { ...form };
