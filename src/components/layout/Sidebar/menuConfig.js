@@ -26,6 +26,7 @@ import {
   PaperAirplaneIcon,
   MegaphoneIcon,
   KeyIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
 
@@ -162,6 +163,17 @@ const adminSidebar = [
   { label: 'Marketing Allocation', path: '/super-admin/marketing-allocation', icon: MegaphoneIcon },
   { label: 'Allocation History', path: '/super-admin/marketing-allocation-history', icon: PhoneArrowDownLeftIcon },
   { label: 'Marketing API Keys', path: '/super-admin/marketing-api-keys', icon: KeyIcon },
+
+  { section: 'MARKETING' },
+  {
+    label: 'Marketing',
+    icon: ChatBubbleLeftRightIcon,
+    children: [
+      { label: 'Marketing Campaigns', path: '/super-admin/marketing-campaigns' },
+      { label: 'Templates', path: '/super-admin/marketing-templates' },
+      { label: 'WhatsApp Settings', path: '/super-admin/whatsapp-settings' },
+    ],
+  },
 
   { section: 'CONFIGURATION' },
   {

@@ -61,6 +61,9 @@ import ReallotmentLogs from '../pages/superadmin/ReallotmentLogs';
 import MarketingAllocationRules from '../pages/superadmin/MarketingAllocation/MarketingAllocationRules';
 import MarketingAllocationHistory from '../pages/superadmin/MarketingAllocation/MarketingAllocationHistory';
 import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingApiKeys';
+import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns';
+import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
+import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -255,6 +258,9 @@ const AppRoutes = () => {
             <Route path="/super-admin/marketing-allocation" element={<MarketingAllocationRules />} />
             <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
             <Route path="/super-admin/marketing-api-keys" element={<MarketingApiKeys />} />
+            <Route path="/super-admin/marketing-campaigns" element={<MarketingCampaigns />} />
+            <Route path="/super-admin/marketing-templates" element={<WhatsappTemplates />} />
+            <Route path="/super-admin/whatsapp-settings" element={<WhatsappSettings />} />
           </Route>
 
           {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization
