@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Cog6ToothIcon, PaperAirplaneIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import HeaderMediaInput from './HeaderMediaInput';
 
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
@@ -112,7 +113,7 @@ const WhatsappSettings = () => {
           <input style={inputStyle} value={form.waba_id} onChange={onChange('waba_id')} placeholder="WhatsApp Business Account ID" />
 
           <label style={labelStyle}>Default Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
-          <input style={inputStyle} value={form.default_header_image_url} onChange={onChange('default_header_image_url')} placeholder="https://yourdomain.com/image.jpg" />
+          <HeaderMediaInput value={form.default_header_image_url} onChange={(url) => setForm((f) => ({ ...f, default_header_image_url: url }))} />
 
           <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
             <button className="crm-btn crm-btn-primary" onClick={save} disabled={saving || loading}>

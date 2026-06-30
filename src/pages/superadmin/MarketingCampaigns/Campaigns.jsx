@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import {
-  MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, CheckCircleIcon, XCircleIcon, EyeIcon,
+  MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, CheckCircleIcon, XCircleIcon, EyeIcon, ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import leadStatusApi from '../../../api/leadStatusApi';
@@ -10,6 +10,8 @@ import locationApi from '../../../api/locationApi';
 import leadStageApi from '../../../api/leadStageApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import HeaderMediaInput from './HeaderMediaInput';
+import WhatsappPreview from './WhatsappPreview';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
@@ -45,6 +47,7 @@ const EMPTY_FILTERS = { statusIds: [], projectIds: [], locationIds: [], stageIds
 
 const Campaigns = () => {
   const [campaigns, setCampaigns] = useState([]);
+  const [view, setView] = useState('list'); // 'list' | 'form'
 
   // Option lists
   const [statuses, setStatuses] = useState([]);
@@ -54,8 +57,7 @@ const Campaigns = () => {
   const [sources, setSources] = useState([]);
   const [templates, setTemplates] = useState([]);
 
-  // New-campaign modal
-  const [showModal, setShowModal] = useState(false);
+  // New-campaign form
   const [name, setName] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [headerImageUrl, setHeaderImageUrl] = useState('');
@@ -119,10 +121,13 @@ const Campaigns = () => {
     [key]: f[key].includes(val) ? f[key].filter((v) => v !== val) : [...f[key], val],
   }));
 
-  const openModal = () => {
+  const openBuilder = () => {
     setName(''); setTemplateId(''); setHeaderImageUrl(''); setFilters(EMPTY_FILTERS); setPreview(null);
-    setShowModal(true);
+    setView('form');
   };
+  const backToList = () => setView('list');
+
+  const selectedTemplate = useMemo(() => templates.find((t) => t.id === templateId) || null, [templates, templateId]);
 
   const runPreview = async () => {
     setPreviewing(true);
@@ -147,7 +152,7 @@ const Campaigns = () => {
         name: name.trim(), template_id: templateId, header_image_url: headerImageUrl || null, filters,
       });
       toast.success(resp.message || 'Campaign queued');
-      setShowModal(false);
+      backToList();
       loadCampaigns();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to create campaign'));
@@ -171,6 +176,96 @@ const Campaigns = () => {
 
   const pct = (c) => (c.total_recipients ? Math.round(((c.sent_count + c.failed_count) / c.total_recipients) * 100) : 0);
 
+  // ─────────────────────────── BUILDER (full page) ───────────────────────────
+  if (view === 'form') {
+    return (
+      <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+        <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="page-header-left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={backToList}><ArrowLeftIcon style={{ width: 16, height: 16 }} /> Back</button>
+            <div>
+              <h1 style={{ margin: 0 }}>New Campaign</h1>
+              <p className="hidden sm:block">Pick a template, target your audience and preview before sending</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="crm-btn crm-btn-ghost" onClick={backToList} disabled={sending}>Cancel</button>
+            <button className="crm-btn crm-btn-primary" onClick={send} disabled={sending || !name.trim() || !templateId}>{sending ? 'Queuing…' : 'Send Campaign'}</button>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16, alignItems: 'start' }} className="wa-builder-grid">
+          {/* Form */}
+          <div className="crm-card" style={{ padding: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Campaign Name *</label>
+                <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. June Offer Blast" />
+              </div>
+              <div>
+                <label style={labelStyle}>Template *</label>
+                <select style={selectStyle} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+                  <option value="">Select a template…</option>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.language_code})</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <label style={labelStyle}>Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span></label>
+              <HeaderMediaInput value={headerImageUrl} onChange={setHeaderImageUrl} />
+            </div>
+
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Target Leads</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+                <MultiCheck label="Status" options={statuses} selected={filters.statusIds} onToggle={toggleFilter('statusIds')} />
+                <MultiCheck label="Project" options={projects} selected={filters.projectIds} onToggle={toggleFilter('projectIds')} />
+                <MultiCheck label="Location" options={locations} selected={filters.locationIds} onToggle={toggleFilter('locationIds')} />
+                <MultiCheck label="Stage" options={stages} selected={filters.stageIds} onToggle={toggleFilter('stageIds')} />
+                <MultiCheck label="Source" options={sources} selected={filters.sourceIds} onToggle={toggleFilter('sourceIds')} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                <div>
+                  <label style={labelStyle}>Created From</label>
+                  <input type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Created To</label>
+                  <input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>No filter = all leads with a phone number. Leads with no valid phone are skipped automatically.</div>
+            </div>
+
+            {/* Audience count */}
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 13 }}>
+                {preview ? (
+                  <span><strong style={{ fontSize: 18 }}>{preview.total}</strong> matching recipient(s)
+                    {preview.sample?.length > 0 && <span style={{ color: 'var(--text-muted)' }}> — e.g. {preview.sample.slice(0, 3).map((s) => s.name || s.phone).join(', ')}…</span>}
+                  </span>
+                ) : <span style={{ color: 'var(--text-muted)' }}>Preview the audience before sending.</span>}
+              </div>
+              <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={runPreview} disabled={previewing}>{previewing ? 'Counting…' : 'Preview Recipients'}</button>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div className="crm-card" style={{ padding: 0, position: 'sticky', top: 16, overflow: 'hidden' }}>
+            <div style={{ background: '#075e54', color: '#fff', padding: '12px 16px', fontWeight: 800, fontSize: 14 }}>Message Preview</div>
+            <div style={{ padding: 12 }}>
+              {selectedTemplate
+                ? <WhatsappPreview template={selectedTemplate} headerMediaUrl={headerImageUrl} />
+                : <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '24px 8px', textAlign: 'center' }}>Select a template to preview the message.</div>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────── LIST ───────────────────────────
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -180,7 +275,7 @@ const Campaigns = () => {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadCampaigns}><ArrowPathIcon style={{ width: 15, height: 15 }} /> Refresh</button>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openModal}><PlusIcon style={{ width: 16, height: 16 }} /> New Campaign</button>
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openBuilder}><PlusIcon style={{ width: 16, height: 16 }} /> New Campaign</button>
         </div>
       </div>
 
@@ -230,75 +325,6 @@ const Campaigns = () => {
           </table>
         </div>
       </div>
-
-      {/* New campaign modal */}
-      {showModal && (
-        <div onClick={() => !sending && setShowModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20, overflowY: 'auto' }}>
-          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 640, margin: '20px auto', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, background: 'var(--bg-primary)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>New Campaign</h2>
-            </div>
-            <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={labelStyle}>Campaign Name *</label>
-                  <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. June Offer Blast" />
-                </div>
-                <div>
-                  <label style={labelStyle}>Template *</label>
-                  <select style={selectStyle} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                    <option value="">Select a template…</option>
-                    {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.language_code})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <label style={labelStyle}>Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span></label>
-                <input style={inputStyle} value={headerImageUrl} onChange={(e) => setHeaderImageUrl(e.target.value)} placeholder="https://yourdomain.com/image.jpg" />
-              </div>
-
-              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Target Leads</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                  <MultiCheck label="Status" options={statuses} selected={filters.statusIds} onToggle={toggleFilter('statusIds')} />
-                  <MultiCheck label="Project" options={projects} selected={filters.projectIds} onToggle={toggleFilter('projectIds')} />
-                  <MultiCheck label="Location" options={locations} selected={filters.locationIds} onToggle={toggleFilter('locationIds')} />
-                  <MultiCheck label="Stage" options={stages} selected={filters.stageIds} onToggle={toggleFilter('stageIds')} />
-                  <MultiCheck label="Source" options={sources} selected={filters.sourceIds} onToggle={toggleFilter('sourceIds')} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-                  <div>
-                    <label style={labelStyle}>Created From</label>
-                    <input type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Created To</label>
-                    <input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} />
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>No filter = all leads with a phone number. Leads with no valid phone are skipped automatically.</div>
-              </div>
-
-              {/* Preview */}
-              <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ fontSize: 13 }}>
-                  {preview ? (
-                    <span><strong style={{ fontSize: 18 }}>{preview.total}</strong> matching recipient(s)
-                      {preview.sample?.length > 0 && <span style={{ color: 'var(--text-muted)' }}> — e.g. {preview.sample.slice(0, 3).map((s) => s.name || s.phone).join(', ')}…</span>}
-                    </span>
-                  ) : <span style={{ color: 'var(--text-muted)' }}>Preview the audience before sending.</span>}
-                </div>
-                <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={runPreview} disabled={previewing}>{previewing ? 'Counting…' : 'Preview Recipients'}</button>
-              </div>
-            </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button className="crm-btn crm-btn-ghost" onClick={() => setShowModal(false)} disabled={sending}>Cancel</button>
-              <button className="crm-btn crm-btn-primary" onClick={send} disabled={sending || !name.trim() || !templateId}>{sending ? 'Queuing…' : 'Send Campaign'}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Recipients drill-down */}
       {drill && (

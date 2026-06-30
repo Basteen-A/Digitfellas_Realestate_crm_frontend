@@ -1630,3 +1630,15 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
     gap: 10px !important;
   }
 }
+
+/* WhatsApp template / campaign builder — collapse the live-preview pane below
+   the form on narrow screens so the form fields stay usable. */
+@media (max-width: 1024px) {
+  .wa-builder-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wa-builder-grid > .crm-card[style*="sticky"] {
+    position: static !important;
+  }
+}

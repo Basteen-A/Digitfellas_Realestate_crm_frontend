@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
-  KeyIcon, PlusIcon, TrashIcon, ArrowPathIcon, ClipboardDocumentIcon, CheckIcon,
+  KeyIcon, PlusIcon, TrashIcon, ArrowPathIcon, ClipboardDocumentIcon, CheckIcon, PencilSquareIcon, ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import marketingApiKeyApi from '../../../api/marketingApiKeyApi';
 import leadSourceApi from '../../../api/leadSourceApi';
@@ -20,11 +20,19 @@ const MarketingApiKeys = () => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newAllowedIps, setNewAllowedIps] = useState('');
+  const [newRateLimit, setNewRateLimit] = useState('');
   const [selectedSourceId, setSelectedSourceId] = useState('');
   const [selectedSubSourceId, setSelectedSubSourceId] = useState('');
   const [sources, setSources] = useState([]);
   const [subSources, setSubSources] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  // Edit-key modal (name + IP whitelist, no secret rotation).
+  const [editing, setEditing] = useState(null); // { id, name, allowed_ips }
+  const [editName, setEditName] = useState('');
+  const [editAllowedIps, setEditAllowedIps] = useState('');
+  const [editRateLimit, setEditRateLimit] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   // The one-time plaintext reveal after create/regenerate.
   const [revealed, setRevealed] = useState(null); // { name, api_key }
   const [copied, setCopied] = useState(false);
@@ -81,15 +89,19 @@ const MarketingApiKeys = () => {
     if (!selectedSourceId) { toast.error('Select a lead source'); return; }
     setCreating(true);
     try {
-      const payload = { 
+      const payload = {
         name: newName.trim(),
         lead_source_id: selectedSourceId || null,
         lead_sub_source_id: selectedSubSourceId || null,
+        allowed_ips: newAllowedIps,
+        rate_limit_per_min: newRateLimit === '' ? 0 : Number(newRateLimit),
       };
       const resp = await marketingApiKeyApi.create(payload);
       setRevealed({ name: resp.data.name, api_key: resp.data.api_key });
       setCopied(false);
       setNewName('');
+      setNewAllowedIps('');
+      setNewRateLimit('');
       setSelectedSourceId('');
       setSelectedSubSourceId('');
       setShowCreate(false);
@@ -119,6 +131,32 @@ const MarketingApiKeys = () => {
       load();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to update key'));
+    }
+  };
+
+  const openEdit = (k) => {
+    setEditing(k);
+    setEditName(k.name || '');
+    setEditAllowedIps(Array.isArray(k.allowed_ips) ? k.allowed_ips.join('\n') : '');
+    setEditRateLimit(k.rate_limit_per_min ? String(k.rate_limit_per_min) : '');
+  };
+
+  const saveEdit = async () => {
+    if (!editName.trim()) { toast.error('Enter a name for the integration'); return; }
+    setSavingEdit(true);
+    try {
+      await marketingApiKeyApi.update(editing.id, {
+        name: editName.trim(),
+        allowed_ips: editAllowedIps,
+        rate_limit_per_min: editRateLimit === '' ? 0 : Number(editRateLimit),
+      });
+      toast.success('API key updated');
+      setEditing(null);
+      load();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update key'));
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -208,6 +246,8 @@ const MarketingApiKeys = () => {
                 <th style={th}>Key</th>
                 <th style={th}>Source</th>
                 <th style={th}>Sub-Source</th>
+                <th style={th}>Whitelist</th>
+                <th style={th}>Rate Limit</th>
                 <th style={th}>Last Used</th>
                 <th style={th}>Requests</th>
                 <th style={th}>Status</th>
@@ -216,10 +256,10 @@ const MarketingApiKeys = () => {
             </thead>
             <tbody>
               {loading && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>Loading…</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={10}>Loading…</td></tr>
               )}
               {!loading && keys.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>No API keys yet. Create one per website / app.</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={10}>No API keys yet. Create one per website / app.</td></tr>
               )}
               {!loading && keys.map((k) => (
                 <tr key={k.id}>
@@ -234,6 +274,20 @@ const MarketingApiKeys = () => {
                     <span style={{ fontSize: 12, color: k.leadSubSource ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       {k.leadSubSource?.sub_source_name || (k.leadSource ? 'All' : 'Any')}
                     </span>
+                  </td>
+                  <td style={td}>
+                    {Array.isArray(k.allowed_ips) && k.allowed_ips.length > 0 ? (
+                      <span title={k.allowed_ips.join(', ')} style={{ fontSize: 11, fontWeight: 700, color: '#166534', background: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: 999, padding: '3px 9px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <ShieldCheckIcon style={{ width: 13, height: 13 }} /> {k.allowed_ips.length} {k.allowed_ips.length > 1 ? 'rules' : 'rule'}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Any</span>
+                    )}
+                  </td>
+                  <td style={td}>
+                    {k.rate_limit_per_min > 0
+                      ? <span style={{ fontSize: 12, fontWeight: 600 }}>{k.rate_limit_per_min}/min</span>
+                      : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Unlimited</span>}
                   </td>
                   <td style={td}>{fmtDateTime(k.last_used_at)}</td>
                   <td style={td}>{k.usage_count ?? 0}</td>
@@ -254,6 +308,9 @@ const MarketingApiKeys = () => {
                     </button>
                   </td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(k)} title="Edit name / IP whitelist">
+                      <PencilSquareIcon style={{ width: 15, height: 15 }} />
+                    </button>
                     <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => regenerate(k)} title="Regenerate key">
                       <ArrowPathIcon style={{ width: 15, height: 15 }} />
                     </button>
@@ -322,6 +379,30 @@ const MarketingApiKeys = () => {
                 </>
               )}
               
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Allowed IPs / Domains (Optional)</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 70, resize: 'vertical', fontFamily: 'monospace', fontSize: 13 }}
+                placeholder={'203.0.113.5\n10.0.0.0/24\nexample.com'}
+                value={newAllowedIps}
+                onChange={(e) => setNewAllowedIps(e.target.value)}
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                One IP, CIDR range, or domain per line. Leave empty to allow any. Domains match the request's Origin/Referer; IPs match the caller's address.
+              </div>
+
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Rate Limit (requests / minute)</label>
+              <input
+                style={inputStyle}
+                type="number"
+                min={0}
+                placeholder="0 = unlimited"
+                value={newRateLimit}
+                onChange={(e) => setNewRateLimit(e.target.value)}
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Max requests this key may make per minute. Leave empty or 0 for unlimited.
+              </div>
+
               <div style={{ marginTop: 20, padding: 12, background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>Key Configuration Summary</div>
                 <div style={{ fontSize: 12, color: '#0c4a6e' }}>
@@ -336,6 +417,53 @@ const MarketingApiKeys = () => {
             <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button className="crm-btn crm-btn-ghost" onClick={() => setShowCreate(false)} disabled={creating}>Cancel</button>
               <button className="crm-btn crm-btn-primary" onClick={create} disabled={creating || !newName.trim() || !selectedSourceId}>{creating ? 'Creating…' : 'Create Key'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit key (name + IP whitelist — does NOT rotate the secret) */}
+      {editing && (
+        <div
+          onClick={() => !savingEdit && setEditing(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20, overflowY: 'auto' }}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 640, margin: '20px auto', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, background: 'var(--bg-primary)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Edit API Key</h2>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Update the name and IP whitelist. The secret key is not changed.</div>
+            </div>
+            <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Integration Name *</label>
+              <input style={inputStyle} value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="e.g. Company Website" />
+
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Allowed IPs / Domains (Optional)</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 90, resize: 'vertical', fontFamily: 'monospace', fontSize: 13 }}
+                placeholder={'203.0.113.5\n10.0.0.0/24\nexample.com'}
+                value={editAllowedIps}
+                onChange={(e) => setEditAllowedIps(e.target.value)}
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                One IP, CIDR range, or domain per line. Leave empty to allow any. Domains match the request's Origin/Referer; IPs match the caller's address.
+              </div>
+
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Rate Limit (requests / minute)</label>
+              <input
+                style={inputStyle}
+                type="number"
+                min={0}
+                placeholder="0 = unlimited"
+                value={editRateLimit}
+                onChange={(e) => setEditRateLimit(e.target.value)}
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Max requests this key may make per minute. Leave empty or 0 for unlimited.
+              </div>
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button className="crm-btn crm-btn-ghost" onClick={() => setEditing(null)} disabled={savingEdit}>Cancel</button>
+              <button className="crm-btn crm-btn-primary" onClick={saveEdit} disabled={savingEdit || !editName.trim()}>{savingEdit ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </div>
         </div>

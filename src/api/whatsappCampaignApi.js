@@ -45,6 +45,16 @@ const whatsappCampaignApi = {
     return data;
   },
 
+  // ── Header media upload (returns a stable public URL pinbot can fetch) ──
+  uploadHeaderMedia: async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const { data } = await api.post(`${BASE}/media`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
   // ── Campaigns ──
   previewRecipients: async (filters) => {
     const { data } = await api.post(`${BASE}/campaigns/preview`, { filters });

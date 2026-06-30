@@ -11,6 +11,11 @@ const marketingApiKeyApi = {
     const { data } = await api.post('/marketing-api-keys', payload);
     return data;
   },
+  // Edit name / IP whitelist / source mapping without rotating the secret.
+  update: async (id, payload) => {
+    const { data } = await api.patch(`/marketing-api-keys/${id}`, payload);
+    return data;
+  },
   regenerate: async (id) => {
     const { data } = await api.post(`/marketing-api-keys/${id}/regenerate`);
     return data;
