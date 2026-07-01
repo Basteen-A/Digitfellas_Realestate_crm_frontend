@@ -18,6 +18,59 @@ const selectStyle = { ...inputStyle, cursor: 'pointer' };
 const TEMPLATE_NAME_RE = /^[a-z0-9_]+$/;
 const TEMPLATE_NAME_MSG = 'Template name can only contain lowercase alphanumeric characters and underscores ( _ ). No other characters or white space are allowed.';
 const STATUS_OPTIONS = ['APPROVED', 'PENDING', 'REJECTED'];
+const LANGUAGES = [
+  { code: 'af', name: 'Afrikaans' },
+  { code: 'sq', name: 'Albanian' },
+  { code: 'ar', name: 'Arabic' },
+  { code: 'az', name: 'Azerbaijani' },
+  { code: 'bn', name: 'Bengali' },
+  { code: 'bg', name: 'Bulgarian' },
+  { code: 'ca', name: 'Catalan' },
+  { code: 'zh_CN', name: 'Chinese (CHN)' },
+  { code: 'zh_HK', name: 'Chinese (HKG)' },
+  { code: 'zh_TW', name: 'Chinese (TAI)' },
+  { code: 'hr', name: 'Croatian' },
+  { code: 'cs', name: 'Czech' },
+  { code: 'da', name: 'Danish' },
+  { code: 'nl', name: 'Dutch' },
+  { code: 'en', name: 'English' },
+  { code: 'en_GB', name: 'English (UK)' },
+  { code: 'en_US', name: 'English (US)' },
+  { code: 'fi', name: 'Finnish' },
+  { code: 'fr', name: 'French' },
+  { code: 'de', name: 'German' },
+  { code: 'el', name: 'Greek' },
+  { code: 'gu', name: 'Gujarati' },
+  { code: 'he', name: 'Hebrew' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'hu', name: 'Hungarian' },
+  { code: 'id', name: 'Indonesian' },
+  { code: 'it', name: 'Italian' },
+  { code: 'ja', name: 'Japanese' },
+  { code: 'kn', name: 'Kannada' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'ml', name: 'Malayalam' },
+  { code: 'mr', name: 'Marathi' },
+  { code: 'no', name: 'Norwegian' },
+  { code: 'pl', name: 'Polish' },
+  { code: 'pt_BR', name: 'Portuguese (BR)' },
+  { code: 'pt_PT', name: 'Portuguese (PT)' },
+  { code: 'pa', name: 'Punjabi' },
+  { code: 'ro', name: 'Romanian' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'sk', name: 'Slovak' },
+  { code: 'sl', name: 'Slovenian' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'es_LA', name: 'Spanish (LA)' },
+  { code: 'sv', name: 'Swedish' },
+  { code: 'ta', name: 'Tamil' },
+  { code: 'te', name: 'Telugu' },
+  { code: 'th', name: 'Thai' },
+  { code: 'tr', name: 'Turkish' },
+  { code: 'uk', name: 'Ukrainian' },
+  { code: 'ur', name: 'Urdu' },
+  { code: 'vi', name: 'Vietnamese' },
+];
 const BUTTON_LABELS = { QUICK_REPLY: 'Quick reply', URL: 'Visit website (URL)', PHONE_NUMBER: 'Call phone number' };
 
 const EMPTY = {
@@ -61,6 +114,24 @@ const Templates = () => {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [showEmojis, setShowEmojis] = useState(false);
+
+  const insertFormatting = (before, after = '') => {
+    const textarea = document.getElementById('template-body-textarea');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form.body_text;
+    const selected = text.slice(start, end);
+    const replacement = before + selected + after;
+    const newValue = text.slice(0, start) + replacement + text.slice(end);
+    setForm((f) => ({ ...f, body_text: newValue }));
+    
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }, 0);
+  };
 
   const load = useCallback(async (f = EMPTY_FILTERS) => {
     setLoading(true);
@@ -182,7 +253,10 @@ const Templates = () => {
       if (!f.header_text.trim()) return 'Header text is required when template type is Text';
       if (f.header_text.length > 60) return 'Header text cannot exceed 60 characters';
       if (/\{\{\s*\d+\s*\}\}/.test(f.header_text)) return 'Header text cannot contain placeholders';
-    } else if (['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerType)) {
+    } else if (['IMAGE', 'DOCUMENT', 'VIDEO', 'LOCATION', 'CAROUSEL'].includes(headerType)) {
+      if (['LOCATION', 'CAROUSEL'].includes(headerType)) {
+        return 'Location and Carousel media types are not supported yet';
+      }
       if (!f.sample_header_url || !f.sample_header_url.trim()) {
         return `Sample header URL/media is required for media header type ${headerType.toLowerCase()}`;
       }
@@ -270,7 +344,7 @@ const Templates = () => {
     }
   };
 
-  const isMediaHeader = ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(form.header_type);
+  const isMediaHeader = ['IMAGE', 'DOCUMENT', 'VIDEO', 'LOCATION', 'CAROUSEL'].includes(form.header_type);
 
   // ─────────────────────────── BUILDER (full page) ───────────────────────────
   if (view === 'form') {
@@ -295,7 +369,7 @@ const Templates = () => {
           <div className="crm-card" style={{ padding: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
               <div>
-                <label style={labelStyle}>Template name *</label>
+                <label style={labelStyle}>Template name : *</label>
                 <input
                   style={{ ...inputStyle, borderColor: nameInvalid ? '#fca5a5' : undefined }}
                   value={form.name}
@@ -305,52 +379,131 @@ const Templates = () => {
                 {nameInvalid && <div style={{ color: '#dc2626', fontSize: 11.5, marginTop: 5, lineHeight: 1.4 }}>{TEMPLATE_NAME_MSG}</div>}
               </div>
               <div>
-                <label style={labelStyle}>Language *</label>
-                <input style={inputStyle} value={form.language_code} onChange={setField('language_code')} placeholder="en" />
+                <label style={labelStyle}>Language : *</label>
+                <select style={selectStyle} value={form.language_code} onChange={setField('language_code')}>
+                  <option value="">-- Select --</option>
+                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+                </select>
               </div>
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={labelStyle}>Category *</label>
+              <label style={labelStyle}>Category : *</label>
               <select style={{ ...selectStyle, borderColor: !form.category ? '#fca5a5' : undefined }} value={form.category} onChange={setField('category')}>
-                <option value="">-- Select --</option>
+                <option value="">--Select--</option>
                 {meta.categories.map((c) => <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>)}
               </select>
             </div>
 
             {/* Header */}
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Header <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>optional</span></div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Add a title or choose which type of media you'll use for this header.</div>
-              <label style={labelStyle}>Template type</label>
-              <select style={selectStyle} value={form.header_type} onChange={setField('header_type')}>
-                {meta.header_types.map((h) => <option key={h} value={h}>{h === 'NONE' ? 'None' : h.charAt(0) + h.slice(1).toLowerCase()}</option>)}
+              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Header optional</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Add a title or choose which type of media you'll use for this header.</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Your title can't include more than one variable.</div>
+              
+              <label style={labelStyle}>Template type:</label>
+              <select
+                style={selectStyle}
+                value={form.header_type === 'NONE' || form.header_type === 'TEXT' ? form.header_type : 'MEDIA'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'NONE') setForm((f) => ({ ...f, header_type: 'NONE' }));
+                  else if (val === 'TEXT') setForm((f) => ({ ...f, header_type: 'TEXT' }));
+                  else setForm((f) => ({ ...f, header_type: 'IMAGE' })); // default media to Image
+                }}
+              >
+                <option value="NONE">None</option>
+                <option value="TEXT">Text</option>
+                <option value="MEDIA">Media</option>
               </select>
+
               {form.header_type === 'TEXT' && (
                 <div style={{ marginTop: 10 }}>
-                  <label style={labelStyle}>Header Text</label>
-                  <input style={inputStyle} value={form.header_text} onChange={setField('header_text')} placeholder="Header text" maxLength={60} />
+                  <label style={labelStyle}>Text : *</label>
+                  <input style={inputStyle} value={form.header_text} onChange={setField('header_text')} placeholder="Enter text" maxLength={60} />
+                  <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{form.header_text.length}/60</div>
                 </div>
               )}
+
               {isMediaHeader && (
                 <div style={{ marginTop: 10 }}>
-                  <label style={labelStyle}>Default Header Media URL</label>
-                  <HeaderMediaInput value={form.sample_header_url} onChange={(url) => setForm((f) => ({ ...f, sample_header_url: url }))} />
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Media type :</label>
+                    {[
+                      { value: 'DOCUMENT', label: 'Document' },
+                      { value: 'IMAGE', label: 'Image' },
+                      { value: 'VIDEO', label: 'Video' },
+                      { value: 'LOCATION', label: 'Location' },
+                      { value: 'CAROUSEL', label: 'Carousel' }
+                    ].map((mt) => (
+                      <label key={mt.value} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="mediaType"
+                          value={mt.value}
+                          checked={form.header_type === mt.value}
+                          onChange={() => setForm((f) => ({ ...f, header_type: mt.value }))}
+                        />
+                        {mt.label}
+                      </label>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                    Image: jpeg, png; Video: mp4; Document: .pdf, Maximum file size should be 5MB
+                  </div>
+
+                  <label style={labelStyle}>Media URL :</label>
+                  <HeaderMediaInput
+                    value={form.sample_header_url}
+                    onChange={(url) => setForm((f) => ({ ...f, sample_header_url: url }))}
+                    placeholder="Image/Pdf and Video URL, it should be https URL for example: https://domainname/imagename"
+                  />
                 </div>
               )}
             </div>
 
             {/* Body */}
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>Body *</div>
-                <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={addParam}><PlusIcon style={{ width: 14, height: 14 }} /> Add placeholder</button>
+              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>Body</div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Placeholders :</span>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn-secondary crm-btn-sm"
+                  onClick={addParam}
+                  style={{ padding: '4px 10px', fontSize: 12 }}
+                >
+                  Add placeholder
+                </button>
               </div>
+
+              {/* Formatting Toolbar */}
+              <div style={{ marginBottom: 6 }}>
+                <label style={labelStyle}>Message : *</label>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 8, background: 'var(--bg-secondary)', padding: 4, borderRadius: 6, width: 'fit-content' }}>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px' }} onClick={() => setShowEmojis(!showEmojis)} title="Add Emoji">😊</button>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', fontWeight: 'bold' }} onClick={() => insertFormatting('*', '*')} title="Bold">B</button>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', fontStyle: 'italic' }} onClick={() => insertFormatting('_', '_')} title="Italic">I</button>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', textDecoration: 'line-through' }} onClick={() => insertFormatting('~', '~')} title="Strikethrough">S</button>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', fontFamily: 'monospace' }} onClick={() => insertFormatting('```', '```')} title="Monospace">M</button>
+                </div>
+
+                {showEmojis && (
+                  <div style={{ display: 'flex', gap: 6, padding: 6, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-primary)', marginBottom: 8, flexWrap: 'wrap', maxWidth: 280 }}>
+                    {['😊', '👋', '👍', '🗓️', '📞', '📍', '🏠', '🚀', '✅', '❌', '🎁', '🔥'].map((emoji) => (
+                      <button key={emoji} type="button" className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { insertFormatting(emoji); setShowEmojis(false); }} style={{ padding: 4, fontSize: 16 }}>{emoji}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <textarea
+                id="template-body-textarea"
                 style={{ ...inputStyle, minHeight: 90, resize: 'vertical' }}
                 value={form.body_text}
                 onChange={setField('body_text')}
-                placeholder="Hi {{1}}, your update for {{2}} is ready."
+                placeholder="Enter template message"
               />
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Formatting: *bold*, _italic_, ~strikethrough~. Use {'{{1}}'}, {'{{2}}'} … for placeholders.</div>
 
