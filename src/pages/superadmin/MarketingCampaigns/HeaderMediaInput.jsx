@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
 
@@ -45,13 +44,19 @@ const HeaderMediaInput = ({
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-        <input
-          style={{ ...inputStyle, flex: 1 }}
-          value={value || ''}
-          onChange={(e) => { setPreviewError(false); onChange(e.target.value); }}
-          placeholder={placeholder}
-        />
+      <input
+        style={inputStyle}
+        value={value || ''}
+        onChange={(e) => { setPreviewError(false); onChange(e.target.value); }}
+        placeholder={placeholder}
+      />
+      
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '14px 0', position: 'relative' }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', background: 'var(--border-primary)', zIndex: 1 }}></div>
+        <span style={{ position: 'relative', zIndex: 2, background: 'var(--bg-primary)', padding: '0 12px', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>OR UPLOAD</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <button
           type="button"
           className="crm-btn crm-btn-secondary crm-btn-sm"
@@ -59,16 +64,30 @@ const HeaderMediaInput = ({
           disabled={uploading}
           style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
         >
-          <ArrowUpTrayIcon style={{ width: 14, height: 14 }} /> {uploading ? 'Uploading…' : 'Upload'}
+          {uploading ? 'Uploading…' : 'Choose File'}
         </button>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 120 }}>
+          {value ? value.split('/').pop().split('?')[0] : 'No file chosen'}
+        </span>
+        {value && (
+          <button
+            type="button"
+            className="crm-btn crm-btn-ghost crm-btn-sm"
+            onClick={() => { setPreviewError(false); onChange(''); }}
+            style={{ color: '#dc2626', fontSize: 13 }}
+          >
+            Clear file
+          </button>
+        )}
         <input ref={fileRef} type="file" accept={accept} onChange={handleFile} style={{ display: 'none' }} />
       </div>
+
       {value && looksLikeImage(value) && !previewError && (
         <img
           src={value}
           alt="Header preview"
           onError={() => setPreviewError(true)}
-          style={{ marginTop: 8, maxHeight: 90, maxWidth: '100%', borderRadius: 8, border: '1px solid var(--border-primary)', objectFit: 'contain' }}
+          style={{ marginTop: 12, maxHeight: 90, maxWidth: '100%', borderRadius: 8, border: '1px solid var(--border-primary)', objectFit: 'contain' }}
         />
       )}
     </div>

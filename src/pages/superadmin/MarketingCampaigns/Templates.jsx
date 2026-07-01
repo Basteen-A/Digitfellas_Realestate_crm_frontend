@@ -74,7 +74,7 @@ const LANGUAGES = [
 const BUTTON_LABELS = { QUICK_REPLY: 'Quick reply', URL: 'Visit website (URL)', PHONE_NUMBER: 'Call phone number' };
 
 const EMPTY = {
-  name: '', language_code: 'en', category: '', header_type: 'NONE', header_text: '',
+  name: '', language_code: 'en', category: '', sub_category: 'custom', header_type: 'NONE', header_text: '',
   sample_header_url: '', body_text: '', body_params: [], footer_text: '', buttons: [], is_active: true,
 };
 const EMPTY_FILTERS = { search: '', category: '', header_type: '', language_code: '', status: '' };
@@ -367,24 +367,15 @@ const Templates = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16, alignItems: 'start' }} className="wa-builder-grid">
           {/* Form */}
           <div className="crm-card" style={{ padding: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Template name : *</label>
-                <input
-                  style={{ ...inputStyle, borderColor: nameInvalid ? '#fca5a5' : undefined }}
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.toLowerCase() }))}
-                  placeholder="enter_template_name"
-                />
-                {nameInvalid && <div style={{ color: '#dc2626', fontSize: 11.5, marginTop: 5, lineHeight: 1.4 }}>{TEMPLATE_NAME_MSG}</div>}
-              </div>
-              <div>
-                <label style={labelStyle}>Language : *</label>
-                <select style={selectStyle} value={form.language_code} onChange={setField('language_code')}>
-                  <option value="">-- Select --</option>
-                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
-                </select>
-              </div>
+            <div>
+              <label style={labelStyle}>Template name : *</label>
+              <input
+                style={{ ...inputStyle, borderColor: nameInvalid ? '#fca5a5' : undefined }}
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.toLowerCase() }))}
+                placeholder="enter_template_name"
+              />
+              {nameInvalid && <div style={{ color: '#dc2626', fontSize: 11.5, marginTop: 5, lineHeight: 1.4 }}>{TEMPLATE_NAME_MSG}</div>}
             </div>
 
             <div style={{ marginTop: 12 }}>
@@ -392,6 +383,75 @@ const Templates = () => {
               <select style={{ ...selectStyle, borderColor: !form.category ? '#fca5a5' : undefined }} value={form.category} onChange={setField('category')}>
                 <option value="">--Select--</option>
                 {meta.categories.map((c) => <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>)}
+              </select>
+            </div>
+
+            {form.category === 'MARKETING' && (
+              <div style={{ marginTop: 14, padding: '12px', border: '1px solid var(--border-primary)', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+                <label style={labelStyle}>Type of marketing template :</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                  {[
+                    { value: 'custom', label: 'Custom', desc: 'Send promotional offers, announcements and more to increase awareness and engagement' },
+                    { value: 'product_messages', label: 'Product Messages', desc: 'Send message about your entire catalogue or multiple product from it' },
+                    { value: 'lto', label: 'LTO', desc: 'Limited time offer templates allow you to display expiration dates and running countdown timers for offer codes in template messages' },
+                    { value: 'order_payment', label: 'Order Payment details message', desc: 'Send messages with order details and payment options.' },
+                    { value: 'calling_permissions', label: 'Calling Permissions Request', desc: 'Ask customers if you can call them on WhatsApp' }
+                  ].map((opt) => (
+                    <div key={opt.value} style={{ display: 'flex', alignItems: 'start', gap: 10 }}>
+                      <input
+                        type="radio"
+                        id={`marketing-type-${opt.value}`}
+                        name="marketing_type"
+                        value={opt.value}
+                        checked={(form.sub_category || 'custom') === opt.value}
+                        onChange={() => setForm((f) => ({ ...f, sub_category: opt.value }))}
+                        style={{ marginTop: 3, cursor: 'pointer' }}
+                      />
+                      <label htmlFor={`marketing-type-${opt.value}`} style={{ cursor: 'pointer', flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{opt.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>{opt.desc}</div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {form.category === 'UTILITY' && (
+              <div style={{ marginTop: 14, padding: '12px', border: '1px solid var(--border-primary)', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+                <label style={labelStyle}>Type of utility template :</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                  {[
+                    { value: 'custom', label: 'Custom', desc: 'Send transactional updates related to a specific user action' },
+                    { value: 'order_status', label: 'Order status message', desc: 'Send message with order status' },
+                    { value: 'order_details', label: 'Order details message', desc: 'Send message with order details and payment options' },
+                    { value: 'calling_permissions', label: 'Calling Permissions Request', desc: 'Ask customers if you can call them on WhatsApp' }
+                  ].map((opt) => (
+                    <div key={opt.value} style={{ display: 'flex', alignItems: 'start', gap: 10 }}>
+                      <input
+                        type="radio"
+                        id={`utility-type-${opt.value}`}
+                        name="utility_type"
+                        value={opt.value}
+                        checked={(form.sub_category || 'custom') === opt.value}
+                        onChange={() => setForm((f) => ({ ...f, sub_category: opt.value }))}
+                        style={{ marginTop: 3, cursor: 'pointer' }}
+                      />
+                      <label htmlFor={`utility-type-${opt.value}`} style={{ cursor: 'pointer', flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{opt.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>{opt.desc}</div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 12 }}>
+              <label style={labelStyle}>Language : *</label>
+              <select style={selectStyle} value={form.language_code} onChange={setField('language_code')}>
+                <option value="">-- Select --</option>
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
               </select>
             </div>
 
