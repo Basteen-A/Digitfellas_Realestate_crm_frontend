@@ -119,23 +119,28 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
-  // ── Assign to Collection Executive (Collection Manager) ──
+  // ── Assign to Collection Executives (Collection Manager, multi-assign) ──
   const [assignOpen, setAssignOpen] = useState(false);
   const [executives, setExecutives] = useState([]);
-  const [selectedExecId, setSelectedExecId] = useState('');
+  const [selectedExecIds, setSelectedExecIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
   const openAssign = () => {
-    setSelectedExecId(booking?.collection_executive_id || '');
+    const current = (booking?.collectionExecutives || []).map((e) => String(e.id));
+    setSelectedExecIds(current.length ? current : (booking?.collection_executive_id ? [String(booking.collection_executive_id)] : []));
     setAssignOpen(true);
     bookingApi.getCollectionExecutives()
       .then((r) => setExecutives(r.data?.data || r.data || []))
       .catch(() => setExecutives([]));
   };
+  const toggleExec = (id) => {
+    const key = String(id);
+    setSelectedExecIds((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]));
+  };
   const handleAssignExecutive = async () => {
     setAssigning(true);
     try {
-      await bookingApi.assignCollectionExecutive(bookingId, { collection_executive_id: selectedExecId || null });
-      toast.success(selectedExecId ? 'Collection Executive assigned' : 'Assignment cleared');
+      await bookingApi.assignCollectionExecutive(bookingId, { collection_executive_ids: selectedExecIds });
+      toast.success(selectedExecIds.length ? 'Collection Executives assigned' : 'Assignment cleared');
       setAssignOpen(false);
       loadBooking();
       loadActivities();
@@ -930,7 +935,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           )}
           {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user)) && !booking.is_cancelled && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#6366F1',color:'#6366F1'}} onClick={openAssign} title="Assign this booking to a Collection Executive">
-              <UserIcon style={{width:14,height:14}}/> {booking.collectionExecutive ? `Executive: ${booking.collectionExecutive.first_name}` : 'Assign Executive'}
+              <UserIcon style={{width:14,height:14}}/> {(() => {
+                const execs = booking.collectionExecutives || [];
+                if (execs.length === 0) return 'Assign Executives';
+                if (execs.length === 1) return `Executive: ${execs[0].first_name}`;
+                return `Executives: ${execs.length}`;
+              })()}
             </button>
           )}
           {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user)) && (booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_APPROVED' && (
@@ -2631,22 +2641,33 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         <div className="col-modal-overlay" onClick={() => setAssignOpen(false)}>
           <div className="qa-modal-panel" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
             <div className="qa-drawer-header">
-              <div className="qa-drawer-name">Assign Collection Executive</div>
+              <div className="qa-drawer-name">Assign Collection Executives</div>
               <button className="qa-drawer-close" onClick={() => setAssignOpen(false)}>×</button>
             </div>
             <div style={{ padding: '16px 20px' }}>
-              <label className="bkd-form-label">Collection Executive</label>
-              <select className="bkd-form-control" value={selectedExecId} onChange={(e) => setSelectedExecId(e.target.value)}>
-                <option value="">— Unassigned —</option>
-                {executives.map((ex) => (
-                  <option key={ex.id} value={ex.id}>{`${ex.first_name || ''} ${ex.last_name || ''}`.trim()}{ex.email ? ` · ${ex.email}` : ''}</option>
-                ))}
-              </select>
+              <label className="bkd-form-label">Collection Executives {selectedExecIds.length > 0 && <span style={{ color: '#6366F1' }}>({selectedExecIds.length} selected)</span>}</label>
+              <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid var(--border-color, #E5E7EB)', borderRadius: 8, marginTop: 6 }}>
+                {executives.length === 0 && (
+                  <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>No active Collection Executives found.</div>
+                )}
+                {executives.map((ex) => {
+                  const checked = selectedExecIds.includes(String(ex.id));
+                  return (
+                    <label key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color, #F1F5F9)', background: checked ? 'rgba(99,102,241,0.06)' : 'transparent' }}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleExec(ex.id)} style={{ width: 16, height: 16, accentColor: '#6366F1' }} />
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 600, fontSize: 13 }}>{`${ex.first_name || ''} ${ex.last_name || ''}`.trim() || 'Executive'}</span>
+                        {ex.email && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>{ex.email}</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-                The executive can update status, follow-ups and record payments for this booking — without seeing financial summary details.
+                Assigned executives can update status, follow-ups and record payments for this booking — without seeing financial summary details. All assignees and the manager share the same activity timeline.
               </p>
               <button className="bkd-btn bkd-btn-primary" style={{ marginTop: 16, width: '100%' }} disabled={assigning} onClick={handleAssignExecutive}>
-                {assigning ? 'Saving…' : (selectedExecId ? 'Assign' : 'Clear Assignment')}
+                {assigning ? 'Saving…' : (selectedExecIds.length ? `Save Assignment (${selectedExecIds.length})` : 'Clear Assignment')}
               </button>
             </div>
           </div>

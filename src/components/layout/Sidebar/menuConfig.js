@@ -268,9 +268,9 @@ const recordManagerSidebar = [
   { label: 'Registered Bookings', path: '/record-manager/bookings', icon: ClipboardDocumentListIcon },
 ];
 
-// ── Accounts Manager (cash verification) ──
+// ── Accounts Manager ── (mirrors the Accountant; verify queue defaults to cash)
 const accountsManagerSidebar = [
-  { label: 'Cash Verification', path: '/accounts-manager/verify', icon: BanknotesIcon },
+  { label: 'Verify Payments', path: '/accounts-manager/verify', icon: MagnifyingGlassIcon },
 ];
 
 // ── Collection Executive (assigned collections) ──
@@ -357,10 +357,14 @@ export const recordManagerMenu = [
   { label: 'Registered Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
 ];
 
+// Accounts Manager mirrors the Accountant (ACCT) menu exactly — same items,
+// no "Cash" labels. The verify queue still defaults to cash server-side, with a
+// "Show all payments" toggle on the screen itself.
 export const accountsManagerMenu = [
   { group: 'Menu' },
-  { label: 'Cash Verification', key: 'verify', icon: BanknotesIcon, badgeColor: 'orange' },
-  { label: 'Cash Report', key: 'reports', icon: ChartBarIcon, badge: null },
+  { label: 'Dashboard', key: 'dashboard', icon: Squares2X2Icon, badge: null },
+  { label: 'Verify Payments', key: 'verify', icon: MagnifyingGlassIcon, badgeColor: 'orange' },
+  { label: 'Accounts Report', key: 'reports', icon: ChartBarIcon, badge: null },
 ];
 
 export const collectionExecMenu = [

@@ -17,6 +17,7 @@ const fmtDate = (d) => {
 };
 
 const isVerifiedPayment = (p) => !!p?.is_verified || p?.approval_status === 'APPROVED' || !!p?.management_approved || !!p?.accounts_approved;
+const isCashPayment = (p) => String(p?.payment_mode || '').trim().toLowerCase() === 'cash';
 const extractRows = (data) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.rows)) return data.rows;
@@ -31,6 +32,10 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(initialFilter);
+  // Accounts Manager sees the CASH queue by default; "Show all payments" lifts
+  // the cash filter (server-side too) for a full overview across every mode.
+  const [showAll, setShowAll] = useState(false);
+  const cashOnly = isAccountsManager && !showAll;
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
@@ -46,30 +51,30 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   const [verifyTxnId, setVerifyTxnId] = useState('');
   const [verifyNote, setVerifyNote] = useState('');
 
-  const normalizedFilter = isAccountsManager ? 'verified' : (filter === 'pending' ? 'unverified' : filter);
+  const normalizedFilter = filter === 'pending' ? 'unverified' : filter;
 
   const matchesFilter = useCallback((p) => {
-    if (isAccountsManager) {
-      if (p?.payment_mode?.toLowerCase() !== 'cash') return false;
-      return isVerifiedPayment(p) && !p.is_bounced;
-    }
+    if (cashOnly && !isCashPayment(p)) return false;
     if (normalizedFilter === 'verified') return isVerifiedPayment(p) && !p.is_bounced;
     if (normalizedFilter === 'rejected') return !!p.is_bounced;
     if (normalizedFilter === 'unverified') return !isVerifiedPayment(p) && !p.is_bounced;
     return true;
-  }, [normalizedFilter, isAccountsManager]);
+  }, [normalizedFilter, cashOnly]);
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
     try {
       const apiStatus = ['unverified', 'verified', 'rejected'].includes(normalizedFilter) ? normalizedFilter : undefined;
-      const res = await bookingApi.getAllPayments({ status: apiStatus, page, limit });
+      // AM's queue is cash-scoped server-side; show_all lifts that for a full view.
+      const baseParams = { page, limit };
+      if (isAccountsManager && showAll) baseParams.show_all = 'true';
+      const res = await bookingApi.getAllPayments({ ...baseParams, status: apiStatus });
       const data = res.data?.data || res.data;
       let rows = extractRows(data);
       let filteredRows = rows.filter(matchesFilter);
 
       if (apiStatus && normalizedFilter !== 'unverified' && filteredRows.length === 0) {
-        const fallbackRes = await bookingApi.getAllPayments({ page, limit });
+        const fallbackRes = await bookingApi.getAllPayments(baseParams);
         const fallbackData = fallbackRes.data?.data || fallbackRes.data;
         const fallbackRows = extractRows(fallbackData);
         const fallbackFilteredRows = fallbackRows.filter(matchesFilter);
@@ -82,12 +87,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
       if (normalizedFilter === 'verified' && filteredRows.length === 0) {
         const statsResp = await dashboardApi.getAccountsStats();
         const stats = statsResp.data?.data || statsResp.data || {};
-        const fallbackRows = (stats.recentPayments || []).filter((p) => {
-          if (isAccountsManager) {
-            return p?.payment_mode?.toLowerCase() === 'cash' && isVerifiedPayment(p) && !p.is_bounced;
-          }
-          return isVerifiedPayment(p) && !p.is_bounced;
-        });
+        const fallbackRows = (stats.recentPayments || []).filter(matchesFilter);
         if (fallbackRows.length > 0) {
           setPayments(fallbackRows);
           setTotal(fallbackRows.length);
@@ -98,17 +98,13 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
       if (normalizedFilter === 'unverified' && filteredRows.length === 0) {
         const statsResp = await dashboardApi.getAccountsStats();
         const stats = statsResp.data?.data || statsResp.data || {};
-        const fallbackRows = (stats.recentPayments || []).filter((p) => !isVerifiedPayment(p) && !p.is_bounced);
+        const fallbackRows = (stats.recentPayments || []).filter(matchesFilter);
         setPayments(fallbackRows);
         setTotal(fallbackRows.length);
       } else {
         setPayments(filteredRows);
-        if (isAccountsManager) {
-          setTotal(filteredRows.length);
-        } else {
-          const reportedTotal = data?.pagination?.totalItems || data?.count || rows.length || 0;
-          setTotal(Math.max(reportedTotal, filteredRows.length));
-        }
+        const reportedTotal = data?.pagination?.totalItems || data?.count || rows.length || 0;
+        setTotal(Math.max(reportedTotal, filteredRows.length));
       }
     } catch (err) {
       console.error('Failed to fetch payments:', err);
@@ -116,13 +112,13 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
     } finally {
       setLoading(false);
     }
-  }, [normalizedFilter, page, limit, matchesFilter, isAccountsManager]);
+  }, [normalizedFilter, page, limit, matchesFilter, isAccountsManager, showAll]);
 
   useEffect(() => {
-    setFilter(isAccountsManager ? 'verified' : (initialFilter || 'unverified'));
+    setFilter(initialFilter || 'unverified');
     setPage(1);
     setSelected(null);
-  }, [initialFilter, isAccountsManager]);
+  }, [initialFilter]);
 
   useEffect(() => {
     fetchPayments();
@@ -181,10 +177,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   };
 
   const visiblePayments = payments.filter((p) => {
-    if (isAccountsManager) {
-      if (p?.payment_mode?.toLowerCase() !== 'cash') return false;
-      if (!isVerifiedPayment(p) || p.is_bounced) return false;
-    }
+    if (cashOnly && !isCashPayment(p)) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (
@@ -199,40 +192,54 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   return (
     <div className="col-dashboard-new">
       {/* Page Header */}
-      <div className="col-greeting-new">
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-          {isAccountsManager ? 'Verified Cash Payments' : (filter === 'unverified' ? 'Payment Verification' : filter === 'verified' ? 'Verified Payments' : 'Rejected Payments')}
-        </h1>
-        <p style={{ color: 'var(--col-text-secondary)', marginTop: 4, fontSize: '0.875rem' }}>
-          {isAccountsManager
-            ? 'History of all verified cash payments'
-            : (filter === 'unverified'
-            ? 'Review payments submitted by Collection Managers and verify against bank records'
-            : filter === 'verified'
-            ? 'History of all verified payments'
-            : 'Payments that were rejected during verification')}
-        </p>
+      <div className="col-greeting-new" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+            {normalizedFilter === 'unverified' ? 'Payment Verification'
+              : normalizedFilter === 'verified' ? 'Verified Payments'
+              : normalizedFilter === 'rejected' ? 'Rejected Payments'
+              : 'All Payments'}
+          </h1>
+          <p style={{ color: 'var(--col-text-secondary)', marginTop: 4, fontSize: '0.875rem' }}>
+            {normalizedFilter === 'unverified' ? 'Review payments submitted by Collection Managers and verify against bank records'
+              : normalizedFilter === 'verified' ? 'History of all verified payments'
+              : normalizedFilter === 'rejected' ? 'Payments that were rejected during verification'
+              : 'All payments across every verification status'}
+          </p>
+        </div>
+        {/* Accounts Manager: cash by default, tick to show every payment mode */}
+        {isAccountsManager && (
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.8125rem', fontWeight: 600, color: 'var(--col-text-secondary)', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+          >
+            <input
+              type="checkbox"
+              checked={showAll}
+              onChange={(e) => { setShowAll(e.target.checked); setPage(1); setSelected(null); }}
+              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--col-primary, #4f46e5)' }}
+            />
+            Show all payments
+          </label>
+        )}
       </div>
 
       {/* Filter Tabs */}
-      {!isAccountsManager && (
-        <div className="acct-verify-tabs">
-          {['unverified', 'verified', 'rejected'].map((f) => (
-            <button
-              key={f}
-              onClick={() => { setFilter(f); setPage(1); setSelected(null); }}
-              className={`acct-verify-tab ${filter === f ? 'active' : ''}`}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                {f === 'unverified' && <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />}
-                {f === 'verified' && <CheckCircleIcon style={{ width: 14, height: 14 }} />}
-                {f === 'rejected' && <XCircleIcon style={{ width: 14, height: 14 }} />}
-                {f === 'unverified' ? 'Pending' : f === 'verified' ? 'Verified' : 'Rejected'}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="acct-verify-tabs">
+        {['unverified', 'verified', 'rejected'].map((f) => (
+          <button
+            key={f}
+            onClick={() => { setFilter(f); setPage(1); setSelected(null); }}
+            className={`acct-verify-tab ${filter === f ? 'active' : ''}`}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {f === 'unverified' && <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />}
+              {f === 'verified' && <CheckCircleIcon style={{ width: 14, height: 14 }} />}
+              {f === 'rejected' && <XCircleIcon style={{ width: 14, height: 14 }} />}
+              {f === 'unverified' ? 'Pending' : f === 'verified' ? 'Verified' : 'Rejected'}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* Main Panel — queue + detail sidebar */}
       <div className="acct-verify-layout">
@@ -256,7 +263,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               <div className="acct-verify-empty">Loading payments...</div>
             ) : payments.length === 0 ? (
               <div className="acct-verify-empty">
-                No {normalizedFilter === 'unverified' ? 'pending' : normalizedFilter} payments found
+                No {normalizedFilter === 'unverified' ? 'pending ' : normalizedFilter === 'all' ? '' : `${normalizedFilter} `}payments found
               </div>
             ) : (
               <table className="col-table-new">
@@ -394,8 +401,8 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               )}
             </div>
 
-            {/* Action Buttons — only for unverified */}
-            {normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && (
+            {/* Action Buttons — only for unverified (AM acts on cash only) */}
+            {normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && (!isAccountsManager || isCashPayment(selected)) && (
               <div className="acct-verify-action-panel">
                 <div style={{ marginBottom: 10 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--col-text-secondary)', display: 'block', marginBottom: 4 }}>
@@ -438,6 +445,13 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
                     <XCircleIcon style={{ width: 16, height: 16 }} /> Reject
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* AM sees non-cash rows under "Show all" but can't verify them */}
+            {isAccountsManager && normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && !isCashPayment(selected) && (
+              <div className="acct-verify-action-panel" style={{ fontSize: '0.75rem', color: 'var(--col-text-secondary)', lineHeight: 1.5 }}>
+                Non-cash payments are verified by the Accountant. This record is view-only here — only cash payments can be verified by the Accounts Manager.
               </div>
             )}
           </div>

@@ -35,6 +35,17 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 // A follow-up date is required when moving a task into an active state.
 const needsFollowUp = (status) => status === 'open' || status === 'work_in_progress';
 
+// Completed tasks auto-close 15 days after completion (server-side
+// taskAutoCloseService). Surface the remaining time so it isn't a surprise.
+// AUTO_CLOSE_DAYS must stay in sync with the server's CLOSE_AFTER_DAYS.
+const AUTO_CLOSE_DAYS = 15;
+const autoCloseLabel = (completedAt) => {
+  if (!completedAt) return '';
+  const days = Math.ceil((new Date(completedAt).getTime() + AUTO_CLOSE_DAYS * 86400000 - Date.now()) / 86400000);
+  if (days <= 0) return 'Auto-closes shortly';
+  return `Auto-closes in ${days} day${days === 1 ? '' : 's'}`;
+};
+
 // Uploaded files are served by the backend at :5000/uploads (file_url is relative).
 const FILE_BASE = `http://${window.location.hostname}:5000`;
 const fileHref = (att) => (att?.file_url?.startsWith('http') ? att.file_url : `${FILE_BASE}${att?.file_url || ''}`);
@@ -689,6 +700,9 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                   {task.is_overdue && <span className="tm-badge tm-badge--overdue">Overdue</span>}
                   <span>Priority: {cap(task.priority)}</span>
                   {task.creator && <span>· by {fullName(task.creator)}</span>}
+                  {task.status === 'completed' && autoCloseLabel(task.completed_at) && (
+                    <span style={{ color: '#B45309', fontWeight: 600 }}>· ⏳ {autoCloseLabel(task.completed_at)}</span>
+                  )}
                 </div>
               )}
               {isCreate && <div className="tmq-meta">Creating as {fullName(currentUser)} (you)</div>}

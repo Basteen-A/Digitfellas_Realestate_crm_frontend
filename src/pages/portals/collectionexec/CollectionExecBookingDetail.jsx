@@ -326,6 +326,23 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
           </div>
         </div>
 
+        {/* Assigned team — the collection executives sharing this booking */}
+        {(booking.collectionExecutives || []).length > 0 && (
+          <div className="bkd-card">
+            <div className="bkd-card-header"><div className="bkd-card-title"><UserIcon style={{ width: 15, height: 15 }} /> Assigned Team</div></div>
+            <div className="bkd-card-body">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(booking.collectionExecutives || []).map((ex) => (
+                  <span key={ex.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999, background: 'var(--bg-secondary, #f1f5f9)', fontSize: 12, fontWeight: 600 }}>
+                    <UserIcon style={{ width: 12, height: 12 }} /> {`${ex.first_name || ''} ${ex.last_name || ''}`.trim() || 'Executive'}
+                  </span>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>You and everyone above share this booking's status, follow-ups and payments.</div>
+            </div>
+          </div>
+        )}
+
         {/* Uploads */}
         <div className="bkd-card">
           <div className="bkd-card-header"><div className="bkd-card-title"><CloudArrowUpIcon style={{ width: 15, height: 15 }} /> Documents</div></div>
