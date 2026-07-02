@@ -39,6 +39,7 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
     try {
       const resp = await bookingApi.getAll({
         status_code: 'REGISTERED',
+        record_status: 'OPEN', // Completed records drop off the Record Manager's queue
         with_documents: 1,
         is_cancelled: 'false',
         search: search || undefined,
@@ -47,7 +48,7 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
       });
       const rows = resp.data?.data?.rows || resp.data?.data || [];
       setBookings(Array.isArray(rows) ? rows : []);
-      setTotal(resp.data?.pagination?.total ?? rows.length ?? 0);
+      setTotal(resp.data?.meta?.total ?? resp.data?.pagination?.total ?? rows.length ?? 0);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load registered bookings'));
       setBookings([]);
@@ -80,7 +81,7 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
       <header className="lead-workspace__header">
         <div>
           <h1>Registered Bookings</h1>
-          <p className="hide-mobile">Upload registration documents and record the registration number</p>
+          <p className="hide-mobile">Record Doc No, Doc Date, Buyer &amp; Seller and upload registration documents</p>
         </div>
         <div className="lead-workspace__header-actions">
           <button type="button" className="workspace-btn workspace-btn--ghost" onClick={loadBookings} disabled={loading}>
@@ -97,7 +98,7 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by registration date, doc number, project / phase / unit or buyer name"
+            placeholder="Search by doc number, buyer, seller, project / phase / unit"
           />
         </div>
       </div>
@@ -125,35 +126,34 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
               <table className="lead-workspace__table">
                 <thead>
                   <tr>
-                    <th style={{ width: 130 }}>Registration Date</th>
+                    <th style={{ width: 150 }}>Doc No</th>
+                    <th style={{ width: 120 }}>Doc Date</th>
                     <th style={{ width: 'auto' }}>Buyer</th>
+                    <th style={{ width: 'auto' }}>Seller</th>
                     <th className="hide-mobile" style={{ width: 140 }}>File Status</th>
-                    <th className="hide-mobile" style={{ width: 150 }}>Doc Number</th>
-                    <th className="hide-mobile" style={{ width: 220 }}>Project · Phase · Unit</th>
-                    <th style={{ width: 120 }}>Status</th>
+                    <th className="hide-mobile" style={{ width: 100 }}>Status</th>
                     <th style={{ textAlign: 'center', width: 90 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((booking) => (
+                  {bookings.map((booking) => {
+                    const seller = booking.seller_name || booking.project?.builder_name || booking.builder_name;
+                    return (
                     <tr key={booking.id} style={{ cursor: 'pointer' }} onClick={() => onSelectBooking(booking.id)}>
-                      <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(booking.registration_date)}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>
+                        {booking.registration_number || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>—</span>}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(booking.registration_document_date)}</td>
                       <td className="lead-col-lead">
                         <p className="lead-title">{booking.buyer_name || booking.customer_name || '—'}</p>
                         <small>{booking.booking_number}</small>
                       </td>
-                      <td className="hide-mobile">{renderUploadStatus(booking)}</td>
-                      <td className="hide-mobile" style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                        {booking.registration_number || <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                      </td>
-                      <td className="hide-mobile">
-                        <span style={{ fontSize: 12 }}>{booking.project_unit_display || booking.project_name || '—'}</span>
-                      </td>
                       <td>
-                        <span className="col-badge" style={{ background: `${booking.status_color || '#16A34A'}22`, color: booking.status_color || '#16A34A' }}>
-                          <span className="col-badge-dot" style={{ background: booking.status_color || '#16A34A' }} />
-                          {booking.status_label || 'Registered'}
-                        </span>
+                        <span style={{ fontSize: 13 }}>{seller || <span style={{ color: 'var(--text-muted)' }}>—</span>}</span>
+                      </td>
+                      <td className="hide-mobile">{renderUploadStatus(booking)}</td>
+                      <td className="hide-mobile">
+                        <span className="col-badge" style={{ background: '#B4530922', color: '#B45309', border: '1px solid currentColor' }}>Open</span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <button
@@ -165,7 +165,8 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

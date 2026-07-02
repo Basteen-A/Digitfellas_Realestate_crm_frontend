@@ -56,6 +56,7 @@ const SCREEN_TITLES = {
   tasks: '',
   departments: '',
   'sub-departments': '',
+  documents: '',
   push: 'Push to Sales Head',
   negotiations: '',
   bookings: '',

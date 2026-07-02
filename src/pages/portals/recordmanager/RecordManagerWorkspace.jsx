@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
 import RecordManagerBookings from './RecordManagerBookings';
 import RecordManagerBookingDetail from './RecordManagerBookingDetail';
+import DocumentManagement from '../../superadmin/DocumentManagement';
 import { recordManagerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const RecordManagerWorkspaceContent = ({ selectedBookingId, setSelectedBookingId, user }) => {
@@ -35,12 +36,16 @@ const RecordManagerWorkspace = () => {
       defaultScreen="bookings"
       searchPlaceholder="Search registered bookings..."
     >
-      {() => (
-        <RecordManagerWorkspaceContent
-          selectedBookingId={selectedBookingId}
-          setSelectedBookingId={setSelectedBookingId}
-          user={user}
-        />
+      {({ activeScreen }) => (
+        activeScreen === 'documents' ? (
+          <DocumentManagement />
+        ) : (
+          <RecordManagerWorkspaceContent
+            selectedBookingId={selectedBookingId}
+            setSelectedBookingId={setSelectedBookingId}
+            user={user}
+          />
+        )
       )}
     </PortalLayout>
   );

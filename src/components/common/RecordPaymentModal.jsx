@@ -48,21 +48,23 @@ const computeBudget = (booking) => {
   let stampValue;
   let registrationValue;
   if (guidelineRate > 0 && plotAreaSqft > 0) {
-    plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100;
-    stampValue = Math.ceil((plotValue * 0.07) / 100) * 100;
-    registrationValue = Math.ceil((plotValue * 0.02) / 100) * 100;
+    plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100; // ROUNDUP to nearest 100
+    stampValue = plotValue * 0.07;        // exact 7%, no rounding
+    registrationValue = plotValue * 0.02; // exact 2%, no rounding
   } else {
     plotValue = toAmount(booking?.plot_value || booking?.base_price || booking?.total_amount || booking?.net_amount);
     stampValue = toAmount(booking?.stamp_value || booking?.stamp_duty);
     registrationValue = toAmount(booking?.registration_exp || booking?.registration_charges);
   }
   const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
-    ? Math.round(plotAreaSqft * perSqftCost * 1.18 * 100) / 100
+    ? Math.round(plotAreaSqft * perSqftCost * 1.18)
     : toAmount(booking?.development_charges);
 
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmount(v), 0);
   const costBreakdown = booking?.custom_fields?.cost_breakdown || {};
-  const savedRegSplit = costBreakdown.registration_split || {};
+  // Stamp Commission is always 1% of Stamp Value (computed).
+  const stampCommission = Math.round(stampValue * 0.01);
+  const savedRegSplit = { ...(costBreakdown.registration_split || {}), stamp_commission: stampCommission };
   const savedModtEnabled = !!costBreakdown.modt_enabled;
   const savedModtSplit = costBreakdown.modt_split || {};
   const regSplitTotal = sumSplit(savedRegSplit);

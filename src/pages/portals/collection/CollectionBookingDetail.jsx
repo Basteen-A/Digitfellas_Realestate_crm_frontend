@@ -13,14 +13,15 @@ import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
 import { ROLE_CODES } from '../../../utils/constants';
-import { generateBookingConfirmationPDF } from '../../../utils/BookingConfirmationPDF';
+import GenerateBookingFormModal from './GenerateBookingFormModal';
 import termsAndConditionsApi from '../../../api/termsAndConditionsApi';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon,
   BanknotesIcon, UserIcon, ClockIcon,
   ExclamationTriangleIcon, PlusIcon,
   CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
-  DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon, EyeIcon
+  DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon, EyeIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
@@ -40,6 +41,17 @@ const InfoRow = ({label,value,mono,color}) => (
     <div className={`bkd-info-value${mono?' mono':''}`} style={color?{color}:undefined}>{value || '—'}</div>
   </div>
 );
+
+// Deterministic avatar colour + initials (shared look with the task assignee UI).
+const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
+const colorFor = (id) => {
+  const s = String(id ?? '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+};
+const initialsOf = (u) => `${(u?.first_name || '?')[0] || ''}${(u?.last_name || '')[0] || ''}`.toUpperCase();
+const execName = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim() || 'Executive';
 
 const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [booking, setBooking] = useState(null);
@@ -84,8 +96,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [approvalAction, setApprovalAction] = useState(null); // 'approve' | 'reject'
   const [approvalRemarks, setApprovalRemarks] = useState('');
   const [approvalSaving, setApprovalSaving] = useState(false);
-  const [selectedPlotBankId, setSelectedPlotBankId] = useState('');
-  const [selectedDevBankId, setSelectedDevBankId] = useState('');
+  // Generate Booking Form modal (multi-account plot/dev amount split → PDF).
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const emptyRegSplit = {
     stamp_commission: '',
     registration_expenses: '',
@@ -124,6 +136,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [executives, setExecutives] = useState([]);
   const [selectedExecIds, setSelectedExecIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
+  const [assignAddOpen, setAssignAddOpen] = useState(false);
+  const [assignSearch, setAssignSearch] = useState('');
+  const assignAddRef = useRef(null);
+  useEffect(() => {
+    if (!assignAddOpen) return undefined;
+    const onDoc = (e) => { if (assignAddRef.current && !assignAddRef.current.contains(e.target)) setAssignAddOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [assignAddOpen]);
   const openAssign = () => {
     const current = (booking?.collectionExecutives || []).map((e) => String(e.id));
     setSelectedExecIds(current.length ? current : (booking?.collection_executive_id ? [String(booking.collection_executive_id)] : []));
@@ -610,13 +631,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     const cleanSplit = (split) => Object.fromEntries(
       Object.entries(split).map(([k, v]) => [k, parseFloat(v) || 0])
     );
+    // Stamp Commission always saved as 1% of Stamp Value (7% of Plot Value).
+    const savedStampCommission = Math.round(Math.ceil((guideline * area) / 100) * 100 * 0.07 * 0.01);
     setDevCostSaving(true);
     try {
       await bookingApi.updateDevelopmentCost(bookingId, {
         guideline_value: guideline,
         plot_area: area,
         development_cost_per_sqft: perSqft,
-        registration_split: cleanSplit(devCostForm.registration_split),
+        registration_split: { ...cleanSplit(devCostForm.registration_split), stamp_commission: savedStampCommission },
         modt_enabled: !!devCostForm.modt_enabled,
         modt_split: cleanSplit(devCostForm.modt_split),
       });
@@ -686,9 +709,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // Once registered, stamp/registration/MODT expenses are cleared server-side.
   // The flag drives UI hiding of those sections.
   const isRegistered = ['REGISTERED'].includes(booking.bookingStatus?.status_code || booking.status_code);
-  // Derive Plot/Stamp/Registration/Development from guideline × area with ROUNDUP(…, -2),
-  // falling back to stored columns — matches Booking Approvals and the dev-cost preview so
-  // Registration (2%) no longer shows a stale/zero value.
+  // Derive Plot/Stamp/Registration/Development from guideline × area — Plot Value is
+  // ROUNDUP(rate × sqft, -2) (nearest 100); Stamp (7%) & Registration (2%) are the exact
+  // percentage of Plot Value with NO rounding; falling back to stored columns otherwise.
   const guidelineRate = toAmount(booking.guideline_value);
   const plotAreaSqft = toAmount(booking.plot_area);
   const perSqftCost = toAmount(booking.development_cost_per_sqft);
@@ -697,22 +720,24 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   let registrationValue;
   if (guidelineRate > 0 && plotAreaSqft > 0) {
     plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100;
-    stampValue = isRegistered ? 0 : Math.ceil((plotValue * 0.07) / 100) * 100;
-    registrationValue = isRegistered ? 0 : Math.ceil((plotValue * 0.02) / 100) * 100;
+    stampValue = isRegistered ? 0 : plotValue * 0.07;
+    registrationValue = isRegistered ? 0 : plotValue * 0.02;
   } else {
     plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
     stampValue = isRegistered ? 0 : toAmount(booking.stamp_value || booking.stamp_duty);
     registrationValue = isRegistered ? 0 : toAmount(booking.registration_exp || booking.registration_charges);
   }
   const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
-    ? Math.round(plotAreaSqft * perSqftCost * 1.18 * 100) / 100
+    ? Math.round(plotAreaSqft * perSqftCost * 1.18)
     : toAmount(booking.development_charges);
 
   // Detailed split + optional MODT stored in custom_fields.cost_breakdown
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmount(v), 0);
   const labelize = (k) => categoryLabel(k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
   const costBreakdown = booking.custom_fields?.cost_breakdown || {};
-  const savedRegSplit = costBreakdown.registration_split || {};
+  // Stamp Commission is always 1% of Stamp Value (computed) — overrides any stored manual value.
+  const computedStampCommission = isRegistered ? 0 : Math.round(stampValue * 0.01);
+  const savedRegSplit = { ...(costBreakdown.registration_split || {}), stamp_commission: computedStampCommission };
   const savedModtEnabled = !!costBreakdown.modt_enabled;
   const savedModtSplit = costBreakdown.modt_split || {};
   const regSplitTotal = isRegistered ? 0 : sumSplit(savedRegSplit);
@@ -775,12 +800,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
   const devCostPlotAreaValue = toAmount(devCostForm.plot_area || booking.plot_area);
   const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
-  // Plot Value = ROUNDUP(rate × sqft, -2) — round up to the nearest 100.
+  // Plot Value = ROUNDUP(rate × sqft, -2) — nearest 100; Stamp (7%) & Registration (2%) exact, no rounding.
   const previewPlotValue = Math.ceil((devCostGuidelineValue * devCostPlotAreaValue) / 100) * 100;
-  const previewStampValue = Math.ceil((previewPlotValue * 0.07) / 100) * 100;
-  const previewRegistrationValue = Math.ceil((previewPlotValue * 0.02) / 100) * 100;
-  const previewDevelopmentValue = Math.round((devCostPlotAreaValue * devCostPerSqftValue) * 1.18 * 100) / 100;
-  const previewRegSplitTotal = sumSplit(devCostForm.registration_split);
+  const previewStampValue = previewPlotValue * 0.07;
+  const previewRegistrationValue = previewPlotValue * 0.02;
+  const previewDevelopmentValue = Math.round((devCostPlotAreaValue * devCostPerSqftValue) * 1.18);
+  // Stamp Commission auto-derives from the previewed Stamp Value (1%).
+  const previewStampCommission = Math.round(previewStampValue * 0.01);
+  const previewRegSplit = { ...devCostForm.registration_split, stamp_commission: previewStampCommission };
+  const previewRegSplitTotal = sumSplit(previewRegSplit);
   const previewModtSplitTotal = devCostForm.modt_enabled ? sumSplit(devCostForm.modt_split) : 0;
   const previewOtherChargesTotal = previewRegSplitTotal + previewModtSplitTotal;
   const previewGrandTotal = previewPlotValue + previewStampValue + previewRegistrationValue + previewDevelopmentValue + previewOtherChargesTotal;
@@ -923,8 +951,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               Also blocked while still Booking Open (not yet sent for approval). */}
           {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments && (
             <>
-              <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
-              <button className="bkd-btn bkd-btn-outline" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
+              <button className="bkd-btn bkd-btn-ghost" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
+              <button className="bkd-btn bkd-btn-ghost" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
               <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
             </>
           )}
@@ -934,7 +962,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </button>
           )}
           {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user)) && !booking.is_cancelled && (
-            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#6366F1',color:'#6366F1'}} onClick={openAssign} title="Assign this booking to a Collection Executive">
+            <button className="bkd-btn bkd-btn-ghost" onClick={openAssign} title="Assign this booking to a Collection Executive">
               <UserIcon style={{width:14,height:14}}/> {(() => {
                 const execs = booking.collectionExecutives || [];
                 if (execs.length === 0) return 'Assign Executives';
@@ -944,54 +972,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </button>
           )}
           {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user)) && (booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_APPROVED' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <select
-                className="bkd-btn bkd-btn-outline"
-                style={{ borderColor: '#6B7280', color: '#374151', background: '#F9FAFB', cursor: 'pointer', height: '36px', padding: '0 12px', borderRadius: '4px' }}
-                value={selectedPlotBankId}
-                onChange={(e) => setSelectedPlotBankId(e.target.value)}
-              >
-                <option value="">-- Plot Bank --</option>
-                {bankOptions.filter(b => b.is_active !== false).map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.bank_name} ({b.account_number.replace(/\s/g, '').slice(-4)})
-                  </option>
-                ))}
-              </select>
-              <select
-                className="bkd-btn bkd-btn-outline"
-                style={{ borderColor: '#6B7280', color: '#374151', background: '#F9FAFB', cursor: 'pointer', height: '36px', padding: '0 12px', borderRadius: '4px' }}
-                value={selectedDevBankId}
-                onChange={(e) => setSelectedDevBankId(e.target.value)}
-              >
-                <option value="">-- Dev Bank --</option>
-                {bankOptions.filter(b => b.is_active !== false).map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.bank_name} ({b.account_number.replace(/\s/g, '').slice(-4)})
-                  </option>
-                ))}
-              </select>
-              <button
-                className="bkd-btn bkd-btn-outline"
-                style={{
-                  borderColor: (selectedPlotBankId && selectedDevBankId) ? '#10B981' : '#D1D5DB',
-                  color: (selectedPlotBankId && selectedDevBankId) ? '#10B981' : '#9CA3AF',
-                  cursor: (selectedPlotBankId && selectedDevBankId) ? 'pointer' : 'not-allowed',
-                  background: (selectedPlotBankId && selectedDevBankId) ? '#ECFDF5' : '#F3F4F6'
-                }}
-                disabled={!selectedPlotBankId || !selectedDevBankId}
-                onClick={() => {
-                  const chosenPlotBank = bankOptions.find(b => b.id === selectedPlotBankId);
-                  const chosenDevBank = bankOptions.find(b => b.id === selectedDevBankId);
-                  generateBookingConfirmationPDF(booking, chosenPlotBank, chosenDevBank, terms);
-                }}
-                title={(selectedPlotBankId && selectedDevBankId) ? "Download Booking Confirmation PDF" : "Please select both bank accounts first"}
-              >
-                <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Download PDF
-              </button>
-            </div>
+            <button
+              className="bkd-btn bkd-btn-primary"
+              style={{ background: '#16A34A', boxShadow: '0 1px 2px rgba(22,163,74,0.25)' }}
+              onClick={() => setPdfModalOpen(true)}
+              title="Generate the Booking Form PDF — split the plot & development amounts across bank accounts"
+            >
+              <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Generate Booking Form
+            </button>
           )}
-          <button className="bkd-btn bkd-btn-ghost" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:14,height:14}}/></button>
+          <button className="bkd-btn bkd-btn-ghost bkd-btn-icon" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:16,height:16}}/></button>
         </div>
       </div>
 
@@ -1692,7 +1682,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       const viewUrl = doc.file_url || doc.download_url;
                       const downloadUrl = doc.download_url || doc.file_url;
                       return (
-                        <div className="bkd-document-item" key={doc.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border-primary, #e5e7eb)' }}>
+                        <div className="bkd-document-item" key={doc.id} style={{ alignItems: 'flex-start', minWidth: 0 }}>
                           <div style={{
                             width: 44, height: 44, flexShrink: 0, borderRadius: 8,
                             background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
@@ -1803,6 +1793,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {pdfModalOpen && (
+        <GenerateBookingFormModal
+          booking={booking}
+          banks={bankOptions}
+          terms={terms}
+          onClose={() => setPdfModalOpen(false)}
+        />
       )}
 
       {actionMode && (
@@ -2194,7 +2193,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
             {actionMode === 'devCost' && (() => {
               const regSplitFields = [
-                { key: 'stamp_commission', label: 'Stamp Commission' },
                 { key: 'registration_expenses', label: 'Registration Expenses' },
                 { key: 'writer_expenses', label: 'Writer Expenses' },
                 { key: 'patta_charges', label: 'Patta Charges' },
@@ -2266,16 +2264,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       onChange={e => setDevCostForm(p => ({ ...p, development_cost_per_sqft: e.target.value }))} />
                   </div>
                   <div className="bkd-dev-hint">
-                    Plot Value = Guideline × Area · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Development = Area × Cost/sqft × 1.18 (GST).
+                    Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).
                   </div>
 
                   <div className="qa-drawer-section" style={{ padding: '14px 0 8px' }}>
                     Registration Expenses (Detailed Split)
                     <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                      Subtotal: {fmtFull(sumSplit(devCostForm.registration_split))}
+                      Subtotal: {fmtFull(previewRegSplitTotal)}
                     </span>
                   </div>
                   <div className="bkd-form-row" style={{ flexWrap: 'wrap' }}>
+                    <div className="bkd-form-group" style={{ flex: '1 1 45%' }}>
+                      <label className="bkd-form-label">Stamp Commission (1% of Stamp)</label>
+                      <input type="number" className="bkd-form-control" value={previewStampCommission} readOnly disabled
+                        title="Auto-computed as 1% of Stamp Value" />
+                    </div>
                     {regSplitFields.map(f => (
                       <div className="bkd-form-group" key={f.key} style={{ flex: '1 1 45%' }}>
                         <label className="bkd-form-label">{f.label}</label>
@@ -2645,25 +2648,53 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <button className="qa-drawer-close" onClick={() => setAssignOpen(false)}>×</button>
             </div>
             <div style={{ padding: '16px 20px' }}>
-              <label className="bkd-form-label">Collection Executives {selectedExecIds.length > 0 && <span style={{ color: '#6366F1' }}>({selectedExecIds.length} selected)</span>}</label>
-              <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid var(--border-color, #E5E7EB)', borderRadius: 8, marginTop: 6 }}>
-                {executives.length === 0 && (
-                  <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>No active Collection Executives found.</div>
-                )}
-                {executives.map((ex) => {
-                  const checked = selectedExecIds.includes(String(ex.id));
-                  return (
-                    <label key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color, #F1F5F9)', background: checked ? 'rgba(99,102,241,0.06)' : 'transparent' }}>
-                      <input type="checkbox" checked={checked} onChange={() => toggleExec(ex.id)} style={{ width: 16, height: 16, accentColor: '#6366F1' }} />
-                      <span style={{ flex: 1 }}>
-                        <span style={{ display: 'block', fontWeight: 600, fontSize: 13 }}>{`${ex.first_name || ''} ${ex.last_name || ''}`.trim() || 'Executive'}</span>
-                        {ex.email && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>{ex.email}</span>}
+              <label className="bkd-form-label">Collection Executives {selectedExecIds.length > 0 && <span style={{ color: '#6366F1' }}>({selectedExecIds.length})</span>}</label>
+              {(() => {
+                const selectedExecs = executives.filter((ex) => selectedExecIds.includes(String(ex.id)));
+                const q = assignSearch.trim().toLowerCase();
+                const availableExecs = executives.filter((ex) => !selectedExecIds.includes(String(ex.id))
+                  && (!q || `${execName(ex)} ${ex.email || ''}`.toLowerCase().includes(q)));
+                return (
+                  <div className="bkd-assignee-chips">
+                    {selectedExecs.map((ex) => (
+                      <span className="bkd-assignee-chip" key={ex.id}>
+                        <span className="bkd-assignee-avatar" style={{ background: colorFor(ex.id) }}>{initialsOf(ex)}</span>
+                        {execName(ex)}
+                        <button type="button" className="bkd-assignee-x" title="Remove" onClick={() => toggleExec(ex.id)}>✕</button>
                       </span>
-                    </label>
-                  );
-                })}
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                    ))}
+                    <div className="bkd-assignee-add-wrap" ref={assignAddRef}>
+                      <button type="button" className="bkd-assignee-add" onClick={() => { setAssignAddOpen((o) => !o); setAssignSearch(''); }}>
+                        <PlusIcon style={{ width: 14, height: 14 }} /> Add <ChevronDownIcon style={{ width: 12, height: 12 }} />
+                      </button>
+                      {assignAddOpen && (
+                        <div className="bkd-assignee-menu">
+                          <input
+                            className="bkd-assignee-search"
+                            type="text"
+                            autoFocus
+                            value={assignSearch}
+                            placeholder="Search executives…"
+                            onChange={(e) => setAssignSearch(e.target.value)}
+                          />
+                          {availableExecs.length === 0 && <div className="bkd-assignee-menu-empty">No executives found</div>}
+                          {availableExecs.map((ex) => (
+                            <div className="bkd-assignee-menu-item" key={ex.id} onClick={() => { toggleExec(ex.id); setAssignSearch(''); }}>
+                              <span className="bkd-assignee-avatar sm" style={{ background: colorFor(ex.id) }}>{initialsOf(ex)}</span>
+                              {execName(ex)}
+                              {ex.email && <span className="bkd-assignee-email">{ex.email}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {selectedExecs.length === 0 && !assignAddOpen && (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No executives assigned yet</span>
+                    )}
+                  </div>
+                );
+              })()}
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>
                 Assigned executives can update status, follow-ups and record payments for this booking — without seeing financial summary details. All assignees and the manager share the same activity timeline.
               </p>
               <button className="bkd-btn bkd-btn-primary" style={{ marginTop: 16, width: '100%' }} disabled={assigning} onClick={handleAssignExecutive}>

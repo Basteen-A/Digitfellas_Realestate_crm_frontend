@@ -72,8 +72,12 @@ const bookingApi = {
   processRefund: (id, data) => api.post(`/bookings/${id}/refunds`, data),
   getCancellationRequests: (params) => api.get('/bookings/cancellation-requests', { params }),
 
-  // Record Manager — record the registration (document) number
+  // Record Manager — record the registration details (Doc No / Doc Date / Seller)
   updateRegistrationDetails: (id, data) => api.patch(`/bookings/${id}/registration-details`, data),
+  // Record Manager work status (OPEN | COMPLETED); Super Admin can re-open.
+  updateRecordStatus: (id, data) => api.patch(`/bookings/${id}/record-status`, data),
+  // Super Admin document archive (search-only, all registration records)
+  getDocumentArchive: (params = {}) => api.get('/bookings/documents/archive', { params }),
 
   // Collection Executive assignment (Collection Manager)
   getCollectionExecutives: () => api.get('/bookings/collection-executives'),

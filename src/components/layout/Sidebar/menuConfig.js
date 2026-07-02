@@ -27,6 +27,7 @@ import {
   MegaphoneIcon,
   KeyIcon,
   ChatBubbleLeftRightIcon,
+  FolderOpenIcon,
 } from '@heroicons/react/24/outline';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
 
@@ -147,6 +148,8 @@ const adminSidebar = [
       { label: 'Inventory Overview', path: '/super-admin/inventory' },
       { label: 'Projects', path: '/super-admin/projects' },
       { label: 'Project Types', path: '/super-admin/project-types' },
+      { label: 'Document Management', path: '/super-admin/document-management' },
+      { label: 'Document Archive', path: '/super-admin/document-archive' },
     ],
   },
   { label: 'Units & Plots', path: '/super-admin/units', icon: HomeModernIcon },
@@ -355,6 +358,7 @@ export const accountsMenu = [
 export const recordManagerMenu = [
   { group: 'Menu' },
   { label: 'Registered Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
+  { label: 'Project Documents', key: 'documents', icon: FolderOpenIcon },
 ];
 
 // Accounts Manager mirrors the Accountant (ACCT) menu exactly — same items,

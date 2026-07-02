@@ -83,6 +83,8 @@ export const routePermissions = {
   '/super-admin/locations': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/projects': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/project-types': ROLE_GROUPS.ADMIN_LEVEL,
+  '/super-admin/document-archive': ROLE_GROUPS.ADMIN_LEVEL,
+  '/super-admin/document-management': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/lead-types': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/lead-sources': ROLE_GROUPS.ADMIN_LEVEL,
   '/super-admin/lead-sub-sources': ROLE_GROUPS.ADMIN_LEVEL,

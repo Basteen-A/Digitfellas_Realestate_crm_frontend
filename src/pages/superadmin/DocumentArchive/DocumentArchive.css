@@ -1,0 +1,208 @@
+.doc-archive {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.doc-archive__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-archive__header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  margin: 0;
+}
+
+.doc-archive__header p {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin: 4px 0 0;
+}
+
+.doc-archive__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-secondary, #475569);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.doc-archive__icon {
+  width: 15px;
+  height: 15px;
+}
+
+.doc-archive__toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-archive__search {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-primary, #fff);
+}
+
+.doc-archive__search input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text-primary, #0f172a);
+}
+
+.doc-archive__filter {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-primary, #fff);
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+}
+
+.doc-archive__card {
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 12px;
+  background: var(--bg-primary, #fff);
+  overflow: hidden;
+}
+
+.doc-archive__count {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-primary, #e2e8f0);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.doc-archive__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.doc-archive__empty-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted, #cbd5e1);
+}
+
+.doc-archive__table-wrap {
+  overflow-x: auto;
+}
+
+.doc-archive__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.doc-archive__table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted, #94a3b8);
+  border-bottom: 1px solid var(--border-primary, #e2e8f0);
+  white-space: nowrap;
+}
+
+.doc-archive__table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-primary, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+  vertical-align: middle;
+}
+
+.doc-archive__name {
+  font-weight: 600;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-archive__mono {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.doc-archive__muted {
+  color: var(--text-muted, #94a3b8);
+}
+
+.doc-archive__tag {
+  background: #3b82f622;
+  color: #2563eb;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.doc-archive__status {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid currentColor;
+}
+
+.doc-archive__status.is-open {
+  color: #b45309;
+  background: #f59e0b1a;
+}
+
+.doc-archive__status.is-completed {
+  color: #16a34a;
+  background: #16a34a1a;
+}
+
+.doc-archive__actions {
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.doc-archive__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 7px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+}

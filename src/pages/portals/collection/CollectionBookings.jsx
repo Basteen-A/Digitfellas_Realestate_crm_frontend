@@ -25,6 +25,17 @@ const BOOKING_TABS = [
   { value: 'Cancelled', label: 'Cancelled', short: 'Cancelled' },
 ];
 
+// Deterministic avatar colour + initials for the assignee stack (matches the task list).
+const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
+const colorFor = (id) => {
+  const s = String(id ?? '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+};
+const avatarInitials = (u) => `${(u?.first_name || '?')[0] || ''}${(u?.last_name || '')[0] || ''}`.toUpperCase();
+const fullNameOf = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim();
+
 const getComputedTotalValue = (booking) => {
   if (!booking) return 0;
   const toAmount = (v) => {
@@ -674,6 +685,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     <th className="hide-mobile" style={{ width: 110 }}>Progress</th>
                     <th className="lead-col-status">Status</th>
                     <th className="hide-mobile" style={{ width: 130 }}>Payment Status</th>
+                    <th className="hide-mobile" style={{ width: 100 }}>Assignee</th>
                     <th className="lead-col-followup" style={{ textAlign: 'right' }}>Follow-up</th>
                     <th className="hide-mobile" style={{ textAlign: 'center', width: 200 }}>Quick Actions</th>
                   </tr>
@@ -742,6 +754,31 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             </span>
                           </td>
                           <td className="hide-mobile">{paymentBadge}</td>
+                          <td className="hide-mobile">
+                            {(() => {
+                              const execs = booking.collectionExecutives || [];
+                              if (execs.length === 0) return <small style={{ color: 'var(--text-muted)' }}>—</small>;
+                              return (
+                                <div className="bkd-cell-avatars">
+                                  {execs.slice(0, 3).map((a, i) => (
+                                    <span
+                                      key={a.id}
+                                      className="bkd-cell-avatar"
+                                      title={fullNameOf(a)}
+                                      style={{ background: colorFor(a.id), marginLeft: i === 0 ? 0 : -8 }}
+                                    >
+                                      {avatarInitials(a)}
+                                    </span>
+                                  ))}
+                                  {execs.length > 3 && (
+                                    <span className="bkd-cell-avatar" style={{ background: '#e2e8f0', color: '#64748b', marginLeft: -8 }}>
+                                      +{execs.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
                           <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <span style={{ fontSize: 11, fontWeight: 600, color: fuColor }}>{fuShort}</span>
                           </td>

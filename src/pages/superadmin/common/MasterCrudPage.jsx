@@ -514,6 +514,17 @@ const MasterCrudPage = ({ config }) => {
                   })}
                   <td>
                     <div className="master-table__actions">
+                      {(config.rowActions || []).map((action) => (
+                        <button
+                          key={action.key}
+                          type="button"
+                          title={action.title}
+                          aria-label={action.title}
+                          onClick={() => action.onClick(row)}
+                        >
+                          {action.icon ? <action.icon className="master-action-icon" /> : action.title}
+                        </button>
+                      ))}
                       <button type="button" title="Edit" aria-label="Edit" onClick={() => openEdit(row)}>
                         <PencilSquareIcon className="master-action-icon" />
                       </button>

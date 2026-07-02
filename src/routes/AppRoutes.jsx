@@ -28,6 +28,8 @@ import NotFound from '../pages/NotFound';
 import Locations from '../pages/superadmin/Locations';
 import Projects from '../pages/superadmin/Projects';
 import ProjectTypes from '../pages/superadmin/ProjectTypes';
+import DocumentArchive from '../pages/superadmin/DocumentArchive';
+import DocumentManagement from '../pages/superadmin/DocumentManagement';
 import LeadTypes from '../pages/superadmin/LeadTypes';
 import LeadSources from '../pages/superadmin/LeadSources';
 import LeadSubSources from '../pages/superadmin/LeadSubSources';
@@ -225,6 +227,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/locations" element={<Locations />} />
             <Route path="/super-admin/projects" element={<Projects />} />
             <Route path="/super-admin/project-types" element={<ProjectTypes />} />
+            <Route path="/super-admin/document-archive" element={<DocumentArchive />} />
+            <Route path="/super-admin/document-management" element={<DocumentManagement />} />
             <Route path="/super-admin/lead-types" element={<LeadTypes />} />
             <Route path="/super-admin/lead-sources" element={<LeadSources />} />
             <Route path="/super-admin/lead-sub-sources" element={<LeadSubSources />} />
