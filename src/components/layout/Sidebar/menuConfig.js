@@ -126,6 +126,7 @@ const adminSidebar = [
   { label: 'Leads', path: '/super-admin/lead-management', icon: UsersIcon },
   { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
   { label: 'Bookings', path: '/super-admin/booking-approvals', icon: CreditCardIcon },
+  { label: 'Record Manager', path: '/super-admin/record-manager', icon: ClipboardDocumentListIcon },
 
   { section: 'INSIGHTS' },
   { label: 'Analytics', path: '/super-admin/reports/organization', icon: ChartBarIcon },

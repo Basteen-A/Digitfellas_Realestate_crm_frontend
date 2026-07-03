@@ -14,7 +14,7 @@ const fmtDate = (d) => (d
   ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
   : '—');
 
-const RecordManagerBookings = ({ onSelectBooking }) => {
+const RecordManagerBookings = ({ onSelectBooking, showCompleted = false }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
@@ -37,15 +37,18 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await bookingApi.getAll({
+      const params = {
         status_code: 'REGISTERED',
-        record_status: 'OPEN', // Completed records drop off the Record Manager's queue
         with_documents: 1,
         is_cancelled: 'false',
         search: search || undefined,
         page,
         limit: pageSize,
-      });
+      };
+      if (!showCompleted) {
+        params.record_status = 'OPEN'; // Completed records drop off the Record Manager's queue
+      }
+      const resp = await bookingApi.getAll(params);
       const rows = resp.data?.data?.rows || resp.data?.data || [];
       setBookings(Array.isArray(rows) ? rows : []);
       setTotal(resp.data?.meta?.total ?? resp.data?.pagination?.total ?? rows.length ?? 0);
@@ -55,7 +58,7 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
     } finally {
       setLoading(false);
     }
-  }, [search, page, pageSize]);
+  }, [search, page, pageSize, showCompleted]);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
 
@@ -153,7 +156,11 @@ const RecordManagerBookings = ({ onSelectBooking }) => {
                       </td>
                       <td className="hide-mobile">{renderUploadStatus(booking)}</td>
                       <td className="hide-mobile">
-                        <span className="col-badge" style={{ background: '#B4530922', color: '#B45309', border: '1px solid currentColor' }}>Open</span>
+                        {booking.record_status === 'COMPLETED' ? (
+                          <span className="col-badge" style={{ background: '#16A34A22', color: '#16A34A', border: '1px solid currentColor' }}>Completed</span>
+                        ) : (
+                          <span className="col-badge" style={{ background: '#B4530922', color: '#B45309', border: '1px solid currentColor' }}>Open</span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <button

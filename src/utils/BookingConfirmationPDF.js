@@ -63,7 +63,7 @@ const cleanTermText = (term) => {
     .replace(/&bull;|&#8226;/g, '-');
   t = t.replace(/[‘’‚‛]/g, '\'').replace(/[“”„‟]/g, '"').replace(/[–—―]/g, '-').replace(/…/g, '...')
     .replace(/[•‣⁃⁌⁍∙▪●○◦‧․·]/g, '-').replace(/₹/g, 'Rs.')
-    .replace(/[  -   　]/g, ' ').replace(/[​-‍﻿­]/g, '').trim();
+    .replace(/[ \u3000]/g, ' ').replace(/[\u200b-\u200d\ufeff\u00ad]/g, '').trim();
   t = Array.from(t).filter((ch) => ch.codePointAt(0) <= 0xFF).join('');
   return t.replace(/\s+/g, ' ').trim();
 };
@@ -372,10 +372,10 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   y = TOP;
   const accountRows = [{ cells: [cell('Account Details', contentW, 'center', true)] }];
   const pushAccountBlock = (splits, totalLabel, totalValue) => {
-    accountRows.push({ cells: [cell(totalLabel, LVW[0], 'center', true), cell(fmtAmt(totalValue), LVW[1], 'left', true), cell(w(totalValue), LVW[2], 'left')] });
+    accountRows.push({ cells: [cell(totalLabel, LVW[0], 'center', true), cell(`Rs. ${fmtAmt(totalValue)}`, LVW[1], 'left', true), cell(w(totalValue), LVW[2], 'left')] });
     splits.forEach((s) => {
-      if (splits.length > 1) {
-        accountRows.push({ cells: [cell('Amount', LVW[0]), cell(fmtAmt(s.amount), LVW[1], 'left'), cell(w(s.amount), LVW[2], 'left')] });
+      if (splits.length > 1 || (splits.length === 1 && Math.abs(s.amount - totalValue) >= 1)) {
+        accountRows.push({ cells: [cell('Amount', LVW[0]), cell(`Rs. ${fmtAmt(s.amount)}`, LVW[1], 'left'), cell(w(s.amount), LVW[2], 'left')] });
       }
       accountRows.push({ cells: [cell('Account Name', LV2[0]), cell(safe(s.account_name), LV2[1], 'left')] });
       accountRows.push({ cells: [cell('Account Number', LV2[0]), cell(safe(s.account_number), LV2[1], 'left')] });
@@ -398,12 +398,12 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     { label: 'Other Registration Expenses', total: docOther, splits: normalizeSplits(cs.other_reg_expenses) },
   ];
   chargeSections.forEach((sec, idx) => {
-    if (idx > 1 && sec.splits.length === 0 && sec.total <= 0) return; // skip empty optional charges
+    if (idx > 1 && sec.splits.length === 0) return; // skip optional charges if no bank account is selected
     if (sec.splits.length === 1 && !sec.splits[0].amount) sec.splits[0].amount = sec.total;
     if (sec.splits.length > 0) {
       pushAccountBlock(sec.splits, sec.label, sec.total);
     } else {
-      accountRows.push({ cells: [cell(sec.label, LVW[0], 'center', true), cell(fmtAmt(sec.total), LVW[1], 'left', true), cell(w(sec.total), LVW[2], 'left')] });
+      accountRows.push({ cells: [cell(sec.label, LVW[0], 'center', true), cell(`Rs. ${fmtAmt(sec.total)}`, LVW[1], 'left', true), cell(w(sec.total), LVW[2], 'left')] });
     }
     accountRows.push({ cells: [cell('', contentW, 'left')] }); // spacer
   });

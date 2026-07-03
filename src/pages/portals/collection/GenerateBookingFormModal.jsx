@@ -130,8 +130,8 @@ const SplitSection = ({ title, total, banks, rows, setRows, optional }) => {
         <button type="button" className="bkd-btn bkd-btn-outline bkd-btn-sm" onClick={addRow}>
           <PlusIcon style={{ width: 14, height: 14 }} /> Add Bank Account
         </button>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: balanced ? '#16A34A' : '#DC2626' }}>
-          {balanced ? 'Balanced ✓' : `Remaining: ${fmt(remaining)}`}
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: balanced ? '#16A34A' : '#64748b' }}>
+          {balanced ? 'Balanced ✓' : `Allocated: ${fmt(sum)} / ${fmt(total)}`}
         </span>
       </div>
     </div>
@@ -165,19 +165,15 @@ const GenerateBookingFormModal = ({ booking, banks, terms, onClose }) => {
     };
   });
 
-  const sumRows = (rows) => rows.reduce((s, r) => s + toNum(r.amount), 0);
-  const sectionValid = (rows, total) => rows.length > 0
-    && rows.every((r) => r.bank_id && toNum(r.amount) > 0)
-    && Math.abs(total - sumRows(rows)) < 1;
-  // Optional charge sections: valid when left unassigned (no bank) OR fully assigned + balanced.
-  const optionalValid = (rows, total) => (!rows.some((r) => r.bank_id)) || sectionValid(rows, total);
+  const sectionValid = (rows) => rows.every((r) => !r.bank_id || toNum(r.amount) > 0);
 
-  const plotValid = sectionValid(plotRows, plotTotal);
-  const devValid = devTotal <= 0 ? true : sectionValid(devRows, devTotal);
-  const canGenerate = plotValid && devValid
-    && optionalValid(stampRows, stamp) && optionalValid(regRows, reg)
-    && optionalValid(commissionRows, commission) && optionalValid(regExpRows, regExpenses)
-    && optionalValid(otherRows, other);
+  const canGenerate = sectionValid(plotRows)
+    && sectionValid(devRows)
+    && sectionValid(stampRows)
+    && sectionValid(regRows)
+    && sectionValid(commissionRows)
+    && sectionValid(regExpRows)
+    && sectionValid(otherRows);
 
   const handleGenerate = () => {
     if (!canGenerate) return;
@@ -254,7 +250,7 @@ const GenerateBookingFormModal = ({ booking, banks, terms, onClose }) => {
             className="bkd-btn bkd-btn-primary"
             disabled={!canGenerate}
             onClick={handleGenerate}
-            title={canGenerate ? 'Generate Booking Form' : 'Assign every row a bank and balance each section’s amounts first'}
+            title={canGenerate ? 'Generate Booking Form' : 'Ensure all entered bank rows have both a bank and a valid amount selected'}
           >
             <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Generate Booking Form
           </button>

@@ -66,6 +66,7 @@ import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingA
 import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns';
 import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
 import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
+import AdminRecordManager from '../pages/superadmin/RecordManager/AdminRecordManager';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -265,6 +266,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/marketing-campaigns" element={<MarketingCampaigns />} />
             <Route path="/super-admin/marketing-templates" element={<WhatsappTemplates />} />
             <Route path="/super-admin/whatsapp-settings" element={<WhatsappSettings />} />
+            <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
           </Route>
 
           {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization
