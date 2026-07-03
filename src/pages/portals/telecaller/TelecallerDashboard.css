@@ -161,9 +161,9 @@
   text-transform: uppercase;
 }
 
-.td-badge-unassigned { background: var(--accent-red-bg); color: var(--accent-red); }
-.td-badge-followup { background: var(--accent-blue-bg); color: var(--accent-blue); }
-.td-badge-sitevisit { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
+.td-badge-unassigned { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; }
+.td-badge-followup { background: #F0FDFA; color: #0F766E; border: 1px solid #99F6E4; }
+.td-badge-sitevisit { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
 
 /* Lead status pill — color is applied inline from the status's own color_code. */
 .td-status-chip {

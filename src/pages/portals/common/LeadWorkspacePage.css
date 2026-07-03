@@ -958,93 +958,98 @@
   flex-shrink: 0;
 }
 
-/* Stage badges */
+/* Stage badges — badge-system triples (badge-system.html / utils/badgeColors.js) */
 .badge-new {
-  background: #f1f5f9;
-  color: #475569;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #BFDBFE;
 }
 
 .badge-new .crm-badge-dot {
-  background: #94a3b8;
+  background: #1D4ED8;
 }
 
 .badge-contacted {
-  background: #dbeafe;
-  color: #2563eb;
+  background: #F0FDFA;
+  color: #0F766E;
+  border-color: #99F6E4;
 }
 
 .badge-contacted .crm-badge-dot {
-  background: #2563eb;
+  background: #0F766E;
 }
 
 .badge-followup {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #F0FDFA;
+  color: #0F766E;
+  border-color: #99F6E4;
 }
 
 .badge-followup .crm-badge-dot {
-  background: #6366f1;
+  background: #0F766E;
 }
 
 .badge-sv-sch {
-  background: #fef3c7;
-  color: #92400e;
+  background: #FFFBEB;
+  color: #92400E;
+  border-color: #FDE68A;
 }
 
 .badge-sv-sch .crm-badge-dot {
-  background: #d97706;
+  background: #92400E;
 }
 
 .badge-sv-done {
-  background: #d1fae5;
-  color: #065f46;
+  background: #F0FDF4;
+  color: #166534;
+  border-color: #BBF7D0;
 }
 
 .badge-sv-done .crm-badge-dot {
-  background: #16a34a;
+  background: #166534;
 }
 
 /* Status badges */
 .badge-hot {
-  background: #fff7ed;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
+  background: #FFF1F2;
+  color: #BE123C;
+  border: 1px solid #FECDD3;
 }
 
 .badge-warm {
-  background: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
 }
 
 .badge-cold {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: #F8FAFC;
+  color: #475569;
+  border: 1px solid #CBD5E1;
 }
 
 .badge-interested {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
 }
 
 .badge-nr {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: #FFF1F2;
+  color: #9F1239;
+  border: 1px solid #FECDD3;
 }
 
 .badge-callback {
-  background: #faf5ff;
-  color: #7c3aed;
-  border: 1px solid #ddd6fe;
+  background: #FAF5FF;
+  color: #6B21A8;
+  border: 1px solid #E9D5FF;
 }
 
 .badge-open {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
 }
 
 .stage-chip,

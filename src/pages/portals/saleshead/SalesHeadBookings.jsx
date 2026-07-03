@@ -9,6 +9,7 @@ import { getErrorMessage } from '../../../utils/helpers';
 import { ClipboardDocumentListIcon, PencilSquareIcon, LinkIcon, CreditCardIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../collection/CollectionWorkspace.css';
 
 const SalesHeadBookings = ({ user }) => {
@@ -175,7 +176,7 @@ const SalesHeadBookings = ({ user }) => {
                   {pageItems.map(booking => {
                     const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
                     const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
-                    const displayStatusColor = isCancelApproved ? '#F59E0B' : booking.status_color;
+                    const displayStatusColor = isCancelApproved ? '#C2410C' : booking.status_color;
                     return (
                       <tr key={booking.id} className="is-clickable" onClick={() => openDetail(booking.id)}>
                         <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
@@ -199,11 +200,8 @@ const SalesHeadBookings = ({ user }) => {
                           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{booking.payment_percentage || 0}% Collected</div>
                         </td>
                         <td>
-                          <span className="col-badge" style={{ 
-                            background: `${displayStatusColor}22`, 
-                            color: displayStatusColor 
-                          }}>
-                            <span className="col-badge-dot" style={{ background: displayStatusColor }} />
+                          <span className="col-badge" style={badgeStyle(displayStatusColor)}>
+                            <span className="col-badge-dot" style={{ background: badgeColors(displayStatusColor).text }} />
                             {displayStatusLabel}
                           </span>
                         </td>

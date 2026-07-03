@@ -11,6 +11,7 @@ import Pagination from '../../components/common/Pagination';
 import usePagination from '../../hooks/usePagination';
 import { useAuthContext } from '../../contexts/AuthContext';
 import CollectionBookingDetail from '../portals/collection/CollectionBookingDetail';
+import { badgeStyle } from '../../utils/badgeColors';
 import './BookingApprovals.css';
 
 // Status filter tabs are built at runtime from the admin-managed Booking
@@ -84,7 +85,7 @@ const unitOf = (b) => b.unit_number || b.inventoryUnit?.unit_number || (b.unit_d
 const statusOf = (b) => {
   const code = b.bookingStatus?.status_code || b.status_code;
   const cancelApproved = code === 'REQUEST_TO_CANCEL' && !!b.custom_fields?.cancel_approved_by;
-  if (cancelApproved) return { label: 'Cancel Pending', color: '#F59E0B' };
+  if (cancelApproved) return { label: 'Cancel Pending', color: '#C2410C' };
   return {
     label: b.status_label || b.bookingStatus?.status_name || '—',
     color: b.status_color || b.bookingStatus?.color_code || '#6B7280',
@@ -264,7 +265,7 @@ const BookingApprovals = () => {
             <div className="ba-mobile-card__customer">{customerName(b)}</div>
             <div className="ba-muted">{formatCurrency(summary.totalValue)} total · {Math.round(summary.pct)}% collected</div>
             <div style={{ marginTop: 4 }}>
-              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${st.color}22`, color: st.color }}>{st.label}</span>
+              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, ...badgeStyle(st.color) }}>{st.label}</span>
             </div>
           </div>
           <div className="ba-mobile-card__actions" onClick={(e) => e.stopPropagation()}>
@@ -374,7 +375,7 @@ const BookingApprovals = () => {
                     <td style={td}>
                       <span className="ba-status-badge" style={{
                         display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700,
-                        background: `${st.color}22`, color: st.color,
+                        ...badgeStyle(st.color),
                       }}>{st.label}</span>
                     </td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>

@@ -9,6 +9,7 @@ import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import TaskModal from './TaskModal';
 import Pagination from '../../components/common/Pagination';
+import { badgeStyle, TASK_STATUS_TEXT } from '../../utils/badgeColors';
 // Reuse the lead workspace design system so this page is visually consistent
 // (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
 import '../portals/common/LeadWorkspacePage.css';
@@ -20,12 +21,10 @@ const STATUS_LABELS = {
 };
 
 // Status / priority chip colours (rendered as .status-chip like the leads table).
-const STATUS_HEX = {
-  open: '#2563eb', pending: '#d97706', work_in_progress: '#7c3aed',
-  completed: '#16a34a', closed: '#64748b', cancelled: '#dc2626',
-};
+// Canonical badge-system text colors; Chip derives bg/border via badgeStyle.
+const STATUS_HEX = TASK_STATUS_TEXT;
 const PRIORITY_HEX = {
-  low: '#16a34a', medium: '#d97706', high: '#ea580c', urgent: '#dc2626',
+  low: '#166534', medium: '#92400E', high: '#C2410C', urgent: '#BE123C',
 };
 
 const GROUP_BY = [
@@ -90,7 +89,7 @@ const groupKeyOf = (task, by) => {
 const Chip = ({ hex, children }) => (
   <span
     className="status-chip"
-    style={{ backgroundColor: `${hex}22`, color: hex, borderColor: hex }}
+    style={badgeStyle(hex)}
   >
     {children}
   </span>

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getFileMeta, humanFileSize } from '../../../utils/fileMeta';
+import { badgeColors } from '../../../utils/badgeColors';
 import {
   ArrowLeftIcon, ArrowPathIcon, CloudArrowUpIcon, DocumentTextIcon,
   ArrowDownTrayIcon, EyeIcon, CheckCircleIcon, UserIcon, IdentificationIcon,
@@ -181,13 +182,15 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
     </div>
   );
 
-  const statusColor = booking.status_color || '#16A34A';
+  const statusBadge = badgeColors(booking.status_color, '#065F46');
   const buyerName = booking.buyer_name || booking.customer_name || '—';
   const customer = booking.customer || {};
   const phoneRaw = customer.phone || customer.phone_number || '';
   const phone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(phoneRaw || '')) ? '—' : (phoneRaw || '—');
   const isCompleted = booking.record_status === 'COMPLETED';
-  const recordColor = isCompleted ? '#16A34A' : '#B45309';
+  const recordBadge = isCompleted
+    ? { bg: '#F0FDF4', text: '#166534', border: '#BBF7D0' }
+    : { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
 
   return (
     <div className="bkd-page">
@@ -198,11 +201,11 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
           <div>
             <h1 className="bkd-title">
               Booking {booking.booking_number}{' '}
-              <span className="bkd-status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}` }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, display: 'inline-block' }} />
+              <span className="bkd-status-badge" style={{ background: statusBadge.bg, color: statusBadge.text, border: `1px solid ${statusBadge.border}` }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusBadge.text, display: 'inline-block' }} />
                 {booking.status_label || 'Registered'}
               </span>
-              <span className="bkd-status-badge" style={{ background: `${recordColor}18`, color: recordColor, border: `1px solid ${recordColor}`, marginLeft: 6 }}>
+              <span className="bkd-status-badge" style={{ background: recordBadge.bg, color: recordBadge.text, border: `1px solid ${recordBadge.border}`, marginLeft: 6 }}>
                 {isCompleted ? 'Completed' : 'Open'}
               </span>
             </h1>

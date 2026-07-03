@@ -66,13 +66,13 @@ const RecordManagerBookings = ({ onSelectBooking, showCompleted = false }) => {
     const count = booking.document_count ?? (booking.has_documents ? 1 : 0);
     if (count > 0) {
       return (
-        <span className="col-badge" style={{ background: '#16A34A22', color: '#16A34A' }}>
+        <span className="col-badge" style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' }}>
           <CheckCircleIcon style={{ width: 13, height: 13 }} /> Uploaded{count > 1 ? ` (${count})` : ''}
         </span>
       );
     }
     return (
-      <span className="col-badge" style={{ background: '#F59E0B22', color: '#B45309' }}>
+      <span className="col-badge" style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
         <ExclamationCircleIcon style={{ width: 13, height: 13 }} /> Pending
       </span>
     );
@@ -157,9 +157,9 @@ const RecordManagerBookings = ({ onSelectBooking, showCompleted = false }) => {
                       <td className="hide-mobile">{renderUploadStatus(booking)}</td>
                       <td className="hide-mobile">
                         {booking.record_status === 'COMPLETED' ? (
-                          <span className="col-badge" style={{ background: '#16A34A22', color: '#16A34A', border: '1px solid currentColor' }}>Completed</span>
+                          <span className="col-badge" style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' }}>Completed</span>
                         ) : (
-                          <span className="col-badge" style={{ background: '#B4530922', color: '#B45309', border: '1px solid currentColor' }}>Open</span>
+                          <span className="col-badge" style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>Open</span>
                         )}
                       </td>
                       <td style={{ textAlign: 'center' }}>

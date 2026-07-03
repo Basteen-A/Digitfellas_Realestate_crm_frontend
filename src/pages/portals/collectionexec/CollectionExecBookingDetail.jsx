@@ -10,6 +10,7 @@ import {
   CloudArrowUpIcon, DocumentTextIcon, ArrowDownTrayIcon, UserIcon, ClockIcon,
   CheckCircleIcon, ExclamationTriangleIcon, CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
+import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import '../collection/CollectionWorkspace.css';
 
@@ -275,7 +276,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
     </div>
   );
 
-  const statusColor = booking.status_color || '#6B7280';
+  const statusBadge = badgeColors(booking.status_color);
   const buyerName = booking.buyer_name || booking.customer_name || '—';
   const customer = booking.customer || {};
   const phoneRaw = customer.phone || customer.phone_number || '';
@@ -289,8 +290,8 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
           <div>
             <h1 className="bkd-title">
               Booking {booking.booking_number}{' '}
-              <span className="bkd-status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}` }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, display: 'inline-block' }} />
+              <span className="bkd-status-badge" style={{ background: statusBadge.bg, color: statusBadge.text, border: `1px solid ${statusBadge.border}` }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusBadge.text, display: 'inline-block' }} />
                 {booking.status_label || '—'}
               </span>
             </h1>
@@ -318,7 +319,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
               <InfoRow label="Project" value={booking.project_name} />
               <InfoRow label="Phase" value={booking.phase_name || '—'} />
               <InfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
-              <InfoRow label="Booking Status" value={booking.status_label} color={statusColor} />
+              <InfoRow label="Booking Status" value={booking.status_label} color={statusBadge.text} />
               <InfoRow label="Payment Status" value={booking.payment_status || '—'} />
               <InfoRow label="Next Follow-up" value={fmtD(booking.next_follow_up_at)} />
               {booking.lead?.lead_number && <InfoRow label="Lead" value={booking.lead.lead_number} mono />}

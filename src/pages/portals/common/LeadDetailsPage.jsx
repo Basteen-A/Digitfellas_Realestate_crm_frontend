@@ -22,6 +22,7 @@ import projectPhaseApi from '../../../api/projectPhaseApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone, formatLocation, cleanRepeatingLocation } from '../../../utils/formatters';
 import { getRoleCode } from '../../../utils/permissions';
+import { badgeStyle } from '../../../utils/badgeColors';
 import { getActionsForRole } from './workflowConfig';
 import {
   XMarkIcon,
@@ -1319,22 +1320,16 @@ const LeadDetailsPage = () => {
             Quick update
           </button>
           {roleCode !== 'TC' && (
-            <span 
-              className="lead-details-stage" 
-              style={{ 
-                backgroundColor: (lead.stageLabel?.toLowerCase().includes('site visit') ? '#15803d22' : `${lead.stageColor}22`), 
-                color: (lead.stageLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.stageColor) 
-              }}
+            <span
+              className="lead-details-stage"
+              style={badgeStyle(lead.stageColor)}
             >
               {lead.stageLabel}
             </span>
           )}
-          <span 
-            className="lead-details-status" 
-            style={{ 
-              backgroundColor: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d22' : `${lead.statusColor}22`), 
-              color: (lead.statusLabel?.toLowerCase().includes('site visit') ? '#15803d' : lead.statusColor) 
-            }}
+          <span
+            className="lead-details-status"
+            style={badgeStyle(lead.statusColor)}
           >
             {lead.statusIcon || ''} {lead.statusLabel}
           </span>
@@ -2171,7 +2166,7 @@ const LeadDetailsPage = () => {
                                   <td>{sv.visit_number || '-'}</td>
                                   <td>{projectName}</td>
                                   <td>
-                                    <span className="status-chip" style={{ backgroundColor: `${sv.statusColor || '#64748b'}22`, color: sv.statusColor || '#334155' }}>
+                                    <span className="status-chip" style={badgeStyle(sv.statusColor)}>
                                       {sv.status || '-'}
                                     </span>
                                   </td>

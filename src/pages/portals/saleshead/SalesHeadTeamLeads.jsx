@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { badgeStyle } from '../../../utils/badgeColors';
 
 const getVisitDetails = (visit) => {
   const directVisitDetails = parseVisitDetailsValue(
@@ -276,7 +277,7 @@ const SalesHeadTeamLeads = () => {
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{lead.leadNumber}</div>
                               </td>
                               <td>
-                                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: (lead.stageColor || '#6B7280') + '22', color: lead.stageColor || '#6B7280' }}>
+                                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, ...badgeStyle(lead.stageColor) }}>
                                   {lead.stageLabel}
                                 </span>
                               </td>

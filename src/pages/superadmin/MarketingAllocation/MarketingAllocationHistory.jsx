@@ -6,6 +6,7 @@ import marketingAllocationRuleApi from '../../../api/marketingAllocationRuleApi'
 import leadSourceApi from '../../../api/leadSourceApi';
 import Pagination from '../../../components/common/Pagination';
 import { getErrorMessage } from '../../../utils/helpers';
+import { badgeStyle } from '../../../utils/badgeColors';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'top' };
@@ -209,7 +210,7 @@ const MarketingAllocationHistory = () => {
                       </div>
                     </td>
                     <td style={td}>
-                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: `${src?.color_code || '#6B7280'}22`, color: src?.color_code || '#6B7280' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, ...badgeStyle(src?.color_code) }}>
                         {src?.source_name || r.source_label || '—'}
                       </span>
                       {r.leadSubSource && (

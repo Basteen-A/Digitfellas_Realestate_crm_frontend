@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import '../collection/CollectionWorkspace.css';
 
@@ -340,8 +341,8 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                             <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</small>
                           </td>
                           <td className="lead-col-status">
-                            <span className="col-badge" style={{ background: `${booking.status_color || '#6B7280'}22`, color: booking.status_color || '#6B7280' }}>
-                              <span className="col-badge-dot" style={{ background: booking.status_color || '#6B7280' }} />
+                            <span className="col-badge" style={badgeStyle(booking.status_color)}>
+                              <span className="col-badge-dot" style={{ background: badgeColors(booking.status_color).text }} />
                               {booking.status_label || '—'}
                             </span>
                           </td>
@@ -435,7 +436,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
             {/* Header */}
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
-                <div className="qa-drawer-avatar" style={{ background: `${activeBooking.status_color || '#6B7280'}22`, color: activeBooking.status_color || '#6B7280', border: `2px solid ${activeBooking.status_color || '#6B7280'}` }}>
+                <div className="qa-drawer-avatar" style={{ background: badgeColors(activeBooking.status_color).bg, color: badgeColors(activeBooking.status_color).text, border: `2px solid ${badgeColors(activeBooking.status_color).border}` }}>
                   {(activeBooking.customer_name || 'B')[0]?.toUpperCase()}
                 </div>
                 <div>

@@ -23,6 +23,7 @@ import {
   DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon, EyeIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
+import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
@@ -831,7 +832,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // (the booking is only truly "Cancelled" after Collection finalizes the refund/cancellation)
   const isCancelApproved = (booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
   const effectiveStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
-  const effectiveStatusColor = isCancelApproved ? '#F59E0B' : booking.status_color;
+  const effectiveStatusColor = isCancelApproved ? '#C2410C' : booking.status_color;
+  const effectiveStatusBadge = badgeColors(effectiveStatusColor);
 
   const renderActivityHistory = () => {
     return (
@@ -895,8 +897,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <h1 className="bkd-title">
               Booking Details — {booking.booking_number}{' '}
                 
-        <span className="bkd-status-badge" style={{background:`${effectiveStatusColor}18`,color:effectiveStatusColor,border:`1px solid ${effectiveStatusColor}`}}>
-          <span style={{width:6,height:6,borderRadius:'50%',background:effectiveStatusColor,display:'inline-block'}}/> {effectiveStatusLabel}
+        <span className="bkd-status-badge" style={{background:effectiveStatusBadge.bg,color:effectiveStatusBadge.text,border:`1px solid ${effectiveStatusBadge.border}`}}>
+          <span style={{width:6,height:6,borderRadius:'50%',background:effectiveStatusBadge.text,display:'inline-block'}}/> {effectiveStatusLabel}
         </span>
      
             </h1>
@@ -1810,7 +1812,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <div className="qa-drawer-handle" />
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
-                <div className="qa-drawer-avatar" style={{ background: `${booking.status_color}22`, color: booking.status_color, border: `2px solid ${booking.status_color}` }}>
+                <div className="qa-drawer-avatar" style={{ background: badgeColors(booking.status_color).bg, color: badgeColors(booking.status_color).text, border: `2px solid ${badgeColors(booking.status_color).border}` }}>
                   {(booking.customer_name || 'B')[0]?.toUpperCase()}
                 </div>
                 <div>

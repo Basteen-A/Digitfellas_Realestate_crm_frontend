@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
+import { badgeStyle } from '../../../utils/badgeColors';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 
@@ -80,7 +81,7 @@ const TelecallerPullRequests = ({ user }) => {
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>📞 {pr.leadPhone}</div>
                       <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                        <span className="crm-badge" style={{ background: pr.leadStageColor + '22', color: pr.leadStageColor, fontSize: 11 }}>
+                        <span className="crm-badge" style={{ ...badgeStyle(pr.leadStageColor), fontSize: 11 }}>
                           {pr.leadStage}
                         </span>
                         <span className="crm-badge" style={{ fontSize: 11 }}>{pr.leadStatus}</span>

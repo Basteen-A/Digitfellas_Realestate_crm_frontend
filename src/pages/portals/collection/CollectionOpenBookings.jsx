@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
@@ -153,8 +154,8 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                         <td style={{ fontWeight: 600 }}>{formatCurrency(computedTotal(b))}</td>
                         <td>{fmtDate(b.booking_date)}</td>
                         <td>
-                          <span className="col-badge" style={{ background: `${b.status_color || '#6B7280'}22`, color: b.status_color || '#6B7280' }}>
-                            <span className="col-badge-dot" style={{ background: b.status_color || '#6B7280' }} />
+                          <span className="col-badge" style={badgeStyle(b.status_color)}>
+                            <span className="col-badge-dot" style={{ background: badgeColors(b.status_color).text }} />
                             {b.status_label || b.status_name}
                           </span>
                         </td>

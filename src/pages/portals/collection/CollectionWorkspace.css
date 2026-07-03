@@ -1223,29 +1223,23 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  /* Outline follows the variant's text colour so verification/payment status
-     badges get a border consistent with the task status chip. */
-  border: 1px solid currentColor;
+  /* Badge-system triples: 50-shade bg, 700/800 text, 200-shade border
+     (badge-system.html / utils/badgeColors.js). */
+  border: 1px solid;
 }
 .col-badge-new::before {
   content: '';
   width: 5px; height: 5px;
   border-radius: 50%;
+  background: currentColor;
 }
-.col-badge-verified { background: #d1fae5; color: #065f46; }
-.col-badge-verified::before { background: #15803d; }
-.col-badge-neutral { background: #f3f4f6; color: #374151; }
-.col-badge-neutral::before { background: #9ca3af; }
-.col-badge-unverified { background: #fef3c7; color: #92400e; }
-.col-badge-unverified::before { background: #f59e0b; }
-.col-badge-rejected { background: #fee2e2; color: #991b1b; }
-.col-badge-rejected::before { background: #ef4444; }
-.col-badge-pending { background: #dbeafe; color: #1e40af; }
-.col-badge-pending::before { background: #3b82f6; }
-.col-badge-overdue { background: #fee2e2; color: #991b1b; }
-.col-badge-overdue::before { background: #ef4444; }
-.col-badge-new-status { background: #ede9ff; color: #5b4fcf; }
-.col-badge-new-status::before { background: #5b4fcf; }
+.col-badge-verified { background: #F0FDF4; color: #166534; border-color: #BBF7D0; }
+.col-badge-neutral { background: #F3F4F6; color: #4B5563; border-color: #D1D5DB; }
+.col-badge-unverified { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+.col-badge-rejected { background: #FFF1F2; color: #9F1239; border-color: #FECDD3; }
+.col-badge-pending { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+.col-badge-overdue { background: #FFF1F2; color: #BE123C; border-color: #FECDD3; }
+.col-badge-new-status { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
 
 /* ── Empty Mini State ── */
 .col-empty-mini {
@@ -2139,16 +2133,12 @@
 .bkd-row-bounced { background:#fef2f2; }
 
 /* Badges */
-.bkd-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
-.bkd-badge::before { content:''; width:5px; height:5px; border-radius:50%; }
-.bkd-badge-success { background:#d1fae5; color:#065f46; }
-.bkd-badge-success::before { background:#15803d; }
-.bkd-badge-neutral { background:#f3f4f6; color:#374151; }
-.bkd-badge-neutral::before { background:#9ca3af; }
-.bkd-badge-warning { background:#fef3c7; color:#92400e; }
-.bkd-badge-warning::before { background:#f59e0b; }
-.bkd-badge-danger { background:#fee2e2; color:#991b1b; }
-.bkd-badge-danger::before { background:#ef4444; }
+.bkd-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; border:1px solid; }
+.bkd-badge::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.bkd-badge-success { background:#F0FDF4; color:#166534; border-color:#BBF7D0; }
+.bkd-badge-neutral { background:#F3F4F6; color:#4B5563; border-color:#D1D5DB; }
+.bkd-badge-warning { background:#FFFBEB; color:#92400E; border-color:#FDE68A; }
+.bkd-badge-danger { background:#FFF1F2; color:#9F1239; border-color:#FECDD3; }
 
 /* Timeline */
 .bkd-timeline { position:relative; padding-left:20px; }

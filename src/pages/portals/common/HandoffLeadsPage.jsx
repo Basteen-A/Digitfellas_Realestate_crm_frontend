@@ -8,6 +8,7 @@ import { formatDateTime } from '../../../utils/formatters';
 import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { badgeStyle } from '../../../utils/badgeColors';
 import './HandoffLeadsPage.css';
 
 const dedupePipeText = (value) => {
@@ -29,13 +30,8 @@ const dedupePipeText = (value) => {
   return unique.join(' | ');
 };
 
-// Site-visit and booked statuses render in a readable dark green rather than
-// the lighter tint stored in the DB color.
-const statusChipColor = (statusName, fallbackColor) => {
-  const lc = String(statusName || '').toLowerCase();
-  if (lc.includes('site visit') || lc.includes('book')) return '#15803d';
-  return fallbackColor || '#6B7280';
-};
+// Badge-system triple (bg/text/border) derived from the DB status color.
+const statusChipStyle = (statusColor) => badgeStyle(statusColor);
 
 const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false, stageCode = null, currentOnly = false }) => {
   const navigate = useNavigate();
@@ -221,7 +217,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 )}
                 {showStage && (
                   <td>
-                    <span className="handoff-chip" style={{ backgroundColor: `${row.stageColor || '#6B7280'}22`, color: 'var(--text-primary)', borderColor: `${row.stageColor || '#6B7280'}66` }}>
+                    <span className="handoff-chip" style={badgeStyle(row.stageColor)}>
                       {row.stageName || row.stageLabel || row.stageCode || row.stage_code || '-'}
                     </span>
                   </td>
@@ -239,7 +235,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                     </td>
                    
                     <td>
-                      <span className="handoff-chip" style={{ backgroundColor: `${statusChipColor(row.statusName, row.statusColor)}22`, color: statusChipColor(row.statusName, row.statusColor), borderColor: `${statusChipColor(row.statusName, row.statusColor)}66` }}>
+                      <span className="handoff-chip" style={statusChipStyle(row.statusColor)}>
                         {row.statusName || '-'}
                       </span>
                     </td>
@@ -247,7 +243,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 ) : (
                   <>
                     <td>
-                      <span className="handoff-chip" style={{ backgroundColor: `${statusChipColor(row.statusName, row.statusColor)}22`, color: statusChipColor(row.statusName, row.statusColor), borderColor: `${statusChipColor(row.statusName, row.statusColor)}66` }}>
+                      <span className="handoff-chip" style={statusChipStyle(row.statusColor)}>
                         {row.statusName || '-'}
                       </span>
                     </td>

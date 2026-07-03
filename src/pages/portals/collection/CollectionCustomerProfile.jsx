@@ -8,6 +8,7 @@ import {
   PencilSquareIcon, DocumentCheckIcon, ClipboardDocumentListIcon,
   BoltIcon, CreditCardIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { badgeStyle } from '../../../utils/badgeColors';
 import './CollectionWorkspace.css';
 
 const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
@@ -236,7 +237,7 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                                 <tr key={b.id} className="is-clickable" onClick={() => openBookingDetail(b.id)}>
                                   <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{b.booking_number}</td>
                                   <td>{b.project?.project_name || '-'}</td>
-                                  <td><span className="col-badge" style={{ background: (b.bookingStatus?.color_code || '#6B7280') + '22', color: b.bookingStatus?.color_code || '#6B7280' }}>{b.bookingStatus?.status_name || '-'}</span></td>
+                                  <td><span className="col-badge" style={badgeStyle(b.bookingStatus?.color_code)}>{b.bookingStatus?.status_name || '-'}</span></td>
                                   <td style={{ fontWeight: 600 }}>{formatCurrency(b.net_amount)}</td>
                                   <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(b.total_paid)}</td>
                                   <td>{(b.payments || []).length} payment{(b.payments || []).length !== 1 ? 's' : ''}</td>
@@ -278,7 +279,7 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                   <div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Project: <strong style={{ color: 'var(--text-primary)' }}>{selectedBooking.project?.project_name || '-'}</strong></div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Unit: <strong>{selectedBooking.unit_number || 'Not set'}</strong> | Floor: <strong>{selectedBooking.floor_number || '-'}</strong> | Config: <strong>{selectedBooking.configuration || '-'}</strong></div>
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Status: <span className="col-badge" style={{ background: (selectedBooking.status_color || '#6B7280') + '22', color: selectedBooking.status_color || '#6B7280' }}>{selectedBooking.status_label || 'Pending'}</span></div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Status: <span className="col-badge" style={badgeStyle(selectedBooking.status_color)}>{selectedBooking.status_label || 'Pending'}</span></div>
                   </div>
                 </div>
 
@@ -297,7 +298,7 @@ const CollectionCustomerProfile = ({ user, initialCustomerId }) => {
                             <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
                             <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
                             <td style={{ fontSize: 12 }}>{formatDate(p.payment_date)}</td>
-                            <td><span className="col-badge" style={{ background: (p.is_bounced ? '#ef4444' : p.management_approved ? '#16a34a' : p.accounts_approved ? '#3b82f6' : '#f59e0b') + '22', color: p.is_bounced ? '#ef4444' : p.management_approved ? '#16a34a' : p.accounts_approved ? '#3b82f6' : '#f59e0b' }}>{p.is_bounced ? 'Bounced' : p.management_approved ? 'Approved' : p.accounts_approved ? 'Accounts OK' : 'Pending'}</span></td>
+                            <td><span className="col-badge" style={badgeStyle(p.is_bounced ? '#9F1239' : p.management_approved ? '#166534' : p.accounts_approved ? '#1D4ED8' : '#92400E')}>{p.is_bounced ? 'Bounced' : p.management_approved ? 'Approved' : p.accounts_approved ? 'Accounts OK' : 'Pending'}</span></td>
                           </tr>
                         ))}
                       </tbody>

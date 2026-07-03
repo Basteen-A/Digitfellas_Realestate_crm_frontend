@@ -27,27 +27,28 @@ const getTodayString = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// Canonical badge-system triples (badge-system.html / utils/badgeColors.js).
 const STATUS_COLORS = {
-  NEW: { bg: '#dbeafe', text: '#1e40af' },
-  RNR: { bg: '#fef3c7', text: '#92400e' },
-  FOLLOW_UP: { bg: '#e0e7ff', text: '#3730a3' },
-  SV_SCHEDULED: { bg: '#d1fae5', text: '#065f46' },
-  SV_DONE: { bg: '#a7f3d0', text: '#047857' },
-  REVISIT: { bg: '#e0e7ff', text: '#4338ca' },
-  NEGOTIATION_HOT: { bg: '#fee2e2', text: '#991b1b' },
-  NEGOTIATION_WARM: { bg: '#fef3c7', text: '#92400e' },
-  NEGOTIATION_COLD: { bg: '#e0e7ff', text: '#3730a3' },
-  BOOKED: { bg: '#d1fae5', text: '#047857' },
-  JUNK: { bg: '#fecaca', text: '#991b1b' },
-  SPAM: { bg: '#fecaca', text: '#7f1d1d' },
-  LOST: { bg: '#fee2e2', text: '#991b1b' },
-  INACTIVE: { bg: '#f3f4f6', text: '#4b5563' },
-  REALLOT: { bg: '#fef3c7', text: '#78350f' },
+  NEW: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
+  RNR: { bg: '#FAF5FF', text: '#6B21A8', border: '#E9D5FF' },
+  FOLLOW_UP: { bg: '#F0FDFA', text: '#0F766E', border: '#99F6E4' },
+  SV_SCHEDULED: { bg: '#FFFBEB', text: '#92400E', border: '#FDE68A' },
+  SV_DONE: { bg: '#F0FDF4', text: '#166534', border: '#BBF7D0' },
+  REVISIT: { bg: '#EEF2FF', text: '#3730A3', border: '#C7D2FE' },
+  NEGOTIATION_HOT: { bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
+  NEGOTIATION_WARM: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
+  NEGOTIATION_COLD: { bg: '#F8FAFC', text: '#475569', border: '#CBD5E1' },
+  BOOKED: { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
+  JUNK: { bg: '#F9FAFB', text: '#6B7280', border: '#E5E7EB' },
+  SPAM: { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB' },
+  LOST: { bg: '#FFF1F2', text: '#9F1239', border: '#FECDD3' },
+  INACTIVE: { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
+  REALLOT: { bg: '#ECFEFF', text: '#155E75', border: '#A5F3FC' },
 };
 
 const getStatusStyle = (statusCode) => {
-  const c = STATUS_COLORS[statusCode] || { bg: '#f3f4f6', text: '#374151' };
-  return { background: c.bg, color: c.text };
+  const c = STATUS_COLORS[statusCode] || { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB' };
+  return { background: c.bg, color: c.text, border: `1px solid ${c.border}` };
 };
 
 const AdminLeadManagement = () => {

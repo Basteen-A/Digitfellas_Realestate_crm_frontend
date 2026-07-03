@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../api/bookingApi';
 import { formatCurrency } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
+import { badgeColors } from '../../utils/badgeColors';
 import '../../pages/portals/common/LeadWorkspacePage.css';
 import '../../pages/portals/collection/CollectionWorkspace.css';
 
@@ -198,7 +199,7 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
   };
 
   const { totalValue, totalPaid, filteredCategories, categoryBuckets } = computeBudget(booking || {});
-  const statusColor = booking?.status_color || 'var(--accent-blue)';
+  const statusBadge = badgeColors(booking?.status_color, '#1D4ED8');
 
   const saveDisabled = saving || !payForm.amount || !payForm.payment_category || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()));
   const statusLabel = payment?.is_verified ? 'verified' : payment?.is_bounced ? 'rejected' : payment?.is_refund ? 'a refund' : 'locked';
@@ -209,7 +210,7 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
         <div className="qa-drawer-handle" />
         <div className="qa-drawer-header">
           <div className="qa-drawer-header-left">
-            <div className="qa-drawer-avatar" style={{ background: `${statusColor}22`, color: statusColor, border: `2px solid ${statusColor}` }}>
+            <div className="qa-drawer-avatar" style={{ background: statusBadge.bg, color: statusBadge.text, border: `2px solid ${statusBadge.border}` }}>
               {(booking?.customer_name || 'B')[0]?.toUpperCase()}
             </div>
             <div>

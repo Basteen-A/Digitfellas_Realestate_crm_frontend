@@ -19,11 +19,12 @@ const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', 
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
+// Canonical badge-system triples (badge-system.html / utils/badgeColors.js).
 const STATUS_COLORS = {
-  QUEUED: { bg: '#eff6ff', fg: '#1d4ed8' },
-  SENDING: { bg: '#fef9c3', fg: '#a16207' },
-  COMPLETED: { bg: '#dcfce7', fg: '#166534' },
-  FAILED: { bg: '#fee2e2', fg: '#991b1b' },
+  QUEUED: { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE' },
+  SENDING: { bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA' },
+  COMPLETED: { bg: '#F0FDF4', fg: '#166534', border: '#BBF7D0' },
+  FAILED: { bg: '#FFF1F2', fg: '#9F1239', border: '#FECDD3' },
 };
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 
@@ -313,7 +314,7 @@ const Campaigns = () => {
                         <div style={{ width: `${pct(c)}%`, height: '100%', background: '#16A34A', borderRadius: 99, transition: 'width 0.4s' }} />
                       </div>
                     </td>
-                    <td style={td}><span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span></td>
+                    <td style={td}><span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span></td>
                     <td style={td}>{fmtDateTime(c.created_at)}</td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openDrill(c)} title="View recipients"><EyeIcon style={{ width: 15, height: 15 }} /></button>

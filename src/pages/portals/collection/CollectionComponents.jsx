@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
+import { badgeStyle } from '../../../utils/badgeColors';
 import {
   ClipboardDocumentListIcon,
   BoltIcon,
@@ -78,7 +79,7 @@ const CollectionDashboard = ({ user, onNavigate, leads }) => {
                   <tr key={lead.id}>
                     <td style={{ fontWeight: 600 }}>{lead.fullName}</td>
                     <td>{lead.phone}</td>
-                    <td><span className="crm-badge" style={{ background: lead.stageColor + '22', color: lead.stageColor, fontSize: 11 }}>{lead.stageLabel}</span></td>
+                    <td><span className="crm-badge" style={{ ...badgeStyle(lead.stageColor), fontSize: 11 }}>{lead.stageLabel}</span></td>
                     <td><span className="crm-badge" style={{ fontSize: 11 }}>{lead.statusLabel}</span></td>
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDateTime(lead.updatedAt)}</td>
                   </tr>
@@ -134,7 +135,7 @@ const CollectionBookings = ({ user, leads, onSelectLead }) => {
                     <td><PhoneIcon style={{ width: 13, height: 13, marginRight: 4, verticalAlign: 'text-bottom' }} />{lead.phone}</td>
                     <td>{lead.project || '-'}</td>
                     <td>
-                      <span className="crm-badge" style={{ background: lead.stageColor + '22', color: lead.stageColor, fontSize: 11 }}>
+                      <span className="crm-badge" style={{ ...badgeStyle(lead.stageColor), fontSize: 11 }}>
                         {lead.stageLabel}
                       </span>
                     </td>

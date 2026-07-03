@@ -8,6 +8,7 @@ import marketingAllocationRuleApi from '../../../api/marketingAllocationRuleApi'
 import leadSourceApi from '../../../api/leadSourceApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { badgeStyle } from '../../../utils/badgeColors';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'top' };
@@ -282,7 +283,7 @@ const MarketingAllocationRules = () => {
                       <div style={{ fontWeight: 600 }}>{rule.rule_name}</div>
                     </td>
                     <td style={td}>
-                      <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, background: `${src?.color_code || '#6B7280'}22`, color: src?.color_code || '#6B7280' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, ...badgeStyle(src?.color_code) }}>
                         {src?.source_name || '—'}
                       </span>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>

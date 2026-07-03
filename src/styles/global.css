@@ -29,6 +29,23 @@ body {
   }
 }
 
+/* ── Form control text ──
+   All typed text in textboxes/textareas/selects is jet black site-wide.
+   `!important` intentionally beats the per-page input classes that set
+   var(--text-primary)/muted colors. Placeholders keep their own styling. */
+input,
+textarea,
+select {
+  color: #000000 !important;
+}
+
+/* Dark theme keeps readable light text on dark fields. */
+[data-theme='dark'] input,
+[data-theme='dark'] textarea,
+[data-theme='dark'] select {
+  color: var(--text-primary) !important;
+}
+
 /* ── Focus Styles ── */
 :focus-visible {
   outline: 2px solid var(--accent-blue);

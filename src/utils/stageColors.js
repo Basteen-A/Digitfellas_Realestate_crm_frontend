@@ -4,22 +4,32 @@
 // Qualified = blue · Site Visit = orange · Negotiation = purple · Booking = green.
 // Keep this in sync with the on-screen funnel in the Reports → Analytics dashboard.
 
+// Canonical badge-system text colors (badge-system.html / utils/badgeColors.js).
 export const STAGE_COLORS = {
-  qualified: '#0ea5e9',   // blue
-  siteVisit: '#f59e0b',   // orange
-  negotiation: '#a855f7', // purple
-  booking: '#16a34a',     // green
-  cancelled: '#dc2626',   // red (lost / cancelled)
+  qualified: '#1D4ED8',   // blue
+  siteVisit: '#92400E',   // amber
+  negotiation: '#6B21A8', // purple
+  booking: '#166534',     // green
+  cancelled: '#9F1239',   // rose (lost / cancelled)
 };
 
-// Tints (background) for the matching foreground color — used by stage chips and
-// funnel rows. Roughly the on-screen `${color}1a` (~10% alpha) convention.
+// Badge-system 50-shade backgrounds for the matching foreground color — used by
+// stage chips and funnel rows.
 export const STAGE_BG = {
-  qualified: '#e0f2fe',
-  siteVisit: '#fef3c7',
-  negotiation: '#f3e8ff',
-  booking: '#dcfce7',
-  cancelled: '#fee2e2',
+  qualified: '#EFF6FF',
+  siteVisit: '#FFFBEB',
+  negotiation: '#FAF5FF',
+  booking: '#F0FDF4',
+  cancelled: '#FFF1F2',
+};
+
+// Badge-system 200-shade borders for the matching foreground color.
+export const STAGE_BORDER = {
+  qualified: '#BFDBFE',
+  siteVisit: '#FDE68A',
+  negotiation: '#E9D5FF',
+  booking: '#BBF7D0',
+  cancelled: '#FECDD3',
 };
 
 // Map a stage/status label to a canonical key. Tolerant of casing/spacing and
@@ -42,4 +52,9 @@ export const stageColorFor = (label, fallback = '#94a3b8') => {
 export const stageBgFor = (label, fallback = '#f1f5f9') => {
   const key = stageKeyFor(label);
   return key ? STAGE_BG[key] : fallback;
+};
+
+export const stageBorderFor = (label, fallback = '#CBD5E1') => {
+  const key = stageKeyFor(label);
+  return key ? STAGE_BORDER[key] : fallback;
 };

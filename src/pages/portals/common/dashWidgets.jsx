@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 
 // Shared building blocks for the role dashboard "widget" grid (lead-list cards).
 // Styling lives in propcrm.css under the `.dash-*` classes.
@@ -42,17 +43,17 @@ export const leadName = (x = {}) =>
 // Small colored pill showing the lead's current status, tinted with its own color.
 export const StatusChip = ({ name, color }) => {
   if (!name) return null;
-  // Site-visit and booked statuses render in a readable dark green.
-  const lc = name.toLowerCase();
-  const c = lc.includes('site visit') || lc.includes('book') ? '#15803d' : (color || '#6B7280');
   return (
-    <span className="dash-chip" style={{ background: `${c}22`, color: c }}>{name}</span>
+    <span className="dash-chip" style={badgeStyle(color)}>{name}</span>
   );
 };
 
 // Round avatar tinted with the lead's own status color (falls back to the blue accent).
-export const Avatar = ({ name, color }) => (
-  <div className="dash-avatar" style={color ? { background: `${color}22`, color } : undefined}>
-    {getInitials(name)}
-  </div>
-);
+export const Avatar = ({ name, color }) => {
+  const c = color ? badgeColors(color) : null;
+  return (
+    <div className="dash-avatar" style={c ? { background: c.bg, color: c.text } : undefined}>
+      {getInitials(name)}
+    </div>
+  );
+};

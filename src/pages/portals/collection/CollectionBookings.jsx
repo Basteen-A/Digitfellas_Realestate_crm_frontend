@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
+import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
@@ -714,7 +715,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     
                     const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
                     const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
-                    const displayStatusColor = isCancelApproved ? '#F59E0B' : booking.status_color;
+                    const displayStatusColor = isCancelApproved ? '#C2410C' : booking.status_color;
                     return (
                       <React.Fragment key={booking.id}>
                         <tr>
@@ -748,8 +749,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{pct}%</div>
                           </td>
                           <td className="lead-col-status">
-                            <span className="col-badge" style={{ background: `${displayStatusColor}22`, color: displayStatusColor }}>
-                              <span className="col-badge-dot" style={{ background: displayStatusColor }} />
+                            <span className="col-badge" style={badgeStyle(displayStatusColor)}>
+                              <span className="col-badge-dot" style={{ background: badgeColors(displayStatusColor).text }} />
                               {displayStatusLabel}
                             </span>
                           </td>
@@ -873,7 +874,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             {/* Header */}
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
-                <div className="qa-drawer-avatar" style={{ background: `${drawerBooking.status_color}22`, color: drawerBooking.status_color, border: `2px solid ${drawerBooking.status_color}` }}>
+                <div className="qa-drawer-avatar" style={{ background: badgeColors(drawerBooking.status_color).bg, color: badgeColors(drawerBooking.status_color).text, border: `2px solid ${badgeColors(drawerBooking.status_color).border}` }}>
                   {(drawerBooking.customer_name || 'B')[0]?.toUpperCase()}
                 </div>
                 <div>

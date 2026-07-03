@@ -17,6 +17,7 @@ import paymentPlanApi from '../../../api/paymentPlanApi';
 // customerTypeApi removed — Customer Type field removed from TC lead creation
 import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone, formatLocation, cleanRepeatingLocation } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import { badgeStyle } from '../../../utils/badgeColors';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import { canUseVoiceNotes } from '../../../utils/voiceNotes';
 
@@ -3275,12 +3276,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       )).join(' | ')
       : '-';
 
-    // Site-visit and booked statuses render in a readable dark green
-    // rather than the lighter tint stored in the DB color.
-    const statusLabelLc = (lead.statusLabel || '').toLowerCase();
-    const statusChipColor = statusLabelLc.includes('site visit') || statusLabelLc.includes('book')
-      ? '#15803d'
-      : lead.statusColor;
+    // Badge-system triple (bg/text/border) derived from the DB status color.
+    const statusChipColor = lead.statusColor;
 
     return (
       <React.Fragment key={lead.id}>
@@ -3313,11 +3310,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           <td className="lead-col-status">
             <span
               className={`status-chip ${lead.isClosed ? 'status-chip--closed' : ''}`}
-              style={{
-                backgroundColor: `${statusChipColor}22`,
-                color: statusChipColor,
-                borderColor: statusChipColor
-              }}
+              style={badgeStyle(statusChipColor)}
             >
               {lead.statusLabel}
             </span>
@@ -3964,11 +3957,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       Read-Only
                     </span>
                   )}
-                  <span className="crm-badge" style={{ backgroundColor: selectedLead.stageColor + '22', color: selectedLead.stageColor }}>
-                    <span className="crm-badge-dot" style={{ background: selectedLead.stageColor }} />
+                  <span className="crm-badge" style={badgeStyle(selectedLead.stageColor)}>
+                    <span className="crm-badge-dot" style={{ background: badgeStyle(selectedLead.stageColor).color }} />
                     {selectedLead.stageLabel}
                   </span>
-                  <span className="crm-badge" style={{ backgroundColor: selectedLead.statusColor + '22', color: selectedLead.statusColor, border: `1px solid ${selectedLead.statusColor}` }}>
+                  <span className="crm-badge" style={badgeStyle(selectedLead.statusColor)}>
                     {selectedLead.statusIcon || ''} {selectedLead.statusLabel}
                   </span>
                   <button type="button" onClick={() => setSelectedLeadId(null)}><XMarkIcon style={{ width: 16, height: 16 }} /></button>
