@@ -14,7 +14,7 @@ import { jsPDF } from 'jspdf';
 /* ── Number → words (international grouping, "... Indian rupees") ── */
 const numberToWords = (num) => {
   const n = Math.floor(Math.abs(Number(num) || 0));
-  if (n === 0) return 'Zero Indian rupees';
+  if (n === 0) return 'Indian Rupees Zero only';
   const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
     'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
@@ -33,7 +33,7 @@ const numberToWords = (num) => {
   });
   if (rem > 0) parts.push(below1000(rem));
   const words = parts.join(', ');
-  return words.charAt(0).toUpperCase() + words.slice(1) + ' Indian rupees';
+  return 'Indian Rupees ' + words.charAt(0).toUpperCase() + words.slice(1) + ' only';
 };
 
 /* ── Safe text helper ── */
