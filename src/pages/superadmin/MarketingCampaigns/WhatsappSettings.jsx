@@ -13,7 +13,7 @@ const WhatsappSettings = () => {
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ phone_id: '', api_key: '', base_url: '', waba_id: '', app_id: '', default_header_image_url: '' });
+  const [form, setForm] = useState({ phone_id: '', api_key: '', base_url: '', waba_id: '', default_header_image_url: '' });
 
   // Test message state
   const [templates, setTemplates] = useState([]);
@@ -35,7 +35,6 @@ const WhatsappSettings = () => {
         api_key: '', // never prefilled — leave blank to keep the stored key
         base_url: c.base_url || 'https://partnersv1.pinbot.ai/v3',
         waba_id: c.waba_id || '',
-        app_id: c.app_id || '',
         default_header_image_url: c.default_header_image_url || '',
       });
       setTemplates(tplResp.data || []);
@@ -112,9 +111,6 @@ const WhatsappSettings = () => {
 
           <label style={labelStyle}>WABA ID <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — enables template sync)</span></label>
           <input style={inputStyle} value={form.waba_id} onChange={onChange('waba_id')} placeholder="WhatsApp Business Account ID" />
-
-          <label style={labelStyle}>App ID <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(required for Image/Video/Document header templates)</span></label>
-          <input style={inputStyle} value={form.app_id} onChange={onChange('app_id')} placeholder="Meta App ID (media sample upload)" />
 
           <label style={labelStyle}>Default Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
           <HeaderMediaInput value={form.default_header_image_url} onChange={(url) => setForm((f) => ({ ...f, default_header_image_url: url }))} />
