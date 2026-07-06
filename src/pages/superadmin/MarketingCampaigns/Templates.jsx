@@ -308,9 +308,19 @@ const Templates = () => {
     setSaving(true);
     try {
       const payload = { ...form };
-      if (editing) await whatsappCampaignApi.updateTemplate(editing, payload);
-      else await whatsappCampaignApi.createTemplate(payload);
-      toast.success(editing ? 'Template updated' : 'Template created');
+      if (editing) {
+        await whatsappCampaignApi.updateTemplate(editing, payload);
+        toast.success('Template updated');
+      } else {
+        const resp = await whatsappCampaignApi.createTemplate(payload);
+        // Server returns a warning message when the provider submit was skipped
+        // (API key lacks template-management permission at pinbot).
+        if (resp?.message && /NOT submitted/i.test(resp.message)) {
+          toast(resp.message, { icon: '⚠️', duration: 12000 });
+        } else {
+          toast.success('Template created');
+        }
+      }
       backToList();
       load(filters);
     } catch (err) {
