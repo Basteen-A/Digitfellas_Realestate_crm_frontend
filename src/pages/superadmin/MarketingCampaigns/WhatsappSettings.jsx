@@ -21,6 +21,10 @@ const WhatsappSettings = () => {
   const [testTemplateId, setTestTemplateId] = useState('');
   const [testing, setTesting] = useState(false);
 
+  // Connection health state
+  const [conn, setConn] = useState(null);
+  const [checking, setChecking] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -62,6 +66,19 @@ const WhatsappSettings = () => {
       toast.error(getErrorMessage(err, 'Failed to save settings'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const checkConnection = async () => {
+    setChecking(true);
+    setConn(null);
+    try {
+      const resp = await whatsappCampaignApi.checkConnection();
+      setConn(resp.data || null);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Connection check failed'));
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -148,6 +165,63 @@ const WhatsappSettings = () => {
               <PaperAirplaneIcon style={{ width: 15, height: 15 }} /> {testing ? 'Sending…' : 'Send Test'}
             </button>
           </div>
+        </div>
+
+        {/* Connection health */}
+        <div className="crm-card" style={{ padding: 20 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>Connection Health</h2>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+            Verifies the API key against the provider: messaging identity, linked numbers, WABA details, and template-API access.
+          </p>
+
+          <div style={{ marginTop: 12 }}>
+            <button className="crm-btn crm-btn-secondary" onClick={checkConnection} disabled={checking}>
+              {checking ? 'Checking…' : 'Check Connection'}
+            </button>
+          </div>
+
+          {conn && (
+            <div style={{ marginTop: 14, fontSize: 13, display: 'grid', gap: 8 }}>
+              <div>
+                <span style={{ fontWeight: 700 }}>Messaging: </span>
+                {conn.phone ? (
+                  <span style={{ color: '#166534' }}>
+                    ✓ {conn.phone.verified_name || '—'} ({conn.phone.display_phone_number || '—'})
+                    {conn.phone.quality_rating ? ` · quality ${conn.phone.quality_rating}` : ''}
+                  </span>
+                ) : (
+                  <span style={{ color: '#991b1b' }}>✗ not reachable</span>
+                )}
+              </div>
+              <div>
+                <span style={{ fontWeight: 700 }}>WABA: </span>
+                {conn.waba ? (
+                  <span style={{ color: '#166534' }}>✓ {conn.waba.name || conn.waba.id}</span>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)' }}>not available</span>
+                )}
+              </div>
+              <div>
+                <span style={{ fontWeight: 700 }}>Template APIs: </span>
+                {conn.templates_access ? (
+                  <span style={{ color: '#166534' }}>✓ enabled (create / sync / edit / delete)</span>
+                ) : (
+                  <span style={{ color: '#991b1b' }}>✗ blocked — templates must be managed in the pinbot panel</span>
+                )}
+              </div>
+              {Array.isArray(conn.numbers) && conn.numbers.length > 0 && (
+                <div>
+                  <span style={{ fontWeight: 700 }}>Linked numbers: </span>
+                  {conn.numbers.map((n) => `${n.wanumber} (phone id ${n.phone_number_id})`).join(', ')}
+                </div>
+              )}
+              {Array.isArray(conn.notes) && conn.notes.length > 0 && (
+                <div style={{ color: '#a16207', fontSize: 12 }}>
+                  {conn.notes.map((n, i) => <div key={i}>• {n}</div>)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

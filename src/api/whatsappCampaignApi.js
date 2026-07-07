@@ -18,6 +18,10 @@ const whatsappCampaignApi = {
     const { data } = await api.post(`${BASE}/config/test`, payload);
     return data;
   },
+  checkConnection: async () => {
+    const { data } = await api.get(`${BASE}/config/connection`, { params: { _t: Date.now() } });
+    return data;
+  },
 
   // ── Templates ──
   getTemplateMeta: async () => {

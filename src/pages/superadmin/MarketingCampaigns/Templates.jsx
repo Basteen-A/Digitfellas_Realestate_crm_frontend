@@ -71,11 +71,12 @@ const LANGUAGES = [
   { code: 'ur', name: 'Urdu' },
   { code: 'vi', name: 'Vietnamese' },
 ];
-const BUTTON_LABELS = { QUICK_REPLY: 'Quick reply', URL: 'Visit website (URL)', PHONE_NUMBER: 'Call phone number' };
+const BUTTON_LABELS = { QUICK_REPLY: 'Quick reply', URL: 'Visit website (URL)', PHONE_NUMBER: 'Call phone number', COPY_CODE: 'Copy code (coupon)' };
+const PLACEHOLDER_RE = /\{\{\s*\d+\s*\}\}/;
 
 const EMPTY = {
   name: '', language_code: 'en', category: '', sub_category: 'custom', header_type: 'NONE', header_text: '',
-  sample_header_url: '', body_text: '', body_params: [], footer_text: '', buttons: [], is_active: true,
+  header_params: [], sample_header_url: '', body_text: '', body_params: [], footer_text: '', buttons: [], is_active: true,
 };
 const EMPTY_FILTERS = { search: '', category: '', header_type: '', language_code: '', status: '' };
 
@@ -106,7 +107,8 @@ const Templates = () => {
   const [loading, setLoading] = useState(false);
   const [meta, setMeta] = useState({
     lead_fields: [], header_types: ['NONE', 'IMAGE', 'TEXT', 'DOCUMENT', 'VIDEO'],
-    categories: ['MARKETING', 'UTILITY', 'AUTHENTICATION'], button_types: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER'],
+    categories: ['MARKETING', 'UTILITY', 'AUTHENTICATION'], button_types: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER', 'COPY_CODE'],
+    max_buttons: 10,
   });
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [editing, setEditing] = useState(null);
@@ -171,7 +173,9 @@ const Templates = () => {
     setEditing(t.id);
     setForm({
       name: t.name || '', language_code: t.language_code || 'en', category: (t.category || '').toUpperCase(),
-      header_type: t.header_type || 'NONE', header_text: t.header_text || '', sample_header_url: t.sample_header_url || '',
+      header_type: t.header_type || 'NONE', header_text: t.header_text || '',
+      header_params: Array.isArray(t.header_params) ? t.header_params : [],
+      sample_header_url: t.sample_header_url || '',
       body_text: t.body_text || '', body_params: Array.isArray(t.body_params) ? t.body_params : [],
       footer_text: t.footer_text || '', buttons: Array.isArray(t.buttons) ? t.buttons : [], is_active: t.is_active !== false,
     });
@@ -195,10 +199,44 @@ const Templates = () => {
     body_params: f.body_params.map((p, idx) => (idx === i ? { ...p, [key]: val } : p)),
   }));
 
+  // ── header {{1}} mapping ──
+  // Keep the single header param row in lock-step with a {{1}} in the header text.
+  const setHeaderText = (e) => {
+    const text = e.target.value;
+    setForm((f) => ({
+      ...f,
+      header_text: text,
+      header_params: PLACEHOLDER_RE.test(text)
+        ? (f.header_params.length ? f.header_params : [{ index: 1, label: '{{1}}', source: 'lead_field', field: 'first_name', value: '' }])
+        : [],
+    }));
+  };
+  const updateHeaderParam = (key, val) => setForm((f) => ({
+    ...f,
+    header_params: f.header_params.map((p, idx) => (idx === 0 ? { ...p, [key]: val } : p)),
+  }));
+
   // ── buttons editing ──
-  const addButton = () => setForm((f) => (f.buttons.length >= 3 ? f : { ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: '', url: '', phone_number: '' }] }));
+  const maxButtons = meta.max_buttons || 10;
+  const addButton = () => setForm((f) => (f.buttons.length >= maxButtons ? f : { ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: '', url: '', phone_number: '', coupon_code: '' }] }));
   const removeButton = (i) => setForm((f) => ({ ...f, buttons: f.buttons.filter((_, idx) => idx !== i) }));
-  const updateButton = (i, key, val) => setForm((f) => ({ ...f, buttons: f.buttons.map((b, idx) => (idx === i ? { ...b, [key]: val } : b)) }));
+  const updateButton = (i, key, val) => setForm((f) => ({
+    ...f,
+    buttons: f.buttons.map((b, idx) => {
+      if (idx !== i) return b;
+      const next = { ...b, [key]: val };
+      // A dynamic {{1}} URL needs a suffix mapping; drop it when the URL is static again.
+      if (key === 'url') {
+        if (PLACEHOLDER_RE.test(val) && !next.url_param) next.url_param = { source: 'lead_field', field: 'lead_number', value: '' };
+        if (!PLACEHOLDER_RE.test(val)) delete next.url_param;
+      }
+      return next;
+    }),
+  }));
+  const updateButtonUrlParam = (i, key, val) => setForm((f) => ({
+    ...f,
+    buttons: f.buttons.map((b, idx) => (idx === i ? { ...b, url_param: { ...(b.url_param || {}), [key]: val } } : b)),
+  }));
 
   const nameInvalid = form.name.length > 0 && !TEMPLATE_NAME_RE.test(form.name);
   const canSave = form.name.trim() && !nameInvalid && form.category && !saving;
@@ -252,7 +290,15 @@ const Templates = () => {
     if (headerType === 'TEXT') {
       if (!f.header_text.trim()) return 'Header text is required when template type is Text';
       if (f.header_text.length > 60) return 'Header text cannot exceed 60 characters';
-      if (/\{\{\s*\d+\s*\}\}/.test(f.header_text)) return 'Header text cannot contain placeholders';
+      const headerVars = [...f.header_text.matchAll(/\{\{\s*(\d+)\s*\}\}/g)].map((m) => m[1]);
+      if (headerVars.length > 1) return 'Header text can contain at most one placeholder ({{1}})';
+      if (headerVars.length === 1 && headerVars[0] !== '1') return 'The header placeholder must be {{1}}';
+      if (headerVars.length === 1) {
+        const hp = (f.header_params || [])[0];
+        if (!hp) return 'Header has a {{1}} placeholder — configure its mapping';
+        if (hp.source === 'lead_field' && !hp.field) return 'Header placeholder is mapped to lead field, but no field is selected';
+        if (hp.source === 'static' && !String(hp.value || '').trim()) return 'Header placeholder is mapped to static text, but the value is empty';
+      }
     } else if (['IMAGE', 'DOCUMENT', 'VIDEO', 'LOCATION', 'CAROUSEL'].includes(headerType)) {
       if (['LOCATION', 'CAROUSEL'].includes(headerType)) {
         return 'Location and Carousel media types are not supported yet';
@@ -270,13 +316,16 @@ const Templates = () => {
       return 'Footer text cannot exceed 60 characters';
     }
 
-    // Buttons validation
+    // Buttons validation (provider limits: 10 mixed; max 2 URL, 1 phone, 1 coupon)
     const buttons = f.buttons || [];
-    if (buttons.length > 3) return 'Templates cannot contain more than 3 buttons';
-    
+    const btnMax = meta.max_buttons || 10;
+    if (buttons.length > btnMax) return `Templates cannot contain more than ${btnMax} buttons`;
+
     const seenTexts = new Set();
+    const counts = { URL: 0, PHONE_NUMBER: 0, COPY_CODE: 0 };
     for (let i = 0; i < buttons.length; i++) {
       const b = buttons[i];
+      if (b.type in counts) counts[b.type] += 1;
       if (!b.text.trim()) return `Button ${i + 1} text is required`;
       const cleanText = b.text.trim();
       if (cleanText.length > 25) return `Button ${i + 1} text cannot exceed 25 characters`;
@@ -288,13 +337,29 @@ const Templates = () => {
         if (!/^https?:\/\/[^\s$.?#].[^\s]*$/i.test(b.url.trim())) {
           return `URL for button "${cleanText}" must be a valid http:// or https:// URL`;
         }
+        const urlVars = [...b.url.matchAll(/\{\{\s*(\d+)\s*\}\}/g)];
+        if (urlVars.length > 1) return `URL for button "${cleanText}" can contain at most one {{1}} placeholder`;
+        if (urlVars.length === 1) {
+          if (urlVars[0][1] !== '1' || !/\{\{\s*1\s*\}\}\/?$/.test(b.url.trim())) {
+            return `The dynamic placeholder in button "${cleanText}" must be {{1}} at the END of the URL`;
+          }
+          const up = b.url_param || {};
+          if (up.source === 'static' && !String(up.value || '').trim()) return `Dynamic URL button "${cleanText}" needs a static value for {{1}}`;
+          if (up.source !== 'static' && !up.field) return `Dynamic URL button "${cleanText}" needs a lead-field mapping for {{1}}`;
+        }
       } else if (b.type === 'PHONE_NUMBER') {
         if (!b.phone_number || !b.phone_number.trim()) return `Phone number is required for phone button "${cleanText}"`;
         if (!/^\+?[0-9\s\-()]{7,20}$/.test(b.phone_number.trim())) {
           return `Phone number for button "${cleanText}" is invalid`;
         }
+      } else if (b.type === 'COPY_CODE') {
+        if (!b.coupon_code || !String(b.coupon_code).trim()) return `Coupon code is required for copy-code button "${cleanText}"`;
+        if (String(b.coupon_code).trim().length > 15) return 'Coupon codes cannot exceed 15 characters';
       }
     }
+    if (counts.URL > 2) return 'Templates can contain at most 2 URL buttons';
+    if (counts.PHONE_NUMBER > 1) return 'Templates can contain at most 1 phone-number button';
+    if (counts.COPY_CODE > 1) return 'Templates can contain at most 1 copy-code button';
 
     return null;
   };
@@ -308,18 +373,15 @@ const Templates = () => {
     setSaving(true);
     try {
       const payload = { ...form };
-      if (editing) {
-        await whatsappCampaignApi.updateTemplate(editing, payload);
-        toast.success('Template updated');
+      // Server returns a warning message when the provider push was skipped
+      // (API key lacks template-management permission at pinbot).
+      const resp = editing
+        ? await whatsappCampaignApi.updateTemplate(editing, payload)
+        : await whatsappCampaignApi.createTemplate(payload);
+      if (resp?.message && /NOT (submitted|pushed)/i.test(resp.message)) {
+        toast(resp.message, { icon: '⚠️', duration: 12000 });
       } else {
-        const resp = await whatsappCampaignApi.createTemplate(payload);
-        // Server returns a warning message when the provider submit was skipped
-        // (API key lacks template-management permission at pinbot).
-        if (resp?.message && /NOT submitted/i.test(resp.message)) {
-          toast(resp.message, { icon: '⚠️', duration: 12000 });
-        } else {
-          toast.success('Template created');
-        }
+        toast.success(editing ? 'Template updated' : 'Template created');
       }
       backToList();
       load(filters);
@@ -333,8 +395,13 @@ const Templates = () => {
   const remove = async (t) => {
     if (!window.confirm(`Delete template "${t.name}"?`)) return;
     try {
-      await whatsappCampaignApi.deleteTemplate(t.id);
-      toast.success('Template deleted');
+      const resp = await whatsappCampaignApi.deleteTemplate(t.id);
+      // Surface whether the provider copy was removed too (or why not).
+      if (resp?.message && /not removed/i.test(resp.message)) {
+        toast(resp.message, { icon: '⚠️', duration: 9000 });
+      } else {
+        toast.success(resp?.message || 'Template deleted');
+      }
       load(filters);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to delete template'));
@@ -490,8 +557,28 @@ const Templates = () => {
               {form.header_type === 'TEXT' && (
                 <div style={{ marginTop: 10 }}>
                   <label style={labelStyle}>Text : *</label>
-                  <input style={inputStyle} value={form.header_text} onChange={setField('header_text')} placeholder="Enter text" maxLength={60} />
+                  <input style={inputStyle} value={form.header_text} onChange={setHeaderText} placeholder={'Enter text (optionally with {{1}})'} maxLength={60} />
                   <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{form.header_text.length}/60</div>
+                  {form.header_params.length > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      <label style={{ ...labelStyle, marginBottom: 4 }}>Header placeholder mapping</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '46px 110px 1fr', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>{'{{1}}'}</span>
+                        <select style={selectStyle} value={form.header_params[0].source} onChange={(e) => updateHeaderParam('source', e.target.value)}>
+                          <option value="lead_field">Lead field</option>
+                          <option value="static">Static text</option>
+                        </select>
+                        {form.header_params[0].source === 'lead_field' ? (
+                          <select style={selectStyle} value={form.header_params[0].field} onChange={(e) => updateHeaderParam('field', e.target.value)}>
+                            <option value="">Select field…</option>
+                            {meta.lead_fields.map((lf) => <option key={lf.value} value={lf.value}>{lf.label}</option>)}
+                          </select>
+                        ) : (
+                          <input style={inputStyle} value={form.header_params[0].value} onChange={(e) => updateHeaderParam('value', e.target.value)} placeholder="Static value" />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -611,8 +698,8 @@ const Templates = () => {
             {/* Buttons */}
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Buttons <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>(optional, up to 3)</span></label>
-                <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={addButton} disabled={form.buttons.length >= 3}><PlusIcon style={{ width: 14, height: 14 }} /> Add button</button>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Buttons <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>(optional, up to {maxButtons} — max 2 URL, 1 phone, 1 coupon)</span></label>
+                <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={addButton} disabled={form.buttons.length >= maxButtons}><PlusIcon style={{ width: 14, height: 14 }} /> Add button</button>
               </div>
               {form.buttons.map((b, i) => (
                 <div key={i} style={{ marginTop: 10, padding: 10, border: '1px solid var(--border-primary)', borderRadius: 8 }}>
@@ -624,10 +711,34 @@ const Templates = () => {
                     <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => removeButton(i)} style={{ color: '#dc2626' }}><TrashIcon style={{ width: 14, height: 14 }} /></button>
                   </div>
                   {b.type === 'URL' && (
-                    <input style={{ ...inputStyle, marginTop: 8 }} value={b.url} onChange={(e) => updateButton(i, 'url', e.target.value)} placeholder="https://example.com/offer" />
+                    <>
+                      <input style={{ ...inputStyle, marginTop: 8 }} value={b.url} onChange={(e) => updateButton(i, 'url', e.target.value)} placeholder={'https://example.com/offer or https://example.com/{{1}}'} />
+                      {PLACEHOLDER_RE.test(b.url || '') && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Dynamic URL — map the {'{{1}}'} suffix appended at send time:</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 8, alignItems: 'center' }}>
+                            <select style={selectStyle} value={b.url_param?.source || 'lead_field'} onChange={(e) => updateButtonUrlParam(i, 'source', e.target.value)}>
+                              <option value="lead_field">Lead field</option>
+                              <option value="static">Static text</option>
+                            </select>
+                            {(b.url_param?.source || 'lead_field') === 'lead_field' ? (
+                              <select style={selectStyle} value={b.url_param?.field || ''} onChange={(e) => updateButtonUrlParam(i, 'field', e.target.value)}>
+                                <option value="">Select field…</option>
+                                {meta.lead_fields.map((lf) => <option key={lf.value} value={lf.value}>{lf.label}</option>)}
+                              </select>
+                            ) : (
+                              <input style={inputStyle} value={b.url_param?.value || ''} onChange={(e) => updateButtonUrlParam(i, 'value', e.target.value)} placeholder="Static suffix value" />
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                   {b.type === 'PHONE_NUMBER' && (
                     <input style={{ ...inputStyle, marginTop: 8 }} value={b.phone_number} onChange={(e) => updateButton(i, 'phone_number', e.target.value)} placeholder="+91 98765 43210" />
+                  )}
+                  {b.type === 'COPY_CODE' && (
+                    <input style={{ ...inputStyle, marginTop: 8 }} value={b.coupon_code || ''} onChange={(e) => updateButton(i, 'coupon_code', e.target.value)} placeholder="Coupon code (max 15 chars), e.g. SAVE25" maxLength={15} />
                   )}
                 </div>
               ))}

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ArrowTopRightOnSquareIcon, PhoneIcon, ArrowUturnLeftIcon, DocumentIcon, PlayCircleIcon,
+  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
 
 // ============================================================
@@ -46,6 +47,7 @@ const substituteBody = (bodyText, bodyParams = []) => {
 const btnIcon = (type) => {
   if (type === 'URL') return <ArrowTopRightOnSquareIcon style={{ width: 15, height: 15 }} />;
   if (type === 'PHONE_NUMBER') return <PhoneIcon style={{ width: 15, height: 15 }} />;
+  if (type === 'COPY_CODE') return <ClipboardDocumentIcon style={{ width: 15, height: 15 }} />;
   return <ArrowUturnLeftIcon style={{ width: 15, height: 15 }} />;
 };
 
@@ -72,7 +74,9 @@ const WhatsappPreview = ({ template, headerMediaUrl }) => {
       <div style={{ background: '#fff', borderRadius: 10, boxShadow: '0 1px 1px rgba(0,0,0,0.15)', overflow: 'hidden', maxWidth: 320, alignSelf: 'flex-start' }}>
         {/* Header */}
         {headerType === 'TEXT' && t.header_text && (
-          <div style={{ padding: '10px 12px 0', fontWeight: 700, fontSize: 14, color: '#111' }}>{t.header_text}</div>
+          <div style={{ padding: '10px 12px 0', fontWeight: 700, fontSize: 14, color: '#111' }}>
+            {substituteBody(t.header_text, t.header_params)}
+          </div>
         )}
         {isMedia && (
           mediaUrl && headerType === 'IMAGE' ? (
@@ -107,7 +111,7 @@ const WhatsappPreview = ({ template, headerMediaUrl }) => {
           <div style={{ borderTop: '1px solid #eef0f1' }}>
             {buttons.map((b, i) => (
               <div key={i} style={{ borderTop: i === 0 ? 'none' : '1px solid #eef0f1', padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, color: '#0096de', fontSize: 13.5, fontWeight: 600 }}>
-                {btnIcon(b.type)} {b.text || (b.type === 'URL' ? 'Visit' : b.type === 'PHONE_NUMBER' ? 'Call' : 'Reply')}
+                {btnIcon(b.type)} {b.text || (b.type === 'URL' ? 'Visit' : b.type === 'PHONE_NUMBER' ? 'Call' : b.type === 'COPY_CODE' ? 'Copy code' : 'Reply')}
               </div>
             ))}
           </div>
