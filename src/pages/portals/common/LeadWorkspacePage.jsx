@@ -1535,8 +1535,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   // Whether the current user still has overdue follow-ups. Driven by an authoritative server
   // count (refreshed in loadLeads) rather than the loaded page, so the Today-tab gate stays
   // correct even when the overdue leads sit beyond the first page.
-  const hasPendingMissedFollowupsForMe =
-    FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && pendingMissedCount > 0;
+  // TEMPORARILY DISABLED: missed-follow-up clearance is not required to access today's
+  // follow-ups. Restore the line below to re-enable the Today-tab gate.
+  // const hasPendingMissedFollowupsForMe =
+  //   FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && pendingMissedCount > 0;
+  const hasPendingMissedFollowupsForMe = false;
 
   // ── Load workflow config on mount ──
   const loadWorkflowConfig = useCallback(async () => {
