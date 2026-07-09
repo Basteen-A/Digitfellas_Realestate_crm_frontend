@@ -131,6 +131,11 @@
   min-width: 220px;
 }
 
+/* Date range while a search is active: still readable, clearly not in play. */
+.alm-filter-group--muted {
+  opacity: 0.5;
+}
+
 .alm-filter-group--toggle {
   border: 1px solid var(--border-primary, #e5e7eb);
   border-radius: var(--border-radius-md, 8px);
@@ -187,6 +192,11 @@
   font-size: 12px;
   font-family: inherit;
   max-width: 150px;
+}
+
+.alm-date-input:disabled {
+  cursor: not-allowed;
+  background: var(--bg-secondary, #f9fafb);
 }
 
 .alm-date-input:focus {

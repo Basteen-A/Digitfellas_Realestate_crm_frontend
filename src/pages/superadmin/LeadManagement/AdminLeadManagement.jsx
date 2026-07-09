@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
@@ -50,6 +50,11 @@ const getStatusStyle = (statusCode) => {
   const c = STATUS_COLORS[statusCode] || { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB' };
   return { background: c.bg, color: c.text, border: `1px solid ${c.border}` };
 };
+
+// Typing fires the query on its own after this idle gap; Enter / Go skip the wait.
+const SEARCH_DEBOUNCE_MS = 400;
+// Below this a term matches too much of the table to be worth an all-dates query.
+const SEARCH_MIN_CHARS = 2;
 
 const AdminLeadManagement = () => {
   const navigate = useNavigate();
@@ -119,8 +124,17 @@ const AdminLeadManagement = () => {
       .catch((err) => { console.error('Load locations failed:', err); setLocations([]); });
   }, [loadUsers]);
 
+  // A search term is looked up across every date, so the date range is suppressed
+  // while one is active — otherwise a search only ever matches today's leads.
+  const searchTerm = search.trim();
+  const isSearching = searchTerm.length > 0;
+
+  // Guards against a slow all-dates search landing after a newer, narrower query.
+  const requestIdRef = useRef(0);
+
   // ── Fetch leads ──
   const fetchLeads = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const params = {
@@ -130,9 +144,12 @@ const AdminLeadManagement = () => {
         sortOrder: 'DESC',
       };
 
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-      if (search.trim()) params.search = search.trim();
+      if (isSearching) {
+        params.search = searchTerm;
+      } else {
+        if (dateFrom) params.dateFrom = dateFrom;
+        if (dateTo) params.dateTo = dateTo;
+      }
       if (selectedStatus) params.statusCode = selectedStatus;
       if (selectedProjectId) params.project_id = selectedProjectId;
       if (selectedLocationId) params.location_id = selectedLocationId;
@@ -148,30 +165,54 @@ const AdminLeadManagement = () => {
       }
 
       const res = await leadWorkflowApi.getAdminLeads(params);
+      if (requestId !== requestIdRef.current) return; // superseded
       const rows = res?.data || [];
       setLeads(Array.isArray(rows) ? rows : []);
       setMeta(res?.meta || { total: rows.length, page: 1, totalPages: 1 });
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.error('Admin leads fetch error:', err);
       toast.error('Failed to load leads');
       setLeads([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, dateFrom, dateTo, search, selectedUserId, filterMode, selectedStatus, selectedProjectId, selectedLocationId]);
+  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserId, filterMode, selectedStatus, selectedProjectId, selectedLocationId]);
 
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
 
+  // ── Auto-search: commit the typed term once typing pauses ──
+  // Short terms are only committed when clearing back to empty, so a single
+  // stray character never triggers a full all-dates scan.
+  useEffect(() => {
+    const term = searchInput.trim();
+    if (term === search) return;
+    if (term.length > 0 && term.length < SEARCH_MIN_CHARS) return;
+    const t = setTimeout(() => {
+      setSearch(term);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [searchInput, search]);
+
   // ── Handlers ──
   const handleSearch = () => {
-    setSearch(searchInput.trim());
+    const term = searchInput.trim();
+    if (term === search) { fetchLeads(); return; } // already applied → treat Go as refresh
+    setSearch(term);
     setPage(1);
   };
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter') handleSearch();
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setPage(1);
   };
 
   const handleClearFilters = () => {
@@ -392,7 +433,7 @@ const AdminLeadManagement = () => {
 
       {/* Filters Bar */}
       <div className="admin-lead-mgmt__filters">
-        {/* Search */}
+        {/* Search — searches every date, ignoring the range below */}
         <div className="alm-filter-group alm-filter-group--search">
           <MagnifyingGlassIcon className="alm-filter-icon" />
           <input
@@ -401,19 +442,32 @@ const AdminLeadManagement = () => {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search name, phone, email, lead #..."
+            placeholder="Search all dates by name, phone, email, lead #..."
           />
+          {searchInput && (
+            <button
+              type="button"
+              className="alm-btn alm-btn--icon"
+              onClick={handleClearSearch}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <XMarkIcon style={{ width: 16, height: 16 }} />
+            </button>
+          )}
           <button type="button" className="alm-btn alm-btn--sm" onClick={handleSearch}>Go</button>
         </div>
 
-        {/* Date Range */}
-        <div className="alm-filter-group">
+        {/* Date Range — inert while a search is running (search spans all dates) */}
+        <div className={`alm-filter-group${isSearching ? ' alm-filter-group--muted' : ''}`}>
           <CalendarDaysIcon className="alm-filter-icon" />
           <label className="alm-filter-label">From</label>
           <input
             type="date"
             className="alm-date-input"
             value={dateFrom}
+            disabled={isSearching}
+            title={isSearching ? 'Clear the search to filter by date' : undefined}
             onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
           />
           <label className="alm-filter-label">To</label>
@@ -421,6 +475,8 @@ const AdminLeadManagement = () => {
             type="date"
             className="alm-date-input"
             value={dateTo}
+            disabled={isSearching}
+            title={isSearching ? 'Clear the search to filter by date' : undefined}
             onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
           />
         </div>
@@ -541,7 +597,10 @@ const AdminLeadManagement = () => {
         <span className="alm-stat">
           <strong>{meta.total || leads.length}</strong> lead{(meta.total || leads.length) !== 1 ? 's' : ''} found
         </span>
-        {dateFrom === dateTo && dateFrom === today && (
+        {isSearching && (
+          <span className="alm-stat alm-stat--highlight">Searching all dates for “{searchTerm}”</span>
+        )}
+        {!isSearching && dateFrom === dateTo && dateFrom === today && (
           <span className="alm-stat alm-stat--highlight">Showing today's leads</span>
         )}
         {filterMode === 'handoff' && !selectedUserId && (
