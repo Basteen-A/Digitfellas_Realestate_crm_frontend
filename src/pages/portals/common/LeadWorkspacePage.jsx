@@ -3790,6 +3790,15 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           {/* Tabs for follow-up roles */}
           {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
             <div className="filter-tabs mobile-compact-tabs">
+              {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
+                <button
+                  onClick={() => setActiveTab('newhot')}
+                  className={`filter-tab ${activeTab === 'newhot' ? 'active' : ''}`}
+                >
+                  <span className="hide-mobile">New/Hot</span>
+                  <span className="show-mobile">New/Hot</span>
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('today')}
                 className={`filter-tab ${activeTab === 'today' ? 'active' : ''}`}
@@ -3806,15 +3815,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <span className="show-mobile">Missed</span>
                 </button>
               )}
-              {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
-                <button
-                  onClick={() => setActiveTab('newhot')}
-                  className={`filter-tab ${activeTab === 'newhot' ? 'active' : ''}`}
-                >
-                  <span className="hide-mobile">New/Hot</span>
-                  <span className="show-mobile">New/Hot</span>
-                </button>
-              )}
+              
               {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
                 <button
                   onClick={() => setActiveTab('reallot')}
@@ -3829,8 +3830,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   onClick={() => setActiveTab('new')}
                   className={`filter-tab ${activeTab === 'new' ? 'active' : ''}`}
                 >
-                  <span className="hide-mobile">New (Unassigned)</span>
-                  <span className="show-mobile">New</span>
+                  <span className="hide-mobile">Unassigned</span>
+                  <span className="show-mobile">Unassigned</span>
                 </button>
               )}
               {workspaceRole === 'SH' && (
