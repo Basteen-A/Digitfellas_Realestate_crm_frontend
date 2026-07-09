@@ -617,7 +617,9 @@ const LeadDetailsPage = () => {
   const isMissedFirstBlocked = useMemo(() => {
     if (!MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) return false;
     if (!hasPendingMissedFollowupsForMe) return false;
-    return !isCurrentLeadMissedFollowup;
+    // TEMPORARILY DISABLED: missed-follow-up clearance is not required to access today's
+    // follow-ups. The leading `false &&` short-circuits the block off; remove it to re-enable.
+    return false && !isCurrentLeadMissedFollowup;
   }, [roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
 
   const loadLeadData = useCallback(async () => {
