@@ -391,6 +391,7 @@ const LeadDetailsPage = () => {
   const [motivationOptions, setMotivationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('followups');
+  const [enquiries, setEnquiries] = useState(null); // { firstEnquiry, reEnquiries } — lazy-loaded on tab open
   const [siteVisits, setSiteVisits] = useState([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [assignedUser, setAssignedUser] = useState(null);
@@ -683,6 +684,15 @@ const LeadDetailsPage = () => {
   useEffect(() => {
     loadLeadData();
   }, [loadLeadData]);
+
+  // Lazy-load the enquiry history (first enquiry + marketing re-enquiries)
+  // the first time the Enquiries tab is opened.
+  useEffect(() => {
+    if (activeTab !== 'enquiries' || enquiries || !id) return;
+    leadWorkflowApi.getLeadEnquiries(id)
+      .then((resp) => setEnquiries(resp.data || { firstEnquiry: null, reEnquiries: [] }))
+      .catch((err) => toast.error(getErrorMessage(err, 'Failed to load enquiries')));
+  }, [activeTab, enquiries, id]);
 
   const handleAddNote = async () => {
     if (!noteDraft.trim() || !lead?.id) return;
@@ -1599,6 +1609,7 @@ const LeadDetailsPage = () => {
             <button className={`lead-details-tab ${activeTab === 'activity' ? 'active' : ''}`} onClick={() => setActiveTab('activity')}>Activity</button>
             <button className={`lead-details-tab ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>Notes</button>
             <button className={`lead-details-tab ${activeTab === 'calls' ? 'active' : ''}`} onClick={() => setActiveTab('calls')}>Call Logs</button>
+            <button className={`lead-details-tab ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => setActiveTab('enquiries')}>Enquiries</button>
             {roleCode !== 'TC' && (
               <button className={`lead-details-tab ${activeTab === 'sitevisits' ? 'active' : ''}`} onClick={() => setActiveTab('sitevisits')}>Site Visits</button>
             )}
@@ -2055,6 +2066,62 @@ const LeadDetailsPage = () => {
             {activeTab === 'calls' && (
               <div className="lead-details-call-logs">
                 <p className="lead-details-empty">Call logs will appear here when telephony integration is enabled.</p>
+              </div>
+            )}
+
+            {activeTab === 'enquiries' && (
+              <div className="lead-details-timeline">
+                {!enquiries ? (
+                  <p className="lead-details-empty">Loading enquiries…</p>
+                ) : (
+                  <>
+                    {(enquiries.reEnquiries || []).map((enq) => (
+                      <div key={enq.id} className="lead-details-timeline-item">
+                        <div className="lead-details-timeline-icon" style={{ background: '#FFF7ED', color: '#C2410C' }}>
+                          <span style={{ fontSize: 10 }}>↻</span>
+                        </div>
+                        <div className="lead-details-timeline-content">
+                          <div className="lead-details-timeline-header">
+                            <span className="lead-details-timeline-title">
+                              Re-enquiry
+                              <span style={{
+                                marginLeft: 6, padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 700,
+                                background: '#FFF7ED', border: '1px solid #FDBA74', color: '#C2410C',
+                              }}>
+                                2nd+ enquiry
+                              </span>
+                            </span>
+                            <span className="lead-details-timeline-date">{formatDateTime(enq.enquiredAt)}</span>
+                          </div>
+                          <p className="lead-details-timeline-desc">
+                            Source: {enq.source || '—'}
+                            {enq.subSource ? ` › ${enq.subSource}` : ''}
+                            {enq.campaignName ? ` · Campaign: ${enq.campaignName}` : ''}
+                          </p>
+                          <span className="lead-details-timeline-by">Via marketing API</span>
+                        </div>
+                      </div>
+                    ))}
+                    {enquiries.firstEnquiry && (
+                      <div className="lead-details-timeline-item">
+                        <div className="lead-details-timeline-icon">
+                          <span style={{ fontSize: 10 }}>★</span>
+                        </div>
+                        <div className="lead-details-timeline-content">
+                          <div className="lead-details-timeline-header">
+                            <span className="lead-details-timeline-title">First Enquiry</span>
+                            <span className="lead-details-timeline-date">{formatDateTime(enquiries.firstEnquiry.enquiredAt)}</span>
+                          </div>
+                          <p className="lead-details-timeline-desc">
+                            Source: {enquiries.firstEnquiry.source || '—'}
+                            {enquiries.firstEnquiry.subSource ? ` › ${enquiries.firstEnquiry.subSource}` : ''}
+                            {enquiries.firstEnquiry.campaignName ? ` · Campaign: ${enquiries.firstEnquiry.campaignName}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 

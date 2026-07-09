@@ -46,6 +46,14 @@ const leadWorkflowApi = {
   },
 
   /**
+   * GET /leads/:id/enquiries — first enquiry + marketing re-enquiries
+   */
+  getLeadEnquiries: async (leadId) => {
+    const { data } = await api.get(`/leads/${leadId}/enquiries`);
+    return data;
+  },
+
+  /**
    * POST /leads
    */
   createLead: async (payload) => {

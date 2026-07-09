@@ -902,7 +902,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     if (initialTab) return initialTab;
     if (workspaceRole === 'SH') return 'all';
     return 'today';
-  }); // 'all' | 'new' | 'today' | 'missed' | 'sh_leads' | 'sm_leads'
+  }); // 'all' | 'new' | 'today' | 'missed' | 'newhot' | 'reallot' | 'sh_leads' | 'sm_leads'
   const [qaActiveTab, setQaActiveTab] = useState('history'); // 'activity' | 'history'
 
   // ── Create lead ──
@@ -1664,6 +1664,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           queryParams.unassigned = true;
         } else if ((workspaceRole === 'SM' && activeTab === 'sh_leads') || (workspaceRole === 'SH' && activeTab === 'sm_leads')) {
           // Keep role visibility broad for cross-role read-only tabs; filtering is handled client-side.
+        } else if (activeTab === 'newhot') {
+          // New/Hot: fresh marketing-API leads + re-enquired leads assigned to
+          // this user, flagged until their first update. Membership is
+          // flag-based (active AND inactive leads both show).
+          queryParams.assignedToMe = true;
+          queryParams.newHot = true;
+        } else if (activeTab === 'reallot') {
+          // Reallot: this user's leads sitting in the Reallot status.
+          queryParams.assignedToMe = true;
+          queryParams.statusCode = 'REALLOT';
         } else {
           // Assigned lead tabs (today / missed) — only show leads assigned to this user
           queryParams.assignedToMe = true;
@@ -3293,7 +3303,20 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             </button>
           </td>
           <td className="lead-col-lead">
-            <p className="lead-title">{lead.fullName}</p>
+            <p className="lead-title">
+              {lead.fullName}
+              {lead.newHotSince && (
+                <span
+                  title={`New/Hot since ${formatDateTime(lead.newHotSince)} — fresh API lead or re-enquiry, pending first update`}
+                  style={{
+                    marginLeft: 6, padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 700,
+                    background: '#FFF7ED', border: '1px solid #FDBA74', color: '#C2410C', verticalAlign: 'middle',
+                  }}
+                >
+                  New/Hot
+                </span>
+              )}
+            </p>
             <small>
               <a
                 href={`/portal/lead/${lead.id}`}
@@ -3781,6 +3804,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 >
                   <span className="hide-mobile">Missed Follow Ups</span>
                   <span className="show-mobile">Missed</span>
+                </button>
+              )}
+              {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
+                <button
+                  onClick={() => setActiveTab('newhot')}
+                  className={`filter-tab ${activeTab === 'newhot' ? 'active' : ''}`}
+                >
+                  <span className="hide-mobile">New/Hot</span>
+                  <span className="show-mobile">New/Hot</span>
+                </button>
+              )}
+              {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
+                <button
+                  onClick={() => setActiveTab('reallot')}
+                  className={`filter-tab ${activeTab === 'reallot' ? 'active' : ''}`}
+                >
+                  <span className="hide-mobile">Reallot</span>
+                  <span className="show-mobile">Reallot</span>
                 </button>
               )}
               {workspaceRole === 'TC' && (
