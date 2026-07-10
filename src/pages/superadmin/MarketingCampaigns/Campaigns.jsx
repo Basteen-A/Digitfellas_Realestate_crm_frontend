@@ -238,6 +238,18 @@ const Campaigns = () => {
             <div style={{ marginTop: 12 }}>
               <label style={labelStyle}>Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span></label>
               <HeaderMediaInput value={headerImageUrl} onChange={setHeaderImageUrl} />
+              {selectedTemplate && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type)
+                && !headerImageUrl && !selectedTemplate.sample_header_url && (
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309' }}>
+                  ⚠ This template has a {selectedTemplate.header_type} header — upload a header file here (or set a
+                  default in WhatsApp Settings), otherwise WhatsApp rejects every message.
+                </div>
+              )}
+              {/x-amz-(signature|expires|credential)/i.test(headerImageUrl || '') && (
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309' }}>
+                  ⚠ This is a temporary presigned link that expires within days — use the Upload button for a permanent URL.
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
