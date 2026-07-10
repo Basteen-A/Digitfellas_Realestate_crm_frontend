@@ -117,6 +117,29 @@ const Campaigns = () => {
   }, [campaigns, loadCampaigns]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
+  // While the recipients drill-down is open, silently re-fetch it every 5s so
+  // delivery receipts arriving via the provider webhook (DELIVERED/READ/FAILED)
+  // show up without a manual refresh.
+  const drillCampaignId = drill?.campaign?.id || null;
+  const drillStatusFilter = drill?.statusFilter ?? '';
+  useEffect(() => {
+    if (!drillCampaignId) return undefined;
+    const timer = setInterval(async () => {
+      try {
+        const [cResp, rResp] = await Promise.all([
+          whatsappCampaignApi.getCampaign(drillCampaignId),
+          whatsappCampaignApi.getRecipients(drillCampaignId, { limit: 100, status: drillStatusFilter || undefined }),
+        ]);
+        setDrill((d) => (
+          d && d.campaign.id === drillCampaignId && (d.statusFilter ?? '') === drillStatusFilter
+            ? { campaign: cResp.data || d.campaign, recipients: rResp.data || d.recipients, statusFilter: d.statusFilter }
+            : d
+        ));
+      } catch { /* silent — next tick retries */ }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [drillCampaignId, drillStatusFilter]);
+
   const toggleFilter = (key) => (val) => setFilters((f) => ({
     ...f,
     [key]: f[key].includes(val) ? f[key].filter((v) => v !== val) : [...f[key], val],
@@ -289,6 +312,7 @@ const Campaigns = () => {
                 <th style={th}>Template</th>
                 <th style={th}>Recipients</th>
                 <th style={th}>Sent</th>
+                <th style={th} title="Confirmed on the phone (via provider webhook); read count in brackets">Delivered</th>
                 <th style={th}>Failed</th>
                 <th style={th}>Progress</th>
                 <th style={th}>Status</th>
@@ -298,7 +322,7 @@ const Campaigns = () => {
             </thead>
             <tbody>
               {campaigns.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={9}>No campaigns yet. Create your first send-out.</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={10}>No campaigns yet. Create your first send-out.</td></tr>
               )}
               {campaigns.map((c) => {
                 const sc = STATUS_COLORS[c.status] || STATUS_COLORS.QUEUED;
@@ -308,6 +332,9 @@ const Campaigns = () => {
                     <td style={td}>{c.template_name || c.template?.name || '—'}</td>
                     <td style={td}><UsersIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: 'var(--text-muted)' }} /> {c.total_recipients}</td>
                     <td style={{ ...td, color: '#166534', fontWeight: 700 }}>{c.sent_count}</td>
+                    <td style={{ ...td, color: c.delivered_count ? '#166534' : 'var(--text-muted)', fontWeight: c.delivered_count ? 700 : 400 }}>
+                      {c.delivered_count ?? 0}{c.read_count ? ` (${c.read_count} read)` : ''}
+                    </td>
                     <td style={{ ...td, color: c.failed_count ? '#991b1b' : 'var(--text-muted)', fontWeight: c.failed_count ? 700 : 400 }}>{c.failed_count}</td>
                     <td style={td}>
                       <div style={{ width: 90, height: 6, background: 'var(--bg-secondary)', borderRadius: 99 }}>
@@ -336,18 +363,24 @@ const Campaigns = () => {
                 <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{drill.campaign.name}</h2>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                   <CheckCircleIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: '#16A34A' }} /> {drill.campaign.sent_count} sent
+                  &nbsp;·&nbsp; {drill.campaign.delivered_count ?? 0} delivered
+                  &nbsp;·&nbsp; {drill.campaign.read_count ?? 0} read
                   &nbsp;·&nbsp; <XCircleIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: '#dc2626' }} /> {drill.campaign.failed_count} failed
                   &nbsp;·&nbsp; {drill.campaign.total_recipients} total
                 </div>
               </div>
               <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setDrill(null)}>Close</button>
             </div>
-            <div style={{ padding: '12px 20px', display: 'flex', gap: 8 }}>
-              {['', 'SENT', 'FAILED', 'PENDING'].map((s) => (
+            <div style={{ padding: '12px 20px 4px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {['', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'PENDING'].map((s) => (
                 <button key={s || 'ALL'} className={`crm-btn crm-btn-sm ${drill.statusFilter === s ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => openDrill(drill.campaign, s)}>
                   {s || 'All'}
                 </button>
               ))}
+            </div>
+            <div style={{ padding: '0 20px 10px', fontSize: 11, color: 'var(--text-muted)' }}>
+              SENT = accepted by WhatsApp. Delivered / Read / Failed arrive via the provider webhook — configure the
+              callback URL in the pinbot panel to keep these in sync.
             </div>
             <div style={{ padding: '0 20px 20px', maxHeight: '60vh', overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -362,18 +395,27 @@ const Campaigns = () => {
                 <tbody>
                   {drillLoading && <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={4}>Loading…</td></tr>}
                   {!drillLoading && drill.recipients.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={4}>No recipients.</td></tr>}
-                  {!drillLoading && drill.recipients.map((r) => (
-                    <tr key={r.id}>
-                      <td style={td}>{r.lead_name || '—'}</td>
-                      <td style={td}>{r.phone}</td>
-                      <td style={td}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: r.status === 'SENT' ? '#166534' : r.status === 'FAILED' ? '#991b1b' : '#a16207' }}>{r.status}</span>
-                      </td>
-                      <td style={{ ...td, color: 'var(--text-muted)', fontSize: 12, maxWidth: 280, whiteSpace: 'normal' }}>
-                        {r.status === 'SENT' ? (r.provider_message_id || 'delivered to provider') : (r.error || '—')}
-                      </td>
-                    </tr>
-                  ))}
+                  {!drillLoading && drill.recipients.map((r) => {
+                    const statusColor = {
+                      SENT: '#2563eb', DELIVERED: '#166534', READ: '#7c3aed', FAILED: '#991b1b',
+                    }[r.status] || '#a16207';
+                    let detail = r.error || '—';
+                    if (r.status === 'SENT') detail = 'Accepted by WhatsApp — awaiting delivery receipt';
+                    else if (r.status === 'DELIVERED') detail = `Delivered${r.delivered_at ? ` ${fmtDateTime(r.delivered_at)}` : ''}`;
+                    else if (r.status === 'READ') detail = `Read${r.read_at ? ` ${fmtDateTime(r.read_at)}` : ''}`;
+                    return (
+                      <tr key={r.id}>
+                        <td style={td}>{r.lead_name || '—'}</td>
+                        <td style={td}>{r.phone}</td>
+                        <td style={td}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: statusColor }}>{r.status}</span>
+                        </td>
+                        <td style={{ ...td, color: 'var(--text-muted)', fontSize: 12, maxWidth: 280, whiteSpace: 'normal' }}>
+                          {detail}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
