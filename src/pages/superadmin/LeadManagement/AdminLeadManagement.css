@@ -513,12 +513,14 @@
   to { opacity: 1; }
 }
 
+/* One consistent size for every form modal — matches the app-wide standard
+   set by MasterCrudPage.css (width min(100%, 740px), max-height min(90vh, 760px),
+   full-screen on mobile). */
 .alm-modal__panel {
   background: var(--bg-modal);
   border: 1px solid var(--border-primary);
   border-radius: var(--border-radius-xl, 16px);
-  width: 480px;
-  max-width: 100%;
+  width: min(100%, 740px);
   max-height: min(90vh, 760px);
   display: flex;
   flex-direction: column;
@@ -527,7 +529,8 @@
   animation: almPanelIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.alm-modal__panel--wide { width: 560px; }
+/* Kept for backwards compatibility — all panels share the same width now. */
+.alm-modal__panel--wide { width: min(100%, 740px); }
 
 @keyframes almPanelIn {
   from { opacity: 0; transform: scale(0.95) translateY(8px); }
@@ -632,6 +635,27 @@
 .alm-userpick__row span { font-size: 14px; color: var(--text-primary); }
 
 .alm-hint { font-size: 11px; color: var(--text-muted); }
+
+/* ── Bulk-transfer live progress ── */
+.alm-transfer-progress { display: grid; gap: 6px; }
+.alm-transfer-progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  overflow: hidden;
+}
+.alm-transfer-progress__fill {
+  height: 100%;
+  background: var(--accent-blue);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.alm-transfer-progress__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
 
 .alm-modal__footer {
   display: flex;

@@ -346,7 +346,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 60px;
+  padding: 60px 14px 14px;
   z-index: var(--z-modal-overlay, 1000);
   backdrop-filter: blur(4px);
   animation: inv-modal-in 0.2s ease-out;
@@ -357,12 +357,13 @@
   to { opacity: 1; }
 }
 
+/* Matches the app-wide form-modal standard (MasterCrudPage.css):
+   width min(100%, 740px), max-height min(90vh, 760px). */
 .inv-modal__panel {
   background: var(--bg-modal);
   border-radius: var(--border-radius-xl, 16px);
-  width: 580px;
-  max-width: 95vw;
-  max-height: 85vh;
+  width: min(100%, 740px);
+  max-height: min(90vh, 760px);
   overflow-y: auto;
   box-shadow: var(--shadow-modal);
   border: 1px solid var(--border-primary);

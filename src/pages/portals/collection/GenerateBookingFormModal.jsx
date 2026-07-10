@@ -7,8 +7,9 @@ const toNum = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 
 const fmt = (v) => `₹${toNum(v).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const last4 = (acc) => String(acc || '').replace(/\s/g, '').slice(-4);
 
-// Same formula the PDF renderer (BookingConfirmationPDF.js) uses to derive the
-// plot value and (GST-inclusive) development charges, so the prefilled totals
+// Same rules the PDF renderer (BookingConfirmationPDF.js) uses: stored booking
+// values win (they are what was billed and collected), and the guideline × area
+// formula only fills values that were never stored — so the prefilled totals
 // match what the generated document shows.
 export const computeBookingTotals = (booking) => {
   const empty = { plotTotal: 0, devTotal: 0, stamp: 0, reg: 0, commission: 0, regExpenses: 0, other: 0, documentation: 0, totalValue: 0 };
@@ -16,17 +17,22 @@ export const computeBookingTotals = (booking) => {
   const guidelineRate = toNum(booking.guideline_value);
   const plotAreaSqft = toNum(booking.plot_area);
   const perSqftCost = toNum(booking.development_cost_per_sqft);
-  const plotTotal = (guidelineRate > 0 && plotAreaSqft > 0)
+  const formulaPlot = (guidelineRate > 0 && plotAreaSqft > 0)
     ? Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100
-    : toNum(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
-  const devTotal = (perSqftCost > 0 && plotAreaSqft > 0)
-    ? Math.round(plotAreaSqft * perSqftCost * 1.18)
-    : toNum(booking.development_charges);
-  // Documentation charges (same formulas + rounding the PDF uses).
-  const stamp = plotTotal * 0.07;
-  const reg = plotTotal * 0.02;
-  const commission = Math.round(stamp * 0.01);
+    : 0;
+  const plotTotal = toNum(booking.plot_value) > 0
+    ? toNum(booking.plot_value)
+    : (formulaPlot > 0 ? formulaPlot : toNum(booking.base_price || booking.total_amount || booking.net_amount));
+  const devTotal = toNum(booking.development_charges) > 0
+    ? toNum(booking.development_charges)
+    : ((perSqftCost > 0 && plotAreaSqft > 0) ? Math.round(plotAreaSqft * perSqftCost * 1.18) : 0);
+  // Documentation charges (stored-first, same fallbacks + rounding the PDF uses).
   const rs = booking.custom_fields?.cost_breakdown?.registration_split || {};
+  const storedStamp = toNum(booking.stamp_value || booking.stamp_duty);
+  const storedReg = toNum(booking.registration_exp || booking.registration_charges);
+  const stamp = storedStamp > 0 ? storedStamp : plotTotal * 0.07;
+  const reg = storedReg > 0 ? storedReg : plotTotal * 0.02;
+  const commission = toNum(rs.stamp_commission) > 0 ? toNum(rs.stamp_commission) : Math.round(stamp * 0.01);
   const regExpenses = toNum(rs.registration_expenses) + toNum(rs.writer_expenses) + toNum(rs.patta_charges);
   const other = toNum(rs.other_registration_expenses);
   const documentation = stamp + commission + reg + regExpenses + other;

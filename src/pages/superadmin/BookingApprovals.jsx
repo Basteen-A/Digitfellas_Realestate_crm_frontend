@@ -40,30 +40,31 @@ const fmtFull = (v) => {
   return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 };
 
-// Mirror the "Update Cost Breakdown" modal exactly: derive the figures from
-// guideline value × area with ROUNDUP(…, -2), falling back to stored values.
+// Stored booking values first — they are what was billed and collected
+// against. The guideline × area formula (ROUNDUP(…, -2), Stamp 7%,
+// Registration 2%) only fills values that were never stored, so the summary
+// always reconciles with total_paid.
 const computeSummary = (b) => {
   const guideline = toAmount(b.guideline_value);
   const area = toAmount(b.plot_area);
   const perSqft = toAmount(b.development_cost_per_sqft);
 
-  let plotValue;
-  let stampValue;
-  let registrationValue;
-  if (guideline > 0 && area > 0) {
-    plotValue = Math.ceil((guideline * area) / 100) * 100;        // ROUNDUP(rate × sqft, -2)
-    stampValue = plotValue * 0.07;        // exact 7%, no rounding
-    registrationValue = plotValue * 0.02; // exact 2%, no rounding
-  } else {
-    plotValue = toAmount(b.plot_value || b.base_price || b.total_amount || b.net_amount);
-    stampValue = toAmount(b.stamp_value || b.stamp_duty);
-    registrationValue = toAmount(b.registration_exp || b.registration_charges);
-  }
-  const developmentValue = (perSqft > 0 && area > 0)
-    ? Math.round(area * perSqft * 1.18)                // area × cost/sqft + 18% GST
-    : toAmount(b.development_charges);
+  const formulaPlotValue = (guideline > 0 && area > 0)
+    ? Math.ceil((guideline * area) / 100) * 100 // ROUNDUP(rate × sqft, -2)
+    : 0;
+  const plotValue = toAmount(b.plot_value) > 0
+    ? toAmount(b.plot_value)
+    : (formulaPlotValue > 0 ? formulaPlotValue : toAmount(b.base_price || b.total_amount || b.net_amount));
+  const storedStamp = toAmount(b.stamp_value || b.stamp_duty);
+  const storedReg = toAmount(b.registration_exp || b.registration_charges);
+  const stampValue = storedStamp > 0 ? storedStamp : plotValue * 0.07;
+  const registrationValue = storedReg > 0 ? storedReg : plotValue * 0.02;
+  const developmentValue = toAmount(b.development_charges) > 0
+    ? toAmount(b.development_charges)
+    : ((perSqft > 0 && area > 0) ? Math.round(area * perSqft * 1.18) : 0); // area × cost/sqft + 18% GST
   const cb = b.custom_fields?.cost_breakdown || {};
-  const stampCommission = Math.round(stampValue * 0.01); // 1% of Stamp Value
+  const storedCommission = toAmount((cb.registration_split || {}).stamp_commission);
+  const stampCommission = storedCommission > 0 ? storedCommission : Math.round(stampValue * 0.01); // 1% fallback
   const regSplit = { ...(cb.registration_split || {}), stamp_commission: stampCommission };
   const modtSplit = cb.modt_enabled ? (cb.modt_split || {}) : {};
   const otherCharges = sumSplit(regSplit) + sumSplit(modtSplit);

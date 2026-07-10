@@ -5,6 +5,9 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import userApi from '../../../api/userApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
+import leadStatusApi from '../../../api/leadStatusApi';
+import bookingStatusApi from '../../../api/bookingStatusApi';
+import paymentStatusApi from '../../../api/paymentStatusApi';
 import { formatDateTime, cleanRepeatingLocation } from '../../../utils/formatters';
 import {
   MagnifyingGlassIcon,
@@ -71,6 +74,8 @@ const AdminLeadManagement = () => {
   const [selectedLocationId, setSelectedLocationId] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedBookingStatus, setSelectedBookingStatus] = useState(''); // booking_statuses.id
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState(''); // payment_statuses.id
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
 
@@ -81,6 +86,9 @@ const AdminLeadManagement = () => {
   const [users, setUsers] = useState([]);
   const [projects, setProjects] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [leadStatuses, setLeadStatuses] = useState([]);
+  const [bookingStatuses, setBookingStatuses] = useState([]);
+  const [paymentStatuses, setPaymentStatuses] = useState([]);
 
   // ── Bulk transfer (user → user) ──
   const [transferOpen, setTransferOpen] = useState(false);
@@ -88,6 +96,7 @@ const AdminLeadManagement = () => {
   const [transferTo, setTransferTo] = useState([]); // target user ids (round-robin when >1)
   const [transferNote, setTransferNote] = useState('');
   const [transferring, setTransferring] = useState(false);
+  const [transferProgress, setTransferProgress] = useState(null); // { done, total } while a job runs
   const [deletingUser, setDeletingUser] = useState(false);
 
   // ── Single-lead move ──
@@ -122,6 +131,18 @@ const AdminLeadManagement = () => {
     locationApi.getDropdown()
       .then((res) => setLocations(pick(res)))
       .catch((err) => { console.error('Load locations failed:', err); setLocations([]); });
+
+    leadStatusApi.getDropdown()
+      .then((res) => setLeadStatuses(pick(res)))
+      .catch((err) => { console.error('Load lead statuses failed:', err); setLeadStatuses([]); });
+
+    bookingStatusApi.getDropdown()
+      .then((res) => setBookingStatuses(pick(res)))
+      .catch((err) => { console.error('Load booking statuses failed:', err); setBookingStatuses([]); });
+
+    paymentStatusApi.getDropdown()
+      .then((res) => setPaymentStatuses(pick(res)))
+      .catch((err) => { console.error('Load payment statuses failed:', err); setPaymentStatuses([]); });
   }, [loadUsers]);
 
   // A search term is looked up across every date, so the date range is suppressed
@@ -140,8 +161,9 @@ const AdminLeadManagement = () => {
       const params = {
         page,
         limit,
-        sortBy: 'created_at',
-        sortOrder: 'DESC',
+        // The server reads `sort` as "field:direction" (sortBy/sortOrder get
+        // stripped by the validator and silently fell back to updated_at).
+        sort: 'created_at:DESC',
       };
 
       if (isSearching) {
@@ -151,6 +173,8 @@ const AdminLeadManagement = () => {
         if (dateTo) params.dateTo = dateTo;
       }
       if (selectedStatus) params.statusCode = selectedStatus;
+      if (selectedBookingStatus) params.bookingStatusId = selectedBookingStatus;
+      if (selectedPaymentStatus) params.paymentStatusId = selectedPaymentStatus;
       if (selectedProjectId) params.project_id = selectedProjectId;
       if (selectedLocationId) params.location_id = selectedLocationId;
 
@@ -177,7 +201,7 @@ const AdminLeadManagement = () => {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserId, filterMode, selectedStatus, selectedProjectId, selectedLocationId]);
+  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserId, filterMode, selectedStatus, selectedBookingStatus, selectedPaymentStatus, selectedProjectId, selectedLocationId]);
 
   useEffect(() => {
     fetchLeads();
@@ -225,6 +249,8 @@ const AdminLeadManagement = () => {
     setSelectedLocationId('');
     setSelectedProjectId('');
     setSelectedStatus('');
+    setSelectedBookingStatus('');
+    setSelectedPaymentStatus('');
     setFilterMode('created');
     setPage(1);
   };
@@ -233,8 +259,13 @@ const AdminLeadManagement = () => {
     navigate(`/lead/${leadId}`);
   };
 
-  // ── Unique status list from loaded leads ──
+  // ── Lead status options from the status master (full list, not just the
+  // statuses present on the current page). Falls back to the loaded rows only
+  // if the master fetch failed. ──
   const statusOptions = useMemo(() => {
+    if (leadStatuses.length > 0) {
+      return leadStatuses.map((s) => ({ code: s.status_code, label: s.status_name }));
+    }
     const map = new Map();
     leads.forEach((l) => {
       if (l.statusCode && !map.has(l.statusCode)) {
@@ -242,7 +273,7 @@ const AdminLeadManagement = () => {
       }
     });
     return Array.from(map.entries()).map(([code, label]) => ({ code, label }));
-  }, [leads]);
+  }, [leadStatuses, leads]);
 
   // Projects filtered by the selected location (project carries location_id).
   const projectOptions = useMemo(() => {
@@ -328,15 +359,34 @@ const AdminLeadManagement = () => {
   }, [users]);
 
   // ── Bulk transfer handlers ──
-  const closeTransfer = () => {
+  const resetTransferModal = () => {
     setTransferOpen(false);
     setTransferFrom('');
     setTransferTo([]);
     setTransferNote('');
   };
 
+  const closeTransfer = () => {
+    if (transferring) return; // a transfer job is in flight — keep the modal up
+    resetTransferModal();
+  };
+
   const toggleTransferTo = (id) => {
     setTransferTo((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  // Poll the background transfer job (1s cadence) until it settles, feeding
+  // the modal's progress bar along the way.
+  const pollBulkTransfer = async (jobId, total) => {
+    setTransferProgress({ done: 0, total });
+    for (;;) {
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
+      const res = await leadWorkflowApi.getBulkTransferStatus(jobId);
+      const job = res?.data || {};
+      setTransferProgress({ done: job.done ?? 0, total: job.total ?? total });
+      if (job.status === 'done') return job.result || {};
+      if (job.status === 'failed') throw new Error(job.message || 'Lead transfer failed — no leads were moved.');
+    }
   };
 
   const handleBulkTransfer = async () => {
@@ -345,8 +395,11 @@ const AdminLeadManagement = () => {
     setTransferring(true);
     try {
       const res = await leadWorkflowApi.bulkTransferLeads(transferFrom, transferTo, transferNote.trim() || undefined);
-      const count = res?.data?.transferred ?? 0;
-      const perUser = res?.data?.perUser || [];
+      // New servers hand back a job to poll; legacy servers answer synchronously.
+      let payload = res?.data || {};
+      if (payload.jobId) payload = await pollBulkTransfer(payload.jobId, payload.total ?? 0);
+      const count = payload.transferred ?? 0;
+      const perUser = payload.perUser || [];
       if (count === 0) {
         toast.success(`${userName(transferFrom)} had no leads to transfer.`);
       } else if (transferTo.length > 1) {
@@ -355,12 +408,13 @@ const AdminLeadManagement = () => {
       } else {
         toast.success(`Transferred ${count} lead(s) to ${userName(transferTo[0])}.`);
       }
-      closeTransfer();
+      resetTransferModal();
       fetchLeads();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Lead transfer failed.');
+      toast.error(err.response?.data?.message || err.message || 'Lead transfer failed.');
     } finally {
       setTransferring(false);
+      setTransferProgress(null);
     }
   };
 
@@ -577,16 +631,47 @@ const AdminLeadManagement = () => {
           </button>
         </div>
 
-        {/* Status Filter */}
+        {/* Lead Status Filter */}
         <div className="alm-filter-group">
           <select
             className="alm-select"
             value={selectedStatus}
             onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
+            title="Filter by lead status"
           >
-            <option value="">All Statuses</option>
+            <option value="">All Lead Statuses</option>
             {statusOptions.map((s) => (
               <option key={s.code} value={s.code}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Booking Status Filter */}
+        <div className="alm-filter-group">
+          <select
+            className="alm-select"
+            value={selectedBookingStatus}
+            onChange={(e) => { setSelectedBookingStatus(e.target.value); setPage(1); }}
+            title="Filter by the lead's booking status"
+          >
+            <option value="">All Booking Statuses</option>
+            {bookingStatuses.map((s) => (
+              <option key={s.id} value={s.id}>{s.status_name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Payment Status Filter */}
+        <div className="alm-filter-group">
+          <select
+            className="alm-select"
+            value={selectedPaymentStatus}
+            onChange={(e) => { setSelectedPaymentStatus(e.target.value); setPage(1); }}
+            title="Filter by the booking's payment status"
+          >
+            <option value="">All Payment Statuses</option>
+            {paymentStatuses.map((s) => (
+              <option key={s.id} value={s.id}>{s.status_name}</option>
             ))}
           </select>
         </div>
@@ -619,6 +704,21 @@ const AdminLeadManagement = () => {
         {selectedProjectId && (
           <span className="alm-stat alm-stat--filter">
             Project: {projects.find((p) => p.id === selectedProjectId)?.project_name || '—'}
+          </span>
+        )}
+        {selectedStatus && (
+          <span className="alm-stat alm-stat--filter">
+            Lead status: {statusOptions.find((s) => s.code === selectedStatus)?.label || selectedStatus}
+          </span>
+        )}
+        {selectedBookingStatus && (
+          <span className="alm-stat alm-stat--filter">
+            Booking status: {bookingStatuses.find((s) => s.id === selectedBookingStatus)?.status_name || '—'}
+          </span>
+        )}
+        {selectedPaymentStatus && (
+          <span className="alm-stat alm-stat--filter">
+            Payment status: {paymentStatuses.find((s) => s.id === selectedPaymentStatus)?.status_name || '—'}
           </span>
         )}
       </div>
@@ -757,7 +857,7 @@ const AdminLeadManagement = () => {
             <div className="alm-modal__body">
               <div className="alm-field">
                 <label>From user (source)</label>
-                <select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
+                <select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)} disabled={transferring}>
                   <option value="">Select source user…</option>
                   {allUserGroups.map((g) => (
                     <optgroup key={g.label} label={g.label}>
@@ -799,6 +899,7 @@ const AdminLeadManagement = () => {
                               <input
                                 type="checkbox"
                                 checked={checked}
+                                disabled={transferring}
                                 onChange={() => toggleTransferTo(u.id)}
                               />
                               <span>{u.name}</span>
@@ -822,8 +923,25 @@ const AdminLeadManagement = () => {
                   value={transferNote}
                   onChange={(e) => setTransferNote(e.target.value)}
                   placeholder="Reason for transfer"
+                  disabled={transferring}
                 />
               </div>
+
+              {transferring && transferProgress && (
+                <div className="alm-transfer-progress">
+                  <div className="alm-transfer-progress__track">
+                    <div
+                      className="alm-transfer-progress__fill"
+                      style={{ width: `${transferProgress.total > 0 ? Math.round((transferProgress.done / transferProgress.total) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <div className="alm-transfer-progress__label">
+                    Moving leads… {transferProgress.done.toLocaleString('en-IN')} / {transferProgress.total.toLocaleString('en-IN')}
+                    {' '}({transferProgress.total > 0 ? Math.round((transferProgress.done / transferProgress.total) * 100) : 0}%)
+                    — keep this window open
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="alm-modal__footer alm-modal__footer--split">
@@ -831,14 +949,14 @@ const AdminLeadManagement = () => {
                 type="button"
                 className="alm-mbtn alm-mbtn--danger"
                 onClick={handleDeleteUser}
-                disabled={!transferFrom || deletingUser}
+                disabled={!transferFrom || deletingUser || transferring}
                 title="Soft-delete the source user (transfer their leads first)"
               >
                 <TrashIcon style={{ width: 16, height: 16 }} />
                 {deletingUser ? 'Deleting…' : 'Delete source user'}
               </button>
               <div className="alm-modal__footer-group">
-                <button type="button" className="alm-mbtn alm-mbtn--ghost" onClick={closeTransfer}>
+                <button type="button" className="alm-mbtn alm-mbtn--ghost" onClick={closeTransfer} disabled={transferring}>
                   Cancel
                 </button>
                 <button

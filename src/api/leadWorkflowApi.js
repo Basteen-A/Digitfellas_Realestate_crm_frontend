@@ -201,7 +201,24 @@ const leadWorkflowApi = {
    */
   bulkTransferLeads: async (fromUserId, toUserIds, note) => {
     const targets = Array.isArray(toUserIds) ? toUserIds : [toUserIds];
-    const { data } = await api.post('/leads/bulk-transfer', { fromUserId, toUserIds: targets, note });
+    // The server answers immediately with { jobId, total } and moves the leads
+    // in the background; poll getBulkTransferStatus for progress. (A legacy
+    // server replies synchronously with { transferred, perUser } instead, so
+    // keep a generous timeout for that case.)
+    const { data } = await api.post(
+      '/leads/bulk-transfer',
+      { fromUserId, toUserIds: targets, note },
+      { timeout: 300000 } // 5 minutes
+    );
+    return data;
+  },
+
+  /**
+   * GET /leads/bulk-transfer/:jobId/status
+   * Live progress of a running bulk transfer: { status, total, done, message, result }.
+   */
+  getBulkTransferStatus: async (jobId) => {
+    const { data } = await api.get(`/leads/bulk-transfer/${jobId}/status`);
     return data;
   },
 

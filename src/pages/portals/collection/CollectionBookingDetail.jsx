@@ -707,42 +707,43 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return Number.isFinite(n) ? n : 0;
   };
   const totalPaid = toAmount(booking.total_paid);
-  // Once registered, stamp/registration/MODT expenses are cleared server-side.
-  // The flag drives UI hiding of those sections.
-  const isRegistered = ['REGISTERED'].includes(booking.bookingStatus?.status_code || booking.status_code);
-  // Derive Plot/Stamp/Registration/Development from guideline × area — Plot Value is
-  // ROUNDUP(rate × sqft, -2) (nearest 100); Stamp (7%) & Registration (2%) are the exact
-  // percentage of Plot Value with NO rounding; falling back to stored columns otherwise.
+  // Show the STORED booking values first — they are what was actually billed
+  // and collected against — and only fall back to the guideline × area formula
+  // (Plot = ROUNDUP(rate × sqft, -2); Stamp 7%; Registration 2%) when a stored
+  // value is missing. Recomputing over stored values drifts from total_paid
+  // whenever the stored charges used different rounding or manual amounts.
+  // Registration does NOT hide or zero any of these — the full breakdown stays
+  // visible for the life of the booking.
   const guidelineRate = toAmount(booking.guideline_value);
   const plotAreaSqft = toAmount(booking.plot_area);
   const perSqftCost = toAmount(booking.development_cost_per_sqft);
-  let plotValue;
-  let stampValue;
-  let registrationValue;
-  if (guidelineRate > 0 && plotAreaSqft > 0) {
-    plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100;
-    stampValue = isRegistered ? 0 : plotValue * 0.07;
-    registrationValue = isRegistered ? 0 : plotValue * 0.02;
-  } else {
-    plotValue = toAmount(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
-    stampValue = isRegistered ? 0 : toAmount(booking.stamp_value || booking.stamp_duty);
-    registrationValue = isRegistered ? 0 : toAmount(booking.registration_exp || booking.registration_charges);
-  }
-  const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
-    ? Math.round(plotAreaSqft * perSqftCost * 1.18)
-    : toAmount(booking.development_charges);
+  const formulaPlotValue = (guidelineRate > 0 && plotAreaSqft > 0)
+    ? Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100
+    : 0;
+  const plotValue = toAmount(booking.plot_value) > 0
+    ? toAmount(booking.plot_value)
+    : (formulaPlotValue > 0 ? formulaPlotValue : toAmount(booking.base_price || booking.total_amount || booking.net_amount));
+  const storedStampValue = toAmount(booking.stamp_value || booking.stamp_duty);
+  const storedRegistrationValue = toAmount(booking.registration_exp || booking.registration_charges);
+  const stampValue = storedStampValue > 0 ? storedStampValue : plotValue * 0.07;
+  const registrationValue = storedRegistrationValue > 0 ? storedRegistrationValue : plotValue * 0.02;
+  const developmentValue = toAmount(booking.development_charges) > 0
+    ? toAmount(booking.development_charges)
+    : ((perSqftCost > 0 && plotAreaSqft > 0) ? Math.round(plotAreaSqft * perSqftCost * 1.18) : 0);
 
   // Detailed split + optional MODT stored in custom_fields.cost_breakdown
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmount(v), 0);
   const labelize = (k) => categoryLabel(k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
   const costBreakdown = booking.custom_fields?.cost_breakdown || {};
-  // Stamp Commission is always 1% of Stamp Value (computed) — overrides any stored manual value.
-  const computedStampCommission = isRegistered ? 0 : Math.round(stampValue * 0.01);
+  // Stamp Commission: use the stored split value (what was billed); only derive
+  // 1% of Stamp Value when nothing was stored.
+  const storedStampCommission = toAmount((costBreakdown.registration_split || {}).stamp_commission);
+  const computedStampCommission = storedStampCommission > 0 ? storedStampCommission : Math.round(stampValue * 0.01);
   const savedRegSplit = { ...(costBreakdown.registration_split || {}), stamp_commission: computedStampCommission };
   const savedModtEnabled = !!costBreakdown.modt_enabled;
   const savedModtSplit = costBreakdown.modt_split || {};
-  const regSplitTotal = isRegistered ? 0 : sumSplit(savedRegSplit);
-  const modtSplitTotal = (savedModtEnabled && !isRegistered) ? sumSplit(savedModtSplit) : 0;
+  const regSplitTotal = sumSplit(savedRegSplit);
+  const modtSplitTotal = savedModtEnabled ? sumSplit(savedModtSplit) : 0;
   const otherChargesTotal = regSplitTotal + modtSplitTotal;
 
   const computedTotalValue = plotValue + stampValue + registrationValue + developmentValue + otherChargesTotal;
@@ -758,10 +759,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return acc;
   }, {});
 
-  // Categories cleared after registration — hidden from Add Payment dropdown and progress bars.
-  const CLEARED_ON_REGISTRATION = ['Stamp Duty', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT'];
+  // Every payment category stays available after registration — nothing is
+  // hidden from the Add Payment dropdown or the progress bars.
   const filteredCategories = PAYMENT_CATEGORIES.filter(cat => {
-    if (isRegistered && CLEARED_ON_REGISTRATION.includes(cat)) return false;
     if (cat === 'MODT') {
       return savedModtEnabled || (paidByCategory['MODT'] > 0);
     }
@@ -778,19 +778,17 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   //                                Writer Expenses, Patta Charges, …) EXCEPT
   //                                "Other Registration Expenses".
   //   • Other Registration Expenses → its own separate bar.
-  const otherRegExpensesTarget = isRegistered ? 0 : toAmount(savedRegSplit.other_registration_expenses);
-  const regMiscExpensesTarget = isRegistered ? 0 : (regSplitTotal - toAmount(savedRegSplit.other_registration_expenses));
+  const otherRegExpensesTarget = toAmount(savedRegSplit.other_registration_expenses);
+  const regMiscExpensesTarget = regSplitTotal - toAmount(savedRegSplit.other_registration_expenses);
   const registrationTarget = registrationValue;
   const categoryBuckets = [
     { key: 'Plot Value', target: plotValue, paid: paidByCategory['Plot Value'] || 0 },
-    ...(isRegistered ? [] : [{ key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 }]),
+    { key: 'Stamp Duty', target: stampValue, paid: paidByCategory['Stamp Duty'] || 0 },
     { key: 'Development', target: developmentValue, paid: paidByCategory['Development'] || 0 },
-    ...(isRegistered ? [] : [
-      { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
-      { key: 'Registration Expenses', target: regMiscExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
-      { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
-      { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
-    ]),
+    { key: 'Registration', target: registrationTarget, paid: paidByCategory['Registration'] || 0 },
+    { key: 'Registration Expenses', target: regMiscExpensesTarget, paid: paidByCategory['Registration Expenses'] || 0 },
+    { key: 'Other Registration Expenses', target: otherRegExpensesTarget, paid: paidByCategory['Other Registration Expenses'] || 0 },
+    { key: 'MODT', target: modtSplitTotal, paid: paidByCategory['MODT'] || 0 },
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
 
@@ -1303,7 +1301,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-plot">{fmtFull(plotValue)}</h3>
                     </div>
 
-                    {!isRegistered && (
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-stamp">
                       <div className="bkd-payment-preview-breakdown-item-head">
                         <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-stamp">
@@ -1320,9 +1317,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
                       <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-stamp">{fmtFull(stampValue)}</h3>
                     </div>
-                    )}
 
-                    {!isRegistered && (
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-registration">
                       <div className="bkd-payment-preview-breakdown-item-head">
                         <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-registration">
@@ -1339,7 +1334,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
                       <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-registration">{fmtFull(registrationValue)}</h3>
                     </div>
-                    )}
 
                     <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-development">
                       <div className="bkd-payment-preview-breakdown-item-head">
@@ -1359,7 +1353,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     </div>
                   </div>
 
-                  {!isRegistered && (otherChargesTotal > 0) && (
+                  {(otherChargesTotal > 0) && (
                     <div className="bkd-extra-charges-shell" style={{ marginTop: 14, padding: '12px 14px', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #111827)' }}>Registration Charges</div>

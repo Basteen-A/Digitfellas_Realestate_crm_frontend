@@ -116,31 +116,29 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const guidelineRate = toAmt(booking.guideline_value);
   const plotAreaSqft = toAmt(booking.plot_area);
   const perSqftCost = toAmt(booking.development_cost_per_sqft);
-  const statusCode = booking.bookingStatus?.status_code || booking.status_code || 'BOOKED';
-  const isRegistered = statusCode === 'REGISTERED';
+  // Stamp / registration charges are always included — registration no longer
+  // hides or zeroes them. Stored booking values win (they are what was billed
+  // and collected); the guideline × area formula only fills missing values.
+  const formulaPlotValue = (guidelineRate > 0 && plotAreaSqft > 0)
+    ? Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100 // ROUNDUP to nearest 100
+    : 0;
+  const plotValue = toAmt(booking.plot_value) > 0
+    ? toAmt(booking.plot_value)
+    : (formulaPlotValue > 0 ? formulaPlotValue : toAmt(booking.base_price || booking.total_amount || booking.net_amount));
+  const storedStampValue = toAmt(booking.stamp_value || booking.stamp_duty);
+  const storedRegistrationValue = toAmt(booking.registration_exp || booking.registration_charges);
+  const stampValue = storedStampValue > 0 ? storedStampValue : plotValue * 0.07;
+  const registrationValue = storedRegistrationValue > 0 ? storedRegistrationValue : plotValue * 0.02;
 
-  let plotValue = 0, stampValue = 0, registrationValue = 0;
-  if (guidelineRate > 0 && plotAreaSqft > 0) {
-    plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100; // ROUNDUP to nearest 100
-    if (!isRegistered) {
-      stampValue = plotValue * 0.07;        // exact 7%, no rounding
-      registrationValue = plotValue * 0.02; // exact 2%, no rounding
-    }
-  } else {
-    plotValue = toAmt(booking.plot_value || booking.base_price || booking.total_amount || booking.net_amount);
-    if (!isRegistered) {
-      stampValue = toAmt(booking.stamp_value || booking.stamp_duty);
-      registrationValue = toAmt(booking.registration_exp || booking.registration_charges);
-    }
-  }
-
-  const developmentValue = (perSqftCost > 0 && plotAreaSqft > 0)
-    ? Math.round(plotAreaSqft * perSqftCost * 1.18)
-    : toAmt(booking.development_charges);
+  const developmentValue = toAmt(booking.development_charges) > 0
+    ? toAmt(booking.development_charges)
+    : ((perSqftCost > 0 && plotAreaSqft > 0) ? Math.round(plotAreaSqft * perSqftCost * 1.18) : 0);
 
   const costBreakdown = booking.custom_fields?.cost_breakdown || {};
   const savedRegSplit = costBreakdown.registration_split || {};
-  const docStampCommission = Math.round(stampValue * 0.01); // 1% of Stamp Value
+  const docStampCommission = toAmt(savedRegSplit.stamp_commission) > 0
+    ? toAmt(savedRegSplit.stamp_commission)
+    : Math.round(stampValue * 0.01); // 1% of Stamp Value fallback
   const docOnline = toAmt(savedRegSplit.registration_expenses);
   const docWriter = toAmt(savedRegSplit.writer_expenses);
   const docPatta = toAmt(savedRegSplit.patta_charges);
