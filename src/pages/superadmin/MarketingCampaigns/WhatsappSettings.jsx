@@ -19,7 +19,15 @@ const WhatsappSettings = () => {
   const [templates, setTemplates] = useState([]);
   const [testPhone, setTestPhone] = useState('');
   const [testTemplateId, setTestTemplateId] = useState('');
+  const [testHeaderImageUrl, setTestHeaderImageUrl] = useState('');
   const [testing, setTesting] = useState(false);
+
+  const selectedTemplate = templates.find((t) => t.id === testTemplateId) || null;
+  const needsHeaderMedia = selectedTemplate
+    && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type)
+    && !testHeaderImageUrl
+    && !selectedTemplate.sample_header_url
+    && !cfg?.default_header_image_url;
 
   // Connection health state
   const [conn, setConn] = useState(null);
@@ -85,9 +93,14 @@ const WhatsappSettings = () => {
   const sendTest = async () => {
     if (!testPhone.trim()) { toast.error('Enter a phone number to test'); return; }
     if (!testTemplateId) { toast.error('Select a template to test'); return; }
+    if (needsHeaderMedia) { toast.error('Header file/image is required'); return; }
     setTesting(true);
     try {
-      const resp = await whatsappCampaignApi.testConfig({ phone: testPhone.trim(), template_id: testTemplateId });
+      const resp = await whatsappCampaignApi.testConfig({
+        phone: testPhone.trim(),
+        template_id: testTemplateId,
+        header_image_url: testHeaderImageUrl || undefined,
+      });
       toast.success(`Test sent (id: ${resp.data?.messageId || 'ok'})`);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Test message failed'));
@@ -147,21 +160,46 @@ const WhatsappSettings = () => {
           </p>
 
           <label style={labelStyle}>Template</label>
-          <select style={selectStyle} value={testTemplateId} onChange={(e) => setTestTemplateId(e.target.value)}>
+          <select style={selectStyle} value={testTemplateId} onChange={(e) => { setTestTemplateId(e.target.value); setTestHeaderImageUrl(''); }}>
             <option value="">Select a template…</option>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>{t.name} ({t.language_code})</option>
+            {templates.filter((t) => t.status === 'APPROVED').map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.language_code}){t.header_type !== 'NONE' ? ` — ${t.header_type} header` : ''}
+              </option>
             ))}
           </select>
+          {templates.length > 0 && templates.filter((t) => t.status === 'APPROVED').length === 0 && (
+            <div style={{ fontSize: 11, color: '#991b1b', marginTop: 4 }}>No approved templates available. Sync or create templates first.</div>
+          )}
           {templates.length === 0 && (
             <div style={{ fontSize: 11, color: '#b45309', marginTop: 4 }}>No templates yet — add one on the Templates page first.</div>
+          )}
+
+          {selectedTemplate && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type) && (
+            <div style={{ marginTop: 12 }}>
+              <label style={labelStyle}>
+                Header {selectedTemplate.header_type || 'Image'} {needsHeaderMedia
+                  ? <span style={{ fontWeight: 800, color: '#dc2626' }}>* REQUIRED</span>
+                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span>}
+              </label>
+              <HeaderMediaInput value={testHeaderImageUrl} onChange={setTestHeaderImageUrl} />
+              {needsHeaderMedia && (
+                <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
+                  <span>
+                    This template has a <strong>{selectedTemplate.header_type}</strong> header — you <strong>must upload a file</strong> above
+                    before testing, otherwise the send will fail.
+                  </span>
+                </div>
+              )}
+            </div>
           )}
 
           <label style={labelStyle}>Test Phone Number</label>
           <input style={inputStyle} value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="e.g. 9876543210 or +91 9876543210" />
 
           <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="crm-btn crm-btn-secondary" onClick={sendTest} disabled={testing}>
+            <button className="crm-btn crm-btn-secondary" onClick={sendTest} disabled={testing || needsHeaderMedia}>
               <PaperAirplaneIcon style={{ width: 15, height: 15 }} /> {testing ? 'Sending…' : 'Send Test'}
             </button>
           </div>
