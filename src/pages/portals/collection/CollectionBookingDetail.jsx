@@ -43,6 +43,65 @@ const InfoRow = ({label,value,mono,color}) => (
   </div>
 );
 
+const BkdStatCell = ({ label, value, border = true }) => {
+  return (
+    <div style={{
+      flex: 1,
+      padding: "10px 14px",
+      borderRight: border ? "1px solid var(--col-border, #e2e8f0)" : "none",
+      minWidth: 120,
+    }}>
+      <div style={{
+        fontSize: 11, fontWeight: 600, letterSpacing: "0.06em",
+        color: "var(--col-text, #000000)", textTransform: "uppercase", marginBottom: 4,
+      }}>{label}</div>
+      <div style={{
+        fontSize: 20, fontWeight: 600, color: "var(--col-text, #000000)",
+        fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em",
+      }}>{value}</div>
+    </div>
+  );
+};
+
+const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon }) => {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 4px", paddingLeft: 4 + indent,
+        borderBottom: "1px solid var(--col-border, #e2e8f0)",
+        cursor: onClick ? "pointer" : "default",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{
+            fontSize: 14, fontWeight: 500,
+            color: "var(--col-text, #000000)",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            display: "flex",
+            alignItems: "center",
+            gap: 6
+          }}>
+            {label}
+            {expandIcon}
+          </div>
+          {note && (
+            <div style={{ fontSize: 12, color: "var(--col-text, #000000)", marginTop: 1 }}>{note}</div>
+          )}
+        </div>
+      </div>
+      <div style={{
+        fontSize: 14, fontWeight: 600,
+        color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums",
+        whiteSpace: "nowrap", marginLeft: 12,
+      }}>{valueText}</div>
+    </div>
+  );
+};
+
+
 // Deterministic avatar colour + initials (shared look with the task assignee UI).
 const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
 const colorFor = (id) => {
@@ -93,6 +152,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // Verified / rejected / refund payments aren't editable, but can be opened
   // read-only in the same rich modal (matches the Payments page view).
   const [viewPaymentId, setViewPaymentId] = useState(null);
+  const [regExpanded, setRegExpanded] = useState(false);
   // Super-Admin approve / reject (from the detail page)
   const [approvalAction, setApprovalAction] = useState(null); // 'approve' | 'reject'
   const [approvalRemarks, setApprovalRemarks] = useState('');
@@ -886,7 +946,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   };
 
   return (
-    <div className="bkd-page">
+    <div className="bkd-page" style={{ maxWidth: '100%' }}>
       {/* Page Header */}
       <div className="bkd-header">
         <div className="bkd-header-left">
@@ -1030,7 +1090,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div className="bkd-card-title"><UserIcon style={{width:15,height:15}}/> Customer Information</div>
               </div>
               <div className="bkd-card-body">
-                <div className="bkd-info-grid">
+                <div className="bkd-info-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   <InfoRow label="Buyer Name" value={buyerName}/>
                   <InfoRow label="Lead Name" value={leadFullName}/>
                   <InfoRow label="Customer Phone" value={customerPhone} mono/>
@@ -1039,7 +1099,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <InfoRow label="Booking Date" value={fmtD(booking.booking_date)}/>
                 </div>
                 <hr className="bkd-divider"/>
-                <div className="bkd-info-grid">
+                <div className="bkd-info-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   <InfoRow label="Project" value={booking.project_name}/>
                   <InfoRow label="Unit" value={booking.unit_display || booking.unit_number}/>
                   <InfoRow label="Area" value={booking.carpet_area ? `${booking.carpet_area} sq.ft` : '—'}/>
@@ -1067,10 +1127,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Sales Manager Row */}
                     {salesManager ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px solid var(--col-border, #E5E7EB)' }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Manager</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>
+                          <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Manager</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--col-text, #000000)' }}>
                             {salesManager.first_name} {salesManager.last_name}
                           </div>
                         </div>
@@ -1085,93 +1145,95 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           />
                           <button
                             type="button"
-                            className="crm-btn crm-btn-primary crm-btn-sm"
+                            className="crm-btn crm-btn-sm"
                             disabled={!smPointsValue || statusSaving}
+                            style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
                             onClick={async () => {
                               if (!smPointsValue || isNaN(parseInt(smPointsValue)) || parseInt(smPointsValue) === 0) {
                                 toast.error('Enter valid points value');
-                                return;
-                              }
-                              const points = parseInt(smPointsValue, 10);
-                              setStatusSaving(true);
-              try {
-                const reason = `Lead conversion / Booking ${booking.booking_number}`;
-                // Use updatePointsForBooking to replace existing points
-                await userApi.updatePointsForBooking(salesManager.id, points, reason, bookingId, booking.lead?.id);
-                toast.success(`Updated ${points} points for SM`);
-                // Keep the saved value in the input for editing
-                setSmPointsValue(String(points));
-                loadActivities();
-              } catch (err) {
-                toast.error(getErrorMessage(err, 'Failed to award points'));
-              } finally {
-                setStatusSaving(false);
-              }
-                            }}
-                          >
-                            {statusSaving ? '...' : 'Save'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 8 }}>
-                        No Sales Manager assigned
-                      </div>
-                    )}
-
-                    {/* Sales Head Row */}
-                    {salesHead ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Head</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#6D28D9' }}>
-                            {salesHead.first_name} {salesHead.last_name}
+                                  return;
+                                }
+                                const points = parseInt(smPointsValue, 10);
+                                setStatusSaving(true);
+                try {
+                  const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                  // Use updatePointsForBooking to replace existing points
+                  await userApi.updatePointsForBooking(salesManager.id, points, reason, bookingId, booking.lead?.id);
+                  toast.success(`Updated ${points} points for SM`);
+                  // Keep the saved value in the input for editing
+                  setSmPointsValue(String(points));
+                  loadActivities();
+                } catch (err) {
+                  toast.error(getErrorMessage(err, 'Failed to award points'));
+                } finally {
+                  setStatusSaving(false);
+                }
+                              }}
+                            >
+                              {statusSaving ? '...' : 'Save'}
+                            </button>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <input
-                            type="number"
-                            className="bkd-form-control"
-                            placeholder="Points"
-                            value={shPointsValue}
-                            onChange={(e) => setShPointsValue(e.target.value)}
-                            style={{ width: 80, fontSize: 13, textAlign: 'center' }}
-                          />
-                          <button
-                            type="button"
-                            className="crm-btn crm-btn-primary crm-btn-sm"
-                            disabled={!shPointsValue || statusSaving}
-                            onClick={async () => {
-                              if (!shPointsValue || isNaN(parseInt(shPointsValue)) || parseInt(shPointsValue) === 0) {
-                                toast.error('Enter valid points value');
-                                return;
-                              }
-                              const points = parseInt(shPointsValue, 10);
-                              setStatusSaving(true);
-              try {
-                const reason = `Lead conversion / Booking ${booking.booking_number}`;
-                // Use updatePointsForBooking to replace existing points
-                await userApi.updatePointsForBooking(salesHead.id, points, reason, bookingId, booking.lead?.id);
-                toast.success(`Updated ${points} points for SH`);
-                // Keep the saved value in the input for editing
-                setShPointsValue(String(points));
-                loadActivities();
-              } catch (err) {
-                toast.error(getErrorMessage(err, 'Failed to award points'));
-              } finally {
-                setStatusSaving(false);
-              }
-                            }}
-                          >
-                            {statusSaving ? '...' : 'Save'}
-                          </button>
+                      ) : (
+                        <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
+                          No Sales Manager assigned
                         </div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 8 }}>
-                        No Sales Head assigned
-                      </div>
-                    )}
+                      )}
+  
+                      {/* Sales Head Row */}
+                      {salesHead ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px solid var(--col-border, #E5E7EB)' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Head</div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--col-text, #000000)' }}>
+                              {salesHead.first_name} {salesHead.last_name}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input
+                              type="number"
+                              className="bkd-form-control"
+                              placeholder="Points"
+                              value={shPointsValue}
+                              onChange={(e) => setShPointsValue(e.target.value)}
+                              style={{ width: 80, fontSize: 13, textAlign: 'center' }}
+                            />
+                            <button
+                              type="button"
+                              className="crm-btn crm-btn-sm"
+                              disabled={!shPointsValue || statusSaving}
+                              style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
+                              onClick={async () => {
+                                if (!shPointsValue || isNaN(parseInt(shPointsValue)) || parseInt(shPointsValue) === 0) {
+                                  toast.error('Enter valid points value');
+                                  return;
+                                }
+                                const points = parseInt(shPointsValue, 10);
+                                setStatusSaving(true);
+                try {
+                  const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                  // Use updatePointsForBooking to replace existing points
+                  await userApi.updatePointsForBooking(salesHead.id, points, reason, bookingId, booking.lead?.id);
+                  toast.success(`Updated ${points} points for SH`);
+                  // Keep the saved value in the input for editing
+                  setShPointsValue(String(points));
+                  loadActivities();
+                } catch (err) {
+                  toast.error(getErrorMessage(err, 'Failed to award points'));
+                } finally {
+                  setStatusSaving(false);
+                }
+                              }}
+                            >
+                              {statusSaving ? '...' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
+                          No Sales Head assigned
+                        </div>
+                      )}
                     {activities.filter((a) => a.activity_type === 'POINTS_AWARDED').length > 0 && (
                       <div style={{ marginTop: 20 }}>
                         <div
@@ -1228,225 +1290,122 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
         {/* Right column: Payment Summary */}
 
-            <div className="bkd-card bkd-payment-preview-card">
-              <div className="bkd-payment-preview-header">
-                <div className="bkd-payment-preview-header-left">
-                  <div className="bkd-payment-preview-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M17 9V7a5 5 0 00-10 0v2M5 9h14l1 11H4L5 9z" />
-                    </svg>
+            <div style={{
+              background: "var(--col-surface, #ffffff)",
+              borderRadius: 12,
+              border: "1px solid var(--col-border, #e2e8f0)",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              overflow: "hidden"
+            }}>
+              {/* Payment Summary Header */}
+              <div style={{
+                padding: "20px 24px",
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                borderBottom: "1px solid var(--col-border, #e2e8f0)"
+              }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 8, background: "var(--bg-secondary, #f1f5f9)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                  }}>
+                    <CreditCardIcon style={{ width: 16, height: 16, color: "var(--col-text, #000000)" }} />
                   </div>
-
                   <div>
-                    <h3 className="bkd-payment-preview-title">Payment Summary</h3>
-                    <p className="bkd-payment-preview-subtitle">Financial overview & collection progress</p>
+                    <div style={{ fontSize: 17, fontWeight: 600, color: "var(--col-text, #000000)" }}>Financial Summary</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bkd-payment-preview-body">
-                <div className="bkd-payment-preview-top-grid">
-                  <div className="bkd-payment-preview-card bkd-payment-preview-card-total">
-                    <p className="bkd-payment-preview-card-label">Total Value</p>
-                    <h2 className="bkd-payment-preview-card-value">{fmtFull(liveTotalValue)}</h2>
-                  </div>
+              {/* Stat Strip */}
+              <div style={{ display: "flex", borderBottom: "1px solid var(--col-border, #e2e8f0)", flexWrap: "wrap" }}>
+                <BkdStatCell label="Total value" value={fmtFull(liveTotalValue)} />
+                <BkdStatCell label="Collected" value={fmtFull(totalPaid)} />
+                <BkdStatCell label="Balance due" value={fmtFull(liveTotalValue - totalPaid)} />
+                <BkdStatCell label="Unverified" value={fmtFull(unverifiedAmt)} border={false} />
+              </div>
 
-                  <div className="bkd-payment-preview-card bkd-payment-preview-card-collected">
-                    <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-collected">Total Collected</p>
-                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-collected">{fmtFull(totalPaid)}</h2>
+              {/* Cost Breakdown */}
+              <div style={{ padding: "18px 24px 8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Cost Breakdown</div>
+                    <div style={{ fontSize: 12, color: "var(--col-text, #000000)" }}>Detailed property pricing structure</div>
                   </div>
-
-                  <div className="bkd-payment-preview-card bkd-payment-preview-card-balance">
-                    <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-balance">Balance Due</p>
-                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-balance">{fmtFull(balanceDue)}</h2>
-                  </div>
-
-                  <div className="bkd-payment-preview-card bkd-payment-preview-card-unverified">
-                    <p className="bkd-payment-preview-card-label bkd-payment-preview-card-label-unverified">Unverified</p>
-                    <h2 className="bkd-payment-preview-card-value bkd-payment-preview-card-value-unverified">{fmtFull(unverifiedAmt)}</h2>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openActionModal('devCost')}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 12px", borderRadius: 8, border: "1px solid var(--col-text, #000000)",
+                      background: "var(--col-surface, #ffffff)", color: "var(--col-text, #000000)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    }}
+                  >
+                    <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
+                  </button>
                 </div>
 
-                <div className="bkd-payment-preview-breakdown-shell">
-                  <div className="bkd-payment-preview-breakdown-head">
-                    <div>
-                      <h4 className="bkd-payment-preview-breakdown-title">Cost Breakdown</h4>
-                      <p className="bkd-payment-preview-breakdown-subtitle">Detailed property pricing structure</p>
-                    </div>
+                <BkdLedgerRow label="Plot Value" note="90% of total" valueText={fmtFull(plotValue)} />
+                <BkdLedgerRow label="Stamp Duty" note="Govt Charge" valueText={fmtFull(stampValue)} />
+                <BkdLedgerRow label="Registration Fees" note="Legal Charge" valueText={fmtFull(registrationValue)} />
+                <BkdLedgerRow label="Development" note="Infrastructure" valueText={fmtFull(developmentValue)} />
 
-                    <div className="bkd-payment-preview-grand-total">
-                      <button type="button" className="bkd-payment-preview-edit-btn" onClick={() => openActionModal('devCost')}>
-                        Edit
-                      </button>
-                      <p className="bkd-payment-preview-grand-label">Grand Total</p>
-                      <p className="bkd-payment-preview-grand-value">{fmtFull(totalValue)}</p>
-                    </div>
-                  </div>
-
-                  <div className="bkd-payment-preview-breakdown-grid">
-                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-plot">
-                      <div className="bkd-payment-preview-breakdown-item-head">
-                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-plot">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-plot" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 7l9-4 9 4-9 4-9-4zm0 0v10l9 4 9-4V7" />
-                          </svg>
-                        </div>
-
-                        <div>
-                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-plot">Plot Value</p>
-                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-plot">90% of total</p>
-                        </div>
-                      </div>
-
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-plot">{fmtFull(plotValue)}</h3>
-                    </div>
-
-                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-stamp">
-                      <div className="bkd-payment-preview-breakdown-item-head">
-                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-stamp">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-stamp" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 12h6m-6 4h6M7 4h10l2 2v14H5V4h2z" />
-                          </svg>
-                        </div>
-
-                        <div>
-                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-stamp">Stamp Duty</p>
-                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-stamp">Govt Charge</p>
-                        </div>
-                      </div>
-
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-stamp">{fmtFull(stampValue)}</h3>
-                    </div>
-
-                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-registration">
-                      <div className="bkd-payment-preview-breakdown-item-head">
-                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-registration">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-registration" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a1 1 0 001-1V7H5v12a1 1 0 001 1z" />
-                          </svg>
-                        </div>
-
-                        <div>
-                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-registration">Registration Fees</p>
-                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-registration">Legal Charge</p>
-                        </div>
-                      </div>
-
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-registration">{fmtFull(registrationValue)}</h3>
-                    </div>
-
-                    <div className="bkd-payment-preview-breakdown-card bkd-payment-preview-breakdown-card-development">
-                      <div className="bkd-payment-preview-breakdown-item-head">
-                        <div className="bkd-payment-preview-breakdown-icon-shell bkd-payment-preview-breakdown-icon-shell-development">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="bkd-payment-preview-breakdown-icon bkd-payment-preview-breakdown-icon-development" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14.7 6.3l3 3m-9.4 9.4H5v-3.3l9.4-9.4a1 1 0 011.4 0l1.9 1.9a1 1 0 010 1.4l-9.4 9.4z" />
-                          </svg>
-                        </div>
-
-                        <div>
-                          <p className="bkd-payment-preview-breakdown-item-label bkd-payment-preview-breakdown-item-label-development">Development</p>
-                          <p className="bkd-payment-preview-breakdown-item-sub bkd-payment-preview-breakdown-item-sub-development">Infrastructure</p>
-                        </div>
-                      </div>
-
-                      <h3 className="bkd-payment-preview-breakdown-item-value bkd-payment-preview-breakdown-item-value-development">{fmtFull(developmentValue)}</h3>
-                    </div>
-                  </div>
-
-                  {(otherChargesTotal > 0) && (
-                    <div className="bkd-extra-charges-shell" style={{ marginTop: 14, padding: '12px 14px', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #111827)' }}>Registration Charges</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#4338CA' }}>
-                          Subtotal: {fmtFull(otherChargesTotal)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {(otherChargesTotal > 0) && (
+                  <>
+                    <BkdLedgerRow
+                      label="Registration Charges"
+                      note={`Subtotal: ${fmtFull(otherChargesTotal)}`}
+                      valueText={fmtFull(otherChargesTotal)}
+                      onClick={() => setRegExpanded((v) => !v)}
+                      expandIcon={regExpanded ? <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)" }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)", transform: "rotate(-90deg)" }} />}
+                    />
+                    {regExpanded && (
+                      <>
                         {Object.entries(savedRegSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
-                          <span key={k} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            background: '#EEF2FF', color: '#4338CA', fontSize: 11, fontWeight: 600,
-                            padding: '4px 8px', borderRadius: 6, border: '1px solid #C7D2FE',
-                          }}>
-                            <span style={{ opacity: 0.85 }}>{labelize(k)}</span>
-                            <strong>{fmtFull(toAmount(v))}</strong>
-                          </span>
+                          <BkdLedgerRow key={k} label={labelize(k)} valueText={fmtFull(toAmount(v))} indent={22} />
                         ))}
                         {savedModtEnabled && Object.entries(savedModtSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
-                          <span key={`modt-${k}`} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            background: '#FEF3C7', color: '#92400E', fontSize: 11, fontWeight: 600,
-                            padding: '4px 8px', borderRadius: 6, border: '1px solid #FDE68A',
-                          }}>
-                            <span style={{ opacity: 0.85 }}>MODT · {labelize(k)}</span>
-                            <strong>{fmtFull(toAmount(v))}</strong>
-                          </span>
+                          <BkdLedgerRow key={`modt-${k}`} label={`MODT · ${labelize(k)}`} valueText={fmtFull(toAmount(v))} indent={22} />
                         ))}
-                      </div>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </>
+                )}
+
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                  marginTop: 10, paddingTop: 14, borderTop: "3px double var(--col-text, #000000)",
+                }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Grand Total</span>
+                  <span style={{ fontSize: 22, fontWeight: 600, color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums" }}>
+                    {fmtFull(totalValue)}
+                  </span>
                 </div>
+              </div>
 
-                <div className="bkd-payment-preview-progress">
-                  <div className="bkd-payment-preview-progress-head">
-                    <h4 className="bkd-payment-preview-progress-title">Collection Progress</h4>
-                    <span className="bkd-payment-preview-progress-percent" style={{ color: '#047857' }}>{pctCollected}%</span>
-                  </div>
-
-                  <div className="bkd-payment-preview-progress-bar">
-                    <div className="bkd-payment-preview-progress-fill" style={{ width: `${pctCollected}%`, background: '#047857' }} />
-                  </div>
-
-                  <div className="bkd-payment-preview-progress-foot">
-                    <p className="bkd-payment-preview-progress-foot-text">{fmtFull(totalPaid)} collected out of {fmtFull(liveTotalValue)}</p>
-                    <p className="bkd-payment-preview-progress-foot-pending">{fmtFull(liveTotalValue - totalPaid)} pending</p>
-                  </div>
-
-                  <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {categoryBuckets.filter(b => b.target > 0 || b.paid > 0).map(b => {
-                      const c = CATEGORY_COLORS[b.key] || CATEGORY_COLORS.Other;
-                      const pct = b.target > 0 ? Math.min(100, Math.round((b.paid / b.target) * 100)) : (b.paid > 0 ? 100 : 0);
-                      const balance = Math.max(b.target - b.paid, 0);
-                      return (
-                        <div key={b.key}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, fontSize: 11 }}>
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 6,
-                              background: c.bg, color: c.text, border: `1px solid ${c.border}`,
-                              padding: '2px 8px', borderRadius: 10, fontWeight: 700,
-                            }}>
-                              {categoryLabel(b.key)} · {pct}%
-                            </span>
-                            <span style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 600 }}>
-                              {fmtFull(b.paid)} / {fmtFull(b.target)}
-                              {b.target > 0 && <span style={{ marginLeft: 6, color: '#DC2626' }}>· {fmtFull(balance)} due</span>}
-                            </span>
-                          </div>
-                          <div style={{ height: 6, background: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: c.text, transition: 'width 0.3s' }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+              {/* Collection Progress */}
+              <div style={{ padding: "16px 24px", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Collection Progress</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
+                    {pctCollected}%
                   </div>
                 </div>
 
-                <div className="bkd-payment-preview-stats-grid">
-                  <div className="bkd-payment-preview-stat-card bkd-payment-preview-stat-card-neutral">
-                    <p className="bkd-payment-preview-stat-label">Payments</p>
-                    <h4 className="bkd-payment-preview-stat-value">{payments.length}</h4>
-                  </div>
-
-                  <div className="bkd-payment-preview-stat-card bkd-payment-preview-stat-card-success">
-                    <p className="bkd-payment-preview-stat-label bkd-payment-preview-stat-label-success">Verified</p>
-                    <h4 className="bkd-payment-preview-stat-value bkd-payment-preview-stat-value-success">{verifiedCount}</h4>
-                  </div>
-
-                  <div className="bkd-payment-preview-stat-card bkd-payment-preview-stat-card-warning">
-                    <p className="bkd-payment-preview-stat-label bkd-payment-preview-stat-label-warning">Pending</p>
-                    <h4 className="bkd-payment-preview-stat-value bkd-payment-preview-stat-value-warning">{pendingCount}</h4>
-                  </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--col-text, #000000)" }}>
+                  <span>{fmtFull(totalPaid)} collected out of {fmtFull(liveTotalValue)}</span>
+                  <span style={{ fontWeight: 600, color: liveTotalValue - totalPaid > 0 ? "#dc2626" : "var(--col-text, #000000)" }}>
+                    {fmtFull(liveTotalValue - totalPaid)} pending
+                  </span>
                 </div>
+              </div>
+
+              {/* Payments Strip */}
+              <div style={{ display: "flex", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
+                <BkdStatCell label="Payments" value={payments.length} />
+                <BkdStatCell label="Verified" value={verifiedCount} />
+                <BkdStatCell label="Pending" value={pendingCount} border={false} />
               </div>
             </div>
 

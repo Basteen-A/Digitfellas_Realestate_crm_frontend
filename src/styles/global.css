@@ -82,3 +82,18 @@ a:hover {
   border-radius: var(--border-radius-md) !important;
   box-shadow: var(--shadow-lg) !important;
 }
+
+/* ── Hide scrollbars site-wide on all elements ── */
+*::-webkit-scrollbar,
+* ::-webkit-scrollbar,
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+*, *::before, *::after {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}

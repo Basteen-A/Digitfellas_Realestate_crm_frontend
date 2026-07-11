@@ -1578,7 +1578,13 @@
 /* =====================================================
    BOOKING DETAIL PAGE (bkd-)
    ===================================================== */
-.bkd-page { max-width: 1200px; }
+.bkd-page {
+  max-width: 1200px;
+  --col-surface: var(--bg-card, #ffffff);
+  --col-border: var(--border-primary, #e2e8f0);
+  --col-text: var(--text-primary, #000000);
+  --col-text-secondary: var(--text-secondary, #9ca3af);
+}
 .bkd-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px; }
 .bkd-header-left { display:flex; align-items:center; gap:12px; }
 .bkd-back-btn { background:var(--col-surface,#fff); border:1px solid var(--col-border,#e5e7eb); border-radius:6px; padding:6px 8px; cursor:pointer; display:flex; align-items:center; }
