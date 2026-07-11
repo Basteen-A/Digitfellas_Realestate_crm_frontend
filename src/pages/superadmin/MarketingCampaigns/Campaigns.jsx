@@ -57,11 +57,15 @@ const Campaigns = () => {
   const [stages, setStages] = useState([]);
   const [sources, setSources] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [leadFields, setLeadFields] = useState([]);
 
   // New-campaign form
   const [name, setName] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [headerImageUrl, setHeaderImageUrl] = useState('');
+  // Per-campaign variable values — pre-filled from the selected template,
+  // editable here without touching the template itself.
+  const [paramValues, setParamValues] = useState({ header_params: [], body_params: [] });
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [preview, setPreview] = useState(null); // { total, sample }
   const [previewing, setPreviewing] = useState(false);
@@ -84,13 +88,14 @@ const Campaigns = () => {
 
   const loadOptions = useCallback(async () => {
     try {
-      const [st, pr, lo, sg, so, tpl] = await Promise.all([
+      const [st, pr, lo, sg, so, tpl, mt] = await Promise.all([
         leadStatusApi.getAll({ limit: 100 }),
         projectApi.getAll({ limit: 100 }),
         locationApi.getAll({ limit: 100 }),
         leadStageApi.getAll({ limit: 100 }),
         leadSourceApi.getAll({ limit: 100 }),
         whatsappCampaignApi.getTemplates({ limit: 100, is_active: 'true' }),
+        whatsappCampaignApi.getTemplateMeta(),
       ]);
       setStatuses((st.data || []).map((x) => ({ value: x.id, label: x.status_name })));
       setProjects((pr.data || []).map((x) => ({ value: x.id, label: x.project_name })));
@@ -98,6 +103,7 @@ const Campaigns = () => {
       setStages((sg.data || []).map((x) => ({ value: x.id, label: x.stage_name })));
       setSources((so.data || []).map((x) => ({ value: x.id, label: x.source_name })));
       setTemplates(tpl.data || []);
+      setLeadFields(mt.data?.lead_fields || []);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load filter options'));
     }
@@ -153,6 +159,26 @@ const Campaigns = () => {
 
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === templateId) || null, [templates, templateId]);
 
+  // Re-seed the editable variable values every time a template is picked.
+  useEffect(() => {
+    setParamValues({
+      header_params: (selectedTemplate?.header_params || []).map((p) => ({ ...p })),
+      body_params: (selectedTemplate?.body_params || []).map((p) => ({ ...p })),
+    });
+  }, [selectedTemplate]);
+
+  const updateParamValue = (group, i, key, val) => setParamValues((pv) => ({
+    ...pv,
+    [group]: pv[group].map((p, idx) => (idx === i ? { ...p, [key]: val } : p)),
+  }));
+
+  // The preview substitutes the campaign's edited values, not the template's.
+  const previewTemplate = useMemo(() => (selectedTemplate ? {
+    ...selectedTemplate,
+    header_params: paramValues.header_params.length ? paramValues.header_params : selectedTemplate.header_params,
+    body_params: paramValues.body_params.length ? paramValues.body_params : selectedTemplate.body_params,
+  } : null), [selectedTemplate, paramValues]);
+
   // True when the selected template has a media header and NO image URL is set anywhere.
   const needsHeaderMedia = selectedTemplate
     && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type)
@@ -171,15 +197,37 @@ const Campaigns = () => {
     }
   };
 
+  // Every variable must resolve — WhatsApp rejects messages with empty params.
+  const paramError = () => {
+    const bad = (p, label) => {
+      if (p.source === 'lead_field' && !p.field) return `${label} is mapped to a lead field — select the field.`;
+      if (p.source !== 'lead_field' && !String(p.value || '').trim()) return `${label} is set to custom text — enter a value.`;
+      return null;
+    };
+    for (const p of paramValues.header_params) { const e = bad(p, 'Header variable {{1}}'); if (e) return e; }
+    for (let i = 0; i < paramValues.body_params.length; i += 1) {
+      const e = bad(paramValues.body_params[i], `Variable {{${paramValues.body_params[i].index || i + 1}}}`);
+      if (e) return e;
+    }
+    return null;
+  };
+
   const send = async () => {
     if (!name.trim()) { toast.error('Enter a campaign name'); return; }
     if (!templateId) { toast.error('Select a template'); return; }
+    const pErr = paramError();
+    if (pErr) { toast.error(pErr); return; }
     const count = preview?.total;
     if (!window.confirm(`Send this campaign${count != null ? ` to ${count} matching lead(s)` : ''}? Real WhatsApp messages will be dispatched.`)) return;
     setSending(true);
     try {
       const resp = await whatsappCampaignApi.createCampaign({
-        name: name.trim(), template_id: templateId, header_image_url: headerImageUrl || null, filters,
+        name: name.trim(),
+        template_id: templateId,
+        header_image_url: headerImageUrl || null,
+        ...(paramValues.header_params.length ? { header_params: paramValues.header_params } : {}),
+        ...(paramValues.body_params.length ? { body_params: paramValues.body_params } : {}),
+        filters,
       });
       toast.success(resp.message || 'Campaign queued');
       backToList();
@@ -205,6 +253,25 @@ const Campaigns = () => {
   };
 
   const pct = (c) => (c.total_recipients ? Math.round(((c.sent_count + c.failed_count) / c.total_recipients) * 100) : 0);
+
+  // One editable variable row: {{n}} → lead field OR custom text for this campaign.
+  const renderParamRow = (group, label, p, i) => (
+    <div key={`${group}-${i}`} style={{ display: 'grid', gridTemplateColumns: '70px 130px 1fr', gap: 8, alignItems: 'center', marginTop: 8 }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>{label}</span>
+      <select style={selectStyle} value={p.source === 'lead_field' ? 'lead_field' : 'static'} onChange={(e) => updateParamValue(group, i, 'source', e.target.value)}>
+        <option value="lead_field">Lead field</option>
+        <option value="static">Custom text</option>
+      </select>
+      {p.source === 'lead_field' ? (
+        <select style={selectStyle} value={p.field || ''} onChange={(e) => updateParamValue(group, i, 'field', e.target.value)}>
+          <option value="">Select field…</option>
+          {leadFields.map((lf) => <option key={lf.value} value={lf.value}>{lf.label}</option>)}
+        </select>
+      ) : (
+        <input style={inputStyle} value={p.value || ''} onChange={(e) => updateParamValue(group, i, 'value', e.target.value)} placeholder="Text sent to every recipient" />
+      )}
+    </div>
+  );
 
   // ─────────────────────────── BUILDER (full page) ───────────────────────────
   if (view === 'form') {
@@ -271,6 +338,17 @@ const Campaigns = () => {
               )}
             </div>
 
+            {(paramValues.header_params.length > 0 || paramValues.body_params.length > 0) && (
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>Template Variables</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, marginBottom: 4 }}>
+                  Pre-filled from the template — change the values for this campaign only. The saved template is not modified.
+                </div>
+                {paramValues.header_params.map((p, i) => renderParamRow('header_params', 'Header {{1}}', p, i))}
+                {paramValues.body_params.map((p, i) => renderParamRow('body_params', `{{${p.index || i + 1}}}`, p, i))}
+              </div>
+            )}
+
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Target Leads</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
@@ -310,8 +388,8 @@ const Campaigns = () => {
           <div className="crm-card" style={{ padding: 0, position: 'sticky', top: 16, overflow: 'hidden' }}>
             <div style={{ background: '#075e54', color: '#fff', padding: '12px 16px', fontWeight: 800, fontSize: 14 }}>Message Preview</div>
             <div style={{ padding: 12 }}>
-              {selectedTemplate
-                ? <WhatsappPreview template={selectedTemplate} headerMediaUrl={headerImageUrl} />
+              {previewTemplate
+                ? <WhatsappPreview template={previewTemplate} headerMediaUrl={headerImageUrl} />
                 : <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '24px 8px', textAlign: 'center' }}>Select a template to preview the message.</div>}
             </div>
           </div>
