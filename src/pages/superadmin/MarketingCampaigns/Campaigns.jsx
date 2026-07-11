@@ -153,6 +153,12 @@ const Campaigns = () => {
 
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === templateId) || null, [templates, templateId]);
 
+  // True when the selected template has a media header and NO image URL is set anywhere.
+  const needsHeaderMedia = selectedTemplate
+    && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type)
+    && !headerImageUrl
+    && !selectedTemplate.sample_header_url;
+
   const runPreview = async () => {
     setPreviewing(true);
     try {
@@ -214,7 +220,7 @@ const Campaigns = () => {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="crm-btn crm-btn-ghost" onClick={backToList} disabled={sending}>Cancel</button>
-            <button className="crm-btn crm-btn-primary" onClick={send} disabled={sending || !name.trim() || !templateId}>{sending ? 'Queuing…' : 'Send Campaign'}</button>
+            <button className="crm-btn crm-btn-primary" onClick={send} disabled={sending || !name.trim() || !templateId || needsHeaderMedia}>{sending ? 'Queuing…' : 'Send Campaign'}</button>
           </div>
         </div>
 
@@ -230,22 +236,35 @@ const Campaigns = () => {
                 <label style={labelStyle}>Template *</label>
                 <select style={selectStyle} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
                   <option value="">Select a template…</option>
-                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.language_code})</option>)}
+                  {templates.filter((t) => t.status === 'APPROVED').map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.language_code}){t.header_type !== 'NONE' ? ` — ${t.header_type} header` : ''}
+                    </option>
+                  ))}
                 </select>
+                {templates.length > 0 && templates.filter((t) => t.status === 'APPROVED').length === 0 && (
+                  <div style={{ fontSize: 11, color: '#991b1b', marginTop: 4 }}>No approved templates available. Sync or create templates first.</div>
+                )}
               </div>
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={labelStyle}>Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span></label>
+              <label style={labelStyle}>
+                Header {selectedTemplate?.header_type || 'Image'} {needsHeaderMedia
+                  ? <span style={{ fontWeight: 800, color: '#dc2626' }}>* REQUIRED</span>
+                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span>}
+              </label>
               <HeaderMediaInput value={headerImageUrl} onChange={setHeaderImageUrl} />
-              {selectedTemplate && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type)
-                && !headerImageUrl && !selectedTemplate.sample_header_url && (
-                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309' }}>
-                  ⚠ This template has a {selectedTemplate.header_type} header — upload a header file here (or set a
-                  default in WhatsApp Settings), otherwise WhatsApp rejects every message.
+              {needsHeaderMedia && (
+                <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
+                  <span>
+                    This template has a <strong>{selectedTemplate.header_type}</strong> header — you <strong>must upload a file</strong> above
+                    before sending, otherwise WhatsApp will reject every message.
+                  </span>
                 </div>
               )}
-              {/x-amz-(signature|expires|credential)/i.test(headerImageUrl || '') && (
+              {/x-amz-(signature|expires|credential)/i.test(headerImageUrl || '') && !String(headerImageUrl || '').includes('sujatha-crm-uploads') && (
                 <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309' }}>
                   ⚠ This is a temporary presigned link that expires within days — use the Upload button for a permanent URL.
                 </div>
