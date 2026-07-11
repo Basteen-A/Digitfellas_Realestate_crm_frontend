@@ -30,6 +30,39 @@ const getTodayString = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+const getDateRangeForFilter = (option) => {
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date();
+  
+  const formatLocalIso = (d) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  switch (option) {
+    case 'all':
+      return { from: '', to: '' };
+    case 'default':
+    case 'today':
+      return { from: today, to: today };
+    case 'week': {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now.setDate(diff));
+      return { from: formatLocalIso(monday), to: today };
+    }
+    case 'month': {
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: formatLocalIso(firstOfMonth), to: today };
+    }
+    default:
+      return null;
+  }
+};
+
 // Canonical badge-system triples (badge-system.html / utils/badgeColors.js).
 const STATUS_COLORS = {
   NEW: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
@@ -64,10 +97,21 @@ const AdminLeadManagement = () => {
   const today = getTodayString();
 
   // ── Filters ──
-  const [dateFrom, setDateFrom] = useState(today);
-  const [dateTo, setDateTo] = useState(today);
+  const [datePreset, setDatePreset] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset);
+    const range = getDateRangeForFilter(preset);
+    if (range) {
+      setDateFrom(range.from);
+      setDateTo(range.to);
+      setPage(1);
+    }
+  };
   const [filterMode, setFilterMode] = useState('created'); // 'created' | 'assigned' | 'handoff'
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState(''); // narrows the user dropdown
@@ -240,8 +284,9 @@ const AdminLeadManagement = () => {
   };
 
   const handleClearFilters = () => {
-    setDateFrom(today);
-    setDateTo(today);
+    setDatePreset('all');
+    setDateFrom('');
+    setDateTo('');
     setSearch('');
     setSearchInput('');
     setSelectedUserId('');
@@ -512,28 +557,48 @@ const AdminLeadManagement = () => {
           <button type="button" className="alm-btn alm-btn--sm" onClick={handleSearch}>Go</button>
         </div>
 
-        {/* Date Range — inert while a search is running (search spans all dates) */}
+        {/* Date Preset Filter */}
         <div className={`alm-filter-group${isSearching ? ' alm-filter-group--muted' : ''}`}>
           <CalendarDaysIcon className="alm-filter-icon" />
-          <label className="alm-filter-label">From</label>
-          <input
-            type="date"
-            className="alm-date-input"
-            value={dateFrom}
+          <select
+            className="alm-select"
+            value={datePreset}
             disabled={isSearching}
-            title={isSearching ? 'Clear the search to filter by date' : undefined}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-          />
-          <label className="alm-filter-label">To</label>
-          <input
-            type="date"
-            className="alm-date-input"
-            value={dateTo}
-            disabled={isSearching}
-            title={isSearching ? 'Clear the search to filter by date' : undefined}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-          />
+            onChange={(e) => handlePresetChange(e.target.value)}
+          >
+            <option value="default">Default (Today)</option>
+            <option value="all">All Dates</option>
+            <option value="today">Today</option>
+            <option value="week">Week to Date</option>
+            <option value="month">Month to Date</option>
+            <option value="custom">Custom Range</option>
+          </select>
         </div>
+
+        {/* Date Range — visible when custom range is selected, inert during search */}
+        {datePreset === 'custom' && (
+          <div className={`alm-filter-group${isSearching ? ' alm-filter-group--muted' : ''}`}>
+            <CalendarDaysIcon className="alm-filter-icon" />
+            <label className="alm-filter-label">From</label>
+            <input
+              type="date"
+              className="alm-date-input"
+              value={dateFrom}
+              disabled={isSearching}
+              title={isSearching ? 'Clear the search to filter by date' : undefined}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            />
+            <label className="alm-filter-label">To</label>
+            <input
+              type="date"
+              className="alm-date-input"
+              value={dateTo}
+              disabled={isSearching}
+              title={isSearching ? 'Clear the search to filter by date' : undefined}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            />
+          </div>
+        )}
 
         {/* Location Filter */}
         <div className="alm-filter-group">

@@ -29,12 +29,39 @@ const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelect
     }
   }, [activeScreen, selectedBookingId, openedOnScreen, setSelectedBookingId]);
 
+  useEffect(() => {
+    if (selectedBookingId) {
+      if (!window.history.state?.bookingDetailOpen) {
+        window.history.pushState({ bookingDetailOpen: true }, '');
+      }
+
+      const handlePopState = (e) => {
+        setSelectedBookingId(null);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+    return undefined;
+  }, [selectedBookingId, setSelectedBookingId]);
+
   if (selectedBookingId) {
     return (
       <CollectionBookingDetail
         user={user}
         bookingId={selectedBookingId}
-        onBack={() => setSelectedBookingId(null)}
+        onBack={() => {
+          if (openedOnScreen === 'dashboard') {
+            setActiveScreen('bookings');
+          }
+          if (window.history.state?.bookingDetailOpen) {
+            window.history.back();
+          } else {
+            setSelectedBookingId(null);
+          }
+        }}
       />
     );
   }

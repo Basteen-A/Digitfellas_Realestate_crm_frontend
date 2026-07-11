@@ -280,13 +280,39 @@ const BookingApprovals = () => {
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredRows, 25);
 
+  useEffect(() => {
+    if (selectedBookingId) {
+      if (!window.history.state?.bookingDetailOpen) {
+        window.history.pushState({ bookingDetailOpen: true }, '');
+      }
+
+      const handlePopState = (e) => {
+        setSelectedBookingId(null);
+        load();
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+    return undefined;
+  }, [selectedBookingId, load]);
+
   // When a booking is selected, show the full detail page (with SA payment editing).
   if (selectedBookingId) {
     return (
       <CollectionBookingDetail
         user={user}
         bookingId={selectedBookingId}
-        onBack={() => { setSelectedBookingId(null); load(); }}
+        onBack={() => {
+          if (window.history.state?.bookingDetailOpen) {
+            window.history.back();
+          } else {
+            setSelectedBookingId(null);
+            load();
+          }
+        }}
       />
     );
   }

@@ -197,7 +197,7 @@
 .col-stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border-color: var(--accent-blue);
+  border-color: var(--text-primary, #000000);
 }
 
 .col-stat-icon {
@@ -1095,18 +1095,8 @@
   box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 .col-stat-card-new::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--accent-blue, #5b4fcf);
-  border-radius: 10px 10px 0 0;
+  display: none;
 }
-.col-stat-card-new.success::before { background: var(--accent-green, #10b981); }
-.col-stat-card-new.warning::before { background: #f59e0b; }
-.col-stat-card-new.danger::before  { background: var(--accent-red, #ef4444); }
-.col-stat-card-new.info::before    { background: #3b82f6; }
-.col-stat-card-new.purple::before  { background: #8b5cf6; }
 
 .col-stat-label-new {
   font-size: 11px;

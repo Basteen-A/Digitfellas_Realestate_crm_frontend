@@ -44,7 +44,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
 
   const filtered = filter === 'all' ? allPayments
     : filter === 'verified' ? allPayments.filter(p => p.is_verified)
-    : filter === 'pending' ? allPayments.filter(p => !p.is_verified && !p.is_bounced)
+    : filter === 'Unverified' ? allPayments.filter(p => !p.is_verified && !p.is_bounced)
     : allPayments.filter(p => p.is_bounced);
 
     
@@ -65,20 +65,20 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
 
       {/* Summary */}
       <div className="col-stats-grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'all' ? '2px solid var(--accent-blue)' : undefined }} onClick={() => setFilter('all')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}><ChartBarIcon style={{ width: 20, height: 20 }} /></div>
+        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'all' ? '2px solid var(--text-primary, #000000)' : '1px solid var(--border-primary, #e2e8f0)' }} onClick={() => setFilter('all')}>
+          <div className="col-stat-icon" style={{ background: 'var(--bg-secondary, #f1f5f9)', color: 'var(--text-primary, #000000)' }}><ChartBarIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.length}</div><div className="col-stat-label">Total Payments</div></div>
         </div>
-        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'verified' ? '2px solid var(--accent-green)' : undefined }} onClick={() => setFilter('verified')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}><CheckCircleIcon style={{ width: 20, height: 20 }} /></div>
+        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'verified' ? '2px solid var(--text-primary, #000000)' : '1px solid var(--border-primary, #e2e8f0)' }} onClick={() => setFilter('verified')}>
+          <div className="col-stat-icon" style={{ background: 'var(--bg-secondary, #f1f5f9)', color: 'var(--text-primary, #000000)' }}><CheckCircleIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => p.is_verified).length}</div><div className="col-stat-label">Verified</div></div>
         </div>
-        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'pending' ? '2px solid var(--accent-yellow)' : undefined }} onClick={() => setFilter('pending')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}><ClockIcon style={{ width: 20, height: 20 }} /></div>
+        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'Unverified' ? '2px solid var(--text-primary, #000000)' : '1px solid var(--border-primary, #e2e8f0)' }} onClick={() => setFilter('Unverified')}>
+          <div className="col-stat-icon" style={{ background: 'var(--bg-secondary, #f1f5f9)', color: 'var(--text-primary, #000000)' }}><ClockIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => !p.is_verified && !p.is_bounced).length}</div><div className="col-stat-label">Unverified</div></div>
         </div>
-        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'bounced' ? '2px solid var(--accent-red)' : undefined }} onClick={() => setFilter('bounced')}>
-          <div className="col-stat-icon" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}><XCircleIcon style={{ width: 20, height: 20 }} /></div>
+        <div className="col-stat-card" style={{ cursor: 'pointer', border: filter === 'bounced' ? '2px solid var(--text-primary, #000000)' : '1px solid var(--border-primary, #e2e8f0)' }} onClick={() => setFilter('bounced')}>
+          <div className="col-stat-icon" style={{ background: 'var(--bg-secondary, #f1f5f9)', color: 'var(--text-primary, #000000)' }}><XCircleIcon style={{ width: 20, height: 20 }} /></div>
           <div className="col-stat-info"><div className="col-stat-value">{allPayments.filter(p => p.is_bounced).length}</div><div className="col-stat-label">Rejected</div></div>
         </div>
       </div>
@@ -103,7 +103,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
               <thead>
                 <tr>
                   <th>Payment #</th><th>Booking</th><th>Customer</th><th>Type</th>
-                  <th>Mode</th><th>Amount</th><th>Date</th><th>Status</th>
+                  <th>Mode</th><th>Amount</th><th>Date</th><th>Towards</th><th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -116,10 +116,11 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                     <td><span className="col-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>{p.payment_mode}</span></td>
                     <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(p.amount)}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(p.payment_date)}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{p.payment_category || '—'}</td>
                     <td>
                       {p.is_verified ? <span className="col-badge col-badge-neutral">Verified</span>
                         : p.is_bounced ? <span className="col-badge" style={{ background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>Rejected</span>
-                        : <span className="col-badge" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>Pending</span>}
+                        : <span className="col-badge" style={{ background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }}>Unverified</span>}
                     </td>
                   </tr>
                 ))}

@@ -140,7 +140,7 @@ const Dashboard = () => {
       {/* ── Page Header ── */}
       <div className="col-page-header">
         <div className="col-page-header-left">
-          <h1>{getGreeting()}, {user?.first_name || 'Admin'} 👋</h1>
+          <h1>{getGreeting()}, {user?.first_name || 'Admin'}</h1>
           <p>Here's your organization overview for today. Stay on top of your metrics.</p>
         </div>
         <div className="col-page-header-actions">

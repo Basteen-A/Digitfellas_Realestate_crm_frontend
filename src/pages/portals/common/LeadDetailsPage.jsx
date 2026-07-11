@@ -307,8 +307,8 @@ const ROLE_PORTAL_CONFIG = {
   SH: { basePath: '/sales-head/leads', fallbackScreen: 'negotiations' },
   COL: { basePath: '/collection/leads', fallbackScreen: 'leads' },
   ACCT: { basePath: '/accounts/dashboard', fallbackScreen: 'dashboard' },
-  SA: { basePath: '/telecaller/leads', fallbackScreen: 'leads' },
-  ADM: { basePath: '/telecaller/leads', fallbackScreen: 'leads' },
+  SA: { basePath: '/super-admin/lead-management', fallbackScreen: '' },
+  ADM: { basePath: '/super-admin/lead-management', fallbackScreen: '' },
   SE: { basePath: '/task-portal/dashboard', fallbackScreen: 'dashboard' },
 };
 
@@ -454,6 +454,13 @@ const LeadDetailsPage = () => {
       return;
     }
 
+    // If the user navigated here from another page within the app, go back in history.
+    // This preserves their exact list view, search parameters, pagination, and scroll state.
+    if (location.key && location.key !== 'default') {
+      navigate(-1);
+      return;
+    }
+
     let targetScreen = rolePortalConfig.fallbackScreen;
     if (typeof window !== 'undefined') {
       try {
@@ -466,8 +473,12 @@ const LeadDetailsPage = () => {
       }
     }
 
-    navigate(`${rolePortalConfig.basePath}?screen=${encodeURIComponent(targetScreen)}`);
-  }, [location.state, navigate, roleCode]);
+    if (roleCode === 'SA' || roleCode === 'ADM') {
+      navigate(rolePortalConfig.basePath);
+    } else {
+      navigate(`${rolePortalConfig.basePath}?screen=${encodeURIComponent(targetScreen)}`);
+    }
+  }, [location, navigate, roleCode]);
 
   const handleSaveName = async () => {
     if (!editNameValue.trim() || !lead?.id) return;
