@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import AuthedAudio from '../../../components/AuthedAudio';
 import projectApi from '../../../api/projectApi';
 import customerTypeApi from '../../../api/customerTypeApi';
 import motivationApi from '../../../api/motivationApi';
@@ -6685,7 +6686,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                               </div>
                               {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
                               {act.metadata?.voice?.file_url && (
-                                <audio
+                                <AuthedAudio
                                   src={act.metadata.voice.file_url}
                                   controls
                                   preload="none"

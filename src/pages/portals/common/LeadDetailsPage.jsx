@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
+import AuthedAudio from '../../../components/AuthedAudio';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
@@ -3179,7 +3180,7 @@ const LeadDetailsPage = () => {
                           </div>
                           {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
                           {act.metadata?.voice?.file_url && (
-                            <audio
+                            <AuthedAudio
                               src={act.metadata.voice.file_url}
                               controls
                               preload="none"

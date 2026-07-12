@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getFileMeta, humanFileSize } from '../../../utils/fileMeta';
+import { openAuthedFile, downloadAuthedFile } from '../../../utils/authedFile';
+import AuthedImage from '../../../components/AuthedImage';
 import { badgeColors } from '../../../utils/badgeColors';
 import {
   ArrowLeftIcon, ArrowPathIcon, CloudArrowUpIcon, DocumentTextIcon,
@@ -394,7 +396,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                         <div className="bkd-document-item" key={doc.id} style={{ alignItems: 'flex-start', minWidth: 0 }}>
                           <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                             {meta.isImage && viewUrl
-                              ? <img src={viewUrl} alt={doc.document_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ? <AuthedImage src={viewUrl} alt={doc.document_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               : <span>{meta.icon}</span>}
                           </div>
                           <div className="bkd-document-main" style={{ flex: 1, minWidth: 0 }}>
@@ -410,12 +412,14 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                           </div>
                           <div className="bkd-document-actions" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                             {viewUrl && (
-                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={viewUrl} target="_blank" rel="noreferrer" title="View / Preview">
+                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={viewUrl} style={{ cursor: 'pointer' }} title="View / Preview"
+                                onClick={(e) => { e.preventDefault(); openAuthedFile(viewUrl).catch(() => toast.error('Could not open the document')); }}>
                                 <EyeIcon style={{ width: 13, height: 13 }} /> View
                               </a>
                             )}
                             {downloadUrl && (
-                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={downloadUrl} download={doc.document_name || doc.file_name || true} title="Download">
+                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={downloadUrl} style={{ cursor: 'pointer' }} title="Download"
+                                onClick={(e) => { e.preventDefault(); downloadAuthedFile(downloadUrl, doc.document_name || doc.file_name || '').catch(() => toast.error('Could not download the document')); }}>
                                 <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Download
                               </a>
                             )}

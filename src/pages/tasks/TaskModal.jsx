@@ -9,6 +9,9 @@ import {
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import subDepartmentApi from '../../api/subDepartmentApi';
+import AuthedAudio from '../../components/AuthedAudio';
+import AuthedImage from '../../components/AuthedImage';
+import { openAuthedFile } from '../../utils/authedFile';
 
 const STATUS_LABELS = {
   open: 'Open',
@@ -46,9 +49,12 @@ const autoCloseLabel = (completedAt) => {
   return `Auto-closes in ${days} day${days === 1 ? '' : 's'}`;
 };
 
-// Uploaded files are served by the backend at :5000/uploads (file_url is relative).
-const FILE_BASE = `http://${window.location.hostname}:5000`;
-const fileHref = (att) => (att?.file_url?.startsWith('http') ? att.file_url : `${FILE_BASE}${att?.file_url || ''}`);
+// Files stream through the authenticated API (/files/stream) — opened via
+// openAuthedFile / AuthedAudio / AuthedImage so the token rides along.
+const openAttachment = (att, e) => {
+  if (e) e.preventDefault();
+  openAuthedFile(att?.file_url).catch(() => toast.error('Could not open the file'));
+};
 const humanSize = (b) => (!b && b !== 0 ? '' : b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`);
 
 const initials = (u) =>
@@ -946,7 +952,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                                     {r.voice?.file_url && (
                                       <div className="tmq-voice-play">
                                         <MicrophoneIcon style={{ width: 13, height: 13 }} />
-                                        <audio className="tmq-voice-audio" src={r.voice.file_url} controls preload="none" />
+                                        <AuthedAudio className="tmq-voice-audio" src={r.voice.file_url} controls preload="none" />
                                         {r.voice.duration ? <span className="tmq-voice-len">{mmss(r.voice.duration)}</span> : null}
                                       </div>
                                     )}
@@ -955,10 +961,10 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                                         {r.attachments.map((att, i) => (
                                           <a
                                             key={att.id || i}
-                                            href={fileHref(att)}
-                                            target="_blank"
-                                            rel="noreferrer"
+                                            href={att.file_url || '#'}
+                                            onClick={(e) => openAttachment(att, e)}
                                             className="tmq-act-attach"
+                                            style={{ cursor: 'pointer' }}
                                             title={`${att.file_name || 'File'} (${humanSize(att.file_size)})`}
                                           >
                                             <DocumentIcon style={{ width: 13, height: 13, flexShrink: 0 }} />
@@ -991,11 +997,11 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                             const isImg = (att.mime_type || '').startsWith('image/');
                             const who = uploaderLabel(att);
                             return (
-                              <a key={att.id || i} href={fileHref(att)} target="_blank" rel="noreferrer"
+                              <a key={att.id || i} href={att.file_url || '#'} onClick={(e) => openAttachment(att, e)}
                                 className="tm-attach-row"
-                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', textDecoration: 'none', color: 'inherit' }}>
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
                                 <span style={{ width: 34, height: 34, borderRadius: 6, background: '#f1f5f9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                  {isImg ? <img src={fileHref(att)} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{(att.mime_type || '').includes('pdf') ? '📄' : '📎'}</span>}
+                                  {isImg ? <AuthedImage src={att.file_url} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{(att.mime_type || '').includes('pdf') ? '📄' : '📎'}</span>}
                                 </span>
                                 <span style={{ flex: 1, minWidth: 0 }}>
                                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

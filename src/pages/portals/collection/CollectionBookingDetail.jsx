@@ -11,6 +11,8 @@ import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
 import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
+import { openAuthedFile, downloadAuthedFile } from '../../../utils/authedFile';
+import AuthedImage from '../../../components/AuthedImage';
 import { getRoleCode } from '../../../utils/permissions';
 import { ROLE_CODES } from '../../../utils/constants';
 import GenerateBookingFormModal from './GenerateBookingFormModal';
@@ -1644,7 +1646,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                             overflow: 'hidden',
                           }}>
                             {meta.isImage && viewUrl
-                              ? <img src={viewUrl} alt={doc.document_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ? <AuthedImage src={viewUrl} alt={doc.document_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               : <span>{meta.icon}</span>}
                           </div>
                           <div className="bkd-document-main" style={{ flex: 1, minWidth: 0 }}>
@@ -1663,12 +1665,14 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           </div>
                           <div className="bkd-document-actions" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                             {viewUrl && (
-                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={viewUrl} target="_blank" rel="noreferrer" title="View / Preview">
+                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={viewUrl} style={{ cursor: 'pointer' }} title="View / Preview"
+                                onClick={(e) => { e.preventDefault(); openAuthedFile(viewUrl).catch(() => toast.error('Could not open the document')); }}>
                                 <EyeIcon style={{ width: 13, height: 13 }} /> View
                               </a>
                             )}
                             {downloadUrl && (
-                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={downloadUrl} download={doc.document_name || doc.original_filename || true} title="Download to your device">
+                              <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={downloadUrl} style={{ cursor: 'pointer' }} title="Download to your device"
+                                onClick={(e) => { e.preventDefault(); downloadAuthedFile(downloadUrl, doc.document_name || doc.original_filename || '').catch(() => toast.error('Could not download the document')); }}>
                                 <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Download
                               </a>
                             )}

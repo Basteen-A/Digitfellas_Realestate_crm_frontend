@@ -6,6 +6,7 @@ import {
 } from '@heroicons/react/24/outline';
 import bookingApi from '../../../api/bookingApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import { openAuthedFile } from '../../../utils/authedFile';
 import Pagination from '../../../components/common/Pagination';
 import './DocumentArchive.css';
 
@@ -183,7 +184,13 @@ const DocumentArchive = () => {
                       <td style={{ textAlign: 'center' }}>
                         <div className="doc-archive__actions">
                           {href && (
-                            <a className="doc-archive__icon-btn" href={href} target="_blank" rel="noreferrer" title="View / download">
+                            <a
+                              className="doc-archive__icon-btn"
+                              href={href}
+                              onClick={(e) => { e.preventDefault(); openAuthedFile(href).catch(() => toast.error('Could not open the document')); }}
+                              title="View / download"
+                              style={{ cursor: 'pointer' }}
+                            >
                               <ArrowDownTrayIcon className="doc-archive__icon" />
                             </a>
                           )}

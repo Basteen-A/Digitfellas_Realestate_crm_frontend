@@ -9,6 +9,8 @@ import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import TaskModal from './TaskModal';
 import Pagination from '../../components/common/Pagination';
+import AuthedAudio from '../../components/AuthedAudio';
+import { openAuthedFile } from '../../utils/authedFile';
 import { badgeStyle, TASK_STATUS_TEXT } from '../../utils/badgeColors';
 // Reuse the lead workspace design system so this page is visually consistent
 // (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
@@ -47,9 +49,8 @@ const OPTION_TOGGLES = [
   { value: 'updated_today', label: 'Updated Today' },
 ];
 
-// Uploaded files are served by the backend at :5000/uploads (file_url is relative).
-const FILE_BASE = `http://${window.location.hostname}:5000`;
-const fileHref = (att) => (att?.file_url?.startsWith('http') ? att.file_url : `${FILE_BASE}${att?.file_url || ''}`);
+// Files stream through the authenticated API (/files/stream) — opened via
+// openAuthedFile / AuthedAudio so the token rides along; bare hrefs would 401.
 
 // Deterministic avatar colour from a user id so each person keeps one colour.
 const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
@@ -412,11 +413,9 @@ const TaskListPage = () => {
                   {attachments.map((att, i) => (
                     <a
                       key={att.id || i}
-                      href={fileHref(att)}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border-primary, #e2e8f0)', background: 'var(--bg-card, #fff)', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontWeight: 500, color: 'var(--text-primary)', textDecoration: 'none' }}
+                      href={att.file_url || '#'}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAuthedFile(att.file_url).catch(() => toast.error('Could not open the file')); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border-primary, #e2e8f0)', background: 'var(--bg-card, #fff)', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontWeight: 500, color: 'var(--text-primary)', textDecoration: 'none', cursor: 'pointer' }}
                     >
                       <PaperClipIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)' }} />
                       {att.file_name || 'File'}
@@ -452,7 +451,7 @@ const TaskListPage = () => {
                         {r.user && <span> — {fullName(r.user)}</span>}
                         {r.created_at && <span style={{ opacity: 0.7 }}> · {fmtDateTime(r.created_at)}</span>}
                         {r.voice?.file_url && (
-                          <audio
+                          <AuthedAudio
                             src={r.voice.file_url}
                             controls
                             preload="none"

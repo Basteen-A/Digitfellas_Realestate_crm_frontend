@@ -4,6 +4,8 @@ import { CloudArrowUpIcon, ArrowDownTrayIcon, TrashIcon } from '@heroicons/react
 import projectDocumentApi from '../../../api/projectDocumentApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getFileMeta, humanFileSize } from '../../../utils/fileMeta';
+import { openAuthedFile } from '../../../utils/authedFile';
+import AuthedImage from '../../../components/AuthedImage';
 import './ProjectDocumentsModal.css';
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', {
@@ -121,7 +123,7 @@ const ProjectDocumentsPanel = ({ project }) => {
               <div key={doc.id} className="proj-docs__row">
                 <div className="proj-docs__thumb">
                   {meta.isImage && href
-                    ? <img src={href} alt={doc.document_name} />
+                    ? <AuthedImage src={href} alt={doc.document_name} />
                     : <span>{meta.icon}</span>}
                 </div>
                 <div className="proj-docs__row-main">
@@ -136,7 +138,13 @@ const ProjectDocumentsPanel = ({ project }) => {
                   </div>
                 </div>
                 {href && (
-                  <a className="proj-docs__icon-btn" href={href} target="_blank" rel="noreferrer" title="View / download">
+                  <a
+                    className="proj-docs__icon-btn"
+                    href={href}
+                    onClick={(e) => { e.preventDefault(); openAuthedFile(href).catch(() => toast.error('Could not open the document')); }}
+                    title="View / download"
+                    style={{ cursor: 'pointer' }}
+                  >
                     <ArrowDownTrayIcon className="master-action-icon" />
                   </a>
                 )}

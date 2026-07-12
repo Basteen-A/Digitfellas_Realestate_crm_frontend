@@ -5,6 +5,7 @@ import bookingStatusApi from '../../../api/bookingStatusApi';
 import paymentStatusApi from '../../../api/paymentStatusApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency } from '../../../utils/formatters';
+import { openAuthedFile } from '../../../utils/authedFile';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon, PlusIcon,
   CloudArrowUpIcon, DocumentTextIcon, ArrowDownTrayIcon, UserIcon, ClockIcon,
@@ -382,7 +383,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
                       <span>{fmtDateTime(doc.created_at)}</span>
                     </div>
                   </div>
-                  {href && <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={href} target="_blank" rel="noreferrer"><ArrowDownTrayIcon style={{ width: 13, height: 13 }} /></a>}
+                  {href && <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={href} style={{ cursor: 'pointer' }} onClick={(e) => { e.preventDefault(); openAuthedFile(href).catch(() => toast.error('Could not open the document')); }}><ArrowDownTrayIcon style={{ width: 13, height: 13 }} /></a>}
                 </div>
               );
             })}
