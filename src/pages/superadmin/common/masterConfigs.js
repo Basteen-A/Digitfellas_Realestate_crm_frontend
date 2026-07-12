@@ -308,6 +308,7 @@ export const masterConfigs = {
     api: userApi,
     columns: [
       { header: 'Name', path: 'full_name' },
+      { header: 'Login ID', path: 'username' },
       { header: 'Email', path: 'email' },
       { header: 'Phone', path: 'phone' },
       { header: 'Password', path: 'password_plain' },

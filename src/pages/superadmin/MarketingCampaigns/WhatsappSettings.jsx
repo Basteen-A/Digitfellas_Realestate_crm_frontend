@@ -13,7 +13,7 @@ const WhatsappSettings = () => {
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ phone_id: '', api_key: '', base_url: '', waba_id: '', default_header_image_url: '' });
+  const [form, setForm] = useState({ phone_id: '', api_key: '', base_url: '', waba_id: '', default_header_image_url: '', otp_template_id: '' });
 
   // Test message state
   const [templates, setTemplates] = useState([]);
@@ -48,6 +48,7 @@ const WhatsappSettings = () => {
         base_url: c.base_url || 'https://partnersv1.pinbot.ai/v3',
         waba_id: c.waba_id || '',
         default_header_image_url: c.default_header_image_url || '',
+        otp_template_id: c.otp_template_id || '',
       });
       setTemplates(tplResp.data || []);
     } catch (err) {
@@ -144,6 +145,20 @@ const WhatsappSettings = () => {
 
           <label style={labelStyle}>Default Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
           <HeaderMediaInput value={form.default_header_image_url} onChange={(url) => setForm((f) => ({ ...f, default_header_image_url: url }))} />
+
+          <label style={labelStyle}>Login OTP Template <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(mobile app OTP login)</span></label>
+          <select style={selectStyle} value={form.otp_template_id} onChange={onChange('otp_template_id')}>
+            <option value="">Not configured — OTP login disabled</option>
+            {templates.filter((t) => t.status === 'APPROVED').map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.language_code}){t.category ? ` — ${t.category}` : ''}
+              </option>
+            ))}
+          </select>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            The approved AUTHENTICATION-category template that delivers the 6-digit login code
+            (create &amp; get it approved in the pinbot panel, then sync it on the Templates page).
+          </div>
 
           <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
             <button className="crm-btn crm-btn-primary" onClick={save} disabled={saving || loading}>

@@ -39,7 +39,7 @@ const LOGO_FIELDS = [
 const SiteSettings = () => {
   const { refresh } = useSiteSettings();
 
-  const [form, setForm] = useState({ site_name: '', logo_full: '', logo_mark: '', favicon: '' });
+  const [form, setForm] = useState({ site_name: '', logo_full: '', logo_mark: '', favicon: '', mobile_password_login: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const fileInputs = useRef({});
@@ -54,6 +54,7 @@ const SiteSettings = () => {
         logo_full: s.logo_full || '',
         logo_mark: s.logo_mark || '',
         favicon: s.favicon || '',
+        mobile_password_login: s.mobile_password_login === true,
       });
     } catch (err) {
       toast.error('Failed to load site settings');
@@ -99,6 +100,7 @@ const SiteSettings = () => {
         logo_full: form.logo_full || '',
         logo_mark: form.logo_mark || '',
         favicon: form.favicon || '',
+        mobile_password_login: form.mobile_password_login === true,
       });
       toast.success('Site settings saved');
       await refresh(); // re-brands sidebars / topbar / login instantly
@@ -140,6 +142,24 @@ const SiteSettings = () => {
             onChange={(e) => setForm((p) => ({ ...p, site_name: e.target.value }))}
           />
           <div className="site-settings__hint">Appears in the top bar, under the sidebar logo, and on the browser tab. Leave blank to show the logo only.</div>
+        </div>
+
+        {/* Mobile app login fallback */}
+        <div className="site-settings__card">
+          <div className="site-settings__label">Mobile app login</div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14, marginTop: 4 }}>
+            <input
+              type="checkbox"
+              checked={form.mobile_password_login}
+              onChange={(e) => setForm((p) => ({ ...p, mobile_password_login: e.target.checked }))}
+            />
+            Allow password login in the mobile app
+          </label>
+          <div className="site-settings__hint">
+            The app signs users in with a WhatsApp OTP sent to their registered phone (Login ID like
+            ramesh.TC). Turn this on only if OTPs cannot be delivered — it adds a "Login with password"
+            option on the app's login screen.
+          </div>
         </div>
 
         {/* Logos */}
