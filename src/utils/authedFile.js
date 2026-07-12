@@ -41,7 +41,10 @@ export async function openAuthedFile(url) {
     const blobUrl = await getAuthedBlobUrl(url);
     if (win) win.location = blobUrl;
     else window.open(blobUrl, '_blank');
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    // Blob URLs are local to this browser session (unshareable), but revoke
+    // fast anyway — the viewer tab loads it from memory within moments, and
+    // after this a copied blob: URL is dead even in the same browser.
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
   } catch (err) {
     if (win) win.close();
     throw err;
