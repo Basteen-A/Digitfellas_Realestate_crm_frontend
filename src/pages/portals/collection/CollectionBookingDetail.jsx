@@ -23,7 +23,7 @@ import {
   ExclamationTriangleIcon, PlusIcon,
   CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
   DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon, EyeIcon,
-  ChevronDownIcon
+  ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon
 } from '@heroicons/react/24/outline';
 import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
@@ -38,13 +38,6 @@ const fmtFull = (v) => {
   if (!Number.isFinite(n)) return '₹0';
   return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 };
-const InfoRow = ({label,value,mono,color}) => (
-  <div className="bkd-info-item">
-    <div className="bkd-info-label">{label}</div>
-    <div className={`bkd-info-value${mono?' mono':''}`} style={color?{color}:undefined}>{value || '—'}</div>
-  </div>
-);
-
 const BkdStatCell = ({ label, value, border = true }) => {
   return (
     <div style={{
@@ -123,6 +116,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [statusOptions, setStatusOptions] = useState([]);
   const [actionMode, setActionMode] = useState(null); // 'pay' | 'status' | 'payStatus' | 'devCost'
   const [activeTab, setActiveTab] = useState('payment-history');
+  // Customer Information card collapsibles
+  const [ciIdentityOpen, setCiIdentityOpen] = useState(false);
+  const [ciTeamOpen, setCiTeamOpen] = useState(false);
   const [showDeleteBooking, setShowDeleteBooking] = useState(false);
   const [payForm, setPayForm] = useState({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
   const [paySaving, setPaySaving] = useState(false);
@@ -698,7 +694,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     const savedStampCommission = Math.round(Math.ceil((guideline * area) / 100) * 100 * 0.07 * 0.01);
     setDevCostSaving(true);
     try {
-      await bookingApi.updateDevelopmentCost(bookingId, {
+      const res = await bookingApi.updateDevelopmentCost(bookingId, {
         guideline_value: guideline,
         plot_area: area,
         development_cost_per_sqft: perSqft,
@@ -706,7 +702,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         modt_enabled: !!devCostForm.modt_enabled,
         modt_split: cleanSplit(devCostForm.modt_split),
       });
-      toast.success('Cost breakdown updated');
+      toast.success(res?.data?.message || 'Cost breakdown updated');
       closeActionModal();
       loadBooking();
       loadActivities();
@@ -854,8 +850,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
 
-  const isCollectionManager = getRoleCode(user) === ROLE_CODES.COLLECTION;
   const canEditPayments = getRoleCode(user) === ROLE_CODES.SUPER_ADMIN;
+  // Diff snapshot (old → new) shown inline while a cost edit awaits SA approval.
+  const pendingCostChanges = booking?.custom_fields?.pending_cost_changes;
   // Permanent booking delete is restricted to Super Admin / Admin.
   const canDeleteBooking = [ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user));
   const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
@@ -894,6 +891,20 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const effectiveStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
   const effectiveStatusColor = isCancelApproved ? '#C2410C' : booking.status_color;
   const effectiveStatusBadge = badgeColors(effectiveStatusColor);
+
+  // ── Customer Information card fields ──
+  const ciAreaLabel = (booking.carpet_area || booking.plot_area)
+    ? `${Number(booking.carpet_area || booking.plot_area).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sq.ft`
+    : '—';
+  const ciReservedDate = fmtD(booking.unit_reserved_at || booking.reserved_at || booking.created_at || booking.booking_date);
+  const ciTeamMembers = [
+    { role: 'Collection Owner', person: leadAssignee },
+    { role: 'Previous Handler', person: previousLeadAssignee },
+    { role: 'Sales Manager', person: salesManager },
+    { role: 'Sales Head', person: salesHead },
+  ].filter((m) => m.person);
+  const ciPaid = toAmount(booking.total_paid);
+  const ciPaymentStatusLabel = booking.payment_status || (ciPaid > 0 ? 'Partially paid' : 'No payment yet');
 
   const renderActivityHistory = () => {
     return (
@@ -935,6 +946,23 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
                   {act.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{act.description}</div>}
+                  {Array.isArray(act.metadata?.changes) && act.metadata.changes.length > 0 && (
+                    <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {act.metadata.changes.map((c, ci) => {
+                        const fmtVal = (v) => (c.kind === 'bool' ? (v ? 'Yes' : 'No')
+                          : c.kind === 'number' ? Number(v).toLocaleString('en-IN')
+                          : fmtFull(v));
+                        return (
+                          <div key={ci} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.label}</span>
+                            <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>{fmtVal(c.from)}</span>
+                            <span style={{ color: 'var(--text-muted)' }}>→</span>
+                            <span style={{ fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '0 5px', borderRadius: 3 }}>{fmtVal(c.to)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
                     {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : ''} · {new Date(act.performed_at).toLocaleString()}
                   </div>
@@ -1087,43 +1115,147 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       <div className="bkd-two-col">
         {/* Left column: Customer Information + Award Points stacked */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            <div className="bkd-card">
-              <div className="bkd-card-header">
-                <div className="bkd-card-title"><UserIcon style={{width:15,height:15}}/> Customer Information</div>
-              </div>
-              <div className="bkd-card-body">
-                <div className="bkd-info-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  <InfoRow label="Buyer Name" value={buyerName}/>
-                  <InfoRow label="Lead Name" value={leadFullName}/>
-                  <InfoRow label="Customer Phone" value={customerPhone} mono/>
-                  <InfoRow label="PAN" value={customer.pan_number} mono/>
-                  <InfoRow label="Aadhaar" value={customer.aadhar_number} mono/>
-                  <InfoRow label="Booking Date" value={fmtD(booking.booking_date)}/>
+            <div className="bkd-card ci-card">
+              {/* Header */}
+              <div className="ci-header">
+                <div className="ci-header-icon"><UserIcon style={{ width: 20, height: 20 }} /></div>
+                <div className="ci-header-text">
+                  <div className="ci-title">Customer Information</div>
+                  <div className="ci-subtitle">Buyer, property &amp; booking details</div>
                 </div>
-                <hr className="bkd-divider"/>
-                <div className="bkd-info-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  <InfoRow label="Project" value={booking.project_name}/>
-                  <InfoRow label="Unit" value={booking.unit_display || booking.unit_number}/>
-                  <InfoRow label="Area" value={booking.carpet_area ? `${booking.carpet_area} sq.ft` : '—'}/>
-                  
-                
-                  <InfoRow label="Previous Handler" value={previousLeadAssignee ? getUserLabel(previousLeadAssignee) : '—'} />
-                  <InfoRow label="Payment Plan" value={paymentPlanLabel} />
-                  <InfoRow label="Plan Type" value={paymentPlanType || '—'} />
-                  <InfoRow label="Sales Manager" value={salesManager ? getUserLabel(salesManager) : '—'} />
-                  <InfoRow label="Sales Head" value={salesHead ? getUserLabel(salesHead) : '—'} />
-                  <InfoRow label="Collection Owner" value={leadAssignee ? getUserLabel(leadAssignee) : '—'} />
-                  <InfoRow label="Booking Status" value={effectiveStatusLabel} color={effectiveStatusColor} />
-                  <InfoRow label="Payment Status" value={booking.payment_status || '—'} />
-                  <InfoRow label="Unit Reserved" value={fmtD(booking.created_at || booking.booking_date)} />
+              </div>
+
+              {/* Buyer & contact */}
+              <div className="ci-section">
+                <div className="ci-section-label">Buyer &amp; Contact</div>
+                <div className="ci-field ci-field-big">
+                  <div className="ci-field-label">Buyer Name</div>
+                  <div className="ci-field-value ci-value-big">{buyerName || '—'}</div>
+                </div>
+                <div className="ci-grid ci-grid-2">
+                  <div className="ci-field">
+                    <div className="ci-field-label">Lead Name</div>
+                    <div className="ci-field-value">{leadFullName || '—'}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Customer Phone</div>
+                    <div className="ci-field-value mono">{customerPhone || '—'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Property */}
+              <div className="ci-section">
+                <div className="ci-section-label">Property</div>
+                <div className="ci-grid ci-grid-3">
+                  <div className="ci-field">
+                    <div className="ci-field-label">Project</div>
+                    <div className="ci-field-value">{booking.project_name || '—'}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Unit</div>
+                    <div className="ci-field-value">{booking.unit_display || booking.unit_number || '—'}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Area</div>
+                    <div className="ci-field-value">{ciAreaLabel}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Booking */}
+              <div className="ci-section">
+                <div className="ci-section-label">Booking</div>
+                <div className="ci-grid ci-grid-4">
+                  <div className="ci-field">
+                    <div className="ci-field-label">Booking Date</div>
+                    <div className="ci-field-value">{fmtD(booking.booking_date)}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Payment Plan</div>
+                    <div className="ci-field-value">{paymentPlanLabel}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Plan Type</div>
+                    <div className="ci-field-value">{paymentPlanType || '—'}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Unit Reserved</div>
+                    <div className="ci-field-value">{ciReservedDate}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Identity (collapsible) */}
+              <button type="button" className="ci-collapsible-head" onClick={() => setCiIdentityOpen((v) => !v)}>
+                {ciIdentityOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
+                <span className="ci-section-label" style={{ margin: 0 }}>Identity</span>
+                <span className="ci-collapsible-summary">
+                  {[customer.pan_number ? 'PAN' : null, customer.aadhar_number ? 'Aadhaar' : null].filter(Boolean).join(' · ') || '—'}
+                </span>
+              </button>
+              {ciIdentityOpen && (
+                <div className="ci-collapsible-body">
+                  <div className="ci-grid ci-grid-3">
+                    <div className="ci-field">
+                      <div className="ci-field-label">PAN</div>
+                      <div className="ci-field-value mono">{customer.pan_number || '—'}</div>
+                    </div>
+                    <div className="ci-field">
+                      <div className="ci-field-label">Aadhaar</div>
+                      <div className="ci-field-value mono">{customer.aadhar_number || '—'}</div>
+                    </div>
+                    <div className="ci-field">
+                      <div className="ci-field-label">Email</div>
+                      <div className="ci-field-value mono">{customer.email || '—'}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Team & ownership (collapsible) */}
+              <button type="button" className="ci-collapsible-head" onClick={() => setCiTeamOpen((v) => !v)}>
+                {ciTeamOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
+                <span className="ci-section-label" style={{ margin: 0 }}>Team &amp; Ownership</span>
+                <span className="ci-collapsible-summary">
+                  {ciTeamMembers.length ? `${ciTeamMembers.length} ${ciTeamMembers.length === 1 ? 'person' : 'people'}` : '—'}
+                </span>
+              </button>
+              {ciTeamOpen && (
+                <div className="ci-collapsible-body">
+                  {ciTeamMembers.length ? ciTeamMembers.map((m) => (
+                    <div key={m.role} className="ci-team-row">
+                      <span className="ci-team-role">{m.role}</span>
+                      <span className="ci-team-name">{getUserLabel(m.person)}</span>
+                    </div>
+                  )) : <div className="ci-field-value">No team members recorded</div>}
+                </div>
+              )}
+
+              {/* Status */}
+              <div className="ci-section ci-section-last">
+                <div className="ci-section-label">Status</div>
+                <div className="ci-pill-row">
+                  <span className="ci-pill" style={{ background: effectiveStatusBadge.bg, color: effectiveStatusBadge.text, borderColor: effectiveStatusBadge.border }}>
+                    <span className="ci-pill-dot" style={{ background: effectiveStatusColor || 'currentColor' }} />
+                    {effectiveStatusLabel || 'Booking Pending'}
+                  </span>
+                  <span className={`ci-pill ${ciPaid > 0 ? 'ci-pill-success' : 'ci-pill-muted'}`}>
+                    <span className="ci-pill-dot" />
+                    {ciPaymentStatusLabel}
+                  </span>
                 </div>
               </div>
             </div>
 
             {leadAssignee && (
               <div className="bkd-card">
-                <div className="bkd-card-header">
-                  <div className="bkd-card-title">Award Points (Optional)</div>
+                <div className="ci-header">
+                  <div className="ci-header-icon"><CheckCircleIcon style={{ width: 20, height: 20 }} /></div>
+                  <div className="ci-header-text">
+                    <div className="ci-title">Award Points</div>
+                    <div className="ci-subtitle">Recognize the sales team for this booking (optional)</div>
+                  </div>
                 </div>
                 <div className="bkd-card-body">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1300,25 +1432,52 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               overflow: "hidden"
             }}>
               {/* Payment Summary Header */}
-              <div style={{
-                padding: "20px 24px",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                borderBottom: "1px solid var(--col-border, #e2e8f0)"
-              }}>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 8, background: "var(--bg-secondary, #f1f5f9)",
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-                  }}>
-                    <CreditCardIcon style={{ width: 16, height: 16, color: "var(--col-text, #000000)" }} />
+              <div className="ci-header">
+                <div className="ci-header-icon"><BanknotesIcon style={{ width: 20, height: 20 }} /></div>
+                <div className="ci-header-text">
+                  <div className="ci-title">Financial Summary</div>
+                  <div className="ci-subtitle">Booking value, collections &amp; balance</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openActionModal('devCost')}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 12px", borderRadius: 8, border: "1px solid var(--col-text, #000000)",
+                    background: "var(--col-surface, #ffffff)", color: "var(--col-text, #000000)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}
+                >
+                  <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
+                </button>
+              </div>
+
+              {/* Pending cost changes — highlighted inline for the approver */}
+              {pendingCostChanges?.changes?.length > 0 && (
+                <div style={{ padding: '14px 24px', background: '#FFFBEB', borderBottom: '1px solid #FDE68A' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#92400E', marginBottom: 10 }}>
+                    <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
+                    Cost edited — awaiting approval
+                    <span style={{ fontWeight: 500, color: '#B45309' }}>
+                      · by {pendingCostChanges.submitted_by_name || 'user'}{pendingCostChanges.submitted_at ? ` · ${new Date(pendingCostChanges.submitted_at).toLocaleString()}` : ''}
+                    </span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 600, color: "var(--col-text, #000000)" }}>Financial Summary</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {pendingCostChanges.changes.map((c, i) => {
+                      const fmtVal = (v) => (c.kind === 'bool' ? (v ? 'Yes' : 'No')
+                        : c.kind === 'number' ? Number(v).toLocaleString('en-IN')
+                        : fmtFull(v));
+                      return (
+                        <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                          <span style={{ minWidth: 160, fontWeight: 700, color: 'var(--col-text, #000000)' }}>{c.label}</span>
+                          <span style={{ color: '#6B7280', textDecoration: 'line-through' }}>{fmtVal(c.from)}</span>
+                          <span style={{ color: '#9CA3AF' }}>→</span>
+                          <span style={{ fontWeight: 800, color: '#065F46', background: '#D1FAE5', padding: '1px 8px', borderRadius: 4 }}>{fmtVal(c.to)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Stat Strip */}
               <div style={{ display: "flex", borderBottom: "1px solid var(--col-border, #e2e8f0)", flexWrap: "wrap" }}>
@@ -1330,22 +1489,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
               {/* Cost Breakdown */}
               <div style={{ padding: "18px 24px 8px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Cost Breakdown</div>
-                    <div style={{ fontSize: 12, color: "var(--col-text, #000000)" }}>Detailed property pricing structure</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openActionModal('devCost')}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "7px 12px", borderRadius: 8, border: "1px solid var(--col-text, #000000)",
-                      background: "var(--col-surface, #ffffff)", color: "var(--col-text, #000000)", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                    }}
-                  >
-                    <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
-                  </button>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Cost Breakdown</div>
+                  <div style={{ fontSize: 12, color: "var(--col-text, #000000)" }}>Detailed property pricing structure</div>
                 </div>
 
                 <BkdLedgerRow label="Plot Value" note="90% of total" valueText={fmtFull(plotValue)} />
@@ -1432,9 +1578,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
       {activeTab === 'payment-history' && (
         <div className="bkd-card">
-          <div className="bkd-card-header">
-            <div><div className="bkd-card-title"><CreditCardIcon style={{width:15,height:15}}/> Payment History</div>
-              <div className="bkd-card-subtitle">All payments recorded for this booking</div></div>
+          <div className="ci-header">
+            <div className="ci-header-icon"><CreditCardIcon style={{width:20,height:20}}/></div>
+            <div className="ci-header-text">
+              <div className="ci-title">Payment History</div>
+              <div className="ci-subtitle">All payments recorded for this booking</div>
+            </div>
             {/* Payments blocked until sent for approval (Pending+); hidden for Super Admin review. */}
             {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments && (
               <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
@@ -1508,8 +1657,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
       {activeTab === 'activity-log' && (
         <div className="bkd-card">
-          <div className="bkd-card-header">
-            <div className="bkd-card-title"><ClockIcon style={{width:15,height:15}}/> Activity Log</div>
+          <div className="ci-header">
+            <div className="ci-header-icon"><ClockIcon style={{width:20,height:20}}/></div>
+            <div className="ci-header-text">
+              <div className="ci-title">Activity Log</div>
+              <div className="ci-subtitle">Status changes and actions on this booking</div>
+            </div>
             <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => {
               setActivitiesLoading(true);
               bookingApi.getActivities(bookingId).then(r=>setActivities(r.data?.data||r.data||[])).catch(()=>{}).finally(()=>setActivitiesLoading(false));
@@ -1540,9 +1693,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
       {activeTab === 'uploads' && (
         <div className="bkd-card">
-          <div className="bkd-card-header">
-            <div><div className="bkd-card-title"><FolderOpenIcon style={{width:15,height:15}}/> Uploads</div>
-              <div className="bkd-card-subtitle">Store documents against the lead linked to this booking</div></div>
+          <div className="ci-header">
+            <div className="ci-header-icon"><FolderOpenIcon style={{width:20,height:20}}/></div>
+            <div className="ci-header-text">
+              <div className="ci-title">Uploads</div>
+              <div className="ci-subtitle">Store documents against the lead linked to this booking</div>
+            </div>
           </div>
           <div className="bkd-card-body">
             <div className="bkd-upload-grid">
@@ -1766,24 +1922,44 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       {actionMode && (
         <div className="col-modal-overlay" onClick={closeActionModal}>
           <div className="qa-modal-panel" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
-            <div className="qa-drawer-handle" />
-            <div className="qa-drawer-header">
-              <div className="qa-drawer-header-left">
-                <div className="qa-drawer-avatar" style={{ background: badgeColors(booking.status_color).bg, color: badgeColors(booking.status_color).text, border: `2px solid ${badgeColors(booking.status_color).border}` }}>
-                  {(booking.customer_name || 'B')[0]?.toUpperCase()}
-                </div>
+            {actionMode === 'devCost' ? (
+              <div style={{
+                padding: '18px 24px', borderBottom: '1px solid var(--border-primary, #E3E8EE)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
                 <div>
-                  <div className="qa-drawer-name">{booking.customer_name || booking.buyer_name || 'Customer'}</div>
-                  <div className="qa-drawer-meta">{booking.booking_number} · {booking.project_name}</div>
-                  <div className="qa-drawer-budget" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
-                    Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalValue)}</strong> · Paid: <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(totalPaid)}</span> · Balance: <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>{formatCurrency(totalValue - totalPaid)}</span>
-                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary, #0A2540)' }}>Edit cost breakdown</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted, #8792A2)', marginTop: 2 }}>Update line items — totals recalculate automatically</div>
                 </div>
+                <button type="button" onClick={closeActionModal} disabled={devCostSaving} style={{
+                  border: 'none', background: 'var(--bg-secondary, #F6F8FB)', borderRadius: 8, width: 30, height: 30,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary, #5B6B82)',
+                }}>
+                  <XMarkIcon style={{ width: 16, height: 16 }} />
+                </button>
               </div>
-              <button className="qa-drawer-close" onClick={closeActionModal}>×</button>
-            </div>
+            ) : (
+              <>
+                <div className="qa-drawer-handle" />
+                <div className="qa-drawer-header">
+                  <div className="qa-drawer-header-left">
+                    <div className="qa-drawer-avatar" style={{ background: badgeColors(booking.status_color).bg, color: badgeColors(booking.status_color).text, border: `2px solid ${badgeColors(booking.status_color).border}` }}>
+                      {(booking.customer_name || 'B')[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="qa-drawer-name">{booking.customer_name || booking.buyer_name || 'Customer'}</div>
+                      <div className="qa-drawer-meta">{booking.booking_number} · {booking.project_name}</div>
+                      <div className="qa-drawer-budget" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                        Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalValue)}</strong> · Paid: <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(totalPaid)}</span> · Balance: <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>{formatCurrency(totalValue - totalPaid)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button className="qa-drawer-close" onClick={closeActionModal}>×</button>
+                </div>
 
-            <div className="qa-drawer-divider" />
+                <div className="qa-drawer-divider" />
+              </>
+            )}
 
             {actionMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
@@ -2173,10 +2349,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 modt_split: { ...p.modt_split, [key]: val },
               }));
               return (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '620px' }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Cost Breakdown</div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, maxHeight: 'calc(88vh - 90px)' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px' }}>
                   <div className="bkd-dev-summary-grid">
                     <div className="bkd-dev-summary-item">
                       <div className="bkd-dev-summary-label">Plot Value</div>
@@ -2201,18 +2375,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <label className="bkd-form-label">Guideline Value (per sq.ft) *</label>
                       <input type="number" className="bkd-form-control" placeholder="e.g. 5000"
                         value={devCostForm.guideline_value}
-                        disabled={isCollectionManager}
-                        title={isCollectionManager ? 'Collection managers cannot change the guideline value' : undefined}
                         onChange={e => setDevCostForm(p => ({ ...p, guideline_value: e.target.value }))} />
-                      {isCollectionManager && (
-                        <div className="bkd-dev-hint" style={{ marginTop: 4 }}>Guideline value is locked for your role.</div>
-                      )}
                     </div>
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Plot Area (sqft) *</label>
                       <input type="number" className="bkd-form-control" placeholder="e.g. 1200"
                         value={devCostForm.plot_area}
-                        disabled={isCollectionManager}
                         onChange={e => setDevCostForm(p => ({ ...p, plot_area: e.target.value }))} />
                     </div>
                   </div>
@@ -2288,13 +2456,17 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
                   {renderActivityHistory()}
                 </div>
-                <div className="qa-drawer-save-row" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, borderTop: '1px solid var(--border-primary)' }}>
-                  <button type="button" className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={closeActionModal} disabled={devCostSaving}>
-                    Close
-                  </button>
-                  <button type="button" className="bkd-btn bkd-btn-sm" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving}
-                    style={{ background: '#635BFF', borderColor: '#635BFF', color: '#fff' }}>
-                    {devCostSaving ? 'Saving…' : 'Save'}
+                <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-primary, #E3E8EE)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                  <button type="button" onClick={closeActionModal} disabled={devCostSaving} style={{
+                    padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border-strong, #C1C9D2)',
+                    background: '#fff', color: 'var(--text-primary, #0A2540)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                  }}>Cancel</button>
+                  <button type="button" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving} style={{
+                    padding: '9px 18px', borderRadius: 8, border: 'none',
+                    background: '#635BFF', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <CheckIcon style={{ width: 15, height: 15 }} /> {devCostSaving ? 'Saving…' : 'Save changes'}
                   </button>
                 </div>
               </div>
