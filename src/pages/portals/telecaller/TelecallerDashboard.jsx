@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatDate } from '../../../utils/formatters';
 import {
   UserPlusIcon,
   UsersIcon,
@@ -16,12 +15,35 @@ import {
   PhoneXMarkIcon,
   SignalSlashIcon,
   MapPinIcon,
+  ArrowDownLeftIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
 import { TaskDashboardWidget } from '../../tasks';
 import { TelecallerLeaderboardCard } from '../common/LeaderboardCard';
 import '../collection/CollectionWorkspace.css';
+
+const isFollowUpMissed = (dateStr) => {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d.getTime() < today.getTime();
+};
+
+const renderFollowUpDate = (dateStr, isLeadClosed = false) => {
+  if (!dateStr) return '—';
+  const missed = isFollowUpMissed(dateStr) && !isLeadClosed;
+  const arrowColor = missed ? '#e80d0dff' : '#000000';
+  const formatted = new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#000000', fontWeight: 500 }}>
+      <span>{formatted}</span>
+      <ArrowDownLeftIcon style={{ width: 12, height: 12, color: arrowColor }} />
+    </div>
+  );
+};
 
 const TelecallerDashboard = ({ user, onNavigate }) => {
   const navigate = useNavigate();
@@ -215,7 +237,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                         <StatusChip name={lead.statusName} color={lead.statusColor} />
                       </td>
                       <td className="col-cell-mono">{lead.phone || '—'}</td>
-                      <td>{due ? formatDate(due) : '—'}</td>
+                      <td>{due ? renderFollowUpDate(due, lead.isClosed) : '—'}</td>
                       <td>
                         <button className="col-btn col-btn-primary col-btn-sm" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>
                           Claim
@@ -269,7 +291,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                           {fu.statusName && <div className="col-cell-secondary"><StatusChip name={fu.statusName} color={fu.statusColor} /></div>}
                         </td>
                         <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '—'}</td>
-                        <td>{due ? formatDate(due) : '—'}</td>
+                        <td>{due ? renderFollowUpDate(due, fu.isClosed || fu.lead?.isClosed) : '—'}</td>
                         <td>
                           <button className="col-btn col-btn-success-soft col-btn-sm" disabled={!leadPhone(fu)} onClick={(e) => { e.stopPropagation(); callLead(leadPhone(fu)); }}>
                             <PhoneIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }}/> Call
@@ -324,7 +346,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                           {fu.statusName && <div className="col-cell-secondary"><StatusChip name={fu.statusName} color={fu.statusColor} /></div>}
                         </td>
                         <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '—'}</td>
-                        <td>{due ? formatDate(due) : '—'}</td>
+                        <td>{due ? renderFollowUpDate(due, fu.isClosed || fu.lead?.isClosed) : '—'}</td>
                         <td>
                           <button className="col-btn col-btn-success-soft col-btn-sm" disabled={!leadPhone(fu)} onClick={(e) => { e.stopPropagation(); callLead(leadPhone(fu)); }}>
                           <PhoneIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }}/>  Call
@@ -378,7 +400,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                         <div className="col-cell-secondary">{lead.phone || '—'}</div>
                       </td>
                       <td>{lead.project || '—'}</td>
-                      <td>{formatDate(lead.scheduled_at || lead.next_follow_up_date)}</td>
+                      <td>{renderFollowUpDate(lead.scheduled_at || lead.next_follow_up_date, lead.isClosed)}</td>
                     </tr>
                   ))}
                 </tbody>

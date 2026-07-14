@@ -7,11 +7,12 @@ import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
-  EyeIcon, BanknotesIcon, PencilSquareIcon, CheckCircleIcon,
+  BanknotesIcon, PencilSquareIcon, CheckCircleIcon,
   CreditCardIcon, ShieldCheckIcon, CalendarDaysIcon,
   ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon, ChevronRightIcon, ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
+import KebabMenu from '../../../components/common/KebabMenu';
 import usePagination from '../../../hooks/usePagination';
 import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
@@ -262,57 +263,52 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     ? [...quickStatusOptions, cancelStatusOption]
     : quickStatusOptions;
 
-  const renderQuickActions = (booking, mobile = false) => (
-    <div className={`col-qa-actions ${mobile ? 'col-qa-actions--mobile' : ''}`} onClick={mobile ? (e) => e.stopPropagation() : undefined}>
-      <button className="col-qa-btn col-qa-view" title="View Details" onClick={() => onSelectBooking(booking.id)}>
-        <EyeIcon style={{ width: 15, height: 15 }} />
-      </button>
-      {booking.status_code !== 'BOOKING_OPEN' && (
-        <button className="col-qa-btn col-qa-pay" title="Record Payment" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'pay'); }}>
-          <BanknotesIcon style={{ width: 15, height: 15 }} />
-        </button>
-      )}
-      {booking.status_code === 'BOOKING_OPEN' && (
-        <button className="col-qa-btn" title="Send for Approval" style={{ color: '#2563EB' }} disabled={sendingId === booking.id} onClick={(e) => handleSendForApproval(booking, e)}>
-          <CheckCircleIcon style={{ width: 15, height: 15 }} />
-        </button>
-      )}
-      <button className="col-qa-btn col-qa-status" title="Update Payment Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'payStatus'); }}>
-        <CreditCardIcon style={{ width: 15, height: 15 }} />
-      </button>
-      <button className="col-qa-btn col-qa-status" title="Update Booking Status" onClick={(e) => { e.stopPropagation(); openDrawer(booking, 'status'); }}>
-        <PencilSquareIcon style={{ width: 15, height: 15 }} />
-      </button>
-      {['BOOKED', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.status_code) && (
-        <>
-          <button className="col-qa-btn" title="Register" style={{ color: '#16A34A' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'register'); }}>
-            <DocumentTextIcon style={{ width: 15, height: 15 }} />
-          </button>
-          <button className="col-qa-btn" title="EMI" style={{ color: '#F59E0B' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'emi'); }}>
-            <CreditCardIcon style={{ width: 15, height: 15 }} />
-          </button>
-        </>
-      )}
-      {['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.status_code) && (
-        <button className="col-qa-btn" title="Request Cancel" style={{ color: '#EF4444' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'requestCancel'); }}>
-          <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
-        </button>
-      )}
-      {booking.status_code === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
-        <button className="col-qa-btn" title="Confirm Cancel" style={{ color: '#DC2626' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'confirmCancel'); }}>
-          <XCircleIcon style={{ width: 15, height: 15 }} />
-        </button>
-      )}
-      {booking.status_code === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && (
-        <span style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600 }}>Awaiting SH</span>
-      )}
-      {booking.is_cancelled && parseFloat(booking.total_paid || 0) > 0 && (
-        <button className="col-qa-btn" title={`Process Refund (${formatCurrency(booking.total_paid || 0)} pending)`} style={{ color: '#F59E0B' }} onClick={(e) => { e.stopPropagation(); openWorkflow(booking, 'refund'); }}>
-          <BanknotesIcon style={{ width: 15, height: 15 }} />
-        </button>
-      )}
-    </div>
-  );
+  const renderQuickActions = (booking, mobile = false) => {
+    const s = booking.status_code;
+    const stop = (fn) => (e) => { e.stopPropagation(); fn(e); };
+    // Secondary actions collapse into the kebab (⋮); View stays the visible primary.
+    const actions = [];
+    if (s !== 'BOOKING_OPEN') {
+      actions.push({ key: 'pay', label: 'Record Payment', Icon: BanknotesIcon, onClick: stop(() => openDrawer(booking, 'pay')) });
+    }
+    if (s === 'BOOKING_OPEN') {
+      actions.push({ key: 'approve', label: 'Send for Approval', Icon: CheckCircleIcon, color: '#2563EB', disabled: sendingId === booking.id, onClick: stop(() => handleSendForApproval(booking)) });
+    }
+    actions.push({ key: 'payStatus', label: 'Update Payment Status', Icon: CreditCardIcon, onClick: stop(() => openDrawer(booking, 'payStatus')) });
+    actions.push({ key: 'status', label: 'Update Booking Status', Icon: PencilSquareIcon, onClick: stop(() => openDrawer(booking, 'status')) });
+    if (['BOOKED', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(s)) {
+      actions.push({ key: 'register', label: 'Register', Icon: DocumentTextIcon, color: '#16A34A', onClick: stop(() => openWorkflow(booking, 'register')) });
+      actions.push({ key: 'emi', label: 'EMI', Icon: CreditCardIcon, color: '#F59E0B', onClick: stop(() => openWorkflow(booking, 'emi')) });
+    }
+    if (['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(s)) {
+      actions.push({ key: 'requestCancel', label: 'Request Cancel', Icon: ExclamationTriangleIcon, color: '#EF4444', onClick: stop(() => openWorkflow(booking, 'requestCancel')) });
+    }
+    if (s === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by) {
+      actions.push({ key: 'confirmCancel', label: 'Confirm Cancel', Icon: XCircleIcon, color: '#DC2626', onClick: stop(() => openWorkflow(booking, 'confirmCancel')) });
+    }
+    if (booking.is_cancelled && parseFloat(booking.total_paid || 0) > 0) {
+      actions.push({ key: 'refund', label: `Process Refund (${formatCurrency(booking.total_paid || 0)} pending)`, Icon: BanknotesIcon, color: '#F59E0B', onClick: stop(() => openWorkflow(booking, 'refund')) });
+    }
+    const awaitingSH = s === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by;
+
+    return (
+      <div className={`col-qa-actions ${mobile ? 'col-qa-actions--mobile' : ''}`} onClick={mobile ? (e) => e.stopPropagation() : undefined}>
+        <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking(booking.id)}>View</button>
+        {awaitingSH && <span style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600 }}>Awaiting SH</span>}
+        {/* 3+ total actions (View + 2 more) → collapse the rest into a ⋮ menu */}
+        {actions.length >= 2 ? (
+          <KebabMenu items={actions} />
+        ) : (
+          actions.map((a) => (
+            <button key={a.key} type="button" className="col-qa-btn" title={a.label} disabled={a.disabled}
+              style={a.color ? { color: a.color } : undefined} onClick={a.onClick}>
+              <a.Icon style={{ width: 15, height: 15 }} />
+            </button>
+          ))
+        )}
+      </div>
+    );
+  };
 
   // ── Drawer helpers ──
   const openDrawer = (booking, mode) => {

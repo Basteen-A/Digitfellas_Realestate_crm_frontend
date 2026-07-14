@@ -15,7 +15,6 @@ import {
   UserIcon,
   FunnelIcon,
   ArrowPathIcon,
-  EyeIcon,
   BuildingOffice2Icon,
   MapPinIcon,
   ArrowsRightLeftIcon,
@@ -793,13 +792,12 @@ const AdminLeadManagement = () => {
         <table className="alm-table">
           <thead>
             <tr>
-              <th>Lead #</th>
-              <th>Lead Name</th>
+              <th>Lead</th>
               <th>Contact</th>
-              <th>Source / Medium</th>
-              <th>Project / Location</th>
+              <th>Source/Medium</th>
+              <th>Project/Location</th>
               <th>Created By</th>
-              <th>Assigned To</th>
+              <th>Assigned</th>
               <th>Status</th>
               <th>Created</th>
               <th>Actions</th>
@@ -808,7 +806,7 @@ const AdminLeadManagement = () => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan="10" className="alm-table__empty">
+                <td colSpan="9" className="alm-table__empty">
                   <div className="alm-loading-spinner" />
                   Loading leads...
                 </td>
@@ -817,7 +815,7 @@ const AdminLeadManagement = () => {
 
             {!loading && leads.length === 0 && (
               <tr>
-                <td colSpan="10" className="alm-table__empty">
+                <td colSpan="9" className="alm-table__empty">
                   No leads found for the selected filters.
                 </td>
               </tr>
@@ -825,11 +823,15 @@ const AdminLeadManagement = () => {
 
             {!loading && leads.map((lead) => (
               <tr key={lead.id} className="alm-table__row" onClick={() => handleViewLead(lead.id)}>
-                <td className="alm-table__cell-lead-num">
-                  <span className="alm-lead-number">{lead.leadNumber || '—'}</span>
-                </td>
-                <td>
+                <td className="alm-table__cell-lead">
                   <div className="alm-lead-name">{lead.fullName || '—'}</div>
+                  <a
+                    href={`/lead/${lead.id}`}
+                    className="alm-lead-link"
+                    onClick={(e) => { e.stopPropagation(); handleViewLead(lead.id); }}
+                  >
+                    {lead.leadNumber || '—'}
+                  </a>
                 </td>
                 <td>
                   <div className="alm-contact-cell">
@@ -872,11 +874,11 @@ const AdminLeadManagement = () => {
                   <div style={{ display: 'inline-flex', gap: 4 }}>
                     <button
                       type="button"
-                      className="alm-btn alm-btn--icon"
+                      className="view-link"
                       title="View Lead"
                       onClick={(e) => { e.stopPropagation(); handleViewLead(lead.id); }}
                     >
-                      <EyeIcon style={{ width: 18, height: 18 }} />
+                      View
                     </button>
                     <button
                       type="button"

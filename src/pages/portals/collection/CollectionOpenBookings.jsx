@@ -4,7 +4,7 @@ import bookingApi from '../../../api/bookingApi';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
-  ArrowPathIcon, ClipboardDocumentListIcon, PaperAirplaneIcon, EyeIcon, MagnifyingGlassIcon,
+  ArrowPathIcon, ClipboardDocumentListIcon, PaperAirplaneIcon, MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
@@ -161,9 +161,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                         </td>
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <div className="col-action-group">
-                            <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>
-                              <EyeIcon style={{ width: 15, height: 15 }} />
-                            </button>
+                            <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking?.(b.id)}>View</button>
                           </div>
                         </td>
                       </tr>
@@ -185,9 +183,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                         <div className="col-bookings-mobile-card__meta">{b.project_name || '—'} · {b.unit_display || b.unit_number || 'TBD'}</div>
                       </div>
                       <div className="col-bookings-mobile-card__actions">
-                        <button type="button" className="col-qa-btn" title="View details" onClick={() => onSelectBooking?.(b.id)}>
-                          <EyeIcon style={{ width: 15, height: 15 }} />
-                        </button>
+                        <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking?.(b.id)}>View</button>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderTop: '1px solid var(--border-primary, #e2e8f0)' }}>

@@ -8,7 +8,7 @@ import AuthedImage from '../../../components/AuthedImage';
 import { badgeColors } from '../../../utils/badgeColors';
 import {
   ArrowLeftIcon, ArrowPathIcon, CloudArrowUpIcon, DocumentTextIcon,
-  ArrowDownTrayIcon, EyeIcon, CheckCircleIcon, UserIcon, IdentificationIcon,
+  ArrowDownTrayIcon, CheckCircleIcon, UserIcon, IdentificationIcon,
   CheckBadgeIcon, CalendarDaysIcon, BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
@@ -414,7 +414,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                             {viewUrl && (
                               <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={viewUrl} style={{ cursor: 'pointer' }} title="View / Preview"
                                 onClick={(e) => { e.preventDefault(); openAuthedFile(viewUrl).catch(() => toast.error('Could not open the document')); }}>
-                                <EyeIcon style={{ width: 13, height: 13 }} /> View
+                                View
                               </a>
                             )}
                             {downloadUrl && (

@@ -1,38 +1,90 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
-import bookingStatusApi from '../../../api/bookingStatusApi';
-import paymentPlanApi from '../../../api/paymentPlanApi';
-import paymentTypeApi from '../../../api/paymentTypeApi';
-import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { ClipboardDocumentListIcon, PencilSquareIcon, LinkIcon, CreditCardIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon, LinkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
-import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../collection/CollectionWorkspace.css';
 
+// Read-only formatters for the booking-details view. Financial sections (pricing,
+// valuation, loan, agreement, channel partner) are intentionally omitted — the SH
+// record shows only who booked and what unit, not money (that's Collection/Finance).
+const dt = (v) => (v ? formatDate(v) : '—');
+const txt = (v) => (v === null || v === undefined || String(v).trim() === '' ? '—' : String(v));
+
+// Every field the Sales Head filled at booking time, grouped for a complete
+// read-only view — the booking record is immutable to lead reassignment, so this
+// always shows what the SH captured even after the lead moves to a TC/other SM.
+const buildBookingSections = (b) => {
+  const c = b.customer || {};
+  const address = [c.address_line_1, c.address_line_2, c.city, c.state, c.pincode, c.country].filter(Boolean).join(', ');
+  return [
+    { title: 'Booking', rows: [
+      ['Booking #', txt(b.booking_number)],
+      ['Booking Date', dt(b.booking_date)],
+      ['Closed By (Sales Head)', txt(b.closedBy ? `${b.closedBy.first_name || ''} ${b.closedBy.last_name || ''}`.trim() : '')],
+      ['Created', dt(b.created_at)],
+    ] },
+    { title: 'Customer Profile', rows: [
+      ['Buyer Name', txt(b.buyer_name || `${c.first_name || ''} ${c.last_name || ''}`.trim())],
+      ['Relation', (b.relation_type || b.relation_name) ? `${b.relation_type || ''} ${b.relation_name || ''}`.trim() : '—'],
+      ['Phone', txt(c.phone)],
+      ['Email', txt(c.email)],
+      ['PAN', txt(c.pan_number)],
+      ['Aadhaar', txt(c.aadhar_number)],
+      ['Date of Birth', dt(c.date_of_birth)],
+      ['Gender', txt(c.gender)],
+      ['Marital Status', txt(c.marital_status)],
+      ['Occupation', txt(c.occupation)],
+      ['Current Post', txt(c.current_post)],
+      ['Purchase Type', txt(c.purchase_type)],
+      ['Address', txt(address)],
+    ] },
+    { title: 'Property / Unit', rows: [
+      ['Project', txt(b.project?.project_name)],
+      ['Phase', txt(b.phase?.phase_name || b.inventoryUnit?.phase?.phase_name)],
+      ['Location', txt(b.project?.location?.location_name)],
+      ['Unit #', txt(b.unit_number || b.inventoryUnit?.unit_number)],
+      ['Tower / Block', txt(b.tower_block || b.inventoryUnit?.tower_block)],
+      ['Floor', txt(b.floor_number)],
+      ['Configuration', txt(b.configuration || b.inventoryUnit?.configuration)],
+      ['Carpet Area', txt(b.carpet_area)],
+      ['Built-up Area', txt(b.built_up_area)],
+      ['Super Built-up Area', txt(b.super_built_up_area)],
+      ['Area Unit', txt(b.area_unit)],
+      ['Facing', txt(b.inventoryUnit?.facing)],
+    ] },
+    { title: 'Payment Plan', rows: [
+      ['Payment Plan', txt(b.paymentPlan?.plan_name)],
+      ['Payment Type', txt(b.paymentType?.type_name)],
+    ] },
+    { title: 'Remarks', rows: [
+      ['Remarks', txt(b.remarks)],
+    ] },
+  ];
+};
+
 const SalesHeadBookings = ({ user }) => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [statusOptions, setStatusOptions] = useState([]);
-  const [planOptions, setPlanOptions] = useState([]);
-  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { limit: 100, scope: 'team' };
+      // Only the bookings THIS Sales Head actually made (closed_by / created_by) —
+      // /bookings/my is maker-keyed, so team members' bookings are not shown here.
+      const params = { limit: 100 };
       if (activeTab === 'Active') params.is_cancelled = 'false';
       if (activeTab === 'Cancelled') params.is_cancelled = 'true';
-      // For 'Completed', we might need to filter by a specific status code if available
-      
-      const resp = await bookingApi.getAll(params);
+
+      const resp = await bookingApi.getMyBookings(params);
       setBookings(resp.data?.data || []);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load bookings'));
@@ -41,40 +93,15 @@ const SalesHeadBookings = ({ user }) => {
     }
   }, [activeTab]);
 
-  const loadStatuses = useCallback(async () => {
-    try {
-      const resp = await bookingStatusApi.getDropdown();
-      setStatusOptions(resp.data?.data || resp.data || []);
-    } catch { /* silent */ }
-  }, []);
-
-  const loadPlans = useCallback(async () => {
-    try {
-      const resp = await paymentPlanApi.getDropdown();
-      setPlanOptions(resp.data || []);
-    } catch { /* silent */ }
-  }, []);
-
-  const loadPaymentTypes = useCallback(async () => {
-    try {
-      const resp = await paymentTypeApi.getDropdown();
-      setPaymentTypeOptions(resp.data || []);
-    } catch { /* silent */ }
-  }, []);
-
   useEffect(() => {
     loadBookings();
-    loadStatuses();
-    loadPlans();
-    loadPaymentTypes();
-  }, [loadBookings, loadStatuses, loadPlans, loadPaymentTypes]);
+  }, [loadBookings]);
 
   const openDetail = async (bookingId) => {
     setDetailLoading(true);
     try {
       const resp = await bookingApi.getById(bookingId);
       setSelectedBooking(resp.data?.data || resp.data);
-      setEditMode(false);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load booking details'));
     } finally {
@@ -82,41 +109,19 @@ const SalesHeadBookings = ({ user }) => {
     }
   };
 
-  const handleEditSave = async () => {
-    if (!selectedBooking) return;
-    try {
-      await bookingApi.update(selectedBooking.id, editForm);
-      toast.success('Booking details updated');
-      setEditMode(false);
-      openDetail(selectedBooking.id);
-      loadBookings();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update booking'));
+  // View Lead: the SH keeps the booking after the lead is re-engaged/reassigned, so
+  // the underlying lead may no longer be theirs. Only navigate when it is still
+  // assigned to this SH; otherwise tell them who holds it now.
+  const handleViewLead = () => {
+    const ownerId = selectedBooking?.lead?.assigned_to;
+    const ownerName = selectedBooking?.lead?.assignedTo
+      ? `${selectedBooking.lead.assignedTo.first_name || ''} ${selectedBooking.lead.assignedTo.last_name || ''}`.trim()
+      : '';
+    if (String(ownerId || '') === String(user?.id || '')) {
+      navigate(`/portal/lead/${selectedBooking.lead_id}`);
+    } else {
+      toast(`This lead is now assigned to ${ownerName || 'another user'} — you can't access it.`, { icon: '🔒' });
     }
-  };
-
-  const startEdit = () => {
-    setEditForm({
-      unit_number: selectedBooking.unit_number || '',
-      tower_block: selectedBooking.tower_block || '',
-      floor_number: selectedBooking.floor_number || '',
-      configuration: selectedBooking.configuration || '',
-      carpet_area: selectedBooking.carpet_area || '',
-      base_price: selectedBooking.base_price || '',
-      total_amount: selectedBooking.total_amount || '',
-      discount_amount: selectedBooking.discount_amount || '',
-      net_amount: selectedBooking.net_amount || '',
-      gst_amount: selectedBooking.gst_amount || '',
-      stamp_duty: selectedBooking.stamp_duty || '',
-      registration_charges: selectedBooking.registration_charges || '',
-      booking_status_id: selectedBooking.booking_status_id || '',
-      payment_plan_id: selectedBooking.payment_plan_id || '',
-      payment_type_id: selectedBooking.payment_type_id || '',
-      remarks: selectedBooking.remarks || '',
-      relation_type: selectedBooking.relation_type || '',
-      relation_name: selectedBooking.relation_name || '',
-    });
-    setEditMode(true);
   };
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(bookings, 25);
@@ -130,7 +135,7 @@ const SalesHeadBookings = ({ user }) => {
         </div>
         <div className="page-header-actions flex-wrap">
           <div className="filter-tabs">
-            {['All', 'Active', 'Completed', 'Cancelled'].map(tab => (
+            {['All', 'Active', 'Cancelled'].map(tab => (
               <button 
                 key={tab}
                 className={`filter-tab ${activeTab === tab ? 'active' : ''}`}
@@ -165,52 +170,35 @@ const SalesHeadBookings = ({ user }) => {
                     <th>Booking #</th>
                     <th>Buyer</th>
                     <th>Project · Unit</th>
-                    <th>Net Value</th>
-                    <th>Paid</th>
-                    <th>Progress</th>
-                    <th>Status</th>
+                    <th>Booking Date</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pageItems.map(booking => {
-                    const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
-                    const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
-                    const displayStatusColor = isCancelApproved ? '#C2410C' : booking.status_color;
-                    return (
+                  {pageItems.map(booking => (
                       <tr key={booking.id} className="is-clickable" onClick={() => openDetail(booking.id)}>
                         <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{booking.booking_number}</td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{booking.customer_name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{booking.lead?.lead_number || ''}</div>
+                          {booking.made_by_me && booking.lead_owner_name
+                            && String(booking.lead_owner_id || '') !== String(user?.id || '') && (
+                            <div style={{ fontSize: 10, color: 'var(--accent-orange, #C2410C)', marginTop: 2 }}
+                              title="This booking's lead has since been re-engaged/reassigned. Your booking record stays with you.">
+                              Lead now with: {booking.lead_owner_name}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <div style={{ fontWeight: 500 }}>{booking.project_name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {booking.unit_display}</div>
                         </td>
-                        <td style={{ fontWeight: 600 }}>{formatCurrency(booking.net_amount)}</td>
-                        <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(booking.total_paid || 0)}</td>
-                        <td style={{ minWidth: 100 }}>
-                          <div className="col-progress" style={{ height: 6, width: '100%' }}>
-                            <div 
-                              className={`col-progress-bar ${booking.payment_percentage >= 100 ? 'success' : booking.payment_percentage >= 50 ? '' : 'warning'}`}
-                              style={{ width: `${Math.min(booking.payment_percentage || 0, 100)}%` }} 
-                            />
-                          </div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{booking.payment_percentage || 0}% Collected</div>
-                        </td>
-                        <td>
-                          <span className="col-badge" style={badgeStyle(displayStatusColor)}>
-                            <span className="col-badge-dot" style={{ background: badgeColors(displayStatusColor).text }} />
-                            {displayStatusLabel}
-                          </span>
-                        </td>
+                        <td>{formatDate(booking.booking_date)}</td>
                         <td>
                           <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>View</button>
                         </td>
                       </tr>
-                    );
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -241,87 +229,10 @@ const SalesHeadBookings = ({ user }) => {
               </div>
             ) : (
               <div className="col-modal-body">
-                {/* Summary amounts */}
-                <div className="col-booking-amounts" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-                  <div className="col-amount-card"><div className="col-amount-label">Total Amount</div><div className="col-amount-value">{formatCurrency(selectedBooking.total_amount)}</div></div>
-                  <div className="col-amount-card"><div className="col-amount-label">Net Amount</div><div className="col-amount-value blue">{formatCurrency(selectedBooking.net_amount)}</div></div>
-                  <div className="col-amount-card"><div className="col-amount-label">Total Paid</div><div className="col-amount-value green">{formatCurrency(selectedBooking.total_paid)}</div></div>
-                  <div className="col-amount-card"><div className="col-amount-label">Balance Due</div><div className="col-amount-value red">{formatCurrency(selectedBooking.total_due)}</div></div>
-                </div>
-
-                {editMode ? (
-                  <div className="col-section">
-                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 15, color: 'var(--accent-blue)' }}>Edit Pricing & Unit Details</h3>
-                    <div className="col-form-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 15 }}>
-                      {[
-                        ['unit_number', 'Unit #'], ['tower_block', 'Tower/Block'], ['floor_number', 'Floor'],
-                        ['configuration', 'Config'], ['carpet_area', 'Carpet Area'], ['base_price', 'Base Price'],
-                        ['total_amount', 'Total Amount'], ['discount_amount', 'Discount'], ['net_amount', 'Net Amount'],
-                        ['gst_amount', 'GST'], ['stamp_duty', 'Stamp Duty'], ['registration_charges', 'Reg. Charges']
-                      ].map(([field, label]) => (
-                        <div className="col-form-group" key={field}>
-                          <label className="col-form-label">{label}</label>
-                          <input 
-                            className="col-form-input" 
-                            type={['base_price', 'total_amount', 'discount_amount', 'net_amount', 'gst_amount', 'stamp_duty', 'registration_charges'].includes(field) ? 'number' : 'text'}
-                            value={editForm[field] || ''} 
-                            onChange={e => setEditForm(p => ({ ...p, [field]: e.target.value }))} 
-                          />
-                        </div>
-                      ))}
-                      <div className="col-form-group">
-                        <label className="col-form-label">Booking Status</label>
-                        <select className="col-form-select" value={editForm.booking_status_id || ''} onChange={e => setEditForm(p => ({ ...p, booking_status_id: e.target.value }))}>
-                          <option value="">Select status...</option>
-                          {statusOptions.map(s => <option key={s.id} value={s.id}>{s.status_name}</option>)}
-                        </select>
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Relation (S/O or W/O)</label>
-                        <select className="col-form-select" value={editForm.relation_type || ''} onChange={e => setEditForm(p => ({ ...p, relation_type: e.target.value }))}>
-                          <option value="">Select relation...</option>
-                          <option value="S/O">S/O (Son of)</option>
-                          <option value="W/O">W/O (Wife of)</option>
-                          <option value="D/O">D/O (Daughter of)</option>
-                          <option value="C/O">C/O (Care of)</option>
-                        </select>
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Relative Name</label>
-                        <input 
-                          className="col-form-input" 
-                          type="text"
-                          value={editForm.relation_name || ''} 
-                          onChange={e => setEditForm(p => ({ ...p, relation_name: e.target.value }))} 
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 15 }}>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Payment Plan</label>
-                        <select className="col-form-select" value={editForm.payment_plan_id || ''} onChange={e => setEditForm(p => ({ ...p, payment_plan_id: e.target.value || null }))}>
-                          <option value="">Select plan...</option>
-                          {planOptions.map(pl => <option key={pl.id} value={pl.id}>{pl.plan_name} ({pl.plan_type}{pl.plan_type === 'EMI' ? ` - ${pl.emi_months}m` : ''})</option>)}
-                        </select>
-                      </div>
-                      <div className="col-form-group">
-                        <label className="col-form-label">Payment Type</label>
-                        <select className="col-form-select" value={editForm.payment_type_id || ''} onChange={e => setEditForm(p => ({ ...p, payment_type_id: e.target.value || null }))}>
-                          <option value="">Select type...</option>
-                          {paymentTypeOptions.map(pt => <option key={pt.id} value={pt.id}>{pt.type_name}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="col-form-group" style={{ marginTop: 15 }}>
-                      <label className="col-form-label">Internal Remarks</label>
-                      <textarea className="col-form-textarea" rows={2} value={editForm.remarks || ''} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-                      <button className="crm-btn crm-btn-ghost" onClick={() => setEditMode(false)}>Cancel</button>
-                      <button className="crm-btn crm-btn-primary" onClick={handleEditSave}>Save Changes</button>
-                    </div>
-                  </div>
-                ) : (
+                {/* Payment/collection totals (paid, balance, progress, status) are
+                    intentionally NOT shown here — those belong to Collection. This view
+                    shows only what the Sales Head entered when making the booking. */}
+                {(
                   <>
                     <div className="col-booking-header" style={{ background: 'var(--bg-secondary)', padding: 15, borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div className="col-booking-customer">
@@ -330,60 +241,37 @@ const SalesHeadBookings = ({ user }) => {
                           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Relation: <strong>{selectedBooking.relation_type} {selectedBooking.relation_name}</strong></div>
                         )}
                         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Project: <strong>{selectedBooking.project?.project_name || '-'}</strong> | Unit: <strong>{selectedBooking.unit_number || 'TBD'}</strong></div>
+                        {selectedBooking.lead?.assignedTo
+                          && String(selectedBooking.lead.assigned_to || '') !== String(selectedBooking.closed_by || '') && (
+                          <div style={{ fontSize: 12, color: 'var(--accent-orange, #C2410C)', marginTop: 2 }}>
+                            Lead now with: <strong>{`${selectedBooking.lead.assignedTo.first_name || ''} ${selectedBooking.lead.assignedTo.last_name || ''}`.trim()}</strong> · this booking record stays with you
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>
-                        {!selectedBooking.is_cancelled && (selectedBooking.bookingStatus?.status_code || selectedBooking.status_code) !== 'REQUEST_TO_CANCEL' && (
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><PencilSquareIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />Edit Details</button>
-                        )}
                         {selectedBooking.lead_id && (
-                          <a href={`/leads/${selectedBooking.lead_id}`} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ textDecoration: 'none' }}>
+                          <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" onClick={handleViewLead}>
                             <LinkIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />View Lead
-                          </a>
+                          </button>
                         )}
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 25 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}><CreditCardIcon style={{ width: 18, height: 18, display: 'inline', verticalAlign: 'text-bottom', marginRight: 6 }} />Payments</h3>
-                      {(!selectedBooking.payments || selectedBooking.payments.length === 0) ? (
-                        <div style={{ padding: 20, textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: 8, color: 'var(--text-muted)' }}>
-                          No payments recorded for this booking yet.
+                    {/* Full read-only booking details — every field the SH filled */}
+                    <div style={{ marginTop: 20 }}>
+                      {buildBookingSections(selectedBooking).map((sec) => (
+                        <div key={sec.title} style={{ marginBottom: 18 }}>
+                          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6 }}>{sec.title}</h3>
+                          <div className="sh-booking-detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px 20px' }}>
+                            {sec.rows.map(([label, val]) => (
+                              <div key={label}>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{val}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ) : (
-                        <div style={{ overflowX: 'auto' }}>
-                          <table className="col-table">
-                            <thead>
-                              <tr>
-                                <th>Ref #</th>
-                                <th>Type</th>
-                                <th>Mode</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedBooking.payments.map(payment => (
-                                <tr key={payment.id}>
-                                  <td>{payment.payment_number}</td>
-                                  <td>{payment.payment_type}</td>
-                                  <td>{payment.payment_mode}</td>
-                                  <td style={{ fontWeight: 600, color: 'var(--accent-green)' }}>{formatCurrency(payment.amount)}</td>
-                                  <td>{formatDate(payment.payment_date)}</td>
-                                  <td>
-                                    <span className="col-badge" style={{ 
-                                      background: payment.management_approved ? '#16a34a22' : '#f59e0b22',
-                                      color: payment.management_approved ? '#16a34a' : '#f59e0b'
-                                    }}>
-                                      {payment.management_approved ? 'Verified' : 'Pending Verification'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </>
                 )}

@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
   ArrowPathIcon, PlusCircleIcon, PlusIcon, MagnifyingGlassIcon, ChevronRightIcon,
-  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, FunnelIcon,
-} from '@heroicons/react/24/outline';
+  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, FunnelIcon, ArrowDownLeftIcon} from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import TaskModal from './TaskModal';
@@ -26,7 +25,7 @@ const STATUS_LABELS = {
 // Canonical badge-system text colors; Chip derives bg/border via badgeStyle.
 const STATUS_HEX = TASK_STATUS_TEXT;
 const PRIORITY_HEX = {
-  low: '#166534', medium: '#92400E', high: '#C2410C', urgent: '#BE123C',
+  low: '#4B5563', medium: '#1D4ED8', high: '#C2410C', urgent: '#BE123C',
 };
 
 const GROUP_BY = [
@@ -456,7 +455,7 @@ const TaskListPage = () => {
                             controls
                             preload="none"
                             onClick={(e) => e.stopPropagation()}
-                            style={{ display: 'block', height: 30, marginTop: 6, maxWidth: 220 }}
+                            style={{ display: 'block', height: 30, marginTop: 8, maxWidth: 220 }}
                           />
                         )}
                       </span>
@@ -490,7 +489,7 @@ const TaskListPage = () => {
               <div style={{ minWidth: 0 }}>
                 <p className="lead-title">{task.title}</p>
                 <small style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
-                  <span style={{ color: PRIORITY_HEX[task.priority] || '#64748b', fontWeight: 700, textTransform: 'capitalize' }}>{task.priority}</span>
+                  <span style={{ color: PRIORITY_HEX[task.priority] || '#64748b', fontWeight: 500, textTransform: 'capitalize' }}>{task.priority}</span>
                   {task.creator && <span>· {fullName(task.creator)}</span>}
                   {note && <span style={{ opacity: 0.85 }}>· “{note.content.length > 28 ? `${note.content.slice(0, 28)}…` : note.content}”</span>}
                 </small>
@@ -536,7 +535,7 @@ const TaskListPage = () => {
                 {task.phase?.phase_name && (
                   <small style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     {task.phase.phase_name}
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '0 6px', borderRadius: 6, color: task.phase.is_approved === false ? '#b91c1c' : '#15803d', background: task.phase.is_approved === false ? '#fef2f2' : '#f0fdf4', border: `1px solid ${task.phase.is_approved === false ? '#fecaca' : '#bbf7d0'}` }}>
+                    <span style={{ fontSize: 10, fontWeight: 400, padding: '0 6px', borderRadius: 6, color: task.phase.is_approved === false ? '#b91c1c' : '#15803d', background: task.phase.is_approved === false ? '#fef2f2' : '#f0fdf4', border: `1px solid ${task.phase.is_approved === false ? '#fecaca' : '#bbf7d0'}` }}>
                       {task.phase.is_approved === false ? 'Unapproved' : 'Approved'}
                     </span>
                   </small>
@@ -551,11 +550,12 @@ const TaskListPage = () => {
           {/* Follow-up */}
           <td className="task-col-followup">
             {task.follow_up_date ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: fu === 'missed' ? '#dc2626' : fu === 'today' ? '#d97706' : 'var(--text-secondary)' }}>
-                <CalendarDaysIcon style={{ width: 12, height: 12 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 400, color: fu === 'missed' ? '#000000ff' : fu === 'today' ? '#000000ff' : 'var(--text-secondary)' }}>
+               
                 <span>{fmtDate(task.follow_up_date)}</span>
-                {fu === 'missed' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>· Missed</span>}
-                {fu === 'today' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>· Today</span>}
+                 <ArrowDownLeftIcon style={{ width: 12, height: 12, color: fu === 'missed' ? '#e80d0dff' : '#000000' }} />
+                {/* {fu === 'missed' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}></span>}
+                {fu === 'today' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}></span>} */}
               </div>
             ) : <small>—</small>}
           </td>

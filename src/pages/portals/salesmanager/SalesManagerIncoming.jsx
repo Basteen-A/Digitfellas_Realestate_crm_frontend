@@ -51,6 +51,14 @@ const toDateOnlyValue = (date) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
+// Normalize an ISO date (e.g. the TC's SV date) to the yyyy-mm-dd an <input type="date"> expects.
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return toDateOnlyValue(d);
+};
+
 const getQuickFollowUpDate = (dayOffset) => {
   const date = new Date();
   date.setDate(date.getDate() + dayOffset);
@@ -354,6 +362,12 @@ const SalesManagerIncoming = ({ onNavigate }) => {
     } else {
       setExpandedId(id);
       resetQuickWorkflowForm();
+      // Pre-fill the site-visit date with the date the TC entered on SV Done, so the
+      // SM confirms it rather than re-keying. Only seed if not already touched.
+      const handoff = handoffs.find((h) => h.id === id);
+      if (handoff?.svDoneDate && !acceptForms[id]?.svDate) {
+        updateAcceptForm(id, { svDate: toDateInputValue(handoff.svDoneDate) });
+      }
     }
   };
 

@@ -22,7 +22,7 @@ import {
   BanknotesIcon, UserIcon, ClockIcon,
   ExclamationTriangleIcon, PlusIcon,
   CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
-  DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon, EyeIcon,
+  DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon,
   ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon
 } from '@heroicons/react/24/outline';
 import { badgeColors } from '../../../utils/badgeColors';
@@ -1633,7 +1633,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       </button>
                     ) : (
                       <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
-                        <EyeIcon style={{ width: 13, height: 13 }} /> View
+                        View
                       </button>
                     )}
                   </td>
@@ -1823,7 +1823,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                             {viewUrl && (
                               <a className="bkd-btn bkd-btn-ghost bkd-btn-sm" href={viewUrl} style={{ cursor: 'pointer' }} title="View / Preview"
                                 onClick={(e) => { e.preventDefault(); openAuthedFile(viewUrl).catch(() => toast.error('Could not open the document')); }}>
-                                <EyeIcon style={{ width: 13, height: 13 }} /> View
+                                View
                               </a>
                             )}
                             {downloadUrl && (

@@ -438,6 +438,7 @@ const LeadDetailsPage = () => {
     bookingProjectId: '',
     bookingLocationId: '',
     bookingPhaseId: '',
+    bookingDate: new Date().toISOString().split('T')[0],
   });
   const [availableUnits, setAvailableUnits] = useState([]);
   const [bookingPhases, setBookingPhases] = useState([]);
@@ -630,9 +631,7 @@ const LeadDetailsPage = () => {
   const isMissedFirstBlocked = useMemo(() => {
     if (!MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) return false;
     if (!hasPendingMissedFollowupsForMe) return false;
-    // TEMPORARILY DISABLED: missed-follow-up clearance is not required to access today's
-    // follow-ups. The leading `false &&` short-circuits the block off; remove it to re-enable.
-    return false && !isCurrentLeadMissedFollowup;
+    return !isCurrentLeadMissedFollowup;
   }, [roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
 
   const loadLeadData = useCallback(async () => {
@@ -892,7 +891,7 @@ const LeadDetailsPage = () => {
         toast.error('Please select Sales Head negotiator');
         return;
       }
-      if (selectedAction.code !== 'TC_SV_DONE' && !actionForm.svDate) {
+      if (!actionForm.svDate) {
         toast.error('Site visit date is required');
         return;
       }
@@ -989,6 +988,7 @@ const LeadDetailsPage = () => {
         bookingProjectId: lead?.projectId || '',
         bookingLocationId: lead?.locationId || '',
         bookingPhaseId: '',
+        bookingDate: new Date().toISOString().split('T')[0],
       });
     }
 
@@ -1072,6 +1072,10 @@ const LeadDetailsPage = () => {
         toast.error('Please fill all mandatory (*) customer profile fields (DOB, PAN, Aadhar, Address, Occupation).');
         return;
       }
+      if (quickSelectedAction.code === 'SH_BOOKING' && !pF.bookingDate) {
+        toast.error('Booking Date is required');
+        return;
+      }
     }
 
     const payload = {
@@ -1085,7 +1089,7 @@ const LeadDetailsPage = () => {
       assignToUserId: quickActionForm.assignToUserId || undefined,
       closureReasonId: quickActionForm.closureReasonId || undefined,
       reason: quickActionForm.reason.trim() || undefined,
-      svDate: quickSelectedAction.code !== 'TC_SV_DONE' ? (quickActionForm.svDate || undefined) : undefined,
+      svDate: quickActionForm.svDate || undefined,
       svProjectId: quickActionForm.svProjectId || undefined,
       budgetMin: (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMin !== '') ? Number(quickActionForm.budgetMin) : undefined,
       budgetMax: (quickSelectedAction.needsSvDetails && quickSelectedAction.code !== 'TC_SV_DONE' && quickActionForm.budgetMax !== '') ? Number(quickActionForm.budgetMax) : undefined,
@@ -1135,6 +1139,7 @@ const LeadDetailsPage = () => {
         current_pincode: pF.current_pincode,
       };
       payload.buyer_name = pF.buyer_name || undefined;
+      payload.bookingDate = pF.bookingDate || undefined;
       payload.inventoryUnitId = pF.inventoryUnitId || undefined;
       payload.payment_plan_id = pF.paymentPlanId || undefined;
       payload.bookingLocationId = pF.bookingLocationId || undefined;
@@ -1163,7 +1168,7 @@ const LeadDetailsPage = () => {
         toast.error('Please select Sales Head negotiator');
         return;
       }
-      if (quickSelectedAction.code !== 'TC_SV_DONE' && !quickActionForm.svDate) {
+      if (!quickActionForm.svDate) {
         toast.error('Site visit date is required');
         return;
       }
@@ -1691,7 +1696,7 @@ const LeadDetailsPage = () => {
                         {selectedAction.code === 'TC_SV_DONE' && (
                           <div className="lead-actions-grid">
                             <label className="lead-actions-label">
-                              Site Visit Date
+                              Site Visit Date *
                               <input
                                 type="date"
                                 value={actionForm.svDate}
@@ -2590,6 +2595,16 @@ const LeadDetailsPage = () => {
                       <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Site Visit Date *</label>
+                          <input
+                            type="date"
+                            className="qa-drawer-field-input"
+                            value={quickActionForm.svDate}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, svDate: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Project Visited *</label>
                           <select
                             className="qa-drawer-field-select"
@@ -2834,10 +2849,17 @@ const LeadDetailsPage = () => {
                   {/* ── Contextual: Customer Profile ── */}
                   {(quickSelectedAction?.needsCustomerProfile || quickSelectedAction?.code === 'SH_BOOKING') && (
                     <div className="qa-drawer-profile-block">
-                      {/* ── Buyer Name ── */}
+                      {/* ── Buyer Name & Booking Date ── */}
                       <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Buyer Name</div>
-                      <div style={{ marginBottom: 12 }}>
-                        <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter buyer name (if different from lead)" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} />
+                      <div className="qa-drawer-profile-grid" style={{ marginBottom: 12 }}>
+                        <div>
+                          <label className="qa-drawer-field-label">Buyer Name</label>
+                          <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter buyer name (if different from lead)" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Booking Date *</label>
+                          <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.bookingDate || ''} onChange={(e) => setCustomerProfileForm(p => ({ ...p, bookingDate: e.target.value }))} required />
+                        </div>
                       </div>
                       {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>

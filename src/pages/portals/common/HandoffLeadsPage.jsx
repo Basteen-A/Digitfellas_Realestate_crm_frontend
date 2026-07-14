@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
@@ -258,11 +258,12 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 )}
                 <td>
                   <button
-                    className="crm-btn crm-btn-sm crm-btn-ghost"
+                    type="button"
+                    className="view-link"
                     onClick={() => navigate(`/portal/lead/${row.leadId}`)}
                     title="View Lead"
                   >
-                    <EyeIcon style={{ width: 14, height: 14 }} />
+                    View
                   </button>
                 </td>
               </tr>

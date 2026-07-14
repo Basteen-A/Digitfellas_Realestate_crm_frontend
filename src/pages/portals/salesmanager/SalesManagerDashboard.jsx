@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dashboardApi from '../../../api/dashboardApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { formatDate } from '../../../utils/formatters';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import {
   HomeModernIcon,
@@ -15,6 +14,7 @@ import {
   InboxArrowDownIcon,
   UserGroupIcon,
   CubeIcon,
+  ArrowDownLeftIcon,
 } from '@heroicons/react/24/outline';
 import { StatusChip, leadName, leadPhone, callLead, useIsMobile } from '../common/dashWidgets';
 import { hasTaskPortalAccess } from '../../../utils/permissions';
@@ -176,7 +176,14 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
                 <div className="col-cell-secondary">{lead.phone || '—'}</div>
               </td>
               <td>{lead.projectName || lead.project || '—'}</td>
-              <td style={overdue ? { color: 'var(--accent-red)', fontWeight: 600 } : undefined}>{due ? formatDate(due) : '—'}</td>
+              <td>
+                {due ? (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#000000', fontWeight: 500 }}>
+                    <span>{new Date(due).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    <ArrowDownLeftIcon style={{ width: 12, height: 12, color: overdue ? '#e80d0dff' : '#000000' }} />
+                  </div>
+                ) : '—'}
+              </td>
               <td>
                 <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}>
                   View

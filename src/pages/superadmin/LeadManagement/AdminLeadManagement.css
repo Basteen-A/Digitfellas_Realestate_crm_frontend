@@ -304,13 +304,15 @@
   font-size: 13px;
 }
 
+/* Header styling mirrors the Lead Workspace table for a consistent look. */
 .alm-table th {
   background: var(--bg-table-header, #f8fafc);
-  color: var(--text-muted, #9ca3af);
-  font-size: 11px;
-  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--border-primary, #e2e8f0);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -319,15 +321,16 @@
 
 .alm-table__row {
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.1s;
 }
 
-.alm-table__row:nth-child(even) {
-  background: var(--bg-table-row-stripe, #fafbfc);
-}
-
+/* Plain (un-striped) rows with a hover highlight — matches the Lead Workspace. */
 .alm-table__row:hover {
-  background: var(--bg-table-row-hover, #f0f4ff);
+  background: var(--bg-table-row-hover, #f8fafc);
+}
+
+.alm-table__row:last-child td {
+  border-bottom: none;
 }
 
 .alm-table__empty {
@@ -338,19 +341,25 @@
 }
 
 /* ── Cell Styles ── */
-.alm-lead-number {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-blue, #2563eb);
-  background: var(--accent-blue-bg, #eff6ff);
-  padding: 3px 8px;
-  border-radius: var(--border-radius-sm, 6px);
-}
-
+/* Lead cell: name stacked over the lead-number link (matches Lead Workspace). */
 .alm-lead-name {
   font-weight: 600;
+  font-size: 13px;
   color: var(--text-primary, #111827);
+}
+
+.alm-lead-link {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-blue, #2563eb);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.alm-lead-link:hover {
+  color: var(--accent-blue-hover, #1d4ed8);
 }
 
 .alm-contact-cell {

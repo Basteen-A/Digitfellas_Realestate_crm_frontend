@@ -7,17 +7,25 @@ import { getErrorMessage } from '../../../utils/helpers';
 import { formatCurrency } from '../../../utils/formatters';
 import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
-  EyeIcon, PlusIcon, CreditCardIcon, PencilSquareIcon,
+  PlusIcon, CreditCardIcon, PencilSquareIcon,
   ChevronRightIcon, ChevronDownIcon, CalendarDaysIcon,
   CheckCircleIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
+import KebabMenu from '../../../components/common/KebabMenu';
 import usePagination from '../../../hooks/usePagination';
 import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import '../collection/CollectionWorkspace.css';
 
 const dayStr = (d) => { try { return new Date(d).toISOString().slice(0, 10); } catch { return ''; } };
+
+// Collection-Exec row actions (collapsed into the ⋮ kebab; View stays visible).
+const execQaItems = (booking, openAction) => [
+  { key: 'pay', label: 'Add Payment', Icon: PlusIcon, onClick: (e) => { e.stopPropagation(); openAction(booking, 'pay'); } },
+  { key: 'payStatus', label: 'Payment Status / Follow-up', Icon: CreditCardIcon, onClick: (e) => { e.stopPropagation(); openAction(booking, 'payStatus'); } },
+  { key: 'status', label: 'Update Booking Status', Icon: PencilSquareIcon, onClick: (e) => { e.stopPropagation(); openAction(booking, 'status'); } },
+];
 const shortDate = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }); } catch { return ''; } };
 
 const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT', 'Other'];
@@ -354,18 +362,8 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                           </td>
                           <td className="hide-mobile" style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
-                              <button className="col-qa-btn col-qa-view" title="Open" onClick={() => onSelectBooking(booking.id)}>
-                                <EyeIcon style={{ width: 15, height: 15 }} />
-                              </button>
-                              <button className="col-qa-btn col-qa-pay" title="Add Payment" onClick={() => openAction(booking, 'pay')}>
-                                <PlusIcon style={{ width: 15, height: 15 }} />
-                              </button>
-                              <button className="col-qa-btn col-qa-status" title="Payment Status / Follow-up" onClick={() => openAction(booking, 'payStatus')}>
-                                <CreditCardIcon style={{ width: 15, height: 15 }} />
-                              </button>
-                              <button className="col-qa-btn col-qa-status" title="Update Booking Status" onClick={() => openAction(booking, 'status')}>
-                                <PencilSquareIcon style={{ width: 15, height: 15 }} />
-                              </button>
+                              <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking(booking.id)}>View</button>
+                              <KebabMenu items={execQaItems(booking, openAction)} />
                             </div>
                           </td>
                         </tr>
@@ -394,18 +392,8 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                                   <div className="expanded-info-item full-width">
                                     <label>Quick Actions</label>
                                     <div className="col-qa-actions col-qa-actions--mobile" onClick={(e) => e.stopPropagation()}>
-                                      <button className="col-qa-btn col-qa-view" title="View Details" onClick={() => onSelectBooking(booking.id)}>
-                                        <EyeIcon style={{ width: 15, height: 15 }} />
-                                      </button>
-                                      <button className="col-qa-btn col-qa-pay" title="Add Payment" onClick={() => openAction(booking, 'pay')}>
-                                        <PlusIcon style={{ width: 15, height: 15 }} />
-                                      </button>
-                                      <button className="col-qa-btn col-qa-status" title="Payment Status / Follow-up" onClick={() => openAction(booking, 'payStatus')}>
-                                        <CreditCardIcon style={{ width: 15, height: 15 }} />
-                                      </button>
-                                      <button className="col-qa-btn col-qa-status" title="Update Booking Status" onClick={() => openAction(booking, 'status')}>
-                                        <PencilSquareIcon style={{ width: 15, height: 15 }} />
-                                      </button>
+                                      <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking(booking.id)}>View</button>
+                                      <KebabMenu items={execQaItems(booking, openAction)} />
                                     </div>
                                   </div>
                                 </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import {
-  MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, CheckCircleIcon, XCircleIcon, EyeIcon, ArrowLeftIcon,
+  MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, CheckCircleIcon, XCircleIcon, ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import leadStatusApi from '../../../api/leadStatusApi';
@@ -453,7 +453,7 @@ const Campaigns = () => {
                     <td style={td}><span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span></td>
                     <td style={td}>{fmtDateTime(c.created_at)}</td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openDrill(c)} title="View recipients"><EyeIcon style={{ width: 15, height: 15 }} /></button>
+                      <button type="button" className="view-link" onClick={() => openDrill(c)} title="View recipients">View</button>
                     </td>
                   </tr>
                 );

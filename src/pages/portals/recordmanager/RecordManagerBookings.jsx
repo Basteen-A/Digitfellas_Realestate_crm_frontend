@@ -4,7 +4,7 @@ import bookingApi from '../../../api/bookingApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
-  EyeIcon, CheckCircleIcon, ExclamationCircleIcon,
+  CheckCircleIcon, ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import '../common/LeadWorkspacePage.css';
@@ -164,11 +164,12 @@ const RecordManagerBookings = ({ onSelectBooking, showCompleted = false }) => {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <button
-                          className="col-qa-btn col-qa-view"
-                          title="Open"
+                          type="button"
+                          className="view-link"
+                          title="View details"
                           onClick={(e) => { e.stopPropagation(); onSelectBooking(booking.id); }}
                         >
-                          <EyeIcon style={{ width: 15, height: 15 }} />
+                          View
                         </button>
                       </td>
                     </tr>

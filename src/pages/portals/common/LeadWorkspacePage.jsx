@@ -58,12 +58,12 @@ import {
   IdentificationIcon,
   TableCellsIcon,
   BoltIcon,
-  EyeIcon,
   FunnelIcon,
   ChevronRightIcon,
   ChevronDownIcon,
   MagnifyingGlassIcon,
   UserGroupIcon,
+  ArrowDownLeftIcon,
 } from '@heroicons/react/24/outline';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -387,11 +387,22 @@ const isValidPhoneForCountry = (dialCode, localNumber) => {
   }
 };
 
-const REENGAGEABLE_STATUS_CODES = ['LOST', 'CLOSED_LOST', 'COLD_LOST', 'JUNK', 'SPAM'];
+// Mirrors the server: a lead is re-engageable when closed-lost, terminal, OR
+// already BOOKED. A booked lead's booking lives independently on the collection
+// side, so a fresh enquiry from the same contact may be taken as a new lead.
+const REENGAGEABLE_STATUS_CODES = ['LOST', 'CLOSED_LOST', 'COLD_LOST', 'JUNK', 'SPAM', 'BOOKED'];
+const REENGAGEABLE_STAGE_CODES = ['CLOSED_LOST', 'BOOKING'];
+
+const isBookedLead = (lead) => {
+  const stageCode = String(lead?.stageCode || lead?.stage?.stage_code || '').trim().toUpperCase();
+  const statusCode = String(lead?.statusCode || lead?.status_code || lead?.status?.status_code || '')
+    .trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return stageCode === 'BOOKING' || statusCode === 'BOOKED';
+};
 
 const isClosedLostLead = (lead) => {
   const stageCode = String(lead?.stageCode || lead?.stage?.stage_code || '').trim().toUpperCase();
-  if (stageCode === 'CLOSED_LOST') return true;
+  if (REENGAGEABLE_STAGE_CODES.includes(stageCode)) return true;
   const statusCode = String(lead?.statusCode || lead?.status_code || lead?.status?.status_code || '')
     .trim().toUpperCase().replace(/[\s-]+/g, '_');
   return REENGAGEABLE_STATUS_CODES.includes(statusCode);
@@ -408,6 +419,10 @@ const getLeadOwnerName = (lead) => {
 const buildDuplicateLeadInfo = (lead) => {
   const statusName = lead?.status?.status_name || lead?.statusLabel || 'No Status';
   const ownerName = getLeadOwnerName(lead);
+
+  if (isBookedLead(lead)) {
+    return `This contact already has a booking.\nStatus: ${statusName} · Owner: ${ownerName}. The booking stays with collection — use this lead to re-engage as a new enquiry.`;
+  }
 
   if (isClosedLostLead(lead)) {
     return `This contact already has a previous lead.\nStatus: ${statusName} · Owner: ${ownerName}. Use this lead to re-engage.`;
@@ -1014,6 +1029,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     sameAsCurrent: false,
     assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
     bookingProjectId: '', bookingLocationId: '', bookingPhaseId: '',
+    bookingDate: new Date().toISOString().split('T')[0],
   });
   const [availableUnits, setAvailableUnits] = useState([]);
   const [availablePhases, setAvailablePhases] = useState([]);
@@ -1536,10 +1552,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   // Whether the current user still has overdue follow-ups. Driven by an authoritative server
   // count (refreshed in loadLeads) rather than the loaded page, so the Today-tab gate stays
   // correct even when the overdue leads sit beyond the first page.
-  // TEMPORARILY DISABLED: missed-follow-up clearance is not required to access today's
-  // follow-ups. The leading `false &&` short-circuits the gate off; remove it to re-enable.
   const hasPendingMissedFollowupsForMe =
-    false && FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && pendingMissedCount > 0;
+    FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && pendingMissedCount > 0;
 
   // ── Load workflow config on mount ──
   const loadWorkflowConfig = useCallback(async () => {
@@ -1675,6 +1689,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           // Reallot: this user's leads sitting in the Reallot status.
           queryParams.assignedToMe = true;
           queryParams.statusCode = 'REALLOT';
+        } else if (workspaceRole === 'SH' && activeTab === 'booked') {
+          // Booked: this SH's leads currently in the BOOKING stage. These are
+          // hidden from the working list, so the server exposes them only via the
+          // booked flag. The SH can view the booking or re-book the same lead.
+          queryParams.assignedToMe = true;
+          queryParams.booked = true;
         } else {
           // Assigned lead tabs (today / missed) — only show leads assigned to this user
           queryParams.assignedToMe = true;
@@ -2233,6 +2253,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         bookingProjectId: selectedLead.projectId || '',
         bookingLocationId: selectedLead.locationId || '',
         bookingPhaseId: '',
+        bookingDate: new Date().toISOString().split('T')[0],
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
@@ -2333,6 +2354,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   const handleSvDoneSubmit = async () => {
     if (!selectedLead) return;
     if (!svDoneForm.assignToUserId) { toast.error('Sales Manager is mandatory'); return; }
+    if (!svDoneForm.svDate) { toast.error('Site Visit date is mandatory'); return; }
     if (!svDoneForm.svProjectId) { toast.error('Project visited is mandatory'); return; }
     if ((svDoneForm.budgetMin !== '' || svDoneForm.budgetMax !== '') && (svDoneForm.budgetMin === '' || svDoneForm.budgetMax === '')) { toast.error('Budget Min and Budget Max must both be provided when entering budget details'); return; }
     if (svDoneForm.budgetMin !== '' && svDoneForm.budgetMax !== '' && Number(svDoneForm.budgetMax) < Number(svDoneForm.budgetMin)) { toast.error('Budget Max must be greater than or equal to Budget Min'); return; }
@@ -2484,11 +2506,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     if (!f.occupation) { toast.error('Occupation is required'); return; }
     if (!f.assignToUserId) { toast.error('Please select a Collection Manager'); return; }
     if (!f.paymentPlanId) { toast.error('Please select a Payment Plan'); return; }
+    if (!f.bookingDate) { toast.error('Booking Date is required'); return; }
 
     setManualUpdateSaving(true);
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING', {
         assignToUserId: f.assignToUserId,
+        bookingDate: f.bookingDate,
         note: f.note?.trim() || 'Booking approved by Sales Head',
         inventoryUnitId: f.inventoryUnitId || undefined,
         payment_plan_id: f.paymentPlanId || undefined,
@@ -2594,6 +2618,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         bookingProjectId: selectedLead.projectId || '',
         bookingLocationId: selectedLead.locationId || '',
         bookingPhaseId: '',
+        bookingDate: new Date().toISOString().split('T')[0],
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
@@ -2874,6 +2899,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         bookingProjectId: quickActionLead?.projectId || '',
         bookingLocationId: quickActionLead?.locationId || '',
         bookingPhaseId: '',
+        bookingDate: new Date().toISOString().split('T')[0],
       });
       setAvailableUnits([]);
       setAvailablePhases([]);
@@ -3016,7 +3042,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           return;
         }
 
-        if (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && !f.svDate) {
+        if ((quickWorkflowAction.needsSvDetails || quickWorkflowAction.code === 'TC_SV_DONE') && !f.svDate) {
           toast.error('Please select the site visit date');
           setQuickActionLoading(false);
           return;
@@ -3090,6 +3116,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             setQuickActionLoading(false);
             return;
           }
+          if (!cpF.bookingDate) {
+            toast.error('Please select Booking Date *');
+            setQuickActionLoading(false);
+            return;
+          }
         }
 
         // Validation: Reason selection is mandatory for reason-based actions
@@ -3110,7 +3141,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           closureReasonId: f.closureReasonId || undefined,
           callResult: undefined,
           reason: f.reason.trim() || undefined,
-          svDate: quickWorkflowAction.code !== 'TC_SV_DONE' ? (f.svDate || undefined) : undefined,
+          svDate: f.svDate || undefined,
           svProjectId: f.svProjectId || undefined,
           budgetMin: (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && f.budgetMin !== '') ? Number(f.budgetMin) : undefined,
           budgetMax: (quickWorkflowAction.needsSvDetails && quickWorkflowAction.code !== 'TC_SV_DONE' && f.budgetMax !== '') ? Number(f.budgetMax) : undefined,
@@ -3204,6 +3235,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             note: pF.note,
           };
           payload.buyer_name = pF.buyer_name || undefined;
+          payload.bookingDate = pF.bookingDate || undefined;
           payload.inventoryUnitId = pF.inventoryUnitId || undefined;
           payload.payment_plan_id = pF.paymentPlanId || undefined;
           payload.bookingLocationId = pF.bookingLocationId || undefined;
@@ -3340,11 +3372,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             >
               {lead.statusLabel}
             </span>
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: lead.nextFollowUpAt && isFollowUpMissedByDate(lead.nextFollowUpAt) && !lead.isClosed ? '#dc2626' : '#64748b' }}>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#000000' }}>
               {lead.nextFollowUpAt ? (
                 <>
-                  <CalendarDaysIcon style={{ width: 12, height: 12 }} />
-                  <span>{formatDate(lead.nextFollowUpAt)}</span>
+                  <span>{new Date(lead.nextFollowUpAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <ArrowDownLeftIcon style={{ width: 12, height: 12, color: lead.nextFollowUpAt && isFollowUpMissedByDate(lead.nextFollowUpAt) && !lead.isClosed ? '#e80d0dff' : '#000000' }} />
                 </>
               ) : <span>—</span>}
             </div>
@@ -3382,15 +3414,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           </td>
           <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
             <div className="lead-workspace__actions-cell">
-              {activeTab !== 'new' && activeTab !== 'unassigned' && (
-                <button
-                  className="crm-btn crm-btn-sm lead-action-view-btn"
-                  style={{ marginRight: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                  onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
-                >
-                  <EyeIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> 
-                </button>
-              )}
+              {/* View lead — always available, like the Lead Management table. */}
+              <button
+                type="button"
+                className="view-link lead-action-view-btn"
+                title="View lead"
+                style={{ marginRight: 6 }}
+                onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
+              >
+                View
+              </button>
               {!lead.assignedToUserId && activeTab === 'new' && (
                 <button
                   className="crm-btn crm-btn-sm"
@@ -3842,6 +3875,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 >
                   <span className="hide-mobile">SM Leads (Read Only)</span>
                   <span className="show-mobile">SM Leads</span>
+                </button>
+              )}
+              {workspaceRole === 'SH' && (
+                <button
+                  onClick={() => setActiveTab('booked')}
+                  className={`filter-tab ${activeTab === 'booked' ? 'active' : ''}`}
+                  title="Your booked leads — view bookings or book the same lead again"
+                >
+                  <span className="hide-mobile">Booked</span>
+                  <span className="show-mobile">Booked</span>
                 </button>
               )}
               <small className="filter-tabs__records">
@@ -5343,7 +5386,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
               </label>
 
               <label>
-                Date of Site Visit
+                Date of Site Visit *
                 <CalendarPicker
                   type="date"
                   value={svDoneForm.svDate ? new Date(svDoneForm.svDate).toISOString() : ''}
@@ -5406,7 +5449,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   type="button"
                   className="workspace-btn workspace-btn--primary"
                   onClick={handleSvDoneSubmit}
-                  disabled={!svDoneForm.assignToUserId || !svDoneForm.svProjectId || svDoneForm.budgetMin === '' || svDoneForm.budgetMax === ''}
+                  disabled={!svDoneForm.assignToUserId || !svDoneForm.svDate || !svDoneForm.svProjectId || svDoneForm.budgetMin === '' || svDoneForm.budgetMax === ''}
                 >
                   <><CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Confirm SV Done & Handoff</>
                 </button>
@@ -5509,11 +5552,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
               {/* Booking Details */}
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14 }} />Booking Details</div>
-              
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Buyer Name
-                <input type="text" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} placeholder="Enter buyer name (if different from lead)" style={{ width: '100%', marginTop: 4 }} />
-              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Buyer Name
+                  <input type="text" value={customerProfileForm.buyer_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, buyer_name: e.target.value }))} placeholder="Enter buyer name (if different from lead)" style={{ width: '100%', marginTop: 4 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Booking Date *
+                  <input type="date" value={customerProfileForm.bookingDate || ''} onChange={(e) => setCustomerProfileForm(p => ({ ...p, bookingDate: e.target.value }))} style={{ width: '100%', marginTop: 4 }} required />
+                </label>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -6069,6 +6118,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Visit details</div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
+                          <label className="qa-drawer-field-label">Site Visit Date *</label>
+                          <input
+                            type="date"
+                            className="qa-drawer-field-input"
+                            value={quickWorkflowForm.svDate}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, svDate: e.target.value }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Project Visited *</label>
                           <select
                             className="qa-drawer-field-select"
@@ -6334,6 +6393,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         <div>
                           <label className="qa-drawer-field-label">Relative Name</label>
                           <input type="text" className="qa-drawer-field-input" style={{ width: '100%' }} placeholder="Enter relative name" value={customerProfileForm.relation_name} onChange={(e) => setCustomerProfileForm(p => ({ ...p, relation_name: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Booking Date *</label>
+                          <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.bookingDate || ''} onChange={(e) => setCustomerProfileForm(p => ({ ...p, bookingDate: e.target.value }))} required />
                         </div>
                       </div>
                       {/* ── Project Selection for Booking ── */}
