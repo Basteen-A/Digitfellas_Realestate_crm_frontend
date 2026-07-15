@@ -24,6 +24,7 @@ const BOOKING_TABS = [
   { value: 'Active', label: 'Active', short: 'Active' },
   { value: 'Today Follow-up', label: 'Today Follow-up', short: 'Today' },
   { value: 'Missed Follow-up', label: 'Missed Follow-up', short: 'Missed' },
+  { value: 'Registered', label: 'Registered', short: 'Registered' },
   { value: 'Cancelled', label: 'Cancelled', short: 'Cancelled' },
 ];
 
@@ -215,16 +216,15 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   }, []);
 
   const filteredBookings = useMemo(() => {
-    // "Booking Open" drafts live on the New Bookings screen until Collection
-    // sends them for approval — exclude them from the main bookings list.
     let list = bookings.filter((b) => b.status_code !== 'BOOKING_OPEN');
-    // Follow-up tab filtering
     if (activeTab === 'Today Follow-up') {
       const todayStr = new Date().toISOString().slice(0, 10);
-      list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) === todayStr);
+      list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) === todayStr && b.status_code !== 'REGISTERED');
     } else if (activeTab === 'Missed Follow-up') {
       const todayStr = new Date().toISOString().slice(0, 10);
-      list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr);
+      list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr && b.status_code !== 'REGISTERED');
+    } else if (activeTab === 'Registered') {
+      list = list.filter(b => b.status_code === 'REGISTERED');
     }
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
@@ -239,14 +239,16 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredBookings, 25);
 
-  // Follow-up counts for tab badges
   const todayFollowUpCount = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
-    return bookings.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) === todayStr).length;
+    return bookings.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) === todayStr && b.status_code !== 'REGISTERED').length;
   }, [bookings]);
   const missedFollowUpCount = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
-    return bookings.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr).length;
+    return bookings.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr && b.status_code !== 'REGISTERED').length;
+  }, [bookings]);
+  const registeredCount = useMemo(() => {
+    return bookings.filter(b => b.status_code === 'REGISTERED').length;
   }, [bookings]);
 
   const quickStatusOptions = statusOptions.filter((status) => QUICK_STATUS_CODES.includes(status.status_code));
@@ -653,6 +655,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   <span className="show-mobile">{t.short}</span>
                   {t.value === 'Today Follow-up' && todayFollowUpCount > 0 && <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{todayFollowUpCount}</span>}
                   {t.value === 'Missed Follow-up' && missedFollowUpCount > 0 && <span style={{ marginLeft: 4, background: '#EF4444', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{missedFollowUpCount}</span>}
+                  {t.value === 'Registered' && registeredCount > 0 && <span style={{ marginLeft: 4, background: '#10B981', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{registeredCount}</span>}
                 </button>
               ))}
               <small className="filter-tabs__records">{filteredBookings.length} record{filteredBookings.length === 1 ? '' : 's'}</small>

@@ -98,10 +98,17 @@ const getDrawerCategoryBuckets = (booking) => {
 
 // Collection Executive list — only bookings assigned to this executive (scoped
 // server-side via getMyBookings → collection_executive_id).
+const BOOKING_TABS = [
+  { value: 'All', label: 'All', short: 'All' },
+  { value: 'Today Follow-up', label: 'Today Follow-up', short: 'Today' },
+  { value: 'Missed Follow-up', label: 'Missed Follow-up', short: 'Missed' },
+];
+
 const CollectionExecBookings = ({ onSelectBooking }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('All');
 
   // Modals & Active Booking state
   const [activeBooking, setActiveBooking] = useState(null);
@@ -249,15 +256,32 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
   };
 
   const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return bookings;
+    let list = bookings;
+    if (activeTab === 'Today Follow-up') {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) === todayStr);
+    } else if (activeTab === 'Missed Follow-up') {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr);
+    }
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
-    return bookings.filter((b) => [
+    return list.filter((b) => [
       b.booking_number, b.customer_name, b.buyer_name, b.project_name,
       b.unit_display, b.unit_number, b.phase_name,
     ].filter(Boolean).join(' ').toLowerCase().includes(q));
-  }, [bookings, searchQuery]);
+  }, [bookings, searchQuery, activeTab]);
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filtered, 25);
+
+  const todayFollowUpCount = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return bookings.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) === todayStr).length;
+  }, [bookings]);
+  const missedFollowUpCount = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return bookings.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr).length;
+  }, [bookings]);
 
   return (
     <div className="col-bookings-page">
@@ -288,6 +312,21 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
       <div className="crm-card">
         <div className="crm-card-body-flush">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
+            <div className="filter-tabs mobile-compact-tabs">
+              {BOOKING_TABS.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  className={`filter-tab ${activeTab === t.value ? 'active' : ''}`}
+                  onClick={() => setActiveTab(t.value)}
+                >
+                  <span className="hide-mobile">{t.label}</span>
+                  <span className="show-mobile">{t.short}</span>
+                  {t.value === 'Today Follow-up' && todayFollowUpCount > 0 && <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{todayFollowUpCount}</span>}
+                  {t.value === 'Missed Follow-up' && missedFollowUpCount > 0 && <span style={{ marginLeft: 4, background: '#EF4444', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{missedFollowUpCount}</span>}
+                </button>
+              ))}
+            </div>
             <small className="filter-tabs__records">{filtered.length} assigned booking{filtered.length === 1 ? '' : 's'}</small>
           </div>
 
