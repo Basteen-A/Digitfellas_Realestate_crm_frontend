@@ -97,12 +97,12 @@ const WhatsappSettings = () => {
     if (needsHeaderMedia) { toast.error('Header file/image is required'); return; }
     setTesting(true);
     try {
-      const resp = await whatsappCampaignApi.testConfig({
+      await whatsappCampaignApi.testConfig({
         phone: testPhone.trim(),
         template_id: testTemplateId,
         header_image_url: testHeaderImageUrl || undefined,
       });
-      toast.success(`Test sent (id: ${resp.data?.messageId || 'ok'})`);
+      toast.success(`Test message sent to ${testPhone.trim()} — check WhatsApp on that number.`);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Test message failed'));
     } finally {

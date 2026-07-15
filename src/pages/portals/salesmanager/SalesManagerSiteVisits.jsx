@@ -118,6 +118,7 @@ const getSiblingVisitWithDetails = (visit, allVisits = []) => {
 
 const SalesManagerSiteVisits = ({ onNavigate }) => {
   const [visits, setVisits] = useState([]);
+  const [serverSvDone, setServerSvDone] = useState(null); // uncapped SV Done from server
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -219,6 +220,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       const resp = await siteVisitApi.getMyLeadVisits({ limit: 200 });
       const data = resp.data?.data || resp.data?.rows || resp.data || [];
       setVisits(Array.isArray(data) ? data : []);
+      setServerSvDone(resp.data?.meta?.svDoneCount ?? null);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load site visits'));
     } finally {
@@ -555,6 +557,9 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   // SV Done = DISTINCT LEADS with at least one COMPLETED site visit.
   // One lead counts once regardless of revisits, and it stays counted even after the
   // lead is handed to a Sales Head or marked Lost (ownership-based, see filteredVisits).
+  // NOTE: this is only a FALLBACK — the card prefers the server's uncapped `svDoneCount`
+  // (meta.svDoneCount) because this client version only sees the loaded page window and
+  // would under-count an SM with more visits than the fetch limit.
   const svDoneCount = useMemo(() => {
     const uniqueLeadIds = new Set();
     filteredVisits.forEach(v => {
@@ -662,7 +667,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
             <CheckCircleIcon style={{ width: 24, height: 24, color: '#15803d' }} />
           </div>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>{svDoneCount}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>{serverSvDone ?? svDoneCount}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>SV Done</div>
           </div>
         </div>

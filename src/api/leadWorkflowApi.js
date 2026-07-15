@@ -176,8 +176,8 @@ const leadWorkflowApi = {
 
   // ── SH Team Management ──
 
-  getMySMTeam: async () => {
-    const { data } = await api.get('/leads/my-sm-team');
+  getMySMTeam: async (params = {}) => {
+    const { data } = await api.get('/leads/my-sm-team', { params });
     return data;
   },
 

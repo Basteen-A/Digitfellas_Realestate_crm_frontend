@@ -415,6 +415,8 @@
 
 .crm-btn-primary { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
 .crm-btn-primary:hover { background: var(--accent-blue-hover); }
+.crm-btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-primary); }
+.crm-btn-secondary:hover { background: var(--bg-card-hover); }
 .crm-btn-success { background: var(--accent-green); color: white; }
 .crm-btn-success:hover { opacity: 0.9; }
 .crm-btn-danger { background: var(--accent-red); color: white; }
