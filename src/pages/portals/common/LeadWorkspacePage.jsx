@@ -3372,7 +3372,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             >
               {lead.statusLabel}
             </span>
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#000000' }}>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 400, color: '#000000' }}>
               {lead.nextFollowUpAt ? (
                 <>
                   <span>{new Date(lead.nextFollowUpAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>

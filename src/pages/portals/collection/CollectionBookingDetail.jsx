@@ -11,8 +11,6 @@ import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
 import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
 import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { openAuthedFile, downloadAuthedFile } from '../../../utils/authedFile';
-import AuthedImage from '../../../components/AuthedImage';
 import { getRoleCode } from '../../../utils/permissions';
 import { ROLE_CODES } from '../../../utils/constants';
 import GenerateBookingFormModal from './GenerateBookingFormModal';
@@ -22,7 +20,7 @@ import {
   BanknotesIcon, UserIcon, ClockIcon,
   ExclamationTriangleIcon, PlusIcon,
   CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
-  DocumentTextIcon, CloudArrowUpIcon, ArrowDownTrayIcon, FolderOpenIcon, XCircleIcon,
+  ArrowDownTrayIcon, XCircleIcon,
   ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon
 } from '@heroicons/react/24/outline';
 import { badgeColors } from '../../../utils/badgeColors';
@@ -47,7 +45,7 @@ const BkdStatCell = ({ label, value, border = true }) => {
       minWidth: 120,
     }}>
       <div style={{
-        fontSize: 11, fontWeight: 600, letterSpacing: "0.06em",
+        fontSize: 11, fontWeight: 500, letterSpacing: "0.06em",
         color: "var(--col-text, #000000)", textTransform: "uppercase", marginBottom: 4,
       }}>{label}</div>
       <div style={{
@@ -58,7 +56,12 @@ const BkdStatCell = ({ label, value, border = true }) => {
   );
 };
 
-const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon }) => {
+const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon, paid = 0 }) => {
+  const target = parseFloat(valueText?.replace(/[^0-9.-]/g, '') || 0);
+  const due = target - paid;
+  const pct = target > 0 ? Math.round((paid / target) * 100) : 0;
+  const dueText = due > 0 ? `Due: ${fmtFull(due)}` : (paid > 0 ? 'Fully Paid' : '—');
+  const pctText = target > 0 ? `${pct}% paid` : '';
   return (
     <div
       onClick={onClick}
@@ -82,9 +85,9 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon 
             {label}
             {expandIcon}
           </div>
-          {note && (
-            <div style={{ fontSize: 12, color: "var(--col-text, #000000)", marginTop: 1 }}>{note}</div>
-          )}
+          <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
+            {dueText} · {pctText}
+          </div>
         </div>
       </div>
       <div style={{
@@ -182,13 +185,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [devCostSaving, setDevCostSaving] = useState(false);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
-  const [documents, setDocuments] = useState([]);
-  const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [documentsSaving, setDocumentsSaving] = useState(false);
-  const [documentForm, setDocumentForm] = useState({ document_name: '', document_type: '', description: '' });
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef(null);
 
   // ── Assign to Collection Executives (Collection Manager, multi-assign) ──
   const [assignOpen, setAssignOpen] = useState(false);
@@ -229,42 +225,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     } finally {
       setAssigning(false);
     }
-  };
-
-  // ── File-type helpers (icon + flag) ──
-  const getFileMeta = (mimeType = '', fileName = '') => {
-    const mt = String(mimeType).toLowerCase();
-    const name = String(fileName).toLowerCase();
-    const ext = name.includes('.') ? name.split('.').pop() : '';
-    const isImage = mt.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
-    const isPdf = mt === 'application/pdf' || ext === 'pdf';
-    const isVideo = mt.startsWith('video/') || ['mp4', 'mov', 'webm', 'avi'].includes(ext);
-    const isAudio = mt.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
-    const isDoc = ['doc', 'docx', 'odt', 'rtf'].includes(ext) || mt.includes('msword') || mt.includes('officedocument.wordprocessing');
-    const isSheet = ['xls', 'xlsx', 'csv', 'ods'].includes(ext) || mt.includes('spreadsheet') || mt.includes('excel');
-    const isSlide = ['ppt', 'pptx', 'odp'].includes(ext) || mt.includes('presentation') || mt.includes('powerpoint');
-    const isZip = ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mt.includes('zip') || mt.includes('compressed');
-    const isText = mt.startsWith('text/') || ['txt', 'md', 'json', 'xml', 'log'].includes(ext);
-    let icon = '📎';
-    if (isImage) icon = '🖼️';
-    else if (isPdf) icon = '📕';
-    else if (isVideo) icon = '🎬';
-    else if (isAudio) icon = '🎵';
-    else if (isDoc) icon = '📄';
-    else if (isSheet) icon = '📊';
-    else if (isSlide) icon = '📽️';
-    else if (isZip) icon = '🗜️';
-    else if (isText) icon = '📝';
-    return { icon, isImage, isPdf, ext };
-  };
-
-  const humanFileSize = (bytes) => {
-    if (!bytes) return '—';
-    const b = Number(bytes);
-    if (b < 1024) return `${b} B`;
-    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
-    if (b < 1024 * 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(b / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
   // Workflow state
@@ -332,19 +292,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
   }, []);
 
-  const loadDocuments = useCallback(async () => {
-    if (!bookingId) return;
-    setDocumentsLoading(true);
-    try {
-      const resp = await bookingApi.getDocuments(bookingId);
-      setDocuments(resp.data?.data || resp.data || []);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to load documents'));
-    } finally {
-      setDocumentsLoading(false);
-    }
-  }, [bookingId]);
-
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
@@ -366,9 +313,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   useEffect(() => {
     loadActivities();
   }, [loadActivities]);
-  useEffect(() => {
-    loadDocuments();
-  }, [loadDocuments]);
 
   const getUserLabel = (person) => {
     if (!person) return '';
@@ -379,6 +323,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const leadAssignee = booking?.lead?.assignedTo || null;
   const previousLeadAssignee = booking?.lead?.previousAssignedToUser || null;
+  // The booking/customer owner = the Collection Manager the SH selected at booking
+  // time (booking.collection_manager_id). This is intentionally separate from the
+  // lead's assignee (the lead stays with the SH — lead ⇄ collection decoupling),
+  // so the "Collection Owner" row must reflect the collection manager, NOT the SH.
+  const collectionOwner = booking?.collectionManager || null;
   const paymentPlanLabel = booking?.paymentPlan?.plan_name || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_name || '—';
   const paymentPlanType = booking?.paymentPlan?.plan_type || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_type || '';
   const quickStatusOptions = statusOptions.filter((status) => QUICK_STATUS_CODES.includes(status.status_code));
@@ -713,31 +662,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
   };
 
-  const handleUploadDocuments = async () => {
-    if (!selectedFiles.length) {
-      toast.error('Select at least one file to upload');
-      return;
-    }
-    setDocumentsSaving(true);
-    try {
-      const formData = new FormData();
-      selectedFiles.forEach((file) => formData.append('documents', file));
-      formData.append('document_name', documentForm.document_name || 'Booking Document');
-      formData.append('document_type', documentForm.document_type || 'General');
-      formData.append('description', documentForm.description || '');
-      await bookingApi.uploadDocuments(bookingId, formData);
-      toast.success('Documents uploaded');
-      setSelectedFiles([]);
-      setDocumentForm({ document_name: '', document_type: '', description: '' });
-      loadDocuments();
-      loadActivities();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to upload documents'));
-    } finally {
-      setDocumentsSaving(false);
-    }
-  };
-
   if (loading) return (
     <div className="simple-loader">
       <div className="simple-spinner" />
@@ -807,7 +731,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const computedTotalValue = plotValue + stampValue + registrationValue + developmentValue + otherChargesTotal;
   const totalValue = computedTotalValue > 0 ? computedTotalValue : toAmount(booking.net_amount || booking.total_amount);
   const balanceDue = totalValue - totalPaid;
-  const pctCollected = totalValue > 0 ? Math.round((totalPaid / totalValue) * 100) : 0;
 
   // ── Per-category targets & collected (drives the Add Payment dropdown + per-bucket progress bars) ──
   const paidByCategory = payments.reduce((acc, p) => {
@@ -877,8 +800,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const pendingCount = payments.filter(p => !p.is_verified && !p.is_bounced).length;
   const tabs = [
     { key: 'payment-history', label: 'Payments', icon: CreditCardIcon },
-    { key: 'activity-log', label: 'Activity Log', icon: ClockIcon },
-    { key: 'uploads', label: 'Uploads', icon: CloudArrowUpIcon },
+    { key: 'activity-log', label: 'Activity', icon: ClockIcon },
+    // { key: 'uploads', label: 'Uploads', icon: CloudArrowUpIcon },
   ];
 
   // Check overdue
@@ -898,7 +821,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     : '—';
   const ciReservedDate = fmtD(booking.unit_reserved_at || booking.reserved_at || booking.created_at || booking.booking_date);
   const ciTeamMembers = [
-    { role: 'Collection Owner', person: leadAssignee },
+    { role: 'Collection Owner', person: collectionOwner },
     { role: 'Previous Handler', person: previousLeadAssignee },
     { role: 'Sales Manager', person: salesManager },
     { role: 'Sales Head', person: salesHead },
@@ -1123,6 +1046,23 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="ci-title">Customer Information</div>
                   <div className="ci-subtitle">Buyer, property &amp; booking details</div>
                 </div>
+                {/* Collection Owner = the Collection Manager the SH selected at booking
+                    time. Shown here as an always-visible assignee profile (the lead
+                    itself stays with the SH — lead ⇄ collection decoupling). */}
+                {collectionOwner && (
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ textAlign: 'right', minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)' }}>Collection Owner</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--col-text, #000000)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{execName(collectionOwner)}</div>
+                    </div>
+                    <span
+                      title={getUserLabel(collectionOwner)}
+                      style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: colorFor(collectionOwner.id), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}
+                    >
+                      {initialsOf(collectionOwner)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Buyer & contact */}
@@ -1489,15 +1429,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
               {/* Cost Breakdown */}
               <div style={{ padding: "18px 24px 8px" }}>
-                <div style={{ marginBottom: 10 }}>
+                {/* <div style={{ marginBottom: 10 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Cost Breakdown</div>
                   <div style={{ fontSize: 12, color: "var(--col-text, #000000)" }}>Detailed property pricing structure</div>
-                </div>
+                </div> */}
 
-                <BkdLedgerRow label="Plot Value" note="90% of total" valueText={fmtFull(plotValue)} />
-                <BkdLedgerRow label="Stamp Duty" note="Govt Charge" valueText={fmtFull(stampValue)} />
-                <BkdLedgerRow label="Registration Fees" note="Legal Charge" valueText={fmtFull(registrationValue)} />
-                <BkdLedgerRow label="Development" note="Infrastructure" valueText={fmtFull(developmentValue)} />
+                <BkdLedgerRow label="Plot Value" valueText={fmtFull(plotValue)} paid={paidByCategory['Plot Value'] || 0} />
+                <BkdLedgerRow label="Stamp Duty" valueText={fmtFull(stampValue)} paid={paidByCategory['Stamp Duty'] || 0} />
+                <BkdLedgerRow label="Registration Fees" valueText={fmtFull(registrationValue)} paid={paidByCategory['Registration'] || 0} />
+                <BkdLedgerRow label="Development" valueText={fmtFull(developmentValue)} paid={paidByCategory['Development'] || 0} />
 
                 {(otherChargesTotal > 0) && (
                   <>
@@ -1533,7 +1473,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               </div>
 
               {/* Collection Progress */}
-              <div style={{ padding: "16px 24px", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
+              {/* <div style={{ padding: "16px 24px", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Collection Progress</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
@@ -1547,7 +1487,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     {fmtFull(liveTotalValue - totalPaid)} pending
                   </span>
                 </div>
-              </div>
+              </div> */}
 
               {/* Payments Strip */}
               <div style={{ display: "flex", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
@@ -1598,9 +1538,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               {payments.map(p => {
                 const isRefund = !!p.is_refund;
                 const catKey = isRefund ? 'Refund' : (p.payment_category || 'Other');
-                const c = isRefund
-                  ? { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }
-                  : (CATEGORY_COLORS[catKey] || CATEGORY_COLORS.Other);
                 const editable = canEditThisPayment(p);
                 return (
                 <tr key={p.id} className={p.is_bounced ? 'bkd-row-bounced' : ''}
@@ -1608,31 +1545,25 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   title={editable ? 'Click to edit this payment' : 'Click to view this payment'}
                   onClick={editable ? () => openEditPayment(p) : () => setViewPaymentId(p.id)}>
                   <td>{fmtD(p.payment_date)}</td>
-                  <td>
-                    <span style={{
-                      display: 'inline-block', background: c.bg, color: c.text,
-                      border: `1px solid ${c.border}`, padding: '3px 8px',
-                      borderRadius: 12, fontSize: 11, fontWeight: 700,
-                    }}>{isRefund ? '↩ Refund' : catKey}</span>
-                  </td>
-                  <td style={{fontWeight:700, color: isRefund ? '#DC2626' : undefined}}>
-                    {isRefund ? '−' : ''}{formatCurrency(p.amount)}
+                  <td style={{ fontWeight: 400, color: '#1f2937' }}>{isRefund ? '↩ Refund' : catKey}</td>
+                  <td style={{ color: isRefund ? '#DC2626' : undefined }}>
+                    {isRefund ? '−' : ''}{(p.amount)}
                   </td>
                   <td>{p.payment_mode}</td>
-                  <td className="bkd-mono">{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
+                  <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
                   <td style={{fontSize:12}}>{p.bank_name || '—'}</td>
                   <td style={{fontSize:12}}>{p.payment_type}</td>
                   <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
                     : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
-                    : p.is_verified ? <span className="bkd-badge bkd-badge-neutral">Verified</span>
+                    : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
                     : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
                   <td>
                     {editable ? (
-                      <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
-                        <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
+                      <button className="view-link" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
+                        Edit
                       </button>
                     ) : (
-                      <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
+                      <button className="view-link" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
                         View
                       </button>
                     )}
@@ -1660,7 +1591,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           <div className="ci-header">
             <div className="ci-header-icon"><ClockIcon style={{width:20,height:20}}/></div>
             <div className="ci-header-text">
-              <div className="ci-title">Activity Log</div>
+              <div className="ci-title">Activity</div>
               <div className="ci-subtitle">Status changes and actions on this booking</div>
             </div>
             <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => {
@@ -1691,7 +1622,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
       )}
 
-      {activeTab === 'uploads' && (
+      {/* {activeTab === 'uploads' && (
         <div className="bkd-card">
           <div className="ci-header">
             <div className="ci-header-icon"><FolderOpenIcon style={{width:20,height:20}}/></div>
@@ -1842,7 +1773,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ── QUICK ACTION MODAL (same as bookings list style) ── */}
       {showApprovalConfirm && (

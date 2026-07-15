@@ -108,19 +108,6 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
-  const today = new Date().toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric'
-  });
-
-  const firstName = user?.first_name || user?.firstName || 'User';
-
   if (loading) {
     return (
       <div className="simple-loader">
@@ -166,8 +153,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
       {/* Page Header */}
       <div className="col-page-header">
         <div className="col-page-header-left">
-          <h1>{getGreeting()}, {firstName}</h1>
-          <p>Here's your collection overview for today — {today}</p>
+          <h1>My Collections</h1>
+          <p>Bookings assigned to you — update status, follow-ups and record payments</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadStats}>

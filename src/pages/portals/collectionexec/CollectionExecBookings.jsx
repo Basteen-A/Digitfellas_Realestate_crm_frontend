@@ -9,7 +9,7 @@ import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,
   PlusIcon, CreditCardIcon, PencilSquareIcon,
   ChevronRightIcon, ChevronDownIcon, CalendarDaysIcon,
-  CheckCircleIcon, ExclamationTriangleIcon,
+  CheckCircleIcon, ExclamationTriangleIcon, ArrowDownLeftIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import KebabMenu from '../../../components/common/KebabMenu';
@@ -18,17 +18,14 @@ import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import '../collection/CollectionWorkspace.css';
 
-const dayStr = (d) => { try { return new Date(d).toISOString().slice(0, 10); } catch { return ''; } };
-
 // Collection-Exec row actions (collapsed into the ⋮ kebab; View stays visible).
 const execQaItems = (booking, openAction) => [
   { key: 'pay', label: 'Add Payment', Icon: PlusIcon, onClick: (e) => { e.stopPropagation(); openAction(booking, 'pay'); } },
   { key: 'payStatus', label: 'Payment Status / Follow-up', Icon: CreditCardIcon, onClick: (e) => { e.stopPropagation(); openAction(booking, 'payStatus'); } },
   { key: 'status', label: 'Update Booking Status', Icon: PencilSquareIcon, onClick: (e) => { e.stopPropagation(); openAction(booking, 'status'); } },
 ];
-const shortDate = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }); } catch { return ''; } };
 
-const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT', 'Other'];
+const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'MODT', 'Other'];
 const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
 
 const CATEGORY_COLORS = {
@@ -354,12 +351,14 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                 </thead>
                 <tbody>
                   {pageItems.map((booking) => {
-                    const today = dayStr(new Date());
-                    const fStr = booking.next_follow_up_at ? dayStr(booking.next_follow_up_at) : null;
-                    const isToday = fStr === today;
-                    const isMissed = fStr && fStr < today;
-                    const fuColor = isMissed ? '#EF4444' : isToday ? '#3B82F6' : 'var(--text-muted)';
-                    const fuShort = booking.next_follow_up_at ? (isToday ? '📅 Today' : `${isMissed ? '⚠ ' : ''}${shortDate(booking.next_follow_up_at)}`) : '—';
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const fStr = booking.next_follow_up_at ? new Date(booking.next_follow_up_at).toISOString().slice(0, 10) : null;
+                    const isMissed = fStr && fStr < todayStr;
+                    const fuColor = isMissed ? '#e80d0dff' : '#000000';
+                    const arrowColor = isMissed ? '#e80d0dff' : '#000000';
+                    const fuDateStr = booking.next_follow_up_at
+                      ? new Date(booking.next_follow_up_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '—';
                     const isExpanded = expandedMobileBookingId === booking.id;
 
                     return (
@@ -397,7 +396,10 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{booking.payment_status || '—'}</span>
                           </td>
                           <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: fuColor }}>{fuShort}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 400, color: fuColor }}>
+                              {fuDateStr}
+                              {booking.next_follow_up_at && <ArrowDownLeftIcon style={{ width: 12, height: 12, color: arrowColor }} />}
+                            </span>
                           </td>
                           <td className="hide-mobile" style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
@@ -422,9 +424,9 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                                   {booking.next_follow_up_at && (
                                     <div className="expanded-info-item">
                                       <label>Next Follow-Up</label>
-                                      <p style={{ display: 'flex', alignItems: 'center', gap: 4, color: fuColor, fontWeight: 600 }}>
-                                        <CalendarDaysIcon style={{ width: 14, height: 14 }} />
-                                        <span>{new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}{isToday ? ' · Today' : isMissed ? ' · Missed' : ''}</span>
+                                      <p style={{ display: 'flex', alignItems: 'center', gap: 4, color: fuColor, fontWeight: 400 }}>
+                                        <span>{fuDateStr}</span>
+                                        <ArrowDownLeftIcon style={{ width: 12, height: 12, color: arrowColor }} />
                                       </p>
                                     </div>
                                   )}

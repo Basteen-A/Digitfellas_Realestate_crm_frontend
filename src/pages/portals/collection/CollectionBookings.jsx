@@ -10,6 +10,7 @@ import {
   BanknotesIcon, PencilSquareIcon, CheckCircleIcon,
   CreditCardIcon, ShieldCheckIcon, CalendarDaysIcon,
   ClockIcon, ExclamationTriangleIcon, DocumentTextIcon, XCircleIcon, ChevronRightIcon, ChevronDownIcon,
+  FunnelIcon, XMarkIcon, ArrowDownLeftIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import KebabMenu from '../../../components/common/KebabMenu';
@@ -18,7 +19,6 @@ import { badgeStyle, badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
-// Booking list tabs — full label on desktop, short label on mobile (mobile-compact-tabs).
 const BOOKING_TABS = [
   { value: 'All', label: 'All', short: 'All' },
   { value: 'Active', label: 'Active', short: 'Active' },
@@ -28,7 +28,6 @@ const BOOKING_TABS = [
   { value: 'Cancelled', label: 'Cancelled', short: 'Cancelled' },
 ];
 
-// Deterministic avatar colour + initials for the assignee stack (matches the task list).
 const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
 const colorFor = (id) => {
   const s = String(id ?? '');
@@ -59,6 +58,13 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusOptions, setStatusOptions] = useState([]);
+
+  const [selectedProjects, setSelectedProjects] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [showProjectFilter, setShowProjectFilter] = useState(false);
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const projectFilterRef = React.useRef(null);
+  const statusFilterRef = React.useRef(null);
 
   // Quick Action Drawer state
   const [drawerBooking, setDrawerBooking] = useState(null);
@@ -215,6 +221,50 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     });
   }, []);
 
+  const projects = useMemo(() => {
+    const projectMap = new Map();
+    bookings.forEach((b) => {
+      const id = b.project_id || b.project?.id;
+      const name = b.project?.project_name || b.project_name;
+      if (id && name && !projectMap.has(id)) {
+        projectMap.set(id, { id, name });
+      }
+    });
+    return Array.from(projectMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [bookings]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (projectFilterRef.current && !projectFilterRef.current.contains(e.target)) {
+        setShowProjectFilter(false);
+      }
+      if (statusFilterRef.current && !statusFilterRef.current.contains(e.target)) {
+        setShowStatusFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleProjectToggle = (projectId) => {
+    setSelectedProjects((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const handleStatusToggle = (statusCode) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(statusCode)
+        ? prev.filter((code) => code !== statusCode)
+        : [...prev, statusCode]
+    );
+  };
+
+  const clearProjectFilter = () => setSelectedProjects([]);
+  const clearStatusFilter = () => setSelectedStatuses([]);
+
   const filteredBookings = useMemo(() => {
     let list = bookings.filter((b) => b.status_code !== 'BOOKING_OPEN');
     if (activeTab === 'Today Follow-up') {
@@ -226,6 +276,15 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     } else if (activeTab === 'Registered') {
       list = list.filter(b => b.status_code === 'REGISTERED');
     }
+    if (selectedProjects.length > 0) {
+      list = list.filter((b) => {
+        const projectId = b.project_id || b.project?.id;
+        return selectedProjects.includes(projectId);
+      });
+    }
+    if (selectedStatuses.length > 0) {
+      list = list.filter((b) => selectedStatuses.includes(b.status_code));
+    }
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
     return list.filter((b) =>
@@ -235,7 +294,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       (b.unit_display || b.unit_number || '').toLowerCase().includes(q) ||
       (b.buyer_name || '').toLowerCase().includes(q)
     );
-  }, [bookings, searchQuery, activeTab]);
+  }, [bookings, searchQuery, activeTab, selectedProjects, selectedStatuses]);
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filteredBookings, 25);
 
@@ -625,9 +684,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
         </div>
       </header>
 
-      {/* ── Toolbar (search) ── */}
-      <div className="lead-workspace__toolbar">
-        <div className="lead-workspace__toolbar-search">
+      {/* ── Toolbar (search + filters) ── */}
+      <div className="lead-workspace__toolbar" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
+        <div className="lead-workspace__toolbar-search" style={{ flex: '0 1 400px', minWidth: '200px', order: 1 }}>
           <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
           <input
             type="text"
@@ -635,6 +694,100 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search bookings by number, customer, project or unit"
           />
+        </div>
+        
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, order: 2 }}>
+          <div style={{ position: 'relative' }} ref={projectFilterRef}>
+            <button
+              type="button"
+              className={`workspace-btn workspace-btn--ghost ${selectedProjects.length > 0 ? 'has-filter' : ''}`}
+              onClick={() => setShowProjectFilter(!showProjectFilter)}
+              style={{ position: 'relative' }}
+            >
+              <FunnelIcon style={{ width: 14, height: 14 }} />
+              Project
+              {selectedProjects.length > 0 && (
+                <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>
+                  {selectedProjects.length}
+                </span>
+              )}
+            </button>
+            {showProjectFilter && (
+              <div className="filter-dropdown">
+                <div className="filter-dropdown-header">
+                  <span>Filter by Project</span>
+                  {selectedProjects.length > 0 && (
+                    <button type="button" className="filter-clear-btn" onClick={clearProjectFilter}>Clear</button>
+                  )}
+                </div>
+                <div className="filter-dropdown-list">
+                  {projects.map((p) => (
+                    <label key={p.id} className="filter-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjects.includes(p.id)}
+                        onChange={() => handleProjectToggle(p.id)}
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ position: 'relative' }} ref={statusFilterRef}>
+            <button
+              type="button"
+              className={`workspace-btn workspace-btn--ghost ${selectedStatuses.length > 0 ? 'has-filter' : ''}`}
+              onClick={() => setShowStatusFilter(!showStatusFilter)}
+              style={{ position: 'relative' }}
+            >
+              <FunnelIcon style={{ width: 14, height: 14 }} />
+              Status
+              {selectedStatuses.length > 0 && (
+                <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>
+                  {selectedStatuses.length}
+                </span>
+              )}
+            </button>
+            {showStatusFilter && (
+              <div className="filter-dropdown">
+                <div className="filter-dropdown-header">
+                  <span>Filter by Status</span>
+                  {selectedStatuses.length > 0 && (
+                    <button type="button" className="filter-clear-btn" onClick={clearStatusFilter}>Clear</button>
+                  )}
+                </div>
+                <div className="filter-dropdown-list">
+                  {statusOptions.map((s) => (
+                    <label key={s.id} className="filter-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(s.status_code)}
+                        onChange={() => handleStatusToggle(s.status_code)}
+                      />
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color_code || '#6B7280' }} />
+                        {s.status_name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(selectedProjects.length > 0 || selectedStatuses.length > 0) && (
+            <button
+              type="button"
+              className="workspace-btn workspace-btn--ghost"
+              onClick={() => { setSelectedProjects([]); setSelectedStatuses([]); }}
+              style={{ color: '#EF4444' }}
+            >
+              <XMarkIcon style={{ width: 14, height: 14 }} /> Clear all
+            </button>
+          )}
         </div>
       </div>
 
@@ -680,6 +833,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   <tr>
                     <th className="show-mobile lead-col-toggle"></th>
                     <th className="lead-col-lead" style={{ width: 'auto' }}>Booking</th>
+                    <th className="hide-mobile" style={{ width: 120 }}>Phone</th>
                     <th className="hide-mobile" style={{ width: 160 }}>Project · Unit</th>
                     <th className="hide-mobile" style={{ width: 120 }}>Net Value</th>
                     <th className="hide-mobile" style={{ width: 110 }}>Progress</th>
@@ -699,11 +853,11 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     const balance = totalValue - collected;
                     const todayStr = new Date().toISOString().slice(0, 10);
                     const fStr = booking.next_follow_up_at ? new Date(booking.next_follow_up_at).toISOString().slice(0, 10) : null;
-                    const isToday = fStr === todayStr;
                     const isMissed = fStr && fStr < todayStr;
-                    const fuColor = isMissed ? '#EF4444' : isToday ? '#3B82F6' : 'var(--text-muted)';
-                    const fuShort = booking.next_follow_up_at
-                      ? (isToday ? '📅 Today' : `${isMissed ? '⚠ ' : ''}${new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}`)
+                    const fuColor = isMissed ? '#e80d0dff' : '#000000';
+                    const arrowColor = isMissed ? '#e80d0dff' : '#000000';
+                    const fuDateStr = booking.next_follow_up_at
+                      ? new Date(booking.next_follow_up_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                       : '—';
                     const paymentBadge = booking.payment_status ? (
                       <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
@@ -730,17 +884,16 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           </td>
                           <td className="lead-col-lead">
                             <p className="lead-title">{booking.customer_name || booking.buyer_name || '-'}</p>
-                            <small>
-                              <button type="button" className="col-booking-link" onClick={(e) => { e.stopPropagation(); onSelectBooking(booking.id); }}>
-                                {booking.booking_number}
-                              </button>
-                            </small>
+                            <small style={{ color: '#64748b' }}>{booking.booking_number}</small>
+                          </td>
+                          <td className="hide-mobile">
+                            <p style={{ fontSize: 13 }}>{booking.customer?.phone || booking.phone || '—'}</p>
                           </td>
                           <td className="hide-mobile">
                             <p className="lead-title">{booking.project_name || '-'}</p>
                             <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</small>
                           </td>
-                          <td className="hide-mobile" style={{ fontWeight: 600 }}>{formatCurrency(totalValue)}</td>
+                          <td className="hide-mobile">{formatCurrency(totalValue)}</td>
                           <td className="hide-mobile" style={{ minWidth: 90 }}>
                             <div className="col-progress" style={{ height: 6, width: '100%' }}>
                               <div className={`col-progress-bar ${getProgressClass(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
@@ -756,23 +909,32 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           <td className="hide-mobile">{paymentBadge}</td>
                           <td className="hide-mobile">
                             {(() => {
+                              // The booking is owned by the Collection Manager the Sales Head
+                              // selected at booking time; Collection Executives are assigned later
+                              // by the manager. Show the manager as the primary assignee, then execs.
+                              const manager = booking.collectionManager || null;
                               const execs = booking.collectionExecutives || [];
-                              if (execs.length === 0) return <small style={{ color: 'var(--text-muted)' }}>—</small>;
+                              const seen = new Set();
+                              const people = [
+                                ...(manager ? [{ ...manager, _owner: true }] : []),
+                                ...execs,
+                              ].filter((p) => (p && !seen.has(p.id) && seen.add(p.id)));
+                              if (people.length === 0) return <small style={{ color: 'var(--text-muted)' }}>—</small>;
                               return (
                                 <div className="bkd-cell-avatars">
-                                  {execs.slice(0, 3).map((a, i) => (
+                                  {people.slice(0, 3).map((a, i) => (
                                     <span
                                       key={a.id}
                                       className="bkd-cell-avatar"
-                                      title={fullNameOf(a)}
-                                      style={{ background: colorFor(a.id), marginLeft: i === 0 ? 0 : -8 }}
+                                      title={a._owner ? `${fullNameOf(a)} · Collection Owner` : fullNameOf(a)}
+                                      style={{ background: colorFor(a.id), marginLeft: i === 0 ? 0 : -8, ...(a._owner ? { boxShadow: '0 0 0 2px #16A34A' } : null) }}
                                     >
                                       {avatarInitials(a)}
                                     </span>
                                   ))}
-                                  {execs.length > 3 && (
+                                  {people.length > 3 && (
                                     <span className="bkd-cell-avatar" style={{ background: '#e2e8f0', color: '#64748b', marginLeft: -8 }}>
-                                      +{execs.length - 3}
+                                      +{people.length - 3}
                                     </span>
                                   )}
                                 </div>
@@ -780,7 +942,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             })()}
                           </td>
                           <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: fuColor }}>{fuShort}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 400, color: '#000000' }}>
+                              {fuDateStr}
+                              {booking.next_follow_up_at && <ArrowDownLeftIcon style={{ width: 12, height: 12, color: arrowColor }} />}
+                            </span>
                           </td>
                           <td className="hide-mobile">
                             {renderQuickActions(booking)}
@@ -816,7 +981,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                                       <label>Next Follow-Up</label>
                                       <p style={{ display: 'flex', alignItems: 'center', gap: 4, color: fuColor, fontWeight: 600 }}>
                                         <CalendarDaysIcon style={{ width: 14, height: 14 }} />
-                                        <span>{new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}{isToday ? ' · Today' : isMissed ? ' · Missed' : ''}</span>
+                                        <span>{new Date(booking.next_follow_up_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                       </p>
                                     </div>
                                   )}
