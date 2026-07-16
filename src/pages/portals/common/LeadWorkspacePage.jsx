@@ -1903,6 +1903,16 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       if (parsed && parsed.isValid()) {
         countryCode = `+${parsed.countryCallingCode}`;
         phoneDigits = parsed.nationalNumber;
+      } else if (rawStr.startsWith('+')) {
+        // Explicitly international but not fully valid (e.g. a malformed stored
+        // number) — still keep its country code by longest-prefix match.
+        const found = [...COUNTRY_CODES]
+          .sort((a, b) => b.value.length - a.value.length)
+          .find((c) => rawStr.startsWith(c.value));
+        if (found) {
+          countryCode = found.value;
+          phoneDigits = sanitizePhoneNumberInput(rawStr.slice(found.value.length));
+        }
       }
     }
 
