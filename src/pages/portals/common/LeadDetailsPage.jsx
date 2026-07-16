@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import AuthedAudio from '../../../components/AuthedAudio';
+import SmartfloCallButton from '../../../components/telephony/SmartfloCallButton';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
@@ -2320,13 +2321,14 @@ const LeadDetailsPage = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div className="qa-header-comms" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button 
+                  <button
                     className="qa-header-icon-btn"
-                    title="Call Now"
+                    title="Call Now (dial from this device)"
                     onClick={() => window.open(`tel:${lead.phone || lead.phone_number}`)}
                   >
                     <PhoneIcon style={{ width: 18, height: 18 }} />
                   </button>
+                  <SmartfloCallButton leadId={lead.id} />
                   <button 
                     className="qa-header-icon-btn"
                     title="WhatsApp"

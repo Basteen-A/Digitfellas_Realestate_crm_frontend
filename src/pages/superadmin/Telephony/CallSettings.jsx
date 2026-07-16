@@ -32,7 +32,7 @@ const CallSettings = () => {
   const [saving, setSaving] = useState(false);
   const [agents, setAgents] = useState([]);
   const [form, setForm] = useState({
-    api_base_url: '', default_country: 'IN', api_key: '',
+    api_base_url: '', default_country: 'IN', api_key: '', default_caller_id: '',
     is_active: true, log_to_lead_activity: true, match_by_agent_number: true,
   });
 
@@ -49,6 +49,7 @@ const CallSettings = () => {
         api_base_url: c.api_base_url || '',
         default_country: c.default_country || 'IN',
         api_key: '', // never prefilled — leave blank to keep the stored key
+        default_caller_id: c.default_caller_id || '',
         is_active: c.is_active !== false,
         log_to_lead_activity: c.log_to_lead_activity !== false,
         match_by_agent_number: c.match_by_agent_number !== false,
@@ -139,15 +140,28 @@ const CallSettings = () => {
         <input style={{ ...inputStyle, maxWidth: 120 }} value={form.default_country} onChange={(e) => setForm((f) => ({ ...f, default_country: e.target.value.toUpperCase() }))} placeholder="IN" maxLength={4} />
 
         <label style={labelStyle}>
-          Provider API key <span style={{ fontWeight: 400 }}>(optional — only needed if recordings require auth)</span>
+          Click-to-Call API token <span style={{ fontWeight: 400 }}>(Authorization header — from your Smartflo panel; also used for protected recordings)</span>
         </label>
         <input
           style={inputStyle}
           type="password"
           value={form.api_key}
           onChange={(e) => setForm((f) => ({ ...f, api_key: e.target.value }))}
-          placeholder={cfg?.key_set ? `Saved (${cfg.api_key_masked}). Leave blank to keep.` : 'Not set'}
+          placeholder={cfg?.key_set ? `Saved (${cfg.api_key_masked}). Leave blank to keep.` : 'Not set — required for outbound Click-to-Call'}
           autoComplete="new-password"
+        />
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+          Paste the token exactly as your Smartflo account needs it (some require a leading <code>Bearer </code>).
+        </div>
+
+        <label style={labelStyle}>
+          Default Caller ID (DID) <span style={{ fontWeight: 400 }}>(shown to the customer on outbound Click-to-Call)</span>
+        </label>
+        <input
+          style={{ ...inputStyle, maxWidth: 260 }}
+          value={form.default_caller_id}
+          onChange={(e) => setForm((f) => ({ ...f, default_caller_id: e.target.value }))}
+          placeholder="e.g. 918069235400"
         />
 
         <Toggle

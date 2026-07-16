@@ -29,6 +29,13 @@ const telephonyApi = {
   // API-relative recording path for <AuthedAudio src> (axios adds the /api/v1
   // base + the Bearer token; the raw provider URL never reaches the browser).
   recordingSrc: (id) => `${BASE}/call-logs/${id}/recording`,
+
+  // Outbound Click-to-Call — Smartflo rings the logged-in agent's phone, then
+  // the customer. Pass { lead_id } (customer = lead's phone) or { destination_number }.
+  clickToCall: async (payload) => {
+    const { data } = await api.post(`${BASE}/click-to-call`, payload);
+    return data;
+  },
 };
 
 export default telephonyApi;
