@@ -23,6 +23,7 @@ import {
   UserPlusIcon,
   TrophyIcon,
   PhoneArrowDownLeftIcon,
+  PhoneIcon,
   PaperAirplaneIcon,
   MegaphoneIcon,
   KeyIcon,
@@ -176,6 +177,16 @@ const adminSidebar = [
       { label: 'Marketing Campaigns', path: '/super-admin/marketing-campaigns' },
       { label: 'Templates', path: '/super-admin/marketing-templates' },
       { label: 'WhatsApp Settings', path: '/super-admin/whatsapp-settings' },
+    ],
+  },
+
+  { section: 'TELEPHONY' },
+  {
+    label: 'Telephony',
+    icon: PhoneIcon,
+    children: [
+      { label: 'Call Logs', path: '/super-admin/telephony/call-logs' },
+      { label: 'Call Settings', path: '/super-admin/telephony/settings' },
     ],
   },
 

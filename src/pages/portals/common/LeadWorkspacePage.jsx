@@ -3353,7 +3353,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             <small>
               <a
                 href={`/portal/lead/${lead.id}`}
-                onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`); }}
+                onClick={(e) => { e.preventDefault(); navigate(`/portal/lead/${lead.id}`, { state: { viaSearch: Boolean(filters.search.trim()) } }); }}
                 style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
               >
                 {lead.leadNumber}
@@ -3420,7 +3420,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 className="view-link lead-action-view-btn"
                 title="View lead"
                 style={{ marginRight: 6 }}
-                onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}
+                onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`, { state: { viaSearch: Boolean(filters.search.trim()) } }); }}
               >
                 View
               </button>
@@ -3448,10 +3448,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   className="crm-btn crm-btn-primary crm-btn-sm"
                   disabled={
                     isLeadReadOnly(lead)
-                    || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe)
+                    // A searched-up lead is deliberately looked up (e.g. a customer
+                    // calling in) — the missed-first gate must not block acting on it.
+                    || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe && !filters.search.trim())
                   }
                   title={
-                    FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe
+                    FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe && !filters.search.trim()
                       ? 'Complete missed follow-ups first to enable today actions'
                       : undefined
                   }

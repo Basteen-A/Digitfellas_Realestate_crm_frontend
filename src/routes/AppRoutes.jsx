@@ -66,6 +66,8 @@ import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingA
 import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns';
 import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
 import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
+import TelephonyCallSettings from '../pages/superadmin/Telephony/CallSettings';
+import TelephonyCallLogs from '../pages/superadmin/Telephony/CallLogs';
 import AdminRecordManager from '../pages/superadmin/RecordManager/AdminRecordManager';
 import {
   TaskWorkspace,
@@ -266,6 +268,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/marketing-campaigns" element={<MarketingCampaigns />} />
             <Route path="/super-admin/marketing-templates" element={<WhatsappTemplates />} />
             <Route path="/super-admin/whatsapp-settings" element={<WhatsappSettings />} />
+            <Route path="/super-admin/telephony/settings" element={<TelephonyCallSettings />} />
+            <Route path="/super-admin/telephony/call-logs" element={<TelephonyCallLogs />} />
             <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
           </Route>
 

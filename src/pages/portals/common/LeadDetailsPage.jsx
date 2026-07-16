@@ -383,6 +383,10 @@ const LeadDetailsPage = () => {
   const location = useLocation();
   const authUser = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(authUser);
+  // Lead opened from a search result: the user deliberately looked this lead up
+  // (e.g. a customer calling in), so the missed-follow-ups-first gate must not
+  // block updating it. The gate stays in force for normal tab navigation.
+  const viaSearch = location.state?.viaSearch === true;
 
   const [loading, setLoading] = useState(true);
   const [lead, setLead] = useState(null);
@@ -629,10 +633,11 @@ const LeadDetailsPage = () => {
   }, [lead?.nextFollowUpAt, lead?.isClosed]);
 
   const isMissedFirstBlocked = useMemo(() => {
+    if (viaSearch) return false;
     if (!MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) return false;
     if (!hasPendingMissedFollowupsForMe) return false;
     return !isCurrentLeadMissedFollowup;
-  }, [roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
+  }, [viaSearch, roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
 
   const loadLeadData = useCallback(async () => {
     if (!id) return;

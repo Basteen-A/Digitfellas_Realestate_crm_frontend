@@ -337,6 +337,12 @@ export const masterConfigs = {
       },
       { name: 'alternate_phone', label: 'Alternate Phone' },
       {
+        name: 'telephony_agent_number',
+        label: 'Tata Agent Number',
+        placeholder: 'Only if different from Phone',
+        helpText: 'Optional. Used to match Tata Smartflo call webhooks to this telecaller. Leave blank to use the Phone above.',
+      },
+      {
         name: 'location_ids',
         label: 'Project Locations',
         type: 'multiselect',
