@@ -4,6 +4,7 @@ import { PhoneArrowUpRightIcon, PhoneXMarkIcon, ArrowPathIcon } from '@heroicons
 import telephonyApi from '../../../api/telephonyApi';
 import Pagination from '../../../components/common/Pagination';
 import RecordingCell from '../../../components/telephony/RecordingCell';
+import CallDirectionIcon from '../../../components/telephony/CallDirectionIcon';
 import { getErrorMessage } from '../../../utils/helpers';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
@@ -109,7 +110,12 @@ const TelecallerCallLog = () => {
                 const answered = r.call_status === 'ANSWERED';
                 return (
                   <tr key={r.id}>
-                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDateTime(r.start_stamp || r.received_at)}</td>
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <CallDirectionIcon direction={r.direction} status={r.call_status} />
+                        {fmtDateTime(r.start_stamp || r.received_at)}
+                      </span>
+                    </td>
                     <td style={td}>
                       {r.lead ? (
                         <>
