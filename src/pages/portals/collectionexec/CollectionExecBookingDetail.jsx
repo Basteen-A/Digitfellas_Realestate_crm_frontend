@@ -434,7 +434,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
 
             {/* ── BOOKING STATUS UPDATE MODE ── */}
             {actionMode === 'status' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '580px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
@@ -524,7 +524,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
 
             {/* ── PAYMENT STATUS UPDATE MODE ── */}
             {actionMode === 'payStatus' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '580px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
@@ -595,7 +595,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
 
             {/* ── RECORD PAYMENT MODE ── */}
             {actionMode === 'pay' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '580px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
                     <div>Net: <strong>{formatCurrency(getComputedTotalValue(booking))}</strong></div>
@@ -616,6 +616,8 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
                               <option value="">Select what this payment is for</option>
                               {PAYMENT_CATEGORIES.filter((cat) => {
                                 if (cat === 'Other') return false;
+                                // Collection Executives don't collect "Other Registration Expenses".
+                                if (cat === 'Other Registration Expenses') return false;
                                 const bucket = buckets.find(b => b.key === cat);
                                 if (cat === 'MODT') return (bucket?.target || 0) > 0 || (bucket?.paid || 0) > 0;
                                 return true;

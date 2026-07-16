@@ -10,6 +10,7 @@ import {
   PlusIcon, CreditCardIcon, PencilSquareIcon,
   ChevronRightIcon, ChevronDownIcon, CalendarDaysIcon,
   CheckCircleIcon, ExclamationTriangleIcon, ArrowDownLeftIcon,
+  FunnelIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import KebabMenu from '../../../components/common/KebabMenu';
@@ -107,6 +108,13 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
 
+  const [selectedProjects, setSelectedProjects] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [showProjectFilter, setShowProjectFilter] = useState(false);
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const projectFilterRef = React.useRef(null);
+  const statusFilterRef = React.useRef(null);
+
   // Modals & Active Booking state
   const [activeBooking, setActiveBooking] = useState(null);
   const [actionMode, setActionMode] = useState(null); // 'status' | 'payStatus' | 'pay'
@@ -163,6 +171,50 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
       setPaymentModeOptions(payload.payment_modes || []);
       setPaymentTypeOptions(payload.payment_types || []);
     }).catch(() => {});
+  }, []);
+
+  const projects = useMemo(() => {
+    const projectMap = new Map();
+    bookings.forEach((b) => {
+      const id = b.project_id || b.project?.id;
+      const name = b.project?.project_name || b.project_name;
+      if (id && name && !projectMap.has(id)) {
+        projectMap.set(id, { id, name });
+      }
+    });
+    return Array.from(projectMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [bookings]);
+
+  const handleProjectToggle = (projectId) => {
+    setSelectedProjects((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const handleStatusToggle = (statusCode) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(statusCode)
+        ? prev.filter((code) => code !== statusCode)
+        : [...prev, statusCode]
+    );
+  };
+
+  const clearProjectFilter = () => setSelectedProjects([]);
+  const clearStatusFilter = () => setSelectedStatuses([]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (projectFilterRef.current && !projectFilterRef.current.contains(e.target)) {
+        setShowProjectFilter(false);
+      }
+      if (statusFilterRef.current && !statusFilterRef.current.contains(e.target)) {
+        setShowStatusFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const quickStatusOptions = useMemo(() => statusOptions.filter((s) => QUICK_STATUS_CODES.includes(s.status_code)), [statusOptions]);
@@ -261,13 +313,22 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
       const todayStr = new Date().toISOString().slice(0, 10);
       list = list.filter(b => b.next_follow_up_at && new Date(b.next_follow_up_at).toISOString().slice(0, 10) < todayStr);
     }
+    if (selectedProjects.length > 0) {
+      list = list.filter((b) => {
+        const projectId = b.project_id || b.project?.id;
+        return selectedProjects.includes(projectId);
+      });
+    }
+    if (selectedStatuses.length > 0) {
+      list = list.filter((b) => selectedStatuses.includes(b.status_code));
+    }
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
     return list.filter((b) => [
       b.booking_number, b.customer_name, b.buyer_name, b.project_name,
       b.unit_display, b.unit_number, b.phase_name,
     ].filter(Boolean).join(' ').toLowerCase().includes(q));
-  }, [bookings, searchQuery, activeTab]);
+  }, [bookings, searchQuery, activeTab, selectedProjects, selectedStatuses]);
 
   const { pageItems, page, setPage, pageSize, setPageSize, total } = usePagination(filtered, 25);
 
@@ -294,8 +355,8 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
         </div>
       </header>
 
-      <div className="lead-workspace__toolbar">
-        <div className="lead-workspace__toolbar-search">
+      <div className="lead-workspace__toolbar" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
+        <div className="lead-workspace__toolbar-search" style={{ flex: '0 1 400px', minWidth: '200px', order: 1 }}>
           <span className="search-icon"><MagnifyingGlassIcon style={{ width: 14, height: 14 }} /></span>
           <input
             type="text"
@@ -303,6 +364,100 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by booking number, buyer, project or unit"
           />
+        </div>
+        
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, order: 2 }}>
+          <div style={{ position: 'relative' }} ref={projectFilterRef}>
+            <button
+              type="button"
+              className={`workspace-btn workspace-btn--ghost ${selectedProjects.length > 0 ? 'has-filter' : ''}`}
+              onClick={() => setShowProjectFilter(!showProjectFilter)}
+              style={{ position: 'relative' }}
+            >
+              <FunnelIcon style={{ width: 14, height: 14 }} />
+              Project
+              {selectedProjects.length > 0 && (
+                <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>
+                  {selectedProjects.length}
+                </span>
+              )}
+            </button>
+            {showProjectFilter && (
+              <div className="filter-dropdown">
+                <div className="filter-dropdown-header">
+                  <span>Filter by Project</span>
+                  {selectedProjects.length > 0 && (
+                    <button type="button" className="filter-clear-btn" onClick={clearProjectFilter}>Clear</button>
+                  )}
+                </div>
+                <div className="filter-dropdown-list">
+                  {projects.map((p) => (
+                    <label key={p.id} className="filter-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjects.includes(p.id)}
+                        onChange={() => handleProjectToggle(p.id)}
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ position: 'relative' }} ref={statusFilterRef}>
+            <button
+              type="button"
+              className={`workspace-btn workspace-btn--ghost ${selectedStatuses.length > 0 ? 'has-filter' : ''}`}
+              onClick={() => setShowStatusFilter(!showStatusFilter)}
+              style={{ position: 'relative' }}
+            >
+              <FunnelIcon style={{ width: 14, height: 14 }} />
+              Status
+              {selectedStatuses.length > 0 && (
+                <span style={{ marginLeft: 4, background: '#3B82F6', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>
+                  {selectedStatuses.length}
+                </span>
+              )}
+            </button>
+            {showStatusFilter && (
+              <div className="filter-dropdown">
+                <div className="filter-dropdown-header">
+                  <span>Filter by Status</span>
+                  {selectedStatuses.length > 0 && (
+                    <button type="button" className="filter-clear-btn" onClick={clearStatusFilter}>Clear</button>
+                  )}
+                </div>
+                <div className="filter-dropdown-list">
+                  {statusOptions.map((s) => (
+                    <label key={s.id} className="filter-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(s.status_code)}
+                        onChange={() => handleStatusToggle(s.status_code)}
+                      />
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color_code || '#6B7280' }} />
+                        {s.status_name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(selectedProjects.length > 0 || selectedStatuses.length > 0) && (
+            <button
+              type="button"
+              className="workspace-btn workspace-btn--ghost"
+              onClick={() => { setSelectedProjects([]); setSelectedStatuses([]); }}
+              style={{ color: '#EF4444' }}
+            >
+              <XMarkIcon style={{ width: 14, height: 14 }} /> Clear all
+            </button>
+          )}
         </div>
       </div>
 
@@ -483,7 +638,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
 
             {/* ── BOOKING STATUS UPDATE MODE ── */}
             {actionMode === 'status' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '580px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Select New Booking Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
@@ -573,7 +728,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
 
             {/* ── PAYMENT STATUS UPDATE MODE ── */}
             {actionMode === 'payStatus' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '580px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Update Payment Status</div>
                   <div className="qa-drawer-status-grid" style={{ padding: 0, gridTemplateColumns: 'repeat(3, 1fr)' }}>
@@ -644,7 +799,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
 
             {/* ── RECORD PAYMENT MODE ── */}
             {actionMode === 'pay' && (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '580px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
                     <div>Net: <strong>{formatCurrency(getComputedTotalValue(activeBooking))}</strong></div>
@@ -665,6 +820,8 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                               <option value="">Select what this payment is for</option>
                               {PAYMENT_CATEGORIES.filter((cat) => {
                                 if (cat === 'Other') return false;
+                                // Collection Executives don't collect "Other Registration Expenses".
+                                if (cat === 'Other Registration Expenses') return false;
                                 const bucket = buckets.find(b => b.key === cat);
                                 if (cat === 'MODT') return (bucket?.target || 0) > 0 || (bucket?.paid || 0) > 0;
                                 return true;
