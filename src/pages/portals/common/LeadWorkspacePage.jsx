@@ -67,7 +67,7 @@ import {
 } from '@heroicons/react/24/outline';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import { isValidPhoneNumber } from 'libphonenumber-js/max';
+import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js/max';
 import './LeadWorkspacePage.css';
 
 const INDIAN_STATES_UTS = [
@@ -1886,14 +1886,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     const leadPhone = lead.phone || lead.phone_number || lead.mobile || '';
     const leadEmail = lead.email || '';
 
+    // The stored phone is an E.164-style number that may or may not keep its
+    // leading '+'. Detect the real country from the full number (via
+    // libphonenumber) so re-engaging an international lead doesn't reset the
+    // country to +91 and push the country code into the national part. Falls
+    // back to +91 for a bare national number that carries no country code.
+    const rawStr = String(leadPhone).trim();
+    const rawDigits = sanitizePhoneNumberInput(rawStr);
     let countryCode = '+91';
-    let phoneDigits = leadPhone;
-
-    // Check if phone starts with any of our country codes
-    const foundCode = COUNTRY_CODES.find((c) => leadPhone.startsWith(c.value));
-    if (foundCode) {
-      countryCode = foundCode.value;
-      phoneDigits = leadPhone.slice(foundCode.value.length);
+    let phoneDigits = rawDigits;
+    if (rawDigits) {
+      let parsed = null;
+      try {
+        parsed = parsePhoneNumberFromString(rawStr.startsWith('+') ? rawStr : `+${rawDigits}`);
+      } catch { parsed = null; }
+      if (parsed && parsed.isValid()) {
+        countryCode = `+${parsed.countryCallingCode}`;
+        phoneDigits = parsed.nationalNumber;
+      }
     }
 
     setNewLeadForm((prev) => ({
