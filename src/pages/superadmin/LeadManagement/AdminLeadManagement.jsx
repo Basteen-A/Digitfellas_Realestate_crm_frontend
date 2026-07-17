@@ -505,6 +505,22 @@ const AdminLeadManagement = () => {
     }
   };
 
+  // Soft delete only — the server flags is_deleted; the lead disappears from
+  // every portal but stays in the database.
+  const handleDeleteLead = async (e, lead) => {
+    e.stopPropagation();
+    const label = `${lead.leadNumber || 'this lead'}${lead.fullName ? ` — ${lead.fullName}` : ''}`;
+    const ok = window.confirm(`Delete lead ${label}?\n\nThe lead will be hidden from all portals. It is NOT permanently removed.`);
+    if (!ok) return;
+    try {
+      await leadWorkflowApi.deleteLead(lead.id);
+      toast.success(`Lead ${lead.leadNumber || ''} deleted.`);
+      fetchLeads();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not delete lead.');
+    }
+  };
+
   return (
     <section className="admin-lead-mgmt">
       {/* Header */}
@@ -887,6 +903,14 @@ const AdminLeadManagement = () => {
                       onClick={(e) => openMove(e, lead)}
                     >
                       <ArrowsRightLeftIcon style={{ width: 18, height: 18 }} />
+                    </button>
+                    <button
+                      type="button"
+                      className="alm-btn alm-btn--icon alm-btn--danger"
+                      title="Delete lead (soft delete)"
+                      onClick={(e) => handleDeleteLead(e, lead)}
+                    >
+                      <TrashIcon style={{ width: 18, height: 18 }} />
                     </button>
                   </div>
                 </td>

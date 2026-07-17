@@ -231,6 +231,15 @@ const leadWorkflowApi = {
     return data;
   },
 
+  /**
+   * DELETE /leads/:id (Super Admin only)
+   * Soft delete — the server sets is_deleted, the row is never removed.
+   */
+  deleteLead: async (leadId) => {
+    const { data } = await api.delete(`/leads/${leadId}`);
+    return data;
+  },
+
   getUserWithScore: async (userId) => {
     const { data } = await api.get(`/leads/user/${userId}/score`);
     return data;

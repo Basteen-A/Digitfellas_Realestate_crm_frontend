@@ -107,6 +107,14 @@
   transform: scale(1.05);
 }
 
+.alm-btn--icon.alm-btn--danger {
+  color: var(--accent-red, #dc2626);
+}
+
+.alm-btn--icon.alm-btn--danger:hover {
+  background: var(--accent-red-bg, #fef2f2);
+}
+
 /* ── Filters ── */
 .admin-lead-mgmt__filters {
   display: flex;
