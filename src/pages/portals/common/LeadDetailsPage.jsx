@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import AuthedAudio from '../../../components/AuthedAudio';
 import SmartfloCallButton from '../../../components/telephony/SmartfloCallButton';
+import RecordingCell from '../../../components/telephony/RecordingCell';
+import CallDirectionIcon from '../../../components/telephony/CallDirectionIcon';
+import telephonyApi from '../../../api/telephonyApi';
 import projectApi from '../../../api/projectApi';
 import locationApi from '../../../api/locationApi';
 import siteVisitApi from '../../../api/siteVisitApi';
@@ -398,6 +401,7 @@ const LeadDetailsPage = () => {
   const [workflowConfig, setWorkflowConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('followups');
   const [enquiries, setEnquiries] = useState(null); // { firstEnquiry, reEnquiries } — lazy-loaded on tab open
+  const [callLogs, setCallLogs] = useState(null); // Smartflo calls for this lead — lazy-loaded on tab open
   const [siteVisits, setSiteVisits] = useState([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [assignedUser, setAssignedUser] = useState(null);
@@ -710,6 +714,18 @@ const LeadDetailsPage = () => {
       .then((resp) => setEnquiries(resp.data || { firstEnquiry: null, reEnquiries: [] }))
       .catch((err) => toast.error(getErrorMessage(err, 'Failed to load enquiries')));
   }, [activeTab, enquiries, id]);
+
+  // Lazy-load this lead's Smartflo call logs the first time the Call Logs tab
+  // is opened.
+  useEffect(() => {
+    if (activeTab !== 'calls' || callLogs || !id) return;
+    telephonyApi.getCallLogs({ lead_id: id, limit: 100 })
+      .then((resp) => setCallLogs(resp.data || []))
+      .catch((err) => {
+        setCallLogs([]);
+        toast.error(getErrorMessage(err, 'Failed to load call logs'));
+      });
+  }, [activeTab, callLogs, id]);
 
   const handleAddNote = async () => {
     if (!noteDraft.trim() || !lead?.id) return;
@@ -2087,8 +2103,57 @@ const LeadDetailsPage = () => {
             )}
 
             {activeTab === 'calls' && (
-              <div className="lead-details-call-logs">
-                <p className="lead-details-empty">Call logs will appear here when telephony integration is enabled.</p>
+              <div className="lead-details-timeline">
+                {!callLogs ? (
+                  <p className="lead-details-empty">Loading call logs…</p>
+                ) : callLogs.length === 0 ? (
+                  <p className="lead-details-empty">No calls recorded for this lead yet.</p>
+                ) : (
+                  callLogs.map((call) => {
+                    const answered = call.call_status === 'ANSWERED';
+                    const agentName = call.agent
+                      ? `${call.agent.first_name || ''} ${call.agent.last_name || ''}`.trim()
+                      : (call.agent_name || call.agent_number || 'Unknown agent');
+                    const secs = Number(call.duration) || 0;
+                    const durTxt = call.duration !== null && call.duration !== undefined
+                      ? (secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`)
+                      : null;
+                    return (
+                      <div key={call.id} className="lead-details-timeline-item">
+                        <div
+                          className="lead-details-timeline-icon"
+                          style={{ background: answered ? '#DCFCE7' : '#FEE2E2', color: answered ? '#166534' : '#991B1B' }}
+                        >
+                          <PhoneIcon style={{ width: 14, height: 14 }} />
+                        </div>
+                        <div className="lead-details-timeline-content">
+                          <div className="lead-details-timeline-header">
+                            <span className="lead-details-timeline-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <CallDirectionIcon direction={call.direction} status={call.call_status} />
+                              {answered ? 'Call Answered' : 'Missed Call'}
+                              {call.direction && (
+                                <span style={{
+                                  padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 700, textTransform: 'capitalize',
+                                  background: 'var(--bg-secondary, #F3F4F6)', border: '1px solid var(--border-primary, #E5E7EB)', color: 'var(--text-muted, #6B7280)',
+                                }}>
+                                  {call.direction}
+                                </span>
+                              )}
+                            </span>
+                            <span className="lead-details-timeline-date">{formatDateTime(call.start_stamp || call.received_at)}</span>
+                          </div>
+                          <p className="lead-details-timeline-desc">
+                            {[durTxt && `Duration ${durTxt}`, call.customer_number].filter(Boolean).join(' · ') || '—'}
+                          </p>
+                          <span className="lead-details-timeline-by">By {agentName}</span>
+                          <div style={{ marginTop: 6 }}>
+                            <RecordingCell callId={call.id} hasRecording={Boolean(call.recording_url)} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             )}
 
