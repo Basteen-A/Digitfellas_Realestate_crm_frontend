@@ -5,6 +5,7 @@ import telephonyApi from '../../../api/telephonyApi';
 import userApi from '../../../api/userApi';
 import { API_URL } from '../../../api/axiosInstance';
 import { getErrorMessage } from '../../../utils/helpers';
+import DidNumberRules from './DidNumberRules';
 
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
@@ -189,6 +190,9 @@ const CallSettings = () => {
           </button>
         </div>
       </div>
+
+      {/* Ad-number (DID) allocation rules */}
+      <DidNumberRules />
 
       {/* Agent-number mapping helper */}
       <div className="crm-card">

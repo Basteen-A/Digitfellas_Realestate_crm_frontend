@@ -16,6 +16,24 @@ const telephonyApi = {
     return data;
   },
 
+  // ── DID (ad-number) allocation rules (Super Admin) ──
+  getDidRules: async () => {
+    const { data } = await api.get(`${BASE}/did-rules`, { params: { _t: Date.now() } });
+    return data;
+  },
+  createDidRule: async (payload) => {
+    const { data } = await api.post(`${BASE}/did-rules`, payload);
+    return data;
+  },
+  updateDidRule: async (id, payload) => {
+    const { data } = await api.put(`${BASE}/did-rules/${id}`, payload);
+    return data;
+  },
+  deleteDidRule: async (id) => {
+    const { data } = await api.delete(`${BASE}/did-rules/${id}`);
+    return data;
+  },
+
   // ── Call logs ──
   getCallLogs: async (params = {}) => {
     const { data } = await api.get(`${BASE}/call-logs`, { params: { ...params, _t: Date.now() } });
