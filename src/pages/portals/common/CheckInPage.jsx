@@ -5,13 +5,24 @@ import { MapPinIcon, ClockIcon, ArrowRightOnRectangleIcon } from '@heroicons/rea
 import attendanceApi from '../../../api/attendanceApi';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { getErrorMessage } from '../../../utils/helpers';
+import { getRoleCode } from '../../../utils/permissions';
+import { ROLE_LABELS } from '../../../components/layout/Sidebar/menuConfig';
 
 // Daily check-in gate. Enforced-role users land here after login and cannot
 // enter their portal until they check in from inside their office geofence
 // (before the admin-configured deadline). Cancel logs them out.
 const CheckInPage = () => {
   const navigate = useNavigate();
-  const { logout } = useAuthContext();
+  const { logout, user } = useAuthContext();
+
+  // Who is checking in — same identity pattern as the app sidebar.
+  const fullName = user?.fullName || user?.full_name
+    || `${user?.firstName || user?.first_name || ''} ${user?.lastName || user?.last_name || ''}`.trim()
+    || 'User';
+  const initials = (`${(user?.firstName || user?.first_name || '')[0] || ''}${(user?.lastName || user?.last_name || '')[0] || ''}`).toUpperCase() || 'U';
+  const roleCode = getRoleCode(user);
+  const roleLabel = ROLE_LABELS[roleCode] || user?.userType || '';
+  const loginId = user?.username || user?.login_id || user?.email || '';
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -107,11 +118,35 @@ const CheckInPage = () => {
         </div>
 
         <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Daily Check-In</h1>
-        <p style={{ color: 'var(--text-muted, #6b7280)', fontSize: 13, marginBottom: 14 }}>
+        <p style={{ color: 'var(--text-muted, #6b7280)', fontSize: 13, marginBottom: 12 }}>
           {now.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
           {' · '}
           {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </p>
+
+        {/* Who is checking in */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+          background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-primary, #e5e7eb)',
+          borderRadius: 10, padding: '10px 12px', marginBottom: 14,
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+            background: '#eef2ff', color: '#4338ca', fontWeight: 800, fontSize: 15,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {initials}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {roleLabel}{loginId ? ` · ${loginId}` : ''}
+            </div>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted, #6b7280)', whiteSpace: 'nowrap' }}>
+            Not you? Cancel
+          </span>
+        </div>
 
         {loading && <p style={{ color: 'var(--text-muted, #6b7280)' }}>Loading…</p>}
 
