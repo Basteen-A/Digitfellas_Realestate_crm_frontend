@@ -75,6 +75,7 @@ const AttendancePage = () => {
     try {
       const resp = await attendanceApi.updateSettings({
         is_enforced: settings.is_enforced,
+        require_geofence: settings.require_geofence,
         checkin_deadline: settings.checkin_deadline,
         checkout_time: settings.checkout_time,
         default_radius_m: settings.default_radius_m,
@@ -229,6 +230,20 @@ const AttendancePage = () => {
             <div>
               <div style={{ fontWeight: 700 }}>Enforce daily check-in</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Telecallers must check in (inside their office geofence) after login before they can use the portal.</div>
+            </div>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={Boolean(settings.require_geofence)}
+              onChange={(e) => setSettings((s) => ({ ...s, require_geofence: e.target.checked }))}
+            />
+            <div>
+              <div style={{ fontWeight: 700 }}>Location-based check-in (geofence)</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                ON: users must be inside their mapped office location's radius to check in. OFF: users can check in from anywhere (time rules still apply).
+              </div>
             </div>
           </label>
 

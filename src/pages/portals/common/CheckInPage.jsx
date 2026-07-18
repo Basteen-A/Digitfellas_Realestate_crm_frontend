@@ -178,6 +178,10 @@ const CheckInPage = () => {
                     You must be at {status.geofences.map((g) => `${g.name} (within ${g.radiusM}m)`).join(' or ')}.
                     Your location is verified when you press Check In.
                   </p>
+                ) : status.requireGeofence === false ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted, #6b7280)' }}>
+                    Location check is turned off — you can check in from anywhere.
+                  </p>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--text-muted, #6b7280)' }}>
                     No office geofence is configured for you yet — your check-in is recorded without location verification.
