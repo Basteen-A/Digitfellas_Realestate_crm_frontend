@@ -34,6 +34,16 @@ const telephonyApi = {
     return data;
   },
 
+  // ── Allocation history (Super Admin) — inbound-call lead automation audit ──
+  getAllocations: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/allocations`, { params: { ...params, _t: Date.now() } });
+    return data;
+  },
+  getAllocationStats: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/allocations/stats`, { params: { ...params, _t: Date.now() } });
+    return data;
+  },
+
   // ── Call logs ──
   getCallLogs: async (params = {}) => {
     const { data } = await api.get(`${BASE}/call-logs`, { params: { ...params, _t: Date.now() } });

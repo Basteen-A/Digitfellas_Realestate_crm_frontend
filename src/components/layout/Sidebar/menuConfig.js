@@ -186,6 +186,7 @@ const adminSidebar = [
     icon: PhoneIcon,
     children: [
       { label: 'Call Logs', path: '/super-admin/telephony/call-logs' },
+      { label: 'Allocation History', path: '/super-admin/telephony/allocation-history' },
       { label: 'Call Settings', path: '/super-admin/telephony/settings' },
     ],
   },

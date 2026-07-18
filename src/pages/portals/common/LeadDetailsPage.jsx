@@ -1634,6 +1634,15 @@ const LeadDetailsPage = () => {
                 <div className="lead-details-info-item"><span className="lead-details-label">UTM Source</span><span className="lead-details-value">{lead.utmSource || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">UTM Medium</span><span className="lead-details-value">{lead.utmMedium || '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">UTM Campaign</span><span className="lead-details-value">{lead.utmCampaign || '-'}</span></div>
+                {(lead.customFields?.telephony_did_number || lead.customFields?.telephony_dialled_number) && (
+                  <div className="lead-details-info-item"><span className="lead-details-label">Ad Number Dialled</span><span className="lead-details-value">{lead.customFields?.telephony_did_number || lead.customFields?.telephony_dialled_number}</span></div>
+                )}
+                {lead.customFields?.telephony_call_id && (
+                  <div className="lead-details-info-item"><span className="lead-details-label">First Call ID</span><span className="lead-details-value">{lead.customFields.telephony_call_id}</span></div>
+                )}
+                {lead.customFields?.marketing_external_ref && (
+                  <div className="lead-details-info-item"><span className="lead-details-label">External Ref</span><span className="lead-details-value">{lead.customFields.marketing_external_ref}</span></div>
+                )}
                 <div className="lead-details-info-item"><span className="lead-details-label">Created At</span><span className="lead-details-value">{lead.createdAt ? formatDateTime(lead.createdAt) : '-'}</span></div>
                 <div className="lead-details-info-item"><span className="lead-details-label">Updated At</span><span className="lead-details-value">{lead.updatedAt ? formatDateTime(lead.updatedAt) : '-'}</span></div>
               </div>
