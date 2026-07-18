@@ -161,6 +161,7 @@ const AttendancePage = () => {
                         {r.checkinAt
                           ? (r.checkoutAt ? chip('#e5e7eb', '#374151', 'Checked Out') : chip('#dcfce7', '#166534', 'Present'))
                           : chip('#fee2e2', '#991b1b', 'Absent')}
+                        {r.isLate && <span style={{ marginLeft: 6 }}>{chip('#fef3c7', '#92400e', 'Late')}</span>}
                       </td>
                       <td style={td}>
                         {fmtTime(r.checkinAt)}
@@ -233,7 +234,7 @@ const AttendancePage = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Check-in allowed until</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>On-time check-in until</span>
               <input
                 type="time"
                 style={inputStyle}
@@ -241,7 +242,7 @@ const AttendancePage = () => {
                 onChange={(e) => setSettings((s) => ({ ...s, checkin_deadline: e.target.value }))}
                 required
               />
-              <small style={{ fontSize: 11, color: 'var(--text-muted)' }}>After this time only an admin can check a user in.</small>
+              <small style={{ fontSize: 11, color: 'var(--text-muted)' }}>Later check-ins are allowed but marked LATE — by then their overnight leads have been re-allotted, and they receive only new leads from check-in onward.</small>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Auto check-out at</span>

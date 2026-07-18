@@ -84,7 +84,11 @@ const CheckInPage = () => {
     navigate('/login', { replace: true });
   };
 
-  const deadlinePassed = status && !status.canCheckInNow;
+  // Three states: on-time, LATE (after deadline — still allowed, but overnight
+  // leads were re-allotted at the deadline), and day-over (past checkout time).
+  const dayOver = status && !status.canCheckInNow;
+  const isLate = Boolean(status?.isLateNow) && !dayOver;
+  const deadlinePassed = dayOver;
 
   return (
     <div style={{
@@ -115,16 +119,25 @@ const CheckInPage = () => {
           <>
             {deadlinePassed ? (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: 14, marginBottom: 16 }}>
-                <p style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 4 }}>Check-in time is over</p>
+                <p style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 4 }}>The working day is over</p>
                 <p style={{ fontSize: 13, color: '#7f1d1d' }}>
-                  Check-in was allowed until {status.checkinDeadline}. Please contact your admin to be checked in manually.
+                  Check-in closed at {status.checkoutTime}. Please contact your admin.
                 </p>
               </div>
             ) : (
               <div style={{ background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-primary, #e5e7eb)', borderRadius: 10, padding: 14, marginBottom: 16, textAlign: 'left' }}>
-                <p style={{ fontSize: 13, marginBottom: 6 }}>
-                  <strong>Check-in closes at {status.checkinDeadline}.</strong>
-                </p>
+                {isLate ? (
+                  <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: 10, marginBottom: 10 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Late check-in</p>
+                    <p style={{ fontSize: 12, color: '#92400e' }}>
+                      On-time check-in was until {status.checkinDeadline}. Leads received overnight may have been re-allotted to your teammates — you will receive new leads from the moment you check in.
+                    </p>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 13, marginBottom: 6 }}>
+                    <strong>On-time check-in closes at {status.checkinDeadline}.</strong>
+                  </p>
+                )}
                 {status.hasGeofence ? (
                   <p style={{ fontSize: 13, color: 'var(--text-muted, #6b7280)' }}>
                     You must be at {status.geofences.map((g) => `${g.name} (within ${g.radiusM}m)`).join(' or ')}.
@@ -147,7 +160,7 @@ const CheckInPage = () => {
                   disabled={checking}
                   onClick={handleCheckIn}
                 >
-                  <MapPinIcon style={{ width: 16, height: 16 }} /> {checking ? 'Checking in…' : 'Check In'}
+                  <MapPinIcon style={{ width: 16, height: 16 }} /> {checking ? 'Checking in…' : (isLate ? 'Check In (Late)' : 'Check In')}
                 </button>
               )}
               <button type="button" className="crm-btn crm-btn-ghost" style={{ minWidth: 120 }} onClick={handleCancel}>
