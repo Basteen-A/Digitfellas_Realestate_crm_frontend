@@ -165,6 +165,7 @@ export const masterConfigs = {
       { header: 'City', path: 'city' },
       { header: 'State', path: 'state' },
       { header: 'Pincode', path: 'pincode' },
+      { header: 'Geofence (m)', path: 'geofence_radius_m' },
       { header: 'Active', path: 'is_active', type: 'boolean' },
     ],
     fields: [
@@ -174,6 +175,9 @@ export const masterConfigs = {
       { name: 'country', label: 'Country' },
       { name: 'pincode', label: 'Pincode' },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
+      // Composite: latitude + longitude + check-in radius with a "capture
+      // current location" button (attendance geofence for check-ins).
+      { name: 'geofence', label: 'Attendance Geofence (Check-In)', type: 'geofence', fullWidth: true },
       { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],

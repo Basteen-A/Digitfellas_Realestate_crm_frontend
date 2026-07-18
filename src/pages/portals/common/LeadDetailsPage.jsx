@@ -639,10 +639,14 @@ const LeadDetailsPage = () => {
 
   const isMissedFirstBlocked = useMemo(() => {
     if (viaSearch) return false;
+    // New/Hot-flagged leads (fresh API/call lead or re-enquiry awaiting its first
+    // update) must be actionable immediately — the missed-follow-ups-first gate
+    // never blocks them. The flag clears on the first update, restoring the gate.
+    if (lead?.newHotSince) return false;
     if (!MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) return false;
     if (!hasPendingMissedFollowupsForMe) return false;
     return !isCurrentLeadMissedFollowup;
-  }, [viaSearch, roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
+  }, [viaSearch, lead?.newHotSince, roleCode, hasPendingMissedFollowupsForMe, isCurrentLeadMissedFollowup]);
 
   const loadLeadData = useCallback(async () => {
     if (!id) return;

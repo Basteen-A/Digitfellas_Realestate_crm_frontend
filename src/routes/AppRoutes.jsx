@@ -5,6 +5,7 @@ import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 import PortalRoute from './PortalRoute';
 import RoleRoute from './RoleRoute';
+import AttendanceGate from './AttendanceGate';
 import TaskAccessRoute from './TaskAccessRoute';
 import GrantRoute from './GrantRoute';
 import {
@@ -23,6 +24,7 @@ import Profile from '../pages/profile/Profile';
 import ChangePassword from '../pages/profile/ChangePassword';
 import LeadDetailsPage from '../pages/portals/common/LeadDetailsPage';
 import PortalWorkspaceShell from '../pages/portals/common/PortalWorkspaceShell';
+import CheckInPage from '../pages/portals/common/CheckInPage';
 import NotFound from '../pages/NotFound';
 
 import Locations from '../pages/superadmin/Locations';
@@ -70,6 +72,7 @@ import TelephonyCallSettings from '../pages/superadmin/Telephony/CallSettings';
 import TelephonyCallLogs from '../pages/superadmin/Telephony/CallLogs';
 import TelephonyCallAllocationHistory from '../pages/superadmin/Telephony/CallAllocationHistory';
 import AdminRecordManager from '../pages/superadmin/RecordManager/AdminRecordManager';
+import AttendancePage from '../pages/superadmin/Attendance/AttendancePage';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -128,8 +131,14 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
+      {/* Daily check-in gate page — private but OUTSIDE the AttendanceGate. */}
+      <Route element={<PrivateRoute />}>
+        <Route path="/check-in" element={<CheckInPage />} />
+      </Route>
+
       {/* Portal routes — no app sidebar, portals have their own sidebar */}
       <Route element={<PrivateRoute />}>
+        <Route element={<AttendanceGate />}>
         <Route element={<PortalLayoutRoute />}>
           {/* PortalRoute ensures users can only access their own role's portal */}
           <Route element={<PortalRoute />}>
@@ -205,10 +214,12 @@ const AppRoutes = () => {
             />
           </Route>
         </Route>
+        </Route>
       </Route>
 
       {/* Admin & general routes — standard MainLayout with app sidebar */}
       <Route element={<PrivateRoute />}>
+        <Route element={<AttendanceGate />}>
         <Route element={<MainLayout />}>
           <Route path="/" element={<RoleHomeRedirect />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -272,6 +283,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/telephony/settings" element={<TelephonyCallSettings />} />
             <Route path="/super-admin/telephony/call-logs" element={<TelephonyCallLogs />} />
             <Route path="/super-admin/telephony/allocation-history" element={<TelephonyCallAllocationHistory />} />
+            <Route path="/super-admin/attendance" element={<AttendancePage />} />
             <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
           </Route>
 
@@ -291,6 +303,7 @@ const AppRoutes = () => {
           </Route>
 
           <Route path="*" element={<NotFound />} />
+        </Route>
         </Route>
       </Route>
 

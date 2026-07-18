@@ -4,6 +4,7 @@
 import {
   ChartBarIcon,
   UsersIcon,
+  FingerPrintIcon,
   ClipboardDocumentListIcon,
   ArrowPathIcon,
   BoltIcon,
@@ -201,6 +202,7 @@ const adminSidebar = [
       { label: 'Org Settings', path: '/super-admin/site-settings' },
     ],
   },
+  { label: 'Attendance', path: '/super-admin/attendance', icon: FingerPrintIcon },
   {
     label: 'Lead Masters',
     icon: Cog6ToothIcon,

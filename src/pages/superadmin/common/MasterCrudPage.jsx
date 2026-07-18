@@ -31,6 +31,7 @@ const MasterCrudPage = ({ config }) => {
   const [fieldOptions, setFieldOptions] = useState({});
   const [multiSelectSearch, setMultiSelectSearch] = useState({});
   const [dangerRow, setDangerRow] = useState(null);
+  const [geoCapturing, setGeoCapturing] = useState(false);
 
   const visibleFields = useMemo(
     () =>
@@ -61,6 +62,13 @@ const MasterCrudPage = ({ config }) => {
     const initial = {};
 
     (config.fields || []).forEach((field) => {
+      if (field.type === 'geofence') {
+        // Composite field — owns the latitude / longitude / radius columns.
+        initial.latitude = row?.latitude ?? '';
+        initial.longitude = row?.longitude ?? '';
+        initial.geofence_radius_m = row?.geofence_radius_m ?? '';
+        return;
+      }
       if (row) {
         const sourceValue = typeof field.getInitialValue === 'function'
           ? field.getInitialValue(row)
@@ -160,6 +168,14 @@ const MasterCrudPage = ({ config }) => {
     visibleFields.forEach((field) => {
       let value = formValues[field.name];
 
+      if (field.type === 'geofence') {
+        const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+        payload.latitude = num(formValues.latitude);
+        payload.longitude = num(formValues.longitude);
+        payload.geofence_radius_m = num(formValues.geofence_radius_m);
+        return;
+      }
+
       if (field.type === 'checkbox') {
         value = Boolean(value);
       } else if (field.type === 'number') {
@@ -235,7 +251,7 @@ const MasterCrudPage = ({ config }) => {
 
   // Fields that need the full row: long text, multi-value pickers, or explicit opt-in.
   const isFullWidthField = (field) =>
-    field.fullWidth || field.type === 'textarea' || field.type === 'multiselect';
+    field.fullWidth || field.type === 'textarea' || field.type === 'multiselect' || field.type === 'geofence';
 
   const fieldClass = (field, base = 'master-form__field') =>
     `${base}${isFullWidthField(field) ? ' master-form__field--full' : ''}`;
@@ -270,6 +286,99 @@ const MasterCrudPage = ({ config }) => {
             onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
           />
         </label>
+      );
+    }
+
+    if (field.type === 'geofence') {
+      const lat = formValues.latitude;
+      const lng = formValues.longitude;
+      const radius = formValues.geofence_radius_m;
+      const hasCoords = lat !== '' && lat != null && lng !== '' && lng != null;
+      const setVal = (key) => (e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }));
+
+      const captureCurrent = () => {
+        if (!navigator.geolocation) {
+          toast.error('Location is not supported by this browser.');
+          return;
+        }
+        setGeoCapturing(true);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setFormValues((prev) => ({
+              ...prev,
+              latitude: Number(pos.coords.latitude.toFixed(7)),
+              longitude: Number(pos.coords.longitude.toFixed(7)),
+              geofence_radius_m: prev.geofence_radius_m || 100,
+            }));
+            setGeoCapturing(false);
+            toast.success(`Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`);
+          },
+          (err) => {
+            setGeoCapturing(false);
+            toast.error(err.code === 1 ? 'Location permission denied — allow location access and retry.' : 'Could not get your location. Try again.');
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      };
+
+      return (
+        <div className={fieldClass(field)} key={field.name} style={{ border: '1px solid var(--border-primary, #e5e7eb)', borderRadius: 10, padding: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontWeight: 600 }}>{field.label || 'Attendance Geofence (Check-In)'}</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="master-page__secondary" onClick={captureCurrent} disabled={geoCapturing}>
+                📍 {geoCapturing ? 'Locating…' : 'Capture Current Location'}
+              </button>
+              {hasCoords && (
+                <a
+                  href={`https://www.google.com/maps?q=${lat},${lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="master-page__secondary"
+                  style={{ textDecoration: 'none' }}
+                >
+                  Open in Maps
+                </a>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label className="master-form__field">
+              <span>Latitude</span>
+              <input type="number" step="any" min="-90" max="90" value={lat ?? ''} onChange={setVal('latitude')} placeholder="e.g. 13.0827" />
+            </label>
+            <label className="master-form__field">
+              <span>Longitude</span>
+              <input type="number" step="any" min="-180" max="180" value={lng ?? ''} onChange={setVal('longitude')} placeholder="e.g. 80.2707" />
+            </label>
+          </div>
+          <label className="master-form__field" style={{ marginTop: 10 }}>
+            <span>Check-In Radius {radius ? `— ${radius} m` : '(uses the default from Attendance Settings when empty)'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input
+                type="range"
+                min="10"
+                max="1000"
+                step="10"
+                value={Number(radius) || 100}
+                onChange={setVal('geofence_radius_m')}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="number"
+                min="10"
+                max="100000"
+                value={radius ?? ''}
+                onChange={setVal('geofence_radius_m')}
+                placeholder="meters"
+                style={{ width: 110 }}
+              />
+            </div>
+          </label>
+          <small style={{ color: 'var(--text-muted, #6b7280)', display: 'block', marginTop: 6 }}>
+            Telecallers mapped to this location can check in only within this radius of the pinned point.
+          </small>
+        </div>
       );
     }
 
