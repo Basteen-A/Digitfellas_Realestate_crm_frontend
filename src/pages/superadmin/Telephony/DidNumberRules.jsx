@@ -367,20 +367,18 @@ const DidNumberRules = () => {
             Ad Number Allocation
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, maxWidth: 620 }}>
-            Choose how inbound calls are assigned: a per-ad-number rule (each Tata number → its own
-            telecallers + <strong>source / sub-source / campaign</strong>), or one common pool that
-            round-robins every call to a chosen set of telecallers regardless of the number dialled.
+            Each Tata number maps to a <strong>source / sub-source / campaign</strong> that always tags the
+            lead. The switch below decides <em>who</em> gets the call — each number's own telecallers, or one
+            common pool round-robining every call regardless of the number dialled.
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { loadRules(); loadConfig(); }} disabled={loading}>
             <ArrowPathIcon style={{ width: 15, height: 15 }} /> {loading ? 'Refreshing…' : 'Refresh'}
           </button>
-          {didEnabled && (
-            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openCreate}>
-              <PlusIcon style={{ width: 16, height: 16 }} /> New Rule
-            </button>
-          )}
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openCreate}>
+            <PlusIcon style={{ width: 16, height: 16 }} /> New Rule
+          </button>
         </div>
       </div>
 
@@ -399,16 +397,21 @@ const DidNumberRules = () => {
         </div>
       </div>
 
-      {didEnabled ? (
-        <>
-          <div style={{ overflowX: 'auto' }}>
+      {!didEnabled && (
+        <div style={{ padding: '10px 18px', background: '#fffbeb', borderBottom: '1px solid var(--border-primary)', fontSize: 12, color: '#92400e' }}>
+          The telecaller pools below are <strong>paused</strong> — every inbound call goes to the common pool.
+          Each number's <strong>source / medium / campaign</strong> is still applied to the lead, so keep these configured.
+        </div>
+      )}
+
+      <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
               <thead>
                 <tr>
                   <th style={th}>Rule</th>
                   <th style={th}>Ad (DID) Number</th>
                   <th style={th}>Source / Medium</th>
-                  <th style={th}>Telecallers (Round-robin)</th>
+                  <th style={th}>{didEnabled ? 'Telecallers (Round-robin)' : 'Telecallers (paused)'}</th>
                   <th style={th}>Status</th>
                   <th style={{ ...th, textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -439,7 +442,7 @@ const DidNumberRules = () => {
                         {rule.leadSubSource ? `› ${rule.leadSubSource.sub_source_name}` : 'Whole source'}
                       </div>
                     </td>
-                    <td style={td}>{renderTelecallerSummary(rule)}</td>
+                    <td style={{ ...td, ...(didEnabled ? {} : { opacity: 0.45 }) }}>{renderTelecallerSummary(rule)}</td>
                     <td style={td}>
                       <button
                         type="button"
@@ -468,28 +471,19 @@ const DidNumberRules = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+      </div>
 
-          {/* Fallback pool — used for numbers without a rule while rules are on. */}
-          <div style={{ padding: '16px 18px', borderTop: '1px solid var(--border-primary)' }}>
-            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Fallback pool</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, maxWidth: 620 }}>
-              Calls to a number without a rule above are round-robin assigned to this pool. It is also
-              the pool used for <strong>every</strong> call when ad-number rules are switched off.
-            </div>
-            {commonPoolEditor}
-          </div>
-        </>
-      ) : (
-        <div style={{ padding: '16px 18px' }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Common pool</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, maxWidth: 620 }}>
-            Every inbound call is round-robin assigned to these telecallers, regardless of which number
-            was dialled. {rules.length > 0 && <span>Your {rules.length} saved ad-number rule{rules.length > 1 ? 's are' : ' is'} paused while this mode is on.</span>}
-          </div>
-          {commonPoolEditor}
+      {/* Common / fallback pool — the everything-pool when rules are off, the
+          no-rule fallback when they're on. */}
+      <div style={{ padding: '16px 18px', borderTop: '1px solid var(--border-primary)' }}>
+        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{didEnabled ? 'Fallback pool' : 'Common pool'}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, maxWidth: 620 }}>
+          {didEnabled
+            ? <>Calls to a number without a rule above are round-robin assigned to this pool. It is also the pool used for <strong>every</strong> call when ad-number rules are switched off.</>
+            : <>Every inbound call is round-robin assigned to these telecallers, regardless of which number was dialled.</>}
         </div>
-      )}
+        {commonPoolEditor}
+      </div>
 
       {modalOpen && (
         <div
