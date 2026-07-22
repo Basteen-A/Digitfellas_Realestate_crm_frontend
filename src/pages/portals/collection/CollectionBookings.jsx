@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
 import paymentStatusApi from '../../../api/paymentStatusApi';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrencyExact as formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   MagnifyingGlassIcon, ArrowPathIcon, ClipboardDocumentListIcon,

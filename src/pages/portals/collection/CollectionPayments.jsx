@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
-import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { formatCurrencyExact as formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   CreditCardIcon, ArrowPathIcon, MagnifyingGlassIcon, FunnelIcon, XMarkIcon,

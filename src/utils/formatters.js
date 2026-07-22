@@ -63,6 +63,20 @@ export const formatCurrency = (value, currency = 'INR', locale = 'en-IN') => {
   }).format(num);
 };
 
+// Full-value INR — exact digits with Indian grouping, NO Lakh/Crore shortening
+// (e.g. ₹12,50,000). Collection & Accounts screens use this in place of the
+// abbreviated formatCurrency so finance figures are readable to the rupee.
+export const formatCurrencyExact = (value, currency = 'INR', locale = 'en-IN') => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
 export const formatNumber = (value, locale = 'en-IN') => {
   const num = Number(value);
   if (!Number.isFinite(num)) return '-';

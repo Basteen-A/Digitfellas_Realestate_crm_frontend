@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import bookingApi from '../../../api/bookingApi';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrencyExact as formatCurrency } from '../../../utils/formatters';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';

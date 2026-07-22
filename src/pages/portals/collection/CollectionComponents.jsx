@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatCurrency, formatDateTime } from '../../../utils/formatters';
+import { formatCurrencyExact as formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { badgeStyle } from '../../../utils/badgeColors';
 import {
   ClipboardDocumentListIcon,

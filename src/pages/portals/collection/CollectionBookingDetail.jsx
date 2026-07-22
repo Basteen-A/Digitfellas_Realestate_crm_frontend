@@ -9,7 +9,7 @@ import userApi from '../../../api/userApi';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
 import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrencyExact as formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
 import { ROLE_CODES } from '../../../utils/constants';
@@ -55,6 +55,61 @@ const BkdStatCell = ({ label, value, border = true }) => {
     </div>
   );
 };
+
+// PaymentSummary-style edit-modal primitives — clean ledger rows with a right-
+// aligned ₹ amount input, mirroring PaymentSummary.jsx's "Edit cost breakdown".
+// Defined at module scope so the inputs keep focus across the parent's re-renders.
+const PS = {
+  border: '#E3E8EE', borderStrong: '#C1C9D2', text: '#0A2540',
+  textSec: '#5B6B82', muted: '#8792A2', accent: '#635BFF', bg: '#F6F8FB',
+};
+
+const PsSectionLabel = ({ children, top = 14 }) => (
+  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: PS.muted, textTransform: 'uppercase', margin: `${top}px 0 4px` }}>
+    {children}
+  </div>
+);
+
+const PsAmountInput = ({ value, onChange, readOnly = false, placeholder = '0', suffix = null, title }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }} title={title}>
+    {!suffix && <span style={{ fontSize: 14, color: PS.muted, fontWeight: 600 }}>₹</span>}
+    <input
+      type="number"
+      inputMode="decimal"
+      value={value ?? ''}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      disabled={readOnly}
+      onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+      style={{
+        width: 120, textAlign: 'right', fontSize: 14, fontWeight: 600,
+        fontVariantNumeric: 'tabular-nums', color: readOnly ? PS.muted : PS.text,
+        border: `1px solid ${PS.borderStrong}`, borderRadius: 6, padding: '6px 8px',
+        outline: 'none', background: readOnly ? PS.bg : '#fff',
+      }}
+      onFocus={(e) => { if (!readOnly) e.target.style.borderColor = PS.accent; }}
+      onBlur={(e) => { e.target.style.borderColor = PS.borderStrong; }}
+    />
+    {suffix && <span style={{ fontSize: 12, color: PS.muted, fontWeight: 600, marginLeft: 2 }}>{suffix}</span>}
+  </div>
+);
+
+const PsFieldRow = ({ label, note, children }) => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${PS.border}`, gap: 12 }}>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: PS.text }}>{label}</div>
+      {note && <div style={{ fontSize: 11.5, color: PS.muted, marginTop: 1 }}>{note}</div>}
+    </div>
+    {children}
+  </div>
+);
+
+const PsSubtotalRow = ({ label, value }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: 13, fontWeight: 700, color: PS.textSec }}>
+    <span>{label}</span>
+    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+  </div>
+);
 
 const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon, paid = 0 }) => {
   const target = parseFloat(valueText?.replace(/[^0-9.-]/g, '') || 0);
@@ -1852,7 +1907,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
       {actionMode && (
         <div className="col-modal-overlay" onClick={closeActionModal}>
-          <div className="qa-modal-panel" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
+          <div className="qa-modal-panel" style={{ maxWidth: actionMode === 'devCost' ? 540 : 800 }} onClick={(e) => e.stopPropagation()}>
             {actionMode === 'devCost' ? (
               <div style={{
                 padding: '18px 24px', borderBottom: '1px solid var(--border-primary, #E3E8EE)',
@@ -2282,110 +2337,73 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               return (
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, maxHeight: 'calc(88vh - 90px)' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px' }}>
-                  <div className="bkd-dev-summary-grid">
-                    <div className="bkd-dev-summary-item">
-                      <div className="bkd-dev-summary-label">Plot Value</div>
-                      <div className="bkd-dev-summary-value">{fmtFull(previewPlotValue || plotValue)}</div>
-                    </div>
-                    <div className="bkd-dev-summary-item">
-                      <div className="bkd-dev-summary-label">Stamp Duty (7%)</div>
-                      <div className="bkd-dev-summary-value">{fmtFull(previewStampValue || stampValue)}</div>
-                    </div>
-                    <div className="bkd-dev-summary-item">
-                      <div className="bkd-dev-summary-label">Registration (2%)</div>
-                      <div className="bkd-dev-summary-value">{fmtFull(previewRegistrationValue || registrationValue)}</div>
-                    </div>
-                    <div className="bkd-dev-summary-item bkd-dev-summary-item-editable">
-                      <div className="bkd-dev-summary-label">Development</div>
-                      <div className="bkd-dev-summary-value">{fmtFull(previewDevelopmentValue || developmentValue)}</div>
-                    </div>
-                  </div>
-
-                  <div className="bkd-form-row">
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Guideline Value (per sq.ft) *</label>
-                      <input type="number" className="bkd-form-control" placeholder="e.g. 5000"
-                        value={devCostForm.guideline_value}
-                        onChange={e => setDevCostForm(p => ({ ...p, guideline_value: e.target.value }))} />
-                    </div>
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Plot Area (sqft) *</label>
-                      <input type="number" className="bkd-form-control" placeholder="e.g. 1200"
-                        value={devCostForm.plot_area}
-                        onChange={e => setDevCostForm(p => ({ ...p, plot_area: e.target.value }))} />
-                    </div>
-                  </div>
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Development Cost / Sqft</label>
-                    <input type="number" className="bkd-form-control" placeholder="e.g. 250"
-                      value={devCostForm.development_cost_per_sqft}
-                      onChange={e => setDevCostForm(p => ({ ...p, development_cost_per_sqft: e.target.value }))} />
-                  </div>
-                  <div className="bkd-dev-hint">
-                    Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).
-                  </div>
-
-                  <div className="qa-drawer-section" style={{ padding: '14px 0 8px' }}>
-                    Registration Expenses (Detailed Split)
-                    <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                      Subtotal: {fmtFull(previewRegSplitTotal)}
-                    </span>
-                  </div>
-                  <div className="bkd-form-row" style={{ flexWrap: 'wrap' }}>
-                    <div className="bkd-form-group" style={{ flex: '1 1 45%' }}>
-                      <label className="bkd-form-label">Stamp Commission (1% of Stamp)</label>
-                      <input type="number" className="bkd-form-control" value={previewStampCommission} readOnly disabled
-                        title="Auto-computed as 1% of Stamp Value" />
-                    </div>
-                    {regSplitFields.map(f => (
-                      <div className="bkd-form-group" key={f.key} style={{ flex: '1 1 45%' }}>
-                        <label className="bkd-form-label">{f.label}</label>
-                        <input type="number" className="bkd-form-control" placeholder="0"
-                          value={devCostForm.registration_split[f.key] ?? ''}
-                          onChange={e => setRegField(f.key, e.target.value)} />
+                  <div style={{ display: 'flex', border: `1px solid ${PS.border}`, borderRadius: 10, overflow: 'hidden', margin: '10px 0 4px' }}>
+                    {[
+                      { label: 'Plot Value', value: fmtFull(previewPlotValue || plotValue) },
+                      { label: 'Stamp Duty (7%)', value: fmtFull(previewStampValue || stampValue) },
+                      { label: 'Registration (2%)', value: fmtFull(previewRegistrationValue || registrationValue) },
+                      { label: 'Development', value: fmtFull(previewDevelopmentValue || developmentValue) },
+                    ].map((c, i, arr) => (
+                      <div key={c.label} style={{ flex: 1, padding: '12px 14px', borderRight: i < arr.length - 1 ? `1px solid ${PS.border}` : 'none', minWidth: 0 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', color: PS.muted, textTransform: 'uppercase', marginBottom: 5, whiteSpace: 'nowrap' }}>{c.label}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: PS.text, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.value}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="qa-drawer-section" style={{ padding: '14px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontWeight: 700 }}>
-                      <input type="checkbox" checked={!!devCostForm.modt_enabled}
-                        onChange={e => setDevCostForm(p => ({ ...p, modt_enabled: e.target.checked }))} />
-                      MODT Charges
-                    </label>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                      (To be selected if applicable)
-                      {devCostForm.modt_enabled && ` · Subtotal: ${fmtFull(sumSplit(devCostForm.modt_split))}`}
-                    </span>
+                  <PsSectionLabel>Property pricing</PsSectionLabel>
+                  <PsFieldRow label="Guideline Value" note="per sq.ft — required">
+                    <PsAmountInput value={devCostForm.guideline_value} placeholder="5000"
+                      onChange={(v) => setDevCostForm(p => ({ ...p, guideline_value: v }))} />
+                  </PsFieldRow>
+                  <PsFieldRow label="Plot Area" note="sq.ft — required">
+                    <PsAmountInput value={devCostForm.plot_area} placeholder="1200" suffix="sqft"
+                      onChange={(v) => setDevCostForm(p => ({ ...p, plot_area: v }))} />
+                  </PsFieldRow>
+                  <PsFieldRow label="Development Cost" note="per sq.ft (× 1.18 GST)">
+                    <PsAmountInput value={devCostForm.development_cost_per_sqft} placeholder="250"
+                      onChange={(v) => setDevCostForm(p => ({ ...p, development_cost_per_sqft: v }))} />
+                  </PsFieldRow>
+                  <div style={{ fontSize: 11.5, color: PS.muted, marginTop: 8, lineHeight: 1.5 }}>
+                    Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).
                   </div>
+
+                  <PsSectionLabel top={18}>Registration charges</PsSectionLabel>
+                  <PsFieldRow label="Stamp Commission" note="1% of Stamp Duty — auto">
+                    <PsAmountInput value={previewStampCommission} readOnly title="Auto-computed as 1% of Stamp Value" />
+                  </PsFieldRow>
+                  {regSplitFields.map(f => (
+                    <PsFieldRow key={f.key} label={f.label}>
+                      <PsAmountInput value={devCostForm.registration_split[f.key]}
+                        onChange={(v) => setRegField(f.key, v)} />
+                    </PsFieldRow>
+                  ))}
+                  <PsSubtotalRow label="Subtotal — registration charges" value={fmtFull(previewRegSplitTotal)} />
+
+                  <PsSectionLabel top={18}>MODT charges</PsSectionLabel>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 0 8px' }}>
+                    <input type="checkbox" checked={!!devCostForm.modt_enabled}
+                      onChange={e => setDevCostForm(p => ({ ...p, modt_enabled: e.target.checked }))}
+                      style={{ width: 15, height: 15 }} />
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: PS.text }}>Add MODT charges</span>
+                    <span style={{ fontSize: 11.5, color: PS.muted }}>(if applicable)</span>
+                  </label>
                   {devCostForm.modt_enabled && (
-                    <div className="bkd-form-row" style={{ flexWrap: 'wrap' }}>
+                    <>
                       {modtSplitFields.map(f => (
-                        <div className="bkd-form-group" key={f.key} style={{ flex: '1 1 45%' }}>
-                          <label className="bkd-form-label">{f.label}</label>
-                          <input type="number" className="bkd-form-control" placeholder="0"
-                            value={devCostForm.modt_split[f.key] ?? ''}
-                            onChange={e => setModtField(f.key, e.target.value)} />
-                        </div>
+                        <PsFieldRow key={f.key} label={f.label}>
+                          <PsAmountInput value={devCostForm.modt_split[f.key]}
+                            onChange={(v) => setModtField(f.key, v)} />
+                        </PsFieldRow>
                       ))}
-                    </div>
+                      <PsSubtotalRow label="Subtotal — MODT" value={fmtFull(previewModtSplitTotal)} />
+                    </>
                   )}
 
-                  <div className="bkd-dev-summary-grid" style={{ marginTop: 14 }}>
-                    <div className="bkd-dev-summary-item" style={{ gridColumn: '1 / span 1' }}>
-                      <div className="bkd-dev-summary-label">Reg. Split Subtotal</div>
-                      <div className="bkd-dev-summary-value">{fmtFull(previewRegSplitTotal)}</div>
-                    </div>
-                    <div className="bkd-dev-summary-item" style={{ gridColumn: '2 / span 1' }}>
-                      <div className="bkd-dev-summary-label">MODT Subtotal</div>
-                      <div className="bkd-dev-summary-value">{fmtFull(previewModtSplitTotal)}</div>
-                    </div>
-                    <div className="bkd-dev-summary-item bkd-dev-summary-item-editable" style={{ gridColumn: '1 / -1' }}>
-                      <div className="bkd-dev-summary-label">Live Grand Total</div>
-                      <div className="bkd-dev-summary-value" style={{ fontSize: 22, fontWeight: 800 }}>{fmtFull(previewGrandTotal || totalValue)}</div>
-                    </div>
+                  <div style={{ marginTop: 10, paddingTop: 14, borderTop: `3px double ${PS.borderStrong}`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: PS.text }}>Grand total</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: PS.text, fontVariantNumeric: 'tabular-nums' }}>{fmtFull(previewGrandTotal || totalValue)}</span>
                   </div>
-                  {renderActivityHistory()}
                 </div>
                 <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-primary, #E3E8EE)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                   <button type="button" onClick={closeActionModal} disabled={devCostSaving} style={{

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import dashboardApi from '../../../api/dashboardApi';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrencyExact as formatCurrency } from '../../../utils/formatters';
 import { ArrowTrendingUpIcon } from '@heroicons/react/24/outline';
 import './CollectionWorkspace.css';
 
