@@ -5,6 +5,7 @@ import telephonyApi from '../../../api/telephonyApi';
 import marketingAllocationRuleApi from '../../../api/marketingAllocationRuleApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import Pagination from '../../../components/common/Pagination';
+import RecordingCell from '../../../components/telephony/RecordingCell';
 import { getErrorMessage } from '../../../utils/helpers';
 import { badgeStyle } from '../../../utils/badgeColors';
 
@@ -184,12 +185,14 @@ const CallAllocationHistory = () => {
 
       <div className="crm-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1080 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1240 }}>
             <thead>
               <tr>
                 <th style={th}>Date / Time</th>
                 <th style={th}>Lead</th>
                 <th style={th}>Call</th>
+                <th style={th}>Answered By</th>
+                <th style={th}>Recording</th>
                 <th style={th}>Source</th>
                 <th style={th}>Telecaller</th>
                 <th style={th}>Campaign</th>
@@ -199,10 +202,10 @@ const CallAllocationHistory = () => {
             </thead>
             <tbody>
               {loading && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>Loading…</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={10}>Loading…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>No call allocation events match these filters</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={10}>No call allocation events match these filters</td></tr>
               )}
               {!loading && rows.map((r) => {
                 const badge = OUTCOME_BADGE[r.outcome] || { bg: '#e5e7eb', fg: '#374151', label: r.outcome };
@@ -229,6 +232,18 @@ const CallAllocationHistory = () => {
                         {r.did_number ? `to ${r.did_number}` : ''}
                         {r.didRule ? ` · ${r.didRule.rule_name}` : ''}
                       </div>
+                    </td>
+                    <td style={td}>
+                      {r.call_status === 'ANSWERED'
+                        ? (
+                          (r.callLog?.agent ? userName(r.callLog.agent) : r.callLog?.agent_name)
+                            ? <span style={{ fontWeight: 600 }}>{r.callLog?.agent ? userName(r.callLog.agent) : r.callLog.agent_name}</span>
+                            : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>No answer</span>}
+                    </td>
+                    <td style={td}>
+                      <RecordingCell callId={r.callLog?.id} hasRecording={Boolean(r.callLog?.recording_url)} />
                     </td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, ...badgeStyle(src?.color_code) }}>
