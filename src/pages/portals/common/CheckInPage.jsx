@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPinIcon, ClockIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, ClockIcon, ArrowRightOnRectangleIcon, ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import attendanceApi from '../../../api/attendanceApi';
+import { markAttendanceSkipped } from '../../../routes/AttendanceGate';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
@@ -93,6 +94,15 @@ const CheckInPage = () => {
   const handleCancel = async () => {
     try { await logout(); } catch { /* proceed regardless */ }
     navigate('/login', { replace: true });
+  };
+
+  // Enter the portal WITHOUT checking in — work existing leads, but stay
+  // "not checked in" so no new leads are allocated (they go to present
+  // teammates instead, as today). Session-scoped; the banner inside the app
+  // lets them check in later.
+  const handleSkip = () => {
+    markAttendanceSkipped(user?.id);
+    navigate('/', { replace: true });
   };
 
   // Three states: on-time, LATE (after deadline — still allowed, but overnight
@@ -205,6 +215,22 @@ const CheckInPage = () => {
               <button type="button" className="crm-btn crm-btn-ghost" style={{ minWidth: 120 }} onClick={handleCancel}>
                 <ArrowRightOnRectangleIcon style={{ width: 16, height: 16 }} /> Cancel
               </button>
+            </div>
+
+            {/* Skip — enter without checking in (existing leads only, no new leads). */}
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-primary, #e5e7eb)' }}>
+              <button
+                type="button"
+                className="crm-btn crm-btn-ghost"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={handleSkip}
+              >
+                <ArrowRightCircleIcon style={{ width: 16, height: 16 }} /> Skip for now — work my existing leads
+              </button>
+              <p style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)', marginTop: 8 }}>
+                You can still open and work your existing leads, but you won't receive
+                <strong> new leads</strong> until you check in — they go to checked-in teammates.
+              </p>
             </div>
           </>
         )}
