@@ -22,11 +22,99 @@ const EMPTY_FORM = {
   campaign_name: '', assign_all_telecallers: false, telecaller_ids: [], is_active: true,
 };
 
+// Searchable telecaller multi-select (search + select-all-filtered + list). Owns
+// its own search state; `value` is an array of ids, `onChange` gets the new array.
+// Shared by the per-rule modal and the common-pool editor.
+const TelecallerPicker = ({ telecallers, value, onChange }) => {
+  const [search, setSearch] = useState('');
+  const valueStr = value.map(String);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return telecallers;
+    return telecallers.filter((t) => `${userName(t)} ${t.email || ''} ${t.phone || ''}`.toLowerCase().includes(q));
+  }, [telecallers, search]);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((t) => valueStr.includes(String(t.id)));
+
+  const toggle = (id) => {
+    const set = new Set(valueStr);
+    if (set.has(String(id))) set.delete(String(id)); else set.add(String(id));
+    onChange([...set]);
+  };
+  const toggleAllFiltered = () => {
+    const set = new Set(valueStr);
+    if (allFilteredSelected) filtered.forEach((t) => set.delete(String(t.id)));
+    else filtered.forEach((t) => set.add(String(t.id)));
+    onChange([...set]);
+  };
+
+  return (
+    <div>
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <MagnifyingGlassIcon style={{ width: 15, height: 15, position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+        <input
+          style={{ ...inputStyle, paddingLeft: 32 }}
+          placeholder="Search telecallers…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div style={{ border: '1px solid var(--border-primary)', borderRadius: 8, maxHeight: 260, overflowY: 'auto' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--border-primary)', cursor: 'pointer', background: 'var(--bg-secondary)', position: 'sticky', top: 0 }}>
+          <input type="checkbox" checked={allFilteredSelected} onChange={toggleAllFiltered} style={{ width: 16, height: 16 }} />
+          <span style={{ fontWeight: 700, fontSize: 13 }}>
+            Select all{search ? ' (filtered)' : ''} · {value.length} selected
+          </span>
+        </label>
+        {filtered.length === 0 && (
+          <div style={{ padding: 12, fontSize: 13, color: 'var(--text-muted)' }}>No telecallers found.</div>
+        )}
+        {filtered.map((t) => {
+          const checked = valueStr.includes(String(t.id));
+          return (
+            <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid var(--border-primary)', cursor: 'pointer', background: checked ? '#eff6ff' : 'transparent' }}>
+              <input type="checkbox" checked={checked} onChange={() => toggle(t.id)} style={{ width: 16, height: 16 }} />
+              <span style={{ fontSize: 13 }}>
+                <span style={{ fontWeight: 600 }}>{userName(t)}</span>
+                {t.email && <span style={{ color: 'var(--text-muted)' }}> · {t.email}</span>}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// A pill-style on/off switch for the allocation mode.
+const ModeSwitch = ({ checked, disabled, onChange }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={() => onChange(!checked)}
+    style={{
+      width: 46, height: 26, borderRadius: 999, border: 'none', flexShrink: 0,
+      background: checked ? '#16A34A' : '#cbd5e1', position: 'relative',
+      cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 0.15s',
+    }}
+    title="Toggle ad-number allocation"
+  >
+    <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }} />
+  </button>
+);
+
 // Super Admin → Telephony → Call Settings: "Ad Number Allocation" card.
-// Each rule maps one advertised Tata DID number to a Lead Source / Sub-Source
-// (the medium) + campaign, and a telecaller round-robin pool. Inbound calls to
-// that number auto-assign the lead from the pool and tag it with the ad's
-// source, so ad attribution is traceable on the lead itself.
+// A master toggle switches between two inbound-call allocation modes:
+//   • ON  — per ad-number (DID) rules: each advertised Tata number maps to its
+//           own Lead Source / Sub-Source / campaign + a telecaller round-robin
+//           pool, so ad attribution is traceable on the lead.
+//   • OFF — one common pool: every inbound call, whichever number was dialled,
+//           is round-robin assigned to a selected set of telecallers.
+// The common pool is also the fallback for numbers without a rule when ON.
 const DidNumberRules = () => {
   const [rules, setRules] = useState([]);
   const [sources, setSources] = useState([]);
@@ -34,9 +122,14 @@ const DidNumberRules = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Allocation mode + common pool (persisted in telephony_config).
+  const [didEnabled, setDidEnabled] = useState(true);
+  const [togglingMode, setTogglingMode] = useState(false);
+  const [commonForm, setCommonForm] = useState({ assign_all: true, telecaller_ids: [] });
+  const [savingCommon, setSavingCommon] = useState(false);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [tcSearch, setTcSearch] = useState('');
   const [subSources, setSubSources] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
 
@@ -52,6 +145,23 @@ const DidNumberRules = () => {
     }
   }, []);
 
+  const applyConfig = useCallback((c) => {
+    setDidEnabled(c.did_rules_enabled !== false);
+    setCommonForm({
+      assign_all: c.common_assign_all_telecallers !== false,
+      telecaller_ids: Array.isArray(c.common_telecaller_ids) ? c.common_telecaller_ids.map(String) : [],
+    });
+  }, []);
+
+  const loadConfig = useCallback(async () => {
+    try {
+      const resp = await telephonyApi.getConfig();
+      applyConfig(resp.data || {});
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to load allocation settings'));
+    }
+  }, [applyConfig]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -66,19 +176,14 @@ const DidNumberRules = () => {
       }
     })();
     loadRules();
-  }, [loadRules]);
+    loadConfig();
+  }, [loadRules, loadConfig]);
 
   const tcById = useMemo(() => {
     const m = {};
     telecallers.forEach((t) => { m[t.id] = t; });
     return m;
   }, [telecallers]);
-
-  const filteredTelecallers = useMemo(() => {
-    const q = tcSearch.trim().toLowerCase();
-    if (!q) return telecallers;
-    return telecallers.filter((t) => `${userName(t)} ${t.email || ''} ${t.phone || ''}`.toLowerCase().includes(q));
-  }, [telecallers, tcSearch]);
 
   const loadSubSources = useCallback(async (sourceId) => {
     if (!sourceId) { setSubSources([]); return; }
@@ -93,7 +198,7 @@ const DidNumberRules = () => {
     }
   }, []);
 
-  const openCreate = () => { setForm(EMPTY_FORM); setSubSources([]); setTcSearch(''); setModalOpen(true); };
+  const openCreate = () => { setForm(EMPTY_FORM); setSubSources([]); setModalOpen(true); };
   const openEdit = (rule) => {
     setForm({
       id: rule.id,
@@ -106,7 +211,6 @@ const DidNumberRules = () => {
       telecaller_ids: Array.isArray(rule.telecaller_ids) ? rule.telecaller_ids.map(String) : [],
       is_active: rule.is_active !== false,
     });
-    setTcSearch('');
     setModalOpen(true);
     loadSubSources(rule.lead_source_id);
   };
@@ -117,27 +221,38 @@ const DidNumberRules = () => {
     loadSubSources(sourceId);
   };
 
-  const toggleTc = (id) => {
-    setForm((f) => {
-      const set = new Set(f.telecaller_ids.map(String));
-      if (set.has(String(id))) set.delete(String(id)); else set.add(String(id));
-      return { ...f, telecaller_ids: [...set] };
-    });
+  // Master mode toggle — persists immediately (like the per-rule active toggle).
+  const setMode = async (enabled) => {
+    setTogglingMode(true);
+    try {
+      const resp = await telephonyApi.updateConfig({ did_rules_enabled: enabled });
+      applyConfig(resp.data || {});
+      toast.success(enabled ? 'Ad-number rules are on' : 'Switched to one common pool');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to switch allocation mode'));
+    } finally {
+      setTogglingMode(false);
+    }
   };
 
-  const allFilteredSelected = filteredTelecallers.length > 0
-    && filteredTelecallers.every((t) => form.telecaller_ids.map(String).includes(String(t.id)));
-
-  const toggleSelectAllFiltered = () => {
-    setForm((f) => {
-      const set = new Set(f.telecaller_ids.map(String));
-      if (allFilteredSelected) {
-        filteredTelecallers.forEach((t) => set.delete(String(t.id)));
-      } else {
-        filteredTelecallers.forEach((t) => set.add(String(t.id)));
-      }
-      return { ...f, telecaller_ids: [...set] };
-    });
+  const saveCommon = async () => {
+    if (!commonForm.assign_all && commonForm.telecaller_ids.length === 0) {
+      toast.error('Select at least one telecaller, or enable "All telecallers"');
+      return;
+    }
+    setSavingCommon(true);
+    try {
+      const resp = await telephonyApi.updateConfig({
+        common_assign_all_telecallers: commonForm.assign_all,
+        common_telecaller_ids: commonForm.assign_all ? [] : commonForm.telecaller_ids,
+      });
+      applyConfig(resp.data || {});
+      toast.success('Common allocation saved');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to save common allocation'));
+    } finally {
+      setSavingCommon(false);
+    }
   };
 
   const save = async () => {
@@ -186,7 +301,7 @@ const DidNumberRules = () => {
   };
 
   const remove = async (rule) => {
-    if (!window.confirm(`Delete ad-number rule "${rule.rule_name}"? Calls to ${rule.did_number} will fall back to the general incoming-call allocation.`)) return;
+    if (!window.confirm(`Delete ad-number rule "${rule.rule_name}"? Calls to ${rule.did_number} will fall back to the common pool.`)) return;
     try {
       await telephonyApi.deleteDidRule(rule.id);
       toast.success('Rule deleted');
@@ -212,6 +327,37 @@ const DidNumberRules = () => {
     );
   };
 
+  // The common-pool editor — primary when rules are off, "fallback pool" when on.
+  const commonPoolEditor = (
+    <div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', border: '1px solid var(--border-primary)', borderRadius: 8, background: commonForm.assign_all ? '#f0fdf4' : 'var(--bg-primary)', marginBottom: 12 }}>
+        <input
+          type="checkbox"
+          checked={commonForm.assign_all}
+          onChange={(e) => setCommonForm((f) => ({ ...f, assign_all: e.target.checked }))}
+          style={{ width: 16, height: 16 }}
+        />
+        <span style={{ fontWeight: 700, fontSize: 14 }}>All telecallers</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(round-robin across everyone)</span>
+      </label>
+
+      {!commonForm.assign_all && (
+        <div style={{ marginBottom: 12 }}>
+          <label style={labelStyle}>Select Telecallers</label>
+          <TelecallerPicker
+            telecallers={telecallers}
+            value={commonForm.telecaller_ids}
+            onChange={(ids) => setCommonForm((f) => ({ ...f, telecaller_ids: ids }))}
+          />
+        </div>
+      )}
+
+      <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={saveCommon} disabled={savingCommon}>
+        {savingCommon ? 'Saving…' : 'Save common pool'}
+      </button>
+    </div>
+  );
+
   return (
     <div className="crm-card" style={{ marginBottom: 16 }}>
       <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
@@ -221,90 +367,129 @@ const DidNumberRules = () => {
             Ad Number Allocation
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, maxWidth: 620 }}>
-            Advertise a different Tata number in each ad. When a customer calls one, the lead is
-            round-robin assigned to that number's telecallers and tagged with the ad's
-            <strong> source / sub-source / campaign</strong> — numbers without a rule use the
-            general incoming-call allocation.
+            Choose how inbound calls are assigned: a per-ad-number rule (each Tata number → its own
+            telecallers + <strong>source / sub-source / campaign</strong>), or one common pool that
+            round-robins every call to a chosen set of telecallers regardless of the number dialled.
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadRules} disabled={loading}>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { loadRules(); loadConfig(); }} disabled={loading}>
             <ArrowPathIcon style={{ width: 15, height: 15 }} /> {loading ? 'Refreshing…' : 'Refresh'}
           </button>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openCreate}>
-            <PlusIcon style={{ width: 16, height: 16 }} /> New Rule
-          </button>
+          {didEnabled && (
+            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openCreate}>
+              <PlusIcon style={{ width: 16, height: 16 }} /> New Rule
+            </button>
+          )}
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
-          <thead>
-            <tr>
-              <th style={th}>Rule</th>
-              <th style={th}>Ad (DID) Number</th>
-              <th style={th}>Source / Medium</th>
-              <th style={th}>Telecallers (Round-robin)</th>
-              <th style={th}>Status</th>
-              <th style={{ ...th, textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>Loading…</td></tr>
-            )}
-            {!loading && rules.length === 0 && (
-              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No ad-number rules yet. Create one per advertised Tata number.</td></tr>
-            )}
-            {!loading && rules.map((rule) => (
-              <tr key={rule.id}>
-                <td style={td}>
-                  <div style={{ fontWeight: 600 }}>{rule.rule_name}</div>
-                  {rule.campaign_name && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Campaign: {rule.campaign_name}</div>
-                  )}
-                </td>
-                <td style={td}>
-                  <code style={{ fontSize: 13, fontWeight: 600 }}>{rule.did_number}</code>
-                </td>
-                <td style={td}>
-                  <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, ...badgeStyle(rule.leadSource?.color_code) }}>
-                    {rule.leadSource?.source_name || '—'}
-                  </span>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-                    {rule.leadSubSource ? `› ${rule.leadSubSource.sub_source_name}` : 'Whole source'}
-                  </div>
-                </td>
-                <td style={td}>{renderTelecallerSummary(rule)}</td>
-                <td style={td}>
-                  <button
-                    type="button"
-                    onClick={() => toggleActive(rule)}
-                    className="crm-btn crm-btn-sm"
-                    style={{
-                      background: rule.is_active ? '#dcfce7' : '#f3f4f6',
-                      color: rule.is_active ? '#166534' : '#6b7280',
-                      border: `1px solid ${rule.is_active ? '#bbf7d0' : '#e5e7eb'}`,
-                      fontWeight: 700,
-                    }}
-                    title="Click to toggle"
-                  >
-                    {rule.is_active ? 'Active' : 'Inactive'}
-                  </button>
-                </td>
-                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(rule)} title="Edit">
-                    <PencilSquareIcon style={{ width: 15, height: 15 }} />
-                  </button>
-                  <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => remove(rule)} title="Delete" style={{ color: '#dc2626' }}>
-                    <TrashIcon style={{ width: 15, height: 15 }} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Master mode switch */}
+      <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14, background: 'var(--bg-secondary)' }}>
+        <ModeSwitch checked={didEnabled} disabled={togglingMode} onChange={setMode} />
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>
+            {didEnabled ? 'Using per ad-number (DID) rules' : 'Using one common pool for all calls'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {didEnabled
+              ? 'Each advertised number is routed by its rule below. Turn off to send every call to one common pool.'
+              : 'Every inbound call — whichever number was dialled — is round-robin assigned to the common pool below. Turn on to route per ad-number instead.'}
+          </div>
+        </div>
       </div>
+
+      {didEnabled ? (
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+              <thead>
+                <tr>
+                  <th style={th}>Rule</th>
+                  <th style={th}>Ad (DID) Number</th>
+                  <th style={th}>Source / Medium</th>
+                  <th style={th}>Telecallers (Round-robin)</th>
+                  <th style={th}>Status</th>
+                  <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>Loading…</td></tr>
+                )}
+                {!loading && rules.length === 0 && (
+                  <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No ad-number rules yet. Create one per advertised Tata number.</td></tr>
+                )}
+                {!loading && rules.map((rule) => (
+                  <tr key={rule.id}>
+                    <td style={td}>
+                      <div style={{ fontWeight: 600 }}>{rule.rule_name}</div>
+                      {rule.campaign_name && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Campaign: {rule.campaign_name}</div>
+                      )}
+                    </td>
+                    <td style={td}>
+                      <code style={{ fontSize: 13, fontWeight: 600 }}>{rule.did_number}</code>
+                    </td>
+                    <td style={td}>
+                      <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, ...badgeStyle(rule.leadSource?.color_code) }}>
+                        {rule.leadSource?.source_name || '—'}
+                      </span>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                        {rule.leadSubSource ? `› ${rule.leadSubSource.sub_source_name}` : 'Whole source'}
+                      </div>
+                    </td>
+                    <td style={td}>{renderTelecallerSummary(rule)}</td>
+                    <td style={td}>
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(rule)}
+                        className="crm-btn crm-btn-sm"
+                        style={{
+                          background: rule.is_active ? '#dcfce7' : '#f3f4f6',
+                          color: rule.is_active ? '#166534' : '#6b7280',
+                          border: `1px solid ${rule.is_active ? '#bbf7d0' : '#e5e7eb'}`,
+                          fontWeight: 700,
+                        }}
+                        title="Click to toggle"
+                      >
+                        {rule.is_active ? 'Active' : 'Inactive'}
+                      </button>
+                    </td>
+                    <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(rule)} title="Edit">
+                        <PencilSquareIcon style={{ width: 15, height: 15 }} />
+                      </button>
+                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => remove(rule)} title="Delete" style={{ color: '#dc2626' }}>
+                        <TrashIcon style={{ width: 15, height: 15 }} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Fallback pool — used for numbers without a rule while rules are on. */}
+          <div style={{ padding: '16px 18px', borderTop: '1px solid var(--border-primary)' }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Fallback pool</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, maxWidth: 620 }}>
+              Calls to a number without a rule above are round-robin assigned to this pool. It is also
+              the pool used for <strong>every</strong> call when ad-number rules are switched off.
+            </div>
+            {commonPoolEditor}
+          </div>
+        </>
+      ) : (
+        <div style={{ padding: '16px 18px' }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Common pool</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, maxWidth: 620 }}>
+            Every inbound call is round-robin assigned to these telecallers, regardless of which number
+            was dialled. {rules.length > 0 && <span>Your {rules.length} saved ad-number rule{rules.length > 1 ? 's are' : ' is'} paused while this mode is on.</span>}
+          </div>
+          {commonPoolEditor}
+        </div>
+      )}
 
       {modalOpen && (
         <div
@@ -400,39 +585,11 @@ const DidNumberRules = () => {
               {!form.assign_all_telecallers && (
                 <div>
                   <label style={labelStyle}>Select Telecallers</label>
-                  <div style={{ position: 'relative', marginBottom: 8 }}>
-                    <MagnifyingGlassIcon style={{ width: 15, height: 15, position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
-                    <input
-                      style={{ ...inputStyle, paddingLeft: 32 }}
-                      placeholder="Search telecallers…"
-                      value={tcSearch}
-                      onChange={(e) => setTcSearch(e.target.value)}
-                    />
-                  </div>
-
-                  <div style={{ border: '1px solid var(--border-primary)', borderRadius: 8, maxHeight: 260, overflowY: 'auto' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--border-primary)', cursor: 'pointer', background: 'var(--bg-secondary)', position: 'sticky', top: 0 }}>
-                      <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAllFiltered} style={{ width: 16, height: 16 }} />
-                      <span style={{ fontWeight: 700, fontSize: 13 }}>
-                        Select all{tcSearch ? ' (filtered)' : ''} · {form.telecaller_ids.length} selected
-                      </span>
-                    </label>
-                    {filteredTelecallers.length === 0 && (
-                      <div style={{ padding: 12, fontSize: 13, color: 'var(--text-muted)' }}>No telecallers found.</div>
-                    )}
-                    {filteredTelecallers.map((t) => {
-                      const checked = form.telecaller_ids.map(String).includes(String(t.id));
-                      return (
-                        <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid var(--border-primary)', cursor: 'pointer', background: checked ? '#eff6ff' : 'transparent' }}>
-                          <input type="checkbox" checked={checked} onChange={() => toggleTc(t.id)} style={{ width: 16, height: 16 }} />
-                          <span style={{ fontSize: 13 }}>
-                            <span style={{ fontWeight: 600 }}>{userName(t)}</span>
-                            {t.email && <span style={{ color: 'var(--text-muted)' }}> · {t.email}</span>}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <TelecallerPicker
+                    telecallers={telecallers}
+                    value={form.telecaller_ids}
+                    onChange={(ids) => setForm((f) => ({ ...f, telecaller_ids: ids }))}
+                  />
                 </div>
               )}
 
