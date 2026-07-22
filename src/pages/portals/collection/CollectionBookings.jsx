@@ -347,8 +347,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     if (s === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by) {
       actions.push({ key: 'confirmCancel', label: 'Confirm Cancel', Icon: XCircleIcon, color: '#DC2626', onClick: stop(() => openWorkflow(booking, 'confirmCancel')) });
     }
-    if (booking.is_cancelled && parseFloat(booking.total_paid || 0) > 0) {
-      actions.push({ key: 'refund', label: `Process Refund (${formatCurrency(booking.total_paid || 0)} pending)`, Icon: BanknotesIcon, color: '#F59E0B', onClick: stop(() => openWorkflow(booking, 'refund')) });
+    if (parseFloat(booking.refundable_amount ?? 0) > 0.01) {
+      actions.push({ key: 'refund', label: `Process Refund (${formatCurrency(booking.refundable_amount || 0)} verified)`, Icon: BanknotesIcon, color: '#F59E0B', onClick: stop(() => openWorkflow(booking, 'refund')) });
     }
     const awaitingSH = s === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by;
 
@@ -459,10 +459,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   };
 
   const handleProcessRefund = async () => {
-    const totalPaidAmt = parseFloat(workflowBooking?.total_paid || 0);
+    const refundable = parseFloat(workflowBooking?.refundable_amount ?? workflowBooking?.total_paid ?? 0);
     const amt = parseFloat(refundForm.refund_amount || 0);
     if (!amt || amt <= 0) { toast.error('Enter a refund amount greater than 0'); return; }
-    if (amt > totalPaidAmt + 0.01) { toast.error(`Refund cannot exceed remaining collected (${formatCurrency(totalPaidAmt)})`); return; }
+    if (amt > refundable + 0.01) { toast.error(`Refund cannot exceed the verified collected balance (${formatCurrency(refundable)})`); return; }
     setRefundSaving(true);
     try {
       await bookingApi.processRefund(workflowBooking.id, refundForm);
@@ -1586,26 +1586,26 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             })()}
 
             {workflowMode === 'refund' && (() => {
-              const totalPaidAmt = parseFloat(workflowBooking?.total_paid || 0);
+              const refundable = parseFloat(workflowBooking?.refundable_amount ?? workflowBooking?.total_paid ?? 0);
               return (
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
                   <strong>Record Refund Payment</strong>
-                  <p style={{ margin: '6px 0 0' }}>Use this when the refund is paid out after the booking was already cancelled (split refunds, delayed payouts).</p>
+                  <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
                 </div>
 
                 <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Remaining collected (refundable)</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaidAmt)}</strong>
+                    <span>Verified collected (refundable)</span>
+                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundable)}</strong>
                   </div>
                 </div>
 
                 <div className="bkd-form-row">
                   <div className="bkd-form-group">
                     <label className="bkd-form-label">Refund Amount (₹) *</label>
-                    <input type="number" min="0" max={totalPaidAmt} className="bkd-form-control"
-                      placeholder={`Up to ${formatCurrency(totalPaidAmt)}`}
+                    <input type="number" min="0" max={refundable} className="bkd-form-control"
+                      placeholder={`Up to ${formatCurrency(refundable)}`}
                       value={refundForm.refund_amount}
                       onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
                   </div>

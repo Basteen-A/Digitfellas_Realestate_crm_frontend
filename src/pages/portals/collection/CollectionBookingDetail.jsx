@@ -853,6 +853,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const unverifiedAmt = payments.filter(p => !p.is_verified && !p.is_bounced).reduce((s,p) => s + parseFloat(p.amount||0), 0);
   const verifiedCount = payments.filter(p => p.is_verified).length;
   const pendingCount = payments.filter(p => !p.is_verified && !p.is_bounced).length;
+  // Only VERIFIED money is refundable, at any status: verified collected − refunds.
+  const refundableAmt = (booking.refundable_amount !== undefined && booking.refundable_amount !== null)
+    ? parseFloat(booking.refundable_amount) || 0
+    : Math.max(0,
+      payments.filter(p => p.is_verified && !p.is_bounced && !p.is_refund).reduce((s, p) => s + parseFloat(p.amount || 0), 0)
+      - payments.filter(p => p.is_refund).reduce((s, p) => s + parseFloat(p.amount || 0), 0));
   const tabs = [
     { key: 'payment-history', label: 'Payments', icon: CreditCardIcon },
     { key: 'activity-log', label: 'Activity', icon: ClockIcon },
@@ -988,9 +994,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Resubmit Cancellation</button>
             </>
           )}
-          {booking.is_cancelled && totalPaid > 0 && (
+          {refundableAmt > 0.01 && (
             <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#F59E0B',color:'#F59E0B'}} onClick={() => setWorkflowMode('refund')}>
-              <BanknotesIcon style={{width:14,height:14}}/> Process Refund ({formatCurrency(totalPaid)} pending)
+              <BanknotesIcon style={{width:14,height:14}}/> Process Refund ({formatCurrency(refundableAmt)} verified)
             </button>
           )}
           {/* Booking Open → send to Super Admin for approval (unit reserved).
@@ -2649,21 +2655,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
                   <strong>Record Refund Payment</strong>
-                  <p style={{ margin: '6px 0 0' }}>Use this when the refund is paid out after the booking was already cancelled (split refunds, delayed payouts).</p>
+                  <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
                 </div>
 
                 <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Remaining collected (refundable)</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaid)}</strong>
+                    <span>Verified collected (refundable)</span>
+                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundableAmt)}</strong>
                   </div>
                 </div>
 
                 <div className="bkd-form-row">
                   <div className="bkd-form-group">
                     <label className="bkd-form-label">Refund Amount (₹) *</label>
-                    <input type="number" min="0" max={totalPaid} className="bkd-form-control"
-                      placeholder={`Up to ${formatCurrency(totalPaid)}`}
+                    <input type="number" min="0" max={refundableAmt} className="bkd-form-control"
+                      placeholder={`Up to ${formatCurrency(refundableAmt)}`}
                       value={refundForm.refund_amount}
                       onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
                   </div>
@@ -2699,8 +2705,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
                 <div className="qa-drawer-save-row">
                   <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
-                    disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0}
+                    disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0 || parseFloat(refundForm.refund_amount) > refundableAmt + 0.01}
                     onClick={async () => {
+                      if (parseFloat(refundForm.refund_amount) > refundableAmt + 0.01) {
+                        toast.error(`Refund cannot exceed the verified collected balance (${formatCurrency(refundableAmt)})`);
+                        return;
+                      }
                       setRefundSaving(true);
                       try {
                         await bookingApi.processRefund(bookingId, refundForm);
