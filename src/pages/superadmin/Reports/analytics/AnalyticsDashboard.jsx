@@ -118,11 +118,11 @@ export const SELF_REPORT_GROUPS = {
 export const selfFirstKey = (role) => (SELF_REPORT_GROUPS[role] || ROLES[role].groups)[0].keys[0];
 
 // ── presentational pieces ──────────────────────────────────────────────────────
-// When true (the self-service "My Reports" view for TC / SM / SH), the shared
-// pieces below render in a flat monochrome style: no accent top-borders on KPI
-// cards, KPI numbers at font-weight 500, primary-text (black in light mode) table
-// headers, and no per-cell colour. The Super Admin Analytics dashboard leaves this
-// false and keeps its colour-coding.
+// When true, the shared pieces below render in a flat monochrome style: no accent
+// top-borders on KPI cards, KPI numbers at font-weight 500, primary-text (black in
+// light mode) table headers, and no per-cell colour. ReportBrowser turns this on for
+// every report view — the Super Admin Analytics + Performance pages and the
+// self-service "My Reports" all render consistently.
 const MonoContext = createContext(false);
 
 // `valueSize` lets name-based KPI cards (e.g. Top Performer) use a smaller,
@@ -217,6 +217,7 @@ const TotalRow = ({ cells, label = 'Total' }) => (
 );
 
 const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
+  const mono = useContext(MonoContext);
   if (!rows || rows.length === 0) return <div className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>No data for this period.</div>;
   const rankBg = (i) => (i === 0 ? '#F59E0B' : i === 1 ? '#9CA3AF' : i === 2 ? '#CD7C2F' : '#F0F0EE');
   const rankFg = (i) => (i < 3 ? '#fff' : '#666');
@@ -230,7 +231,7 @@ const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
             <div className="text-[13px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{fullName(r)}</div>
             <div className="text-[11.5px] truncate" style={{ color: 'var(--text-muted)' }}>{subFn(r)}</div>
           </div>
-          <div className="ml-auto text-[14px] font-bold flex-shrink-0" style={{ color: COLORS.booking, fontVariantNumeric: 'tabular-nums' }}>{num(metric(r)).toLocaleString('en-IN')} {metricLabel}</div>
+          <div className={`ml-auto text-[14px] flex-shrink-0 ${mono ? '' : 'font-bold'}`} style={{ color: mono ? 'var(--text-primary)' : COLORS.booking, fontWeight: mono ? 500 : undefined, fontVariantNumeric: 'tabular-nums' }}>{num(metric(r)).toLocaleString('en-IN')} {metricLabel}</div>
         </div>
       ))}
     </div>
@@ -1038,7 +1039,11 @@ export const ReportBrowser = ({
           {loading && <div className="simple-loader"><div className="simple-spinner" /><p>{loadingLabel}</p></div>}
           {!loading && !hasData && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{emptyLabel}</div>}
           {!loading && hasData && (
-            <MonoContext.Provider value={selfView}>
+            {/* Flat/monochrome styling applies to every report view now — the
+                Super Admin Analytics + Performance pages and the self-service My
+                Reports all render consistently (no accent colours, 500-weight
+                numbers, black table headers). */}
+            <MonoContext.Provider value={true}>
               <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} selfView={selfView} />
             </MonoContext.Provider>
           )}
