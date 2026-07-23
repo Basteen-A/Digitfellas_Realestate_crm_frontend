@@ -165,6 +165,22 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
 };
 
 
+// Label / value row for the Customer Information card. Mirrors the Financial
+// Summary ledger rows (same padding, dividers, 500-weight value) but keeps the
+// string value LEFT-aligned in a second column instead of right-aligned like money.
+const BkdInfoRow = ({ label, value, mono = false }) => (
+  <div style={{
+    display: 'flex', alignItems: 'baseline', gap: 16,
+    padding: '11px 24px', borderBottom: '1px solid var(--col-border, #e2e8f0)',
+  }}>
+    <div style={{ width: 150, flexShrink: 0, fontSize: 13, color: 'var(--col-text-secondary, #64748b)' }}>{label}</div>
+    <div style={{
+      flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, color: 'var(--col-text, #0f172a)',
+      wordBreak: 'break-word', fontFamily: mono ? 'monospace' : undefined,
+    }}>{value}</div>
+  </div>
+);
+
 // Deterministic avatar colour + initials (shared look with the task assignee UI).
 const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
 const colorFor = (id) => {
@@ -305,6 +321,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [cancelRefundForm, setCancelRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   const [refundSaving, setRefundSaving] = useState(false);
+  // When a refund is started from a specific Payment History row, this holds that
+  // payment so the refund is capped at that row's amount (null = booking-level refund).
+  const [refundSourcePayment, setRefundSourcePayment] = useState(null);
 
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
   const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT', 'Other'];
@@ -1064,7 +1083,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           {/* Overflow menu — routine + destructive actions, decluttered out of the bar. */}
           <KebabMenu items={[
             (!booking.is_cancelled && !isCancelApproved && ['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code)) && { key: 'reqcancel', label: 'Request Cancel', Icon: ExclamationTriangleIcon, color: '#EF4444', onClick: () => setWorkflowMode('requestCancel') },
-            (refundableAmt > 0.01) && { key: 'refund', label: `Process Refund (${formatCurrency(refundableAmt)})`, Icon: BanknotesIcon, color: '#B45309', onClick: () => setWorkflowMode('refund') },
+            (refundableAmt > 0.01) && { key: 'refund', label: `Process Refund (${formatCurrency(refundableAmt)})`, Icon: BanknotesIcon, color: '#B45309', onClick: () => { setRefundSourcePayment(null); setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' }); setWorkflowMode('refund'); } },
             ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'payStatus', label: 'Payment Status', Icon: CreditCardIcon, onClick: () => openActionModal('payStatus') },
             ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'status', label: 'Booking Status', Icon: PencilSquareIcon, onClick: () => openActionModal('status') },
             ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'pay', label: 'Add Payment', Icon: PlusIcon, onClick: () => openActionModal('pay') },
@@ -1128,7 +1147,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 {collectionOwner && (
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ textAlign: 'right', minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)' }}>Collection Owner</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)' }}>Collection Manager</div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--col-text, #000000)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{execName(collectionOwner)}</div>
                     </div>
                     <span
@@ -1141,65 +1160,19 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 )}
               </div>
 
-              {/* Buyer & contact */}
-              <div className="ci-section">
-                <div className="ci-section-label">Buyer &amp; Contact</div>
-                <div className="ci-field ci-field-big">
-                  <div className="ci-field-label">Buyer Name</div>
-                  <div className="ci-field-value ci-value-big">{buyerName || '—'}</div>
-                </div>
-                <div className="ci-grid ci-grid-2">
-                  <div className="ci-field">
-                    <div className="ci-field-label">Lead Name</div>
-                    <div className="ci-field-value">{leadFullName || '—'}</div>
-                  </div>
-                  <div className="ci-field">
-                    <div className="ci-field-label">Customer Phone</div>
-                    <div className="ci-field-value mono">{customerPhone || '—'}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Property */}
-              <div className="ci-section">
-                <div className="ci-section-label">Property</div>
-                <div className="ci-grid ci-grid-3">
-                  <div className="ci-field">
-                    <div className="ci-field-label">Project</div>
-                    <div className="ci-field-value">{booking.project_name || '—'}</div>
-                  </div>
-                  <div className="ci-field">
-                    <div className="ci-field-label">Unit</div>
-                    <div className="ci-field-value">{booking.unit_display || booking.unit_number || '—'}</div>
-                  </div>
-                  <div className="ci-field">
-                    <div className="ci-field-label">Area</div>
-                    <div className="ci-field-value">{ciAreaLabel}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Booking */}
-              <div className="ci-section">
-                <div className="ci-section-label">Booking</div>
-                <div className="ci-grid ci-grid-4">
-                  <div className="ci-field">
-                    <div className="ci-field-label">Booking Date</div>
-                    <div className="ci-field-value">{fmtD(booking.booking_date)}</div>
-                  </div>
-                  <div className="ci-field">
-                    <div className="ci-field-label">Payment Plan</div>
-                    <div className="ci-field-value">{paymentPlanLabel}</div>
-                  </div>
-                  <div className="ci-field">
-                    <div className="ci-field-label">Plan Type</div>
-                    <div className="ci-field-value">{paymentPlanType || '—'}</div>
-                  </div>
-                  <div className="ci-field">
-                    <div className="ci-field-label">Unit Reserved</div>
-                    <div className="ci-field-value">{ciReservedDate}</div>
-                  </div>
-                </div>
+              {/* Flat label / value rows — mirrors the Financial Summary card, but
+                  with left-aligned string values (see BkdInfoRow). */}
+              <div>
+                <BkdInfoRow label="Buyer Name" value={buyerName || '—'} />
+                <BkdInfoRow label="Lead Name" value={leadFullName || '—'} />
+                <BkdInfoRow label="Customer Phone" value={customerPhone || '—'} mono />
+                <BkdInfoRow label="Project" value={booking.project_name || '—'} />
+                <BkdInfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
+                <BkdInfoRow label="Area" value={ciAreaLabel} />
+                <BkdInfoRow label="Booking Date" value={fmtD(booking.booking_date)} />
+                <BkdInfoRow label="Payment Plan" value={paymentPlanLabel} />
+                <BkdInfoRow label="Plan Type" value={paymentPlanType || '—'} />
+                <BkdInfoRow label="Unit Reserved" value={ciReservedDate} />
               </div>
 
               {/* Identity (collapsible) */}
@@ -1634,15 +1607,39 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
                     : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
                   <td>
-                    {editable ? (
-                      <button className="view-link" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
-                        Edit
-                      </button>
-                    ) : (
-                      <button className="view-link" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
-                        View
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {editable ? (
+                        <button className="view-link" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
+                          Edit
+                        </button>
+                      ) : (
+                        <button className="view-link" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
+                          View
+                        </button>
+                      )}
+                      {/* Per-row refund — only for verified (non-refund, non-bounced) money,
+                          capped at this row's amount (and the booking's overall refundable). */}
+                      {p.is_verified && !isRefund && !p.is_bounced && refundableAmt > 0.01 && (
+                        <button
+                          className="view-link"
+                          style={{ color: '#B45309' }}
+                          title={`Refund up to ${formatCurrency(Math.min(parseFloat(p.amount || 0), refundableAmt))} from this payment`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const cap = Math.min(parseFloat(p.amount || 0), refundableAmt);
+                            setRefundSourcePayment(p);
+                            setRefundForm({
+                              refund_amount: cap > 0 ? String(cap) : '',
+                              refund_mode_id: '', refund_reference: '', refund_date: '',
+                              refund_remarks: `Refund of ${catKey} payment${p.transaction_ref ? ` · Ref ${p.transaction_ref}` : ''}`,
+                            });
+                            setWorkflowMode('refund');
+                          }}
+                        >
+                          Refund
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
                 );
@@ -2445,7 +2442,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
       {/* ══════════ WORKFLOW MODAL ══════════ */}
       {workflowMode && (
-        <div className="col-modal-overlay" onClick={() => setWorkflowMode(null)}>
+        <div className="col-modal-overlay" onClick={() => { setWorkflowMode(null); setRefundSourcePayment(null); }}>
           <div className="qa-modal-panel" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
             <div className="qa-drawer-handle" />
             <div className="qa-drawer-header">
@@ -2464,7 +2461,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="qa-drawer-meta">{booking.booking_number} · {booking.customer_name || booking.buyer_name}</div>
                 </div>
               </div>
-              <button className="qa-drawer-close" onClick={() => setWorkflowMode(null)}>×</button>
+              <button className="qa-drawer-close" onClick={() => { setWorkflowMode(null); setRefundSourcePayment(null); }}>×</button>
             </div>
             <div className="qa-drawer-divider" />
 
@@ -2663,7 +2660,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               </div>
             )}
 
-            {workflowMode === 'refund' && (
+            {workflowMode === 'refund' && (() => {
+              // Per-row refunds (started from the Payment History table) cap at that
+              // payment's amount; a booking-level refund caps at the whole verified
+              // balance. Either way we never exceed the overall refundable amount.
+              const refundCap = refundSourcePayment
+                ? Math.min(parseFloat(refundSourcePayment.amount || 0), refundableAmt)
+                : refundableAmt;
+              const overCap = parseFloat(refundForm.refund_amount || 0) > refundCap + 0.01;
+              return (
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
                   <strong>Record Refund Payment</strong>
@@ -2671,17 +2676,23 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </div>
 
                 <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
+                  {refundSourcePayment && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 6, borderBottom: '1px solid var(--border-primary, #E2E8F0)' }}>
+                      <span>Refunding payment{refundSourcePayment.payment_category ? ` · ${refundSourcePayment.payment_category}` : ''}{refundSourcePayment.payment_date ? ` · ${fmtD(refundSourcePayment.payment_date)}` : ''}</span>
+                      <strong>{formatCurrency(parseFloat(refundSourcePayment.amount || 0))}</strong>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Verified collected (refundable)</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundableAmt)}</strong>
+                    <span>{refundSourcePayment ? 'Refundable from this payment' : 'Verified collected (refundable)'}</span>
+                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundCap)}</strong>
                   </div>
                 </div>
 
                 <div className="bkd-form-row">
                   <div className="bkd-form-group">
                     <label className="bkd-form-label">Refund Amount (₹) *</label>
-                    <input type="number" min="0" max={refundableAmt} className="bkd-form-control"
-                      placeholder={`Up to ${formatCurrency(refundableAmt)}`}
+                    <input type="number" min="0" max={refundCap} className="bkd-form-control"
+                      placeholder={`Up to ${formatCurrency(refundCap)}`}
                       value={refundForm.refund_amount}
                       onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
                   </div>
@@ -2714,13 +2725,18 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     value={refundForm.refund_remarks}
                     onChange={(e) => setRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
                 </div>
+                {overCap && (
+                  <div style={{ fontSize: 12, color: '#DC2626', marginTop: -4, marginBottom: 8 }}>
+                    Refund cannot exceed {formatCurrency(refundCap)}{refundSourcePayment ? ' for this payment' : ''}.
+                  </div>
+                )}
 
                 <div className="qa-drawer-save-row">
                   <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
-                    disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0 || parseFloat(refundForm.refund_amount) > refundableAmt + 0.01}
+                    disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0 || overCap}
                     onClick={async () => {
-                      if (parseFloat(refundForm.refund_amount) > refundableAmt + 0.01) {
-                        toast.error(`Refund cannot exceed the verified collected balance (${formatCurrency(refundableAmt)})`);
+                      if (parseFloat(refundForm.refund_amount) > refundCap + 0.01) {
+                        toast.error(`Refund cannot exceed ${formatCurrency(refundCap)}${refundSourcePayment ? ' for this payment' : ' (verified collected balance)'}`);
                         return;
                       }
                       setRefundSaving(true);
@@ -2728,6 +2744,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         await bookingApi.processRefund(bookingId, refundForm);
                         toast.success('Refund recorded');
                         setWorkflowMode(null);
+                        setRefundSourcePayment(null);
                         setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
                         loadBooking(); loadActivities();
                       } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
@@ -2737,7 +2754,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </button>
                 </div>
               </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
