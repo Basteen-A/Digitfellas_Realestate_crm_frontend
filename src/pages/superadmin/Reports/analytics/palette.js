@@ -6,7 +6,7 @@ import { STAGE_COLORS } from '../../../../utils/stageColors';
 
 export const COLORS = {
   primary: '#4f46e5',   // indigo
-  answered: '#22c55e',  // green
+  answered: '#16a34a',  // green (de-limed to the app-standard dark green)
   unanswered: '#ef4444', // red
   leads: '#6366f1',
   qualified: STAGE_COLORS.qualified,
