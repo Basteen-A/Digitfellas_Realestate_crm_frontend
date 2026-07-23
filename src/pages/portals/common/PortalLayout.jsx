@@ -42,7 +42,9 @@ const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'm
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
 
 const SCREEN_TITLES = {
-  dashboard: 'Dashboard',
+  // Each portal dashboard already renders its own "Dashboard" page heading, so the
+  // top bar leaves this blank to avoid the redundant duplicate title.
+  dashboard: '',
   leads: '',
   'leads-addnew': '',
   handoffs: '',

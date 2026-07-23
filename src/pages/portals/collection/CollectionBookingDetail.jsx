@@ -9,6 +9,7 @@ import userApi from '../../../api/userApi';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import RecordPaymentModal from '../../../components/common/RecordPaymentModal';
 import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
+import KebabMenu from '../../../components/common/KebabMenu';
 import { formatCurrencyExact as formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
@@ -21,7 +22,7 @@ import {
   ExclamationTriangleIcon, PlusIcon,
   CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
   ArrowDownTrayIcon, XCircleIcon,
-  ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon
+  ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon, InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
@@ -34,7 +35,9 @@ const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',mo
 const fmtFull = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return '₹0';
-  return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+  // Always show 2 decimals so every amount in the Financial Summary lines up on
+  // the decimal point (e.g. ₹2,31,800.00 aligns with ₹1,217.85).
+  return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 const BkdStatCell = ({ label, value, border = true }) => {
   return (
@@ -49,7 +52,7 @@ const BkdStatCell = ({ label, value, border = true }) => {
         color: "var(--col-text, #000000)", textTransform: "uppercase", marginBottom: 4,
       }}>{label}</div>
       <div style={{
-        fontSize: 20, fontWeight: 600, color: "var(--col-text, #000000)",
+        fontSize: 20, fontWeight: 500, color: "var(--col-text, #000000)",
         fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em",
       }}>{value}</div>
     </div>
@@ -64,16 +67,21 @@ const PS = {
   textSec: '#5B6B82', muted: '#8792A2', accent: '#635BFF', bg: '#F6F8FB',
 };
 
-const PsSectionLabel = ({ children, top = 14 }) => (
-  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: PS.muted, textTransform: 'uppercase', margin: `${top}px 0 4px` }}>
+const PsSectionLabel = ({ children, top = 14, info = null }) => (
+  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: PS.muted, textTransform: 'uppercase', margin: `${top}px 0 4px`, display: 'flex', alignItems: 'center', gap: 5 }}>
     {children}
+    {info && (
+      <span title={info} style={{ display: 'inline-flex', cursor: 'help' }}>
+        <InformationCircleIcon style={{ width: 14, height: 14 }} />
+      </span>
+    )}
   </div>
 );
 
 const PsAmountInput = ({ value, onChange, readOnly = false, placeholder = '0', suffix = null, title }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }} title={title}>
-    {!suffix && <span style={{ fontSize: 14, color: PS.muted, fontWeight: 600 }}>₹</span>}
     <input
+      className="bkd-cost-input"
       type="number"
       inputMode="decimal"
       value={value ?? ''}
@@ -82,9 +90,9 @@ const PsAmountInput = ({ value, onChange, readOnly = false, placeholder = '0', s
       disabled={readOnly}
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       style={{
-        width: 120, textAlign: 'right', fontSize: 14, fontWeight: 600,
+        width: 130, textAlign: 'right', fontSize: 14, fontWeight: 600,
         fontVariantNumeric: 'tabular-nums', color: readOnly ? PS.muted : PS.text,
-        border: `1px solid ${PS.borderStrong}`, borderRadius: 6, padding: '6px 8px',
+        border: `1px solid ${PS.borderStrong}`, borderRadius: 6, padding: '6px 10px',
         outline: 'none', background: readOnly ? PS.bg : '#fff',
       }}
       onFocus={(e) => { if (!readOnly) e.target.style.borderColor = PS.accent; }}
@@ -94,10 +102,12 @@ const PsAmountInput = ({ value, onChange, readOnly = false, placeholder = '0', s
   </div>
 );
 
-const PsFieldRow = ({ label, note, children }) => (
+const PsFieldRow = ({ label, note, required = false, children }) => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${PS.border}`, gap: 12 }}>
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 14, fontWeight: 500, color: PS.text }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 500, color: PS.text }}>
+        {label}{required && <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>}
+      </div>
       {note && <div style={{ fontSize: 11.5, color: PS.muted, marginTop: 1 }}>{note}</div>}
     </div>
     {children}
@@ -146,7 +156,7 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
         </div>
       </div>
       <div style={{
-        fontSize: 14, fontWeight: 600,
+        fontSize: 14, fontWeight: 500,
         color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums",
         whiteSpace: "nowrap", marginLeft: 12,
       }}>{valueText}</div>
@@ -978,10 +988,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           </div>
         </div>
         <div className="bkd-header-actions">
-          {/* Workflow action buttons */}
-          {!booking.is_cancelled && !isCancelApproved && ['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code) && (
-            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Request Cancel</button>
-          )}
+          {/* Contextual state-transition CTAs stay visible; routine actions moved to the ⋮ menu below. */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
             <button className="bkd-btn bkd-btn-primary" style={{background:'#DC2626'}} onClick={() => setWorkflowMode('confirmCancel')}><XCircleIcon style={{width:14,height:14}}/> Confirm Cancel</button>
           )}
@@ -993,11 +1000,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#16A34A',color:'#16A34A'}} onClick={() => setWorkflowMode('revertCancel')}><ArrowPathIcon style={{width:14,height:14}}/> Customer Wants to Continue</button>
               <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Resubmit Cancellation</button>
             </>
-          )}
-          {refundableAmt > 0.01 && (
-            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#F59E0B',color:'#F59E0B'}} onClick={() => setWorkflowMode('refund')}>
-              <BanknotesIcon style={{width:14,height:14}}/> Process Refund ({formatCurrency(refundableAmt)} verified)
-            </button>
           )}
           {/* Booking Open → send to Super Admin for approval (unit reserved).
               This is a Collection action — the Super Admin never sends for approval. */}
@@ -1021,30 +1023,34 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <span style={{fontSize:12, color:'#B45309', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting Super Admin Approval</span>
             )
           )}
-          {/* Collection-only actions — hidden for the Super Admin review view.
-              Also blocked while still Booking Open (not yet sent for approval). */}
-          {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments && (
-            <>
-              <button className="bkd-btn bkd-btn-ghost" onClick={() => openActionModal('payStatus')}><CreditCardIcon style={{width:14,height:14}}/> Payment Status</button>
-              <button className="bkd-btn bkd-btn-ghost" onClick={() => openActionModal('status')}><PencilSquareIcon style={{width:14,height:14}}/> Booking Status</button>
-              <button className="bkd-btn bkd-btn-primary" onClick={() => openActionModal('pay')}><PlusIcon style={{width:14,height:14}}/> Add Payment</button>
-            </>
-          )}
-          {canDeleteBooking && (
-            <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#DC2626',color:'#DC2626'}} onClick={() => setShowDeleteBooking(true)} title="Permanently delete this booking">
-              <ExclamationTriangleIcon style={{width:14,height:14}}/> Delete Booking
-            </button>
-          )}
-          {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user)) && !booking.is_cancelled && (
-            <button className="bkd-btn bkd-btn-ghost" onClick={openAssign} title="Assign this booking to a Collection Executive">
-              <UserIcon style={{width:14,height:14}}/> {(() => {
-                const execs = booking.collectionExecutives || [];
-                if (execs.length === 0) return 'Assign Executives';
-                if (execs.length === 1) return `Executive: ${execs[0].first_name}`;
-                return `Executives: ${execs.length}`;
-              })()}
-            </button>
-          )}
+          {/* Collection Executive assignees — circle avatars (like the task assignee UI). */}
+          {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user)) && !booking.is_cancelled && (() => {
+            const execs = booking.collectionExecutives || [];
+            return (
+              <button type="button" onClick={openAssign} title="Assign this booking to a Collection Executive"
+                style={{ display: 'inline-flex', alignItems: 'center', background: 'transparent', border: 0, padding: 0, cursor: 'pointer' }}>
+                {execs.length === 0 ? (
+                  <span style={{ width: 30, height: 30, borderRadius: '50%', border: '1.5px dashed var(--border-strong, #C1C9D2)', color: 'var(--text-muted, #8792A2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserIcon style={{ width: 15, height: 15 }} />
+                  </span>
+                ) : (
+                  <>
+                    {execs.slice(0, 3).map((e, i) => (
+                      <span key={e.id || i} title={execName(e)}
+                        style={{ width: 30, height: 30, borderRadius: '50%', background: colorFor(e.id), color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: i > 0 ? -8 : 0, border: '2px solid var(--col-surface, #fff)' }}>
+                        {initialsOf(e)}
+                      </span>
+                    ))}
+                    {execs.length > 3 && (
+                      <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--bg-tertiary, #f1f5f9)', color: 'var(--text-secondary, #5B6B82)', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: -8, border: '2px solid var(--col-surface, #fff)' }}>
+                        +{execs.length - 3}
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            );
+          })()}
           {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user)) && (booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_APPROVED' && (
             <button
               className="bkd-btn bkd-btn-primary"
@@ -1055,6 +1061,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Generate Booking Form
             </button>
           )}
+          {/* Overflow menu — routine + destructive actions, decluttered out of the bar. */}
+          <KebabMenu items={[
+            (!booking.is_cancelled && !isCancelApproved && ['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code)) && { key: 'reqcancel', label: 'Request Cancel', Icon: ExclamationTriangleIcon, color: '#EF4444', onClick: () => setWorkflowMode('requestCancel') },
+            (refundableAmt > 0.01) && { key: 'refund', label: `Process Refund (${formatCurrency(refundableAmt)})`, Icon: BanknotesIcon, color: '#B45309', onClick: () => setWorkflowMode('refund') },
+            ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'payStatus', label: 'Payment Status', Icon: CreditCardIcon, onClick: () => openActionModal('payStatus') },
+            ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'status', label: 'Booking Status', Icon: PencilSquareIcon, onClick: () => openActionModal('status') },
+            ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'pay', label: 'Add Payment', Icon: PlusIcon, onClick: () => openActionModal('pay') },
+            canDeleteBooking && { key: 'delete', label: 'Delete Booking', Icon: ExclamationTriangleIcon, color: '#DC2626', onClick: () => setShowDeleteBooking(true) },
+          ].filter(Boolean)} />
           <button className="bkd-btn bkd-btn-ghost bkd-btn-icon" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:16,height:16}}/></button>
         </div>
       </div>
@@ -1526,8 +1541,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   display: "flex", justifyContent: "space-between", alignItems: "baseline",
                   marginTop: 10, paddingTop: 14, borderTop: "3px double var(--col-text, #000000)",
                 }}>
-                  <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Grand Total</span>
-                  <span style={{ fontSize: 22, fontWeight: 600, color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums" }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 500, color: "var(--col-text, #000000)" }}>Grand Total</span>
+                  <span style={{ fontSize: 22, fontWeight: 500, color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums" }}>
                     {fmtFull(totalValue)}
                   </span>
                 </div>
@@ -1913,7 +1928,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
       {actionMode && (
         <div className="col-modal-overlay" onClick={closeActionModal}>
-          <div className="qa-modal-panel" style={{ maxWidth: actionMode === 'devCost' ? 540 : 800 }} onClick={(e) => e.stopPropagation()}>
+          <div className="qa-modal-panel" style={{ maxWidth: actionMode === 'devCost' ? 640 : 800 }} onClick={(e) => e.stopPropagation()}>
             {actionMode === 'devCost' ? (
               <div style={{
                 padding: '18px 24px', borderBottom: '1px solid var(--border-primary, #E3E8EE)',
@@ -2352,27 +2367,24 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     ].map((c, i, arr) => (
                       <div key={c.label} style={{ flex: 1, padding: '12px 14px', borderRight: i < arr.length - 1 ? `1px solid ${PS.border}` : 'none', minWidth: 0 }}>
                         <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', color: PS.muted, textTransform: 'uppercase', marginBottom: 5, whiteSpace: 'nowrap' }}>{c.label}</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: PS.text, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.value}</div>
+                        <div style={{ fontSize: 16, fontWeight: 500, color: PS.text, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.value}</div>
                       </div>
                     ))}
                   </div>
 
-                  <PsSectionLabel>Property pricing</PsSectionLabel>
-                  <PsFieldRow label="Guideline Value" note="per sq.ft — required">
+                  <PsSectionLabel info="Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).">Property pricing</PsSectionLabel>
+                  <PsFieldRow label="Guideline Value" note="per sq.ft" required>
                     <PsAmountInput value={devCostForm.guideline_value} placeholder="5000"
                       onChange={(v) => setDevCostForm(p => ({ ...p, guideline_value: v }))} />
                   </PsFieldRow>
-                  <PsFieldRow label="Plot Area" note="sq.ft — required">
-                    <PsAmountInput value={devCostForm.plot_area} placeholder="1200" suffix="sqft"
+                  <PsFieldRow label="Plot Area" note="sq.ft" required>
+                    <PsAmountInput value={devCostForm.plot_area} placeholder="1200"
                       onChange={(v) => setDevCostForm(p => ({ ...p, plot_area: v }))} />
                   </PsFieldRow>
                   <PsFieldRow label="Development Cost" note="per sq.ft (× 1.18 GST)">
                     <PsAmountInput value={devCostForm.development_cost_per_sqft} placeholder="250"
                       onChange={(v) => setDevCostForm(p => ({ ...p, development_cost_per_sqft: v }))} />
                   </PsFieldRow>
-                  <div style={{ fontSize: 11.5, color: PS.muted, marginTop: 8, lineHeight: 1.5 }}>
-                    Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).
-                  </div>
 
                   <PsSectionLabel top={18}>Registration charges</PsSectionLabel>
                   <PsFieldRow label="Stamp Commission" note="1% of Stamp Duty — auto">

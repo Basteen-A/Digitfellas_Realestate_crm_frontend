@@ -217,11 +217,17 @@
 
 .col-stat-value {
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-primary);
   line-height: 1.1;
   letter-spacing: -0.5px;
 }
+
+/* Cost-breakdown edit inputs: hide the number spinner so the value sits flush to
+   the right edge (removes the extra right gap the spinner reserves). */
+.bkd-cost-input::-webkit-outer-spin-button,
+.bkd-cost-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.bkd-cost-input { -moz-appearance: textfield; appearance: textfield; }
 
 .col-stat-label {
   font-size: 12px;
@@ -1192,7 +1198,7 @@
 }
 .col-stat-value-new {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.5px;
   color: var(--text-primary, #111827);
   line-height: 1;
@@ -1279,9 +1285,23 @@
 .col-clickable-row { cursor: pointer; }
 .col-clickable-row:hover td { background: rgba(91,79,207,0.04); }
 
-.col-cell-primary { font-weight: 600; }
+.col-cell-primary { font-weight: 500; }
 .col-cell-secondary { font-size: 11px; color: var(--text-muted, #9ca3af); }
 .col-cell-mono { font-family: inherit; font-size: inherit; }
+
+/* Simple "View all →" text link (replaces the ghost button in card headers). */
+.col-viewall-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-blue, #2563eb);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.col-viewall-link:hover { text-decoration: underline; }
 
 /* ── Badges (New) ── */
 .col-badge-new {
@@ -1303,7 +1323,7 @@
   border-radius: 50%;
   background: currentColor;
 }
-.col-badge-verified { background: #087629; color: #166534; border-color: #BBF7D0; }
+.col-badge-verified { background: #F0FDF4; color: #166534; border-color: #BBF7D0; }
 .col-badge-neutral { background: #F3F4F6; color: #4B5563; border-color: #D1D5DB; }
 .col-badge-unverified { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
 .col-badge-rejected { background: #FFF1F2; color: #9F1239; border-color: #FECDD3; }

@@ -153,7 +153,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
       {/* Page Header */}
       <div className="col-page-header">
         <div className="col-page-header-left">
-          <h1>My Collections</h1>
+          <h1>Dashboard</h1>
           <p>Bookings assigned to you — update status, follow-ups and record payments</p>
         </div>
         <div className="col-page-header-actions">
@@ -280,8 +280,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                 <div className="col-card-subtitle-new">Latest bookings created</div>
               </div>
             </div>
-            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate('bookings')}>
-              View All →
+            <button type="button" className="col-viewall-link" onClick={() => onNavigate('bookings')}>
+              View all →
             </button>
           </div>
           <div className="col-card-body-flush-new">
@@ -341,8 +341,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                 <div className="col-card-subtitle-new">Last entries added</div>
               </div>
             </div>
-            <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate('payments')}>
-              View All →
+            <button type="button" className="col-viewall-link" onClick={() => onNavigate('payments')}>
+              View all →
             </button>
           </div>
           <div className="col-card-body-flush-new">

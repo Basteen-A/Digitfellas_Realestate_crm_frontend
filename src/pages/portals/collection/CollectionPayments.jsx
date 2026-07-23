@@ -159,19 +159,19 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
         </div>
         <div className="col-stat-card">
           <div className="col-stat-info">
-            <div className="col-stat-value" style={{ color: '#16a34a' }}>{totalVerified}</div>
+            <div className="col-stat-value">{totalVerified}</div>
             <div className="col-stat-label">Verified</div>
           </div>
         </div>
         <div className="col-stat-card">
           <div className="col-stat-info">
-            <div className="col-stat-value" style={{ color: '#f59e0b' }}>{totalUnverified}</div>
+            <div className="col-stat-value">{totalUnverified}</div>
             <div className="col-stat-label">Unverified</div>
           </div>
         </div>
         <div className="col-stat-card">
           <div className="col-stat-info">
-            <div className="col-stat-value" style={{ color: '#ef4444' }}>{totalRejected}</div>
+            <div className="col-stat-value">{totalRejected}</div>
             <div className="col-stat-label">Rejected</div>
           </div>
         </div>
@@ -340,11 +340,11 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                   <tr>
                     <th style={{ width: 120 }}>Payment #</th>
                     <th style={{ width: 'auto' }}>Booking</th>
+                    <th className="hide-mobile" style={{ width: 130 }}>Towards</th>
                     <th className="hide-mobile" style={{ width: 100 }}>Type</th>
                     <th className="hide-mobile" style={{ width: 100 }}>Mode</th>
                     <th className="hide-mobile" style={{ width: 120 }}>Amount</th>
                     <th className="hide-mobile" style={{ width: 110 }}>Date</th>
-                    <th className="hide-mobile" style={{ width: 130 }}>Towards</th>
                     <th style={{ width: 100 }}>Status</th>
                   </tr>
                 </thead>
@@ -366,11 +366,11 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                           </button>
                         </small>
                       </td>
+                      <td className="hide-mobile">{p.payment_category || '—'}</td>
                       <td className="hide-mobile">{p.payment_type}</td>
                       <td className="hide-mobile">{p.payment_mode}</td>
                       <td className="hide-mobile">{formatCurrency(p.amount)}</td>
                       <td className="hide-mobile">{formatDate(p.payment_date)}</td>
-                      <td className="hide-mobile">{p.payment_category || '—'}</td>
                       <td>
                         {p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
                           : p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
