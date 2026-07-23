@@ -1038,11 +1038,11 @@ export const ReportBrowser = ({
 
           {loading && <div className="simple-loader"><div className="simple-spinner" /><p>{loadingLabel}</p></div>}
           {!loading && !hasData && <div className="crm-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>{emptyLabel}</div>}
+          {/* Flat/monochrome styling applies to every report view now — the Super
+              Admin Analytics + Performance pages and the self-service My Reports all
+              render consistently (no accent colours, 500-weight numbers, black
+              table headers). */}
           {!loading && hasData && (
-            {/* Flat/monochrome styling applies to every report view now — the
-                Super Admin Analytics + Performance pages and the self-service My
-                Reports all render consistently (no accent colours, 500-weight
-                numbers, black table headers). */}
             <MonoContext.Provider value={true}>
               <Panel rkey={selected} role={role} d={d} accent={roleAccent} orgCalls={orgCalls} orgHourly={orgHourly} registerRef={registerRef} selfView={selfView} />
             </MonoContext.Provider>
