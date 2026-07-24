@@ -115,13 +115,12 @@
 }
 
 .reports-chip--active {
-  background: #18181b;
+  background: var(--accent-primary, #625AFA);
   color: #fff;
 }
 
 .reports-chip--active:hover {
-  background: #27272a;
-  color: #fff;
+  background: var(--accent-primary-dark, #625AFA);
 }
 
 @media (min-width: 641px) {
@@ -165,7 +164,7 @@
   width: 34px;
   height: 34px;
   border: 3px solid var(--border-primary, #e5e7eb);
-  border-top-color: #18181b;
+  border-top-color: var(--accent-blue, #5b4fcf);
   border-radius: 50%;
   animation: reports-spin 0.7s linear infinite;
 }

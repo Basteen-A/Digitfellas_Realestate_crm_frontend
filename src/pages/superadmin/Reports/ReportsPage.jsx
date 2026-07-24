@@ -169,7 +169,7 @@ const UserActivityReport = ({ period }) => {
                   {isCol ? (
                     <>
                       <td style={td}>{u.payments_recorded ?? 0}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>{formatCurrency(u.amount_collected || 0)}</td>
+                      <td style={{ ...td, fontWeight: 600, color: 'var(--accent-green)' }}>{formatCurrency(u.amount_collected || 0)}</td>
                       <td style={td}>{u.bookings_handled ?? 0}</td>
                     </>
                   ) : (
@@ -180,9 +180,9 @@ const UserActivityReport = ({ period }) => {
                     </>
                   )}
                   <td style={td}>{u.followups ?? 0}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{u.calls_answered ?? 0}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{u.calls_no_answer ?? 0}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>View →</td>
+                  <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{u.calls_answered ?? 0}</td>
+                  <td style={{ ...td, color: 'var(--accent-red)', fontWeight: 600 }}>{u.calls_no_answer ?? 0}</td>
+                  <td style={{ ...td, color: 'var(--accent-blue)', fontWeight: 600 }}>View →</td>
                 </tr>
               ))}
             </tbody>
@@ -230,19 +230,19 @@ const UserDetail = ({ detail, isCol, role, period, loading, onBack }) => {
         {isCol ? (
           <>
             <Metric label="Payments" value={s.payments_recorded ?? 0} />
-            <Metric label="Collected" value={formatCurrency(s.amount_collected || 0)} />
+            <Metric label="Collected" value={formatCurrency(s.amount_collected || 0)} color="var(--accent-green)" />
             <Metric label="Bookings" value={s.bookings_handled ?? 0} />
           </>
         ) : (
           <>
-            <Metric label="Leads Created" value={s.leads_created ?? 0} />
+            <Metric label="Leads Created" value={s.leads_created ?? 0} color="var(--accent-blue)" />
             <Metric label="Assigned" value={s.leads_assigned ?? 0} />
             <Metric label="Handoffs" value={s.handoffs ?? 0} />
           </>
         )}
         <Metric label="Follow-ups" value={s.followups ?? 0} />
-        <Metric label="Answered" value={s.calls_answered ?? 0} />
-        <Metric label="No Answer" value={s.calls_no_answer ?? 0} />
+        <Metric label="Answered" value={s.calls_answered ?? 0} color="var(--accent-green)" />
+        <Metric label="No Answer" value={s.calls_no_answer ?? 0} color="var(--accent-red)" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }} className="report-detail-grid">
@@ -256,7 +256,7 @@ const UserDetail = ({ detail, isCol, role, period, loading, onBack }) => {
               <thead><tr><th style={th}>Login</th><th style={th}>Logout</th></tr></thead>
               <tbody>
                 {sessions.map((sess, i) => (
-                  <tr key={i}><td style={td}>{fmtDateTime(sess.login)}</td><td style={td}>{sess.logout ? fmtDateTime(sess.logout) : <span style={{ fontWeight: 600 }}>Active</span>}</td></tr>
+                  <tr key={i}><td style={td}>{fmtDateTime(sess.login)}</td><td style={td}>{sess.logout ? fmtDateTime(sess.logout) : <span style={{ color: 'var(--accent-green)' }}>Active</span>}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -279,7 +279,7 @@ const UserDetail = ({ detail, isCol, role, period, loading, onBack }) => {
                     <tr key={i}>
                       <td style={td}>{p.booking_number}<div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.buyer_name}</div></td>
                       <td style={td}>{p.payment_category || '—'}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>{p.is_refund ? '-' : ''}{formatCurrency(p.amount)}</td>
+                      <td style={{ ...td, fontWeight: 600, color: p.is_refund ? 'var(--accent-red)' : 'var(--accent-green)' }}>{p.is_refund ? '-' : ''}{formatCurrency(p.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -432,11 +432,11 @@ const InventoryReport = ({ period }) => {
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <Metric label="Total Value" value={formatCurrency(t.totalValue || 0)} />
-        <Metric label="Received" value={formatCurrency(t.totalReceived || 0)} />
-        <Metric label="Due" value={formatCurrency(t.totalDue || 0)} />
-        <Metric label="Refunds" value={formatCurrency(t.totalRefund || 0)} />
-        <Metric label="Received (period)" value={formatCurrency(t.receivedInPeriod || 0)} />
+        <Metric label="Total Value" value={formatCurrency(t.totalValue || 0)} color="var(--accent-blue)" />
+        <Metric label="Received" value={formatCurrency(t.totalReceived || 0)} color="var(--accent-green)" />
+        <Metric label="Due" value={formatCurrency(t.totalDue || 0)} color="var(--accent-red)" />
+        <Metric label="Refunds" value={formatCurrency(t.totalRefund || 0)} color="var(--accent-yellow)" />
+        <Metric label="Received (period)" value={formatCurrency(t.receivedInPeriod || 0)} color="var(--accent-green)" />
         <Metric label="Units (booked/total)" value={`${t.bookedUnits || 0}/${t.totalUnits || 0}`} />
       </div>
 
@@ -482,8 +482,8 @@ const InventoryReport = ({ period }) => {
                     <td style={td}>{u.registration_exp != null ? formatCurrency(u.registration_exp) : '—'}</td>
                     <td style={td}>{u.development_charges != null ? formatCurrency(u.development_charges) : '—'}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{u.net_amount != null ? formatCurrency(u.net_amount) : '—'}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{u.total_paid != null ? formatCurrency(u.total_paid) : '—'}</td>
-                    <td style={td}>{u.due != null && u.booking_number ? formatCurrency(u.due) : '—'}</td>
+                    <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{u.total_paid != null ? formatCurrency(u.total_paid) : '—'}</td>
+                    <td style={{ ...td, color: 'var(--accent-red)' }}>{u.due != null && u.booking_number ? formatCurrency(u.due) : '—'}</td>
                     <td style={td}>{u.refund_amount ? formatCurrency(u.refund_amount) : '—'}</td>
                     <td style={td}>{u.collection_manager || u.created_by_name || '—'}</td>
                   </tr>
@@ -528,7 +528,7 @@ const RollupTable = ({ title, rows, nameKey, userMode }) => (
             {!userMode && <td style={td}>{r.booked_units || 0}/{r.total_units || 0}</td>}
             {userMode && <td style={td}>{r.bookings || 0}</td>}
             <td style={td}>{formatCurrency(r.total_value || 0)}</td>
-            <td style={{ ...td, fontWeight: 600 }}>{formatCurrency(r.total_received || 0)}</td>
+            <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(r.total_received || 0)}</td>
             <td style={td}>{r.total_refund ? formatCurrency(r.total_refund) : '—'}</td>
           </tr>
         ))}

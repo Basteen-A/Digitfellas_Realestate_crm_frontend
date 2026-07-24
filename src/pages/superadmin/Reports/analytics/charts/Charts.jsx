@@ -95,7 +95,7 @@ export const HourlyCallsBar = ({ data }) => {
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
         <XAxis dataKey="hour" tickFormatter={(h) => `${h}h`} tick={axisTick} interval={isMobile ? 3 : 1} tickLine={false} axisLine={{ stroke: GRID }} />
         <YAxis tick={axisTick} allowDecimals={false} width={32} tickLine={false} axisLine={false} />
-        <Tooltip cursor={{ fill: 'rgba(24,24,27,0.05)' }} content={<ChartTooltip labelFormatter={hourTip} />} />
+        <Tooltip cursor={{ fill: 'rgba(99,102,241,0.07)' }} content={<ChartTooltip labelFormatter={hourTip} />} />
         <Legend {...legendProps} />
         <Bar dataKey="answered" name="Answered" stackId="a" fill={COLORS.answered} maxBarSize={46} />
         <Bar dataKey="unanswered" name="Unanswered" stackId="a" fill={COLORS.unanswered} radius={[4, 4, 0, 0]} maxBarSize={46} />
@@ -140,7 +140,7 @@ export const SimpleBar = ({ data, xKey, bars }) => {
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
         <XAxis dataKey={xKey} tick={{ ...axisTick, fontSize: isMobile ? 9 : 10 }} angle={-30} textAnchor="end" interval={0} height={60} tickLine={false} axisLine={{ stroke: GRID }} />
         <YAxis tick={axisTick} allowDecimals={false} width={32} tickLine={false} axisLine={false} />
-        <Tooltip cursor={{ fill: 'rgba(24,24,27,0.05)' }} content={<ChartTooltip />} />
+        <Tooltip cursor={{ fill: 'rgba(99,102,241,0.07)' }} content={<ChartTooltip />} />
         {!single && <Legend {...legendProps} />}
         {bars.map((b, i) => (
           <Bar key={b.key} dataKey={b.key} name={b.name} stackId={b.stack} fill={b.color || SERIES[i % SERIES.length]} radius={[3, 3, 0, 0]} maxBarSize={isMobile ? 40 : 56} minPointSize={2}>
@@ -232,7 +232,7 @@ export const SalesFunnel = ({ data, total }) => {
                 style={{
                   width: '100%',
                   clipPath: `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - botInset}% 100%, ${botInset}% 100%)`,
-                  background: entry.color || '#27272a',
+                  background: entry.color || '#7C3AED',
                   padding: isMobile ? '10px 0' : '14px 0',
                   textAlign: 'center',
                   transition: 'clip-path 0.3s ease',
