@@ -35,7 +35,7 @@ const fullName = (r) => `${r.first_name || ''} ${r.last_name || ''}`.trim() || '
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
 const initials = (r) => `${(r.first_name || '?')[0] || ''}${(r.last_name || '')[0] || ''}`.toUpperCase();
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—');
-const AVATAR_COLORS = ['#7C3AED', '#2563EB', '#1a7a40', '#D97706', '#0891B2', '#DC2626', '#db2777'];
+const AVATAR_COLORS = ['#18181b', '#27272a', '#3f3f46', '#52525b', '#71717a', '#858585', '#a1a1aa'];
 
 // ── Report catalogue, per role (drives the role-specific sidebar) ─────────────
 const R = {
@@ -144,9 +144,9 @@ const KpiCard = ({ label, value, sub, color, icon: Icon, valueSize = 22 }) => {
 const KpiRow = ({ children }) => <div className="flex flex-wrap gap-3 mb-4">{children}</div>;
 
 const PILL_TONES = {
-  green: { bg: '#E8F5E8', fg: '#1a7a40' }, red: { bg: '#FEF2F2', fg: '#DC2626' },
-  amber: { bg: '#FFF7ED', fg: '#D97706' }, blue: { bg: '#EFF6FF', fg: '#2563EB' },
-  purple: { bg: '#F5F3FF', fg: '#7C3AED' }, gray: { bg: '#F3F4F6', fg: '#374151' },
+  green: { bg: '#f4f4f5', fg: '#18181b' }, red: { bg: '#18181b', fg: '#ffffff' },
+  amber: { bg: '#e4e4e7', fg: '#27272a' }, blue: { bg: '#f4f4f5', fg: '#18181b' },
+  purple: { bg: '#e4e4e7', fg: '#18181b' }, gray: { bg: '#f4f4f5', fg: '#374151' },
 };
 const Pill = ({ children, tone = 'blue' }) => {
   const mono = useContext(MonoContext);
@@ -219,8 +219,8 @@ const TotalRow = ({ cells, label = 'Total' }) => (
 const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
   const mono = useContext(MonoContext);
   if (!rows || rows.length === 0) return <div className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>No data for this period.</div>;
-  const rankBg = (i) => (i === 0 ? '#F59E0B' : i === 1 ? '#9CA3AF' : i === 2 ? '#CD7C2F' : '#F0F0EE');
-  const rankFg = (i) => (i < 3 ? '#fff' : '#666');
+  const rankBg = (i) => (i === 0 ? '#18181b' : i === 1 ? '#3f3f46' : i === 2 ? '#71717a' : '#f4f4f5');
+  const rankFg = (i) => (i < 3 ? '#fff' : '#18181b');
   return (
     <div>
       {rows.map((r, i) => (
@@ -231,7 +231,7 @@ const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
             <div className="text-[13px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{fullName(r)}</div>
             <div className="text-[11.5px] truncate" style={{ color: 'var(--text-muted)' }}>{subFn(r)}</div>
           </div>
-          <div className={`ml-auto text-[14px] flex-shrink-0 ${mono ? '' : 'font-bold'}`} style={{ color: mono ? 'var(--text-primary)' : COLORS.booking, fontWeight: mono ? 500 : undefined, fontVariantNumeric: 'tabular-nums' }}>{num(metric(r)).toLocaleString('en-IN')} {metricLabel}</div>
+          <div className="ml-auto text-[14px] flex-shrink-0 font-semibold" style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{num(metric(r)).toLocaleString('en-IN')} {metricLabel}</div>
         </div>
       ))}
     </div>
@@ -1008,13 +1008,18 @@ export const ReportBrowser = ({
                   return (
                     <button key={k} type="button" onClick={() => setSelected(k)}
                       className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
-                      style={on ? { background: `${r.accent}1a` } : {}}>
-                      <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${r.accent}1f`, color: r.accent }}>
+                      style={on ? { background: 'var(--bg-hover, #f4f4f5)' } : {}}>
+                      <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                        style={{
+                          background: on ? 'var(--text-primary, #18181b)' : 'var(--bg-hover, #f4f4f5)',
+                          color: on ? '#ffffff' : 'var(--text-muted, #71717a)',
+                          border: on ? 'none' : '1px solid var(--border-primary, #e4e4e7)'
+                        }}>
                         <RIcon className="w-[15px] h-[15px]" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-medium truncate" style={{ color: on ? r.accent : 'var(--text-primary)' }}>{r.title}</span>
-                        <span className="block text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{r.rs}</span>
+                        <span className="block text-[12.5px] font-semibold truncate" style={{ color: on ? 'var(--text-primary, #09090b)' : 'var(--text-secondary, #3f3f46)' }}>{r.title}</span>
+                        <span className="block text-[11px] truncate" style={{ color: 'var(--text-muted, #71717a)' }}>{r.rs}</span>
                       </span>
                     </button>
                   );
@@ -1027,11 +1032,11 @@ export const ReportBrowser = ({
         {/* Report panel */}
         <main className="flex-1 min-w-0 w-full">
           <div className="flex items-center gap-3 mb-4">
-            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${cfg.accent}1f`, color: cfg.accent }}>
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: 'var(--text-primary, #18181b)', color: '#ffffff' }}>
               <Icon className="w-5 h-5" />
             </span>
             <div className="min-w-0">
-              <div className="text-[17px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{cfg.title}</div>
+              <div className="text-[17px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{cfg.title}</div>
               <div className="text-[12.5px] truncate" style={{ color: 'var(--text-muted)' }}>{cfg.sub}</div>
             </div>
           </div>

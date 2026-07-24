@@ -5,25 +5,25 @@
 import { STAGE_COLORS } from '../../../../utils/stageColors';
 
 export const COLORS = {
-  primary: '#4f46e5',   // indigo
-  answered: '#16a34a',  // green (de-limed to the app-standard dark green)
-  unanswered: '#ef4444', // red
-  leads: '#6366f1',
-  qualified: STAGE_COLORS.qualified,
-  siteVisit: STAGE_COLORS.siteVisit,
-  negotiation: STAGE_COLORS.negotiation,
-  booking: STAGE_COLORS.booking,
-  cancelled: STAGE_COLORS.cancelled,
-  available: '#22c55e',
-  booked: '#f59e0b',
-  blocked: '#ef4444',
-  muted: '#94a3b8',
+  primary: '#18181b',    // charcoal black
+  answered: '#27272a',   // dark slate
+  unanswered: '#71717a', // medium gray
+  leads: '#18181b',
+  qualified: '#27272a',
+  siteVisit: '#3f3f46',
+  negotiation: '#52525b',
+  booking: '#18181b',
+  cancelled: '#71717a',
+  available: '#27272a',
+  booked: '#52525b',
+  blocked: '#71717a',
+  muted: '#9ca3af',
 };
 
-// Ordered series used for multi-bar / pie charts
+// Ordered series used for multi-bar / pie charts (monochrome grayscale)
 export const SERIES = [
-  '#4f46e5', '#0ea5e9', '#f59e0b', '#a855f7', '#16a34a',
-  '#ef4444', '#14b8a6', '#eab308', '#ec4899', '#64748b',
+  '#18181b', '#3f3f46', '#52525b', '#71717a', '#a1a1aa',
+  '#d4d4d8', '#27272a', '#64748b', '#94a3b8', '#e2e8f0',
 ];
 
 // Hex without leading '#', for ExcelJS ARGB fills (FF + RRGGBB)
@@ -37,3 +37,4 @@ export const KPI_THEME = {
   bookings: COLORS.booking,
   cancellations: COLORS.cancelled,
 };
+
