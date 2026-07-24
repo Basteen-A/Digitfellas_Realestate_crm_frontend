@@ -327,8 +327,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                       </td>
                       
                       <td>{c.booking_date ? new Date(c.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                      <td>  
-                        <button className="col-btn col-btn-primary col-btn-sm" onClick={() => onSelectBooking(c.booking_id)}>
+                      <td>
+                        <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking(c.booking_id)}>
                           View
                         </button>
                       </td>

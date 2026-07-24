@@ -10,7 +10,7 @@ import TaskModal from './TaskModal';
 import Pagination from '../../components/common/Pagination';
 import AuthedAudio from '../../components/AuthedAudio';
 import { openAuthedFile } from '../../utils/authedFile';
-import { badgeStyle, TASK_STATUS_TEXT } from '../../utils/badgeColors';
+import { badgeStyle, TASK_STATUS_TEXT, TASK_PRIORITY_TEXT } from '../../utils/badgeColors';
 // Reuse the lead workspace design system so this page is visually consistent
 // (fonts, weights, sizes, buttons, tabs, table, background) with My Leads.
 import '../portals/common/LeadWorkspacePage.css';
@@ -24,9 +24,7 @@ const STATUS_LABELS = {
 // Status / priority chip colours (rendered as .status-chip like the leads table).
 // Canonical badge-system text colors; Chip derives bg/border via badgeStyle.
 const STATUS_HEX = TASK_STATUS_TEXT;
-const PRIORITY_HEX = {
-  low: '#4B5563', medium: '#1D4ED8', high: '#C2410C', urgent: '#BE123C',
-};
+const PRIORITY_HEX = TASK_PRIORITY_TEXT;
 
 const GROUP_BY = [
   { value: 'none', label: 'None' },

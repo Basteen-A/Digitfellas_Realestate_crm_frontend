@@ -4,6 +4,23 @@
 
 .reports-page {
   animation: reportsFadeIn 0.3s ease-out;
+  /* The page never grows past its column, in any report state: wide content
+     (matrix tables with one column per source, charts) scrolls inside its own
+     wrapper instead of pushing a horizontal scrollbar onto the whole page.
+     `clip` (not `hidden`) so no nested vertical scroll container is created;
+     `hidden` is the fallback for browsers without overflow: clip. */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Grid/flex children default to min-width: auto, which lets a wide table or
+   chart force its parent wider than the viewport. Zero it so the report column
+   is free to shrink and the inner scrollers take over. */
+.reports-page .crm-card,
+.reports-charts-grid > * {
+  min-width: 0;
 }
 
 @keyframes reportsFadeIn {

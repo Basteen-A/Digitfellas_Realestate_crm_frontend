@@ -99,6 +99,15 @@ export const TASK_STATUS_TEXT = {
   cancelled: '#9F1239',
 };
 
+// Task priority, same convention as TASK_STATUS_TEXT. Set on the task list and
+// reused by both task dashboards so a priority reads identically everywhere.
+export const TASK_PRIORITY_TEXT = {
+  low: '#4B5563',
+  medium: '#1D4ED8',
+  high: '#C2410C',
+  urgent: '#BE123C',
+};
+
 export const TRANSACTION_STATUS_TEXT = {
   verified: '#166534',
   unverified: '#92400E',

@@ -10,13 +10,22 @@ import {
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
+import { badgeStyle, TASK_STATUS_TEXT, TASK_PRIORITY_TEXT } from '../../utils/badgeColors';
 import '../portals/collection/CollectionWorkspace.css';
+// .status-chip — the same chip the task list renders status/priority with.
+import '../portals/common/LeadWorkspacePage.css';
 import './TaskManagement.css';
 
 const STATUS_LABELS = {
   open: 'Open', pending: 'Pending', work_in_progress: 'Work in Progress',
   completed: 'Completed', closed: 'Closed', cancelled: 'Cancelled',
 };
+
+// Status / priority chips render exactly as they do on the task list screen:
+// the canonical badge-system text colour, with badgeStyle deriving bg + border.
+const Chip = ({ hex, children }) => (
+  <span className="status-chip" style={{ ...badgeStyle(hex), textTransform: 'capitalize' }}>{children}</span>
+);
 const timeAgo = (d) => {
   if (!d) return '';
   const diff = Date.now() - new Date(d).getTime();
@@ -97,31 +106,61 @@ const TaskDashboardWidget = ({ onOpenTasks }) => {
           </div>
         )}
 
-        {/* Recent activity — full-width task list. (The Status Breakdown block was
-            removed: it duplicated the stat cards directly above it.) */}
-        <div style={{ marginTop: 16 }}>
-          <div className="tm-card__title" style={{ marginBottom: 4 }}>RECENT ACTIVITY</div>
-          {loading && <p className="tm-hint">Loading…</p>}
-          {!loading && recent.length === 0 && <p className="tm-hint">No recent activity.</p>}
-          {!loading && recent.map((t) => {
-            const last = (t.remarks || [])[(t.remarks || []).length - 1];
-            const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
-            return (
-              <div className="tm-activity" key={t.id} onClick={() => setOpenTaskId(t.id)}>
-                <div>
-                  <div className="tm-activity__title">{t.title}</div>
-                  <div className="tm-activity__sub">
-                    {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'} · {timeAgo(t.created_at)}
-                    {note && <> · {note}</>}
-                  </div>
-                </div>
-                <div className="tm-activity__badges">
-                  <span className={`tm-prio tm-prio--${t.priority}`}>{t.priority}</span>
-                  <span className={`tm-badge tm-badge--${t.status}`}>{STATUS_LABELS[t.status]}</span>
-                </div>
+        {/* Recent activity — one full-width block, same table + chips as the
+            Task Dashboard. (The Status Breakdown block was removed: it
+            duplicated the stat cards directly above it.) */}
+        <div className="col-card-new" style={{ marginTop: 16, marginBottom: 0 }}>
+          <div className="col-card-header-new">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ClockIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
+              <div>
+                <div className="col-card-title-new">Recent Activity</div>
+                <div className="col-card-subtitle-new">Latest updates across tasks</div>
               </div>
-            );
-          })}
+            </div>
+          </div>
+          <div className="col-card-body-flush-new">
+            {loading ? (
+              <div className="col-empty-mini">Loading…</div>
+            ) : recent.length === 0 ? (
+              <div className="col-empty-mini">
+                <ClockIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No recent activity.</span>
+              </div>
+            ) : (
+              <div className="col-table-scroll">
+                <table className="col-table-new">
+                  <thead>
+                    <tr><th>Task</th><th>Priority</th><th>Status</th><th>Updated</th></tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((t) => {
+                      const last = (t.remarks || [])[(t.remarks || []).length - 1];
+                      const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
+                      return (
+                        <tr key={t.id} className="col-clickable-row" onClick={() => setOpenTaskId(t.id)}>
+                          <td>
+                            <div className="col-cell-primary">{t.title}</div>
+                            <div className="col-cell-secondary">
+                              {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'}
+                              {note && ` · ${note}`}
+                            </div>
+                          </td>
+                          <td>
+                            <Chip hex={TASK_PRIORITY_TEXT[t.priority] || '#64748b'}>{t.priority}</Chip>
+                          </td>
+                          <td>
+                            <Chip hex={TASK_STATUS_TEXT[t.status] || '#64748b'}>{STATUS_LABELS[t.status] || t.status}</Chip>
+                          </td>
+                          <td className="col-cell-secondary" style={{ whiteSpace: 'nowrap' }}>{timeAgo(t.created_at)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -389,7 +389,15 @@ const BookingApprovals = () => {
                           </td>
                           <td className="lead-col-lead">
                             <p className="lead-title">{customerName(booking)}</p>
-                            <small style={{ color: '#64748b' }}>{booking.booking_number}</small>
+                            <small>
+                              <button
+                                type="button"
+                                className="ba-booking-link"
+                                onClick={(e) => { e.stopPropagation(); setSelectedBookingId(booking.id); }}
+                              >
+                                {booking.booking_number}
+                              </button>
+                            </small>
                           </td>
                           <td className="hide-mobile">
                             <p style={{ fontSize: 13 }}>{booking.customer?.phone || booking.phone || '—'}</p>

@@ -82,7 +82,9 @@ export const ChartCard = ({ title, subtitle, chartKey, registerRef, height, chil
         </div>
         {right}
       </div>
-      <div style={{ width: '100%', height: h }}>{children}</div>
+      {/* minWidth: 0 keeps recharts' ResponsiveContainer from holding the card
+          open at its last measured width when the layout narrows. */}
+      <div style={{ width: '100%', minWidth: 0, height: h }}>{children}</div>
     </div>
   );
 };

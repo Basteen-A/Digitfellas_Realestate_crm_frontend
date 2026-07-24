@@ -150,30 +150,24 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
         </div>
       </header>
 
-      <div className="col-stats-grid" style={{ marginBottom: 16 }}>
-        <div className="col-stat-card">
-          <div className="col-stat-info">
-            <div className="col-stat-value">{allPayments.length}</div>
-            <div className="col-stat-label">Total Payments</div>
-          </div>
+      {/* Stat cards use the shared dashboard card (.col-stat-card-new) so the
+          hover lift/shadow matches every other Collection & Accounts screen. */}
+      <div className="col-stat-grid-new" style={{ marginBottom: 16 }}>
+        <div className="col-stat-card-new">
+          <div className="col-stat-label-new">Total Payments</div>
+          <div className="col-stat-value-new">{allPayments.length}</div>
         </div>
-        <div className="col-stat-card">
-          <div className="col-stat-info">
-            <div className="col-stat-value">{totalVerified}</div>
-            <div className="col-stat-label">Verified</div>
-          </div>
+        <div className="col-stat-card-new">
+          <div className="col-stat-label-new">Verified</div>
+          <div className="col-stat-value-new">{totalVerified}</div>
         </div>
-        <div className="col-stat-card">
-          <div className="col-stat-info">
-            <div className="col-stat-value">{totalUnverified}</div>
-            <div className="col-stat-label">Unverified</div>
-          </div>
+        <div className="col-stat-card-new">
+          <div className="col-stat-label-new">Unverified</div>
+          <div className="col-stat-value-new">{totalUnverified}</div>
         </div>
-        <div className="col-stat-card">
-          <div className="col-stat-info">
-            <div className="col-stat-value">{totalRejected}</div>
-            <div className="col-stat-label">Rejected</div>
-          </div>
+        <div className="col-stat-card-new">
+          <div className="col-stat-label-new">Rejected</div>
+          <div className="col-stat-value-new">{totalRejected}</div>
         </div>
       </div>
 

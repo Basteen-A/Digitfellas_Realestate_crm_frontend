@@ -72,7 +72,9 @@ export const Card = ({ title, sub, right, children, registerRef, chartKey }) => 
 export const Table = ({ head, children, colSpan, empty, emptyLabel = 'No data for this period.' }) => {
   const mono = useContext(MonoContext);
   return (
-    <div className="overflow-x-auto">
+    // Wide tables (e.g. the project × source matrix) scroll inside this wrapper
+    // so they never widen the page itself.
+    <div className="overflow-x-auto max-w-full">
       <table className="w-full border-collapse">
         <thead><tr style={{ background: 'var(--bg-table-header, #f1f5f9)' }}>
           {head.map((h, i) => <th key={i} className={`px-3 py-2 text-left text-[10.5px] uppercase tracking-wide whitespace-nowrap ${mono ? 'font-medium' : 'font-semibold'}`} style={{ color: mono ? 'var(--text-primary)' : 'var(--text-muted)' }}>{h}</th>)}
