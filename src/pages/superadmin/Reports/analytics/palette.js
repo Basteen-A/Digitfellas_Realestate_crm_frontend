@@ -2,7 +2,6 @@
 // workbook fills/series match the on-screen charts. The four pipeline-stage
 // colors come from the app-wide canonical source so funnels, stage chips and
 // Finance screens stay consistent (see utils/stageColors.js).
-import { STAGE_COLORS } from '../../../../utils/stageColors';
 
 export const COLORS = {
   primary: '#18181b',    // charcoal black

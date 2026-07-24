@@ -217,7 +217,6 @@ const TotalRow = ({ cells, label = 'Total' }) => (
 );
 
 const LeaderList = ({ rows, metric, metricLabel, subFn }) => {
-  const mono = useContext(MonoContext);
   if (!rows || rows.length === 0) return <div className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>No data for this period.</div>;
   const rankBg = (i) => (i === 0 ? '#18181b' : i === 1 ? '#3f3f46' : i === 2 ? '#71717a' : '#f4f4f5');
   const rankFg = (i) => (i < 3 ? '#fff' : '#18181b');
