@@ -1009,8 +1009,7 @@ export const ReportBrowser = ({
                     <button key={k} type="button" onClick={() => setSelected(k)}
                       className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
                       style={on ? { background: 'var(--bg-hover, #f4f4f5)' } : {}}>
-                      <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-200 dark:border-gray-700"
-                        style={{ background: 'var(--bg-card, #ffffff)', color: 'var(--text-primary, #0f172a)' }}>
+                      <span className="w-6 h-6 flex items-center justify-center flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
                         <RIcon className="w-[15px] h-[15px]" />
                       </span>
                       <span className="min-w-0">
@@ -1027,8 +1026,8 @@ export const ReportBrowser = ({
 
         {/* Report panel */}
         <main className="flex-1 min-w-0 w-full">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-200 dark:border-gray-700" style={{ background: 'var(--bg-card, #ffffff)', color: 'var(--text-primary, #0f172a)' }}>
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="w-7 h-7 flex items-center justify-center flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
               <Icon className="w-5 h-5" />
             </span>
             <div className="min-w-0">
