@@ -68,6 +68,7 @@ import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingA
 import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns';
 import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
 import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
+import MarketingReports from '../pages/superadmin/MarketingReports';
 import TelephonyCallSettings from '../pages/superadmin/Telephony/CallSettings';
 import TelephonyCallLogs from '../pages/superadmin/Telephony/CallLogs';
 import TelephonyCallAllocationHistory from '../pages/superadmin/Telephony/CallAllocationHistory';
@@ -293,6 +294,8 @@ const AppRoutes = () => {
           <Route element={<GrantRoute check={canViewAllReports} />}>
             <Route path="/super-admin/reports" element={<Reports />} />
             <Route path="/super-admin/reports/:module" element={<Reports />} />
+            {/* Marketing › Reports — same reports gate as the main Reports page */}
+            <Route path="/super-admin/marketing-reports" element={<MarketingReports />} />
           </Route>
           <Route element={<GrantRoute check={canAccessBookingApprovals} />}>
             <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />

@@ -129,6 +129,43 @@ export const CallsPerDayLine = ({ data }) => {
   );
 };
 
+// Generic multi-series trend over a day/month bucket. The first series gets a
+// soft gradient area under it (the volume line); the rest render as plain lines.
+// Used by the marketing acquisition trend.
+export const TrendLine = ({ data, xKey = 'bucket', lines = [], monthly = false }) => {
+  const isMobile = useIsMobile();
+  const fmtBucket = (b) => {
+    if (!b) return b;
+    if (monthly) {
+      const [y, m] = String(b).split('-');
+      const dt = new Date(Number(y), Number(m) - 1, 1);
+      return Number.isNaN(dt.getTime()) ? b : dt.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+    }
+    return fmtDay(b);
+  };
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={{ top: 8, right: 12, left: isMobile ? -20 : -10, bottom: 0 }}>
+        <defs>
+          <linearGradient id="trendPrimaryFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lines[0]?.color || COLORS.primary} stopOpacity={0.2} />
+            <stop offset="100%" stopColor={lines[0]?.color || COLORS.primary} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
+        <XAxis dataKey={xKey} tickFormatter={fmtBucket} tick={axisTick} interval="preserveStartEnd" minTickGap={isMobile ? 24 : 12} tickLine={false} axisLine={{ stroke: GRID }} />
+        <YAxis tick={axisTick} allowDecimals={false} width={32} tickLine={false} axisLine={false} />
+        <Tooltip content={<ChartTooltip labelFormatter={fmtBucket} />} />
+        <Legend {...legendProps} />
+        {lines[0] && <Area type="monotone" dataKey={lines[0].key} name={lines[0].name} stroke="none" fill="url(#trendPrimaryFill)" />}
+        {lines.map((l, i) => (
+          <Line key={l.key} type="monotone" dataKey={l.key} name={l.name} stroke={l.color || SERIES[i % SERIES.length]} strokeWidth={i === 0 ? 2.25 : 2} dot={false} activeDot={{ r: 4 }} />
+        ))}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+};
+
 // Generic bar for project / member breakdowns. Single-series bars get value
 // labels on top; rotated x labels collapse gracefully on phones.
 export const SimpleBar = ({ data, xKey, bars }) => {

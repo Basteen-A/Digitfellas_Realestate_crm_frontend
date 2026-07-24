@@ -88,6 +88,8 @@ const buildOrganizationHeadSidebar = (user) => {
         { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
         { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
         { label: 'Sales Head', path: '/super-admin/reports/sales-head' },
+        // Marketing reports share the reports grant, so grant-holders get the link too.
+        { label: 'Marketing', path: '/super-admin/marketing-reports' },
       ],
     });
   }
@@ -175,6 +177,7 @@ const adminSidebar = [
     label: 'Marketing',
     icon: ChatBubbleLeftRightIcon,
     children: [
+      { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
       { label: 'Marketing Campaigns', path: '/super-admin/marketing-campaigns' },
       { label: 'Templates', path: '/super-admin/marketing-templates' },
       { label: 'WhatsApp Settings', path: '/super-admin/whatsapp-settings' },

@@ -117,18 +117,28 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
     );
   }
 
+  // Amount tiles are scoped by the period picker, so each one says which window it
+  // covers — without it "Collected" (period) reads as contradicting "Verified" (all time).
+  const periodLabel = dateFilter === 'custom'
+    ? (customStart && customEnd ? `${customStart} to ${customEnd}` : 'all time')
+    : (DATE_PRESETS.find(p => p.key === dateFilter)?.label || 'All Time').toLowerCase();
+
   const kpiCards = [
     {
       label: 'Total Bookings', value: stats?.activeBookings || 0,
-      sub: 'Active this month', icon: HomeIcon, variant: ''
+      sub: `Active · ${periodLabel}`, icon: HomeIcon, variant: ''
     },
     {
-      label: 'Collected', value: formatCurrency(stats?.monthRevenue || 0),
-      
+      label: 'Collected', value: formatCurrency(stats?.totalCollected || 0),
+      sub: `received · ${periodLabel}`, icon: CreditCardIcon, variant: 'success'
+    },
+    {
+      label: 'This Month', value: formatCurrency(stats?.monthRevenue || 0),
+      sub: 'current month', icon: ArrowPathIcon, variant: ''
     },
      {
       label: 'Verified Payments', value: formatCurrency(stats?.verifiedAmount || 0),
-      sub: 'amount verified', icon: CheckCircleIcon, variant: ''
+      sub: `verified · ${periodLabel}`, icon: CheckCircleIcon, variant: ''
     },
     {
       label: 'Pending Amount', value: formatCurrency(stats?.pendingDues || 0),
@@ -136,13 +146,12 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
     },
     {
       label: 'Overdue', value: stats?.overdueCount || 0,
-      sub: 'customers overdue', icon: ExclamationTriangleIcon, variant: 'danger'
+      sub: 'customers overdue · as of today', icon: ExclamationTriangleIcon, variant: 'danger'
     },
     {
       label: 'Unverified Payments', value: stats?.unverifiedCount || 0,
-      sub: 'awaiting accounts', icon: MagnifyingGlassIcon, variant: 'info'
+      sub: `awaiting accounts · ${periodLabel}`, icon: MagnifyingGlassIcon, variant: 'info'
     },
-   
   ];
 
   const recentPayments = stats?.recentPayments || [];

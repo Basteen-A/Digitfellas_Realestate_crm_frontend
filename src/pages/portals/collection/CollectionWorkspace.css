@@ -1260,7 +1260,7 @@
   width: 100%;
   border-collapse: collapse;
 }
-.col-table-new thead { background: #625afa1f; }
+.col-table-new thead { background: var(--bg-table-header, #f1f5f9); }
 .col-table-new th {
   padding: 11px 14px;
   font-size: 11px;
@@ -1373,7 +1373,7 @@
   top: 0;
   z-index: 2;
   /* Opaque sidebar-active purple so scrolling rows don't bleed through the header. */
-  background: var(--sidebar-active-bg-solid);
+  background: var(--bg-table-header, #f1f5f9);
   border-bottom: 1px solid var(--border-primary);
 }
 @media (max-width: 768px) {

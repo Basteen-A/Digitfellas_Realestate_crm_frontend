@@ -34,7 +34,7 @@ const ROLE_LABEL = { TC: 'Telecaller', SM: 'Sales Manager', SH: 'Sales Head', OR
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 const fullName = (f, l) => `${f || ''} ${l || ''}`.trim() || '—';
-const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
+const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap', background: 'var(--bg-table-header, #f1f5f9)' };
 const td = { padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)' };
 
 const ReportsPage = () => {
@@ -136,7 +136,7 @@ const UserActivityReport = ({ period }) => {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>
+              <tr style={{ background: 'var(--bg-table-header, #f1f5f9)' }}>
                 <th style={th}>Name</th>
                 <th style={th}>Last Login</th>
                 {isCol ? (
