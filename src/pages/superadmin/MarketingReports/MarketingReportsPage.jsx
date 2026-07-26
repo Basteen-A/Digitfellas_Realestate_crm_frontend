@@ -515,7 +515,6 @@ const Panel = ({ rkey, d, registerRef }) => {
       const revisit = sumBy(svBySource, 'revisit');
       const followUp = sumBy(svBySource, 'follow_up');
       const cold = sumBy(svBySource, 'cold');
-      const top = svBySource[0];
       const chart = svBySource.slice(0, 12).map((s) => ({
         source_name: s.source_name,
         booked: num(s.booked),
