@@ -149,8 +149,12 @@ export const masterConfigs = {
         label: 'On Max Reached → Move To Status',
         type: 'select',
         loadOptions: loadLeadStatusIdOptions,
+        // Always visible so it is discoverable while CREATING a rule (it used to be
+        // hidden until a Max Reallotments value was typed, so new rules never showed
+        // it). Still only REQUIRED once a Max is set — it does nothing when Max is
+        // empty (unlimited), which the placeholder makes clear.
+        placeholder: 'Select — used only when Max Reallotments is set',
         required: (formValues) => Number(formValues?.max_occurrences) > 0,
-        showWhen: (formValues) => Number(formValues?.max_occurrences) > 0,
       },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },

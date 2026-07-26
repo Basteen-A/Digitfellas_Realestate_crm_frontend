@@ -185,7 +185,13 @@ const MasterCrudPage = ({ config }) => {
       } else if (field.type === 'multiselect') {
         value = Array.isArray(value) ? value : [];
       } else if (value === '') {
-        value = field.required ? '' : null;
+        // `required` may be a predicate (e.g. on_max_status_id is only required when
+        // Max Reallotments is set) — resolve it so an optional empty select posts null,
+        // not '' (which the API would reject as an invalid id).
+        const req = typeof field.required === 'function'
+          ? field.required(formValues, fieldOptions, modal)
+          : field.required;
+        value = req ? '' : null;
       }
 
       payload[field.name] = value;

@@ -590,7 +590,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
       const isTC = role === 'TC';
       return (
         <Card title={`${ROLES[role].label} Leaderboard`} sub={isTC ? 'Ranked by site visits' : 'Ranked by booked sq ft'}>
-          <LeaderList rows={lb}
+          <LeaderList rows={lb.filter((r) => !r.isInactiveGroup)}
             metric={(r) => (isTC ? r.site_visits : Math.round(num(r.booked_sqft)))} metricLabel={isTC ? 'SV' : 'sq ft'}
             subFn={(r) => (isTC ? `${num(r.leads)} leads · ${pct(num(r.qualified), num(r.leads))}% qual.` : `${num(r.bookings)} bookings · ${num(r.site_visits)} SV`)} />
         </Card>
@@ -599,7 +599,7 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
     case 'shleaderboard':
       return (
         <Card title="Sales Head Leaderboard" sub="Ranked by site visits">
-          <LeaderList rows={d?.salesHeadLeaderboard} metric={(r) => r.bookings} metricLabel="bookings"
+          <LeaderList rows={(d?.salesHeadLeaderboard || []).filter((r) => !r.isInactiveGroup)} metric={(r) => r.bookings} metricLabel="bookings"
             subFn={(r) => `${num(r.site_visits)} SV · ${num(r.leads)} leads`} />
         </Card>
       );

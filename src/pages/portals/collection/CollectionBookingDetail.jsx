@@ -857,6 +857,33 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     { key: 'Other', target: 0, paid: paidByCategory['Other'] || 0 },
   ];
 
+  // ── Registration-charges paid allocation ──
+  // Payments are recorded at the CATEGORY level ('Registration Expenses' lumps the four
+  // misc items, 'Other Registration Expenses' is separate, MODT is its own) — never per
+  // sub-line. So the "Registration Charges" parent row and its sub-rows had no `paid`
+  // value and always read "0% paid / Due: full" even when fully collected. Allocate each
+  // category's collected amount across the sub-items it funds, in listed order (waterfall,
+  // capped at each item's target), so every sub-row + the parent reflect real progress and
+  // reconcile with the category bars in the Add-Payment panel.
+  const allocatePaid = (keysInOrder, splitObj, categoryPaid) => {
+    let remaining = Math.max(0, categoryPaid);
+    return keysInOrder.reduce((out, k) => {
+      const p = Math.min(toAmount(splitObj[k]), remaining);
+      out[k] = p;
+      remaining -= p;
+      return out;
+    }, {});
+  };
+  const regMiscKeys = Object.keys(savedRegSplit).filter((k) => k !== 'other_registration_expenses');
+  const regPaidByKey = {
+    ...allocatePaid(regMiscKeys, savedRegSplit, paidByCategory['Registration Expenses'] || 0),
+    other_registration_expenses: Math.min(otherRegExpensesTarget, paidByCategory['Other Registration Expenses'] || 0),
+  };
+  const modtPaidByKey = allocatePaid(Object.keys(savedModtSplit), savedModtSplit, paidByCategory['MODT'] || 0);
+  // Parent = sum of what the sub-rows show, so parent and children always reconcile.
+  const regChargesPaid = Object.values(regPaidByKey).reduce((s, v) => s + v, 0)
+    + (savedModtEnabled ? Object.values(modtPaidByKey).reduce((s, v) => s + v, 0) : 0);
+
   const canEditPayments = getRoleCode(user) === ROLE_CODES.SUPER_ADMIN;
   // Diff snapshot (old → new) shown inline while a cost edit awaits SA approval.
   const pendingCostChanges = booking?.custom_fields?.pending_cost_changes;
@@ -1494,16 +1521,17 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       label="Registration Charges"
                       note={`Subtotal: ${fmtFull(otherChargesTotal)}`}
                       valueText={fmtFull(otherChargesTotal)}
+                      paid={regChargesPaid}
                       onClick={() => setRegExpanded((v) => !v)}
                       expandIcon={regExpanded ? <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)" }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)", transform: "rotate(-90deg)" }} />}
                     />
                     {regExpanded && (
                       <>
                         {Object.entries(savedRegSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
-                          <BkdLedgerRow key={k} label={labelize(k)} valueText={fmtFull(toAmount(v))} indent={22} />
+                          <BkdLedgerRow key={k} label={labelize(k)} valueText={fmtFull(toAmount(v))} indent={22} paid={regPaidByKey[k] || 0} />
                         ))}
                         {savedModtEnabled && Object.entries(savedModtSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
-                          <BkdLedgerRow key={`modt-${k}`} label={`MODT · ${labelize(k)}`} valueText={fmtFull(toAmount(v))} indent={22} />
+                          <BkdLedgerRow key={`modt-${k}`} label={`MODT · ${labelize(k)}`} valueText={fmtFull(toAmount(v))} indent={22} paid={modtPaidByKey[k] || 0} />
                         ))}
                       </>
                     )}

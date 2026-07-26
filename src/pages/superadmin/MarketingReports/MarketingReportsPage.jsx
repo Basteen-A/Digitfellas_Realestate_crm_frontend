@@ -46,26 +46,6 @@ const pct1 = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
 const fmt = (v) => num(v).toLocaleString('en-IN');
 const sumBy = (rows, key) => (rows || []).reduce((a, r) => a + num(r[key]), 0);
 
-// Sub-source rows → one expandable group per parent source, biggest source first.
-const groupSubSources = (rows) => {
-  const map = new Map();
-  (rows || []).forEach((r) => {
-    if (!map.has(r.source_name)) map.set(r.source_name, []);
-    map.get(r.source_name).push(r);
-  });
-  return [...map.entries()]
-    .map(([source, list]) => ({
-      key: source,
-      label: source,
-      rows: [...list].sort((a, b) => num(b.leads) - num(a.leads)),
-      stats: [
-        { label: 'Sub-sources', value: list.length },
-        { label: 'Leads', value: fmt(sumBy(list, 'leads')) },
-      ],
-    }))
-    .sort((a, b) => sumBy(b.rows, 'leads') - sumBy(a.rows, 'leads'));
-};
-
 // Donut slices for the source mix: the 7 biggest sources plus an "Others"
 // rollup, so the slices always add up to the real total in the donut centre.
 const sourceMix = (bySource, top = 7) => {
@@ -207,8 +187,6 @@ const Panel = ({ rkey, d, registerRef }) => {
         bucket: r.bucket, leads: num(r.leads), qualified: num(r.qualified), sv_leads: num(r.sv_leads),
       }));
       const topSub = [...bySubSource].sort((a, b) => num(b.leads) - num(a.leads))[0];
-      // Sub-sources grouped under their parent source, biggest source first.
-      const subGroups = groupSubSources(bySubSource);
 
       return (
         <>
@@ -266,25 +244,35 @@ const Panel = ({ rkey, d, registerRef }) => {
             </Table>
           </Card>
 
-          <Card title="Sub-source Breakdown" sub="Expand a source to see its sub-sources" right={`${bySubSource.length} sub-source${bySubSource.length === 1 ? '' : 's'}`}>
-            <GroupRows
-              groups={subGroups}
-              emptyLabel="No leads for this period."
-              head={['Sub-source', 'Leads', 'Qualified', 'SV Done', 'Bookings']}
-              renderRow={(r) => (
+          <Card title="Leads by Sub-source" sub="Sv Done = leads generated in this period that completed a first visit (revisits not re-counted)" right={`${bySubSource.length} sub-source${bySubSource.length === 1 ? '' : 's'}`}>
+            <Table head={['Sub Source', 'Leads', 'Sv Done', 'Scheduled', 'Follow Up', 'RNR', 'Cold', 'Junk/Spam']} colSpan={8} empty={bySubSource.length === 0}>
+              {[...bySubSource].sort((a, b) => num(b.leads) - num(a.leads)).map((r) => (
                 <Tr key={`${r.source_id}-${r.sub_source_id}`}>
-                  <Td bold>{r.sub_source_name}</Td>
-                  <Td>{fmt(r.leads)}</Td>
-                  <Td color={COLORS.qualified}>{fmt(r.qualified)}</Td>
+                  <Td bold>
+                    {r.sub_source_name}
+                    <span className="block text-[11px] font-normal" style={{ color: 'var(--text-muted)' }}>{r.source_name}</span>
+                  </Td>
+                  <Td bold>{fmt(r.leads)}</Td>
                   <Td color={COLORS.siteVisit}>{fmt(r.sv_leads)}</Td>
-                  <Td color={COLORS.booking}>{fmt(r.bookings)}</Td>
+                  <Td color={COLORS.negotiation}>{fmt(r.scheduled)}</Td>
+                  <Td color={COLORS.qualified}>{fmt(r.follow_up)}</Td>
+                  <Td>{fmt(r.rnr)}</Td>
+                  <Td>{fmt(r.cold)}</Td>
+                  <Td color={COLORS.cancelled}>{fmt(r.junk_spam)}</Td>
                 </Tr>
+              ))}
+              {bySubSource.length > 0 && (
+                <TotalRow cells={[
+                  fmt(sumBy(bySubSource, 'leads')),
+                  fmt(sumBy(bySubSource, 'sv_leads')),
+                  fmt(sumBy(bySubSource, 'scheduled')),
+                  fmt(sumBy(bySubSource, 'follow_up')),
+                  fmt(sumBy(bySubSource, 'rnr')),
+                  fmt(sumBy(bySubSource, 'cold')),
+                  fmt(sumBy(bySubSource, 'junk_spam')),
+                ]} />
               )}
-              totalCells={(rows) => [
-                fmt(sumBy(rows, 'leads')), fmt(sumBy(rows, 'qualified')),
-                fmt(sumBy(rows, 'sv_leads')), fmt(sumBy(rows, 'bookings')),
-              ]}
-            />
+            </Table>
           </Card>
         </>
       );
@@ -339,34 +327,31 @@ const Panel = ({ rkey, d, registerRef }) => {
             </ChartCard>
           </div>
 
-          <Card title="Lead Quality by Source" sub="SV Done · Qualified · RNR · Unqualified">
-            <Table head={['Source', 'Leads', 'SV Done', 'Qualified', 'Qual %', 'RNR', 'Unqualified', 'Unassigned']} colSpan={8} empty={bySource.length === 0}>
-              {bySource.map((s) => {
-                const q = pct(num(s.qualified), num(s.leads));
-                return (
-                  <Tr key={s.source_id}>
-                    <Td bold>{s.source_name}</Td>
-                    <Td bold>{fmt(s.leads)}</Td>
-                    <Td color={COLORS.siteVisit}>{fmt(s.sv_leads)}</Td>
-                    <Td color={COLORS.qualified}>{fmt(s.qualified)}</Td>
-                    <Td><Pill tone={ratioTone(q)}>{q}%</Pill></Td>
-                    <Td color={COLORS.negotiation}>{fmt(s.rnr)}</Td>
-                    <Td color={COLORS.cancelled}>{fmt(s.unqualified)}</Td>
-                    <Td color={COLORS.muted}>{fmt(s.unassigned)}</Td>
-                  </Tr>
-                );
-              })}
-              {bySource.length > 0 && (() => {
-                const leads = sumBy(bySource, 'leads');
-                const qual = sumBy(bySource, 'qualified');
-                return (
-                  <TotalRow cells={[
-                    fmt(leads), fmt(sumBy(bySource, 'sv_leads')), fmt(qual),
-                    <Pill tone={ratioTone(pct(qual, leads))}>{pct(qual, leads)}%</Pill>,
-                    fmt(sumBy(bySource, 'rnr')), fmt(sumBy(bySource, 'unqualified')), fmt(sumBy(bySource, 'unassigned')),
-                  ]} />
-                );
-              })()}
+          <Card title="Lead Quality by Source" sub="Sv Done = leads generated in this period that completed a first visit · rest are current status">
+            <Table head={['Source', 'Leads', 'Sv Done', 'Scheduled', 'Follow Up', 'RNR', 'Cold', 'Junk/Spam']} colSpan={8} empty={bySource.length === 0}>
+              {bySource.map((s) => (
+                <Tr key={s.source_id}>
+                  <Td bold>{s.source_name}</Td>
+                  <Td bold>{fmt(s.leads)}</Td>
+                  <Td color={COLORS.siteVisit}>{fmt(s.sv_leads)}</Td>
+                  <Td color={COLORS.negotiation}>{fmt(s.scheduled)}</Td>
+                  <Td color={COLORS.qualified}>{fmt(s.follow_up)}</Td>
+                  <Td>{fmt(s.rnr)}</Td>
+                  <Td>{fmt(s.cold)}</Td>
+                  <Td color={COLORS.cancelled}>{fmt(s.junk_spam)}</Td>
+                </Tr>
+              ))}
+              {bySource.length > 0 && (
+                <TotalRow cells={[
+                  fmt(sumBy(bySource, 'leads')),
+                  fmt(sumBy(bySource, 'sv_leads')),
+                  fmt(sumBy(bySource, 'scheduled')),
+                  fmt(sumBy(bySource, 'follow_up')),
+                  fmt(sumBy(bySource, 'rnr')),
+                  fmt(sumBy(bySource, 'cold')),
+                  fmt(sumBy(bySource, 'junk_spam')),
+                ]} />
+              )}
             </Table>
           </Card>
         </>
@@ -522,72 +507,72 @@ const Panel = ({ rkey, d, registerRef }) => {
 
     // ── 5. Source-wise Site Visits ──
     case 'svsource': {
-      const completed = sumBy(svBySource, 'completed');
-      const leadsVisited = sumBy(svBySource, 'leads_visited');
-      const scheduled = sumBy(svBySource, 'scheduled');
-      const cancelled = sumBy(svBySource, 'cancelled');
+      // Visit-anchored: total_visits = distinct leads who did a first visit; the rest
+      // bucket those leads by their current outcome.
+      const totalVisits = sumBy(svBySource, 'total_visits');
       const booked = sumBy(svBySource, 'booked');
+      const negotiation = sumBy(svBySource, 'negotiation');
+      const revisit = sumBy(svBySource, 'revisit');
+      const followUp = sumBy(svBySource, 'follow_up');
+      const cold = sumBy(svBySource, 'cold');
       const top = svBySource[0];
       const chart = svBySource.slice(0, 12).map((s) => ({
         source_name: s.source_name,
-        completed: num(s.completed),
-        scheduled: num(s.scheduled),
-        cancelled: num(s.cancelled),
+        booked: num(s.booked),
+        negotiation: num(s.negotiation),
+        revisit: num(s.revisit),
+        follow_up: num(s.follow_up),
+        cold: num(s.cold),
       }));
       const groups = svBySource.map((s) => ({
         key: s.source_name,
         label: s.source_name,
         rows: svByProject.filter((r) => r.source_name === s.source_name),
         stats: [
-          { label: 'Completed', value: fmt(s.completed) },
-          { label: 'Leads', value: fmt(s.leads_visited) },
+          { label: 'Visits', value: fmt(s.total_visits) },
         ],
       }));
 
       return (
         <>
           <KpiRow>
-            <KpiCard label="Visits Completed" value={fmt(completed)} sub="Performed in this period" color={COLORS.qualified} icon={MapPinIcon} />
-            <KpiCard label="Leads Visited" value={fmt(leadsVisited)} sub="Distinct leads (revisits collapsed)" color={COLORS.siteVisit} icon={UsersIcon} />
-            <KpiCard label="Upcoming" value={fmt(scheduled)} sub="Scheduled / confirmed" color={COLORS.negotiation} icon={ClockIcon} />
-            <KpiCard label="Cancelled / No Show" value={fmt(cancelled)} sub={`${pct1(cancelled, completed + cancelled)}% drop-off`} color={COLORS.cancelled} icon={XCircleIcon} />
-            <KpiCard label="Top Source" value={top?.source_name || '—'} sub={top ? `${fmt(top.completed)} completed visits` : ''} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
+            <KpiCard label="Total Visits" value={fmt(totalVisits)} sub="Distinct leads · first visit only" color={COLORS.qualified} icon={MapPinIcon} />
+            <KpiCard label="Booked" value={fmt(booked)} sub={`${pct1(booked, totalVisits)}% of visited leads`} color={COLORS.booking} icon={CheckBadgeIcon} />
+            <KpiCard label="In Negotiation" value={fmt(negotiation)} sub="Hot / warm" color={COLORS.negotiation} icon={ScaleIcon} />
+            <KpiCard label="Follow Up" value={fmt(followUp)} sub="Awaiting next step" color={COLORS.siteVisit} icon={ClockIcon} />
+            <KpiCard label="Cold" value={fmt(cold)} sub={`${pct1(cold, totalVisits)}% went cold`} color={COLORS.cancelled} icon={XCircleIcon} />
           </KpiRow>
 
-          <ChartCard title="Site Visits by Source" subtitle="Completed · upcoming · cancelled" chartKey="mkt-svsource" registerRef={registerRef}>
+          <ChartCard title="Post-visit Outcome by Source" subtitle="Where visited leads are now" chartKey="mkt-svsource" registerRef={registerRef}>
             <SimpleBar
               data={chart}
               xKey="source_name"
               bars={[
-                { key: 'completed', name: 'Completed', color: COLORS.qualified, stack: 'v' },
-                { key: 'scheduled', name: 'Upcoming', color: COLORS.negotiation, stack: 'v' },
-                { key: 'cancelled', name: 'Cancelled', color: COLORS.cancelled, stack: 'v' },
+                { key: 'booked', name: 'Booked', color: COLORS.booking, stack: 'v' },
+                { key: 'negotiation', name: 'Negotiation', color: COLORS.negotiation, stack: 'v' },
+                { key: 'revisit', name: 'Re Visit', color: COLORS.primary, stack: 'v' },
+                { key: 'follow_up', name: 'Follow Up', color: COLORS.siteVisit, stack: 'v' },
+                { key: 'cold', name: 'Cold', color: COLORS.cancelled, stack: 'v' },
               ]}
             />
           </ChartCard>
 
-          <Card title="Source-wise Site Visits" sub="Anchored on the visit date, attributed to the lead's source">
-            <Table head={['Source', 'Total Visits', 'Completed', 'Upcoming', 'Cancelled', 'Leads Visited', 'Booked', 'Visit → Booking']} colSpan={8} empty={svBySource.length === 0}>
-              {svBySource.map((s) => {
-                const conv = pct(num(s.booked), num(s.leads_visited));
-                return (
-                  <Tr key={s.source_name}>
-                    <Td bold>{s.source_name}</Td>
-                    <Td bold>{fmt(s.total_visits)}</Td>
-                    <Td color={COLORS.qualified}>{fmt(s.completed)}</Td>
-                    <Td color={COLORS.negotiation}>{fmt(s.scheduled)}</Td>
-                    <Td color={COLORS.cancelled}>{fmt(s.cancelled)}</Td>
-                    <Td color={COLORS.siteVisit}>{fmt(s.leads_visited)}</Td>
-                    <Td color={COLORS.booking}>{fmt(s.booked)}</Td>
-                    <Td><Pill tone={ratioTone(conv * 2)}>{conv}%</Pill></Td>
-                  </Tr>
-                );
-              })}
+          <Card title="Source-wise Site Visits" sub="Visit-date anchored · Total Visits = distinct leads' first visit; the rest are their current outcome">
+            <Table head={['Source', 'Total Visits', 'Booked', 'Negotiation', 'Re Visit', 'Follow Up', 'Cold']} colSpan={7} empty={svBySource.length === 0}>
+              {svBySource.map((s) => (
+                <Tr key={s.source_name}>
+                  <Td bold>{s.source_name}</Td>
+                  <Td bold>{fmt(s.total_visits)}</Td>
+                  <Td color={COLORS.booking}>{fmt(s.booked)}</Td>
+                  <Td color={COLORS.negotiation}>{fmt(s.negotiation)}</Td>
+                  <Td color={COLORS.primary}>{fmt(s.revisit)}</Td>
+                  <Td color={COLORS.siteVisit}>{fmt(s.follow_up)}</Td>
+                  <Td color={COLORS.cancelled}>{fmt(s.cold)}</Td>
+                </Tr>
+              ))}
               {svBySource.length > 0 && (
                 <TotalRow cells={[
-                  fmt(sumBy(svBySource, 'total_visits')), fmt(completed), fmt(scheduled), fmt(cancelled),
-                  fmt(leadsVisited), fmt(booked),
-                  <Pill tone={ratioTone(pct(booked, leadsVisited) * 2)}>{pct(booked, leadsVisited)}%</Pill>,
+                  fmt(totalVisits), fmt(booked), fmt(negotiation), fmt(revisit), fmt(followUp), fmt(cold),
                 ]} />
               )}
             </Table>

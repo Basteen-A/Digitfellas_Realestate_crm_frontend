@@ -187,11 +187,33 @@ export const exportMarketingReports = async (payload, meta = {}) => {
 
   addSheet(wb, 'Leads by Source', leadCols('Source'), bySource.map((r) => leadRow(r.source_name, r)));
 
+  // Sub-source sheet mirrors the on-screen table: Leads / Sv Done / Scheduled /
+  // Follow Up / RNR / Cold / Junk-Spam, anchored on the leads generated in range.
   addSheet(
     wb,
     'Leads by Sub Source',
-    [{ header: 'Source', key: 'source' }, ...leadCols('Sub Source')],
-    bySubSource.map((r) => ({ source: r.source_name, ...leadRow(r.sub_source_name, r) })),
+    [
+      { header: 'Source', key: 'source' },
+      { header: 'Sub Source', key: 'sub_source' },
+      { header: 'Leads', key: 'leads', numeric: true },
+      { header: 'Sv Done', key: 'sv_done' },
+      { header: 'Scheduled', key: 'scheduled' },
+      { header: 'Follow Up', key: 'follow_up' },
+      { header: 'RNR', key: 'rnr' },
+      { header: 'Cold', key: 'cold' },
+      { header: 'Junk/Spam', key: 'junk_spam' },
+    ],
+    bySubSource.map((r) => ({
+      source: r.source_name,
+      sub_source: r.sub_source_name,
+      leads: n(r.leads),
+      sv_done: n(r.sv_leads),
+      scheduled: n(r.scheduled),
+      follow_up: n(r.follow_up),
+      rnr: n(r.rnr),
+      cold: n(r.cold),
+      junk_spam: n(r.junk_spam),
+    })),
   );
 
   addSheet(
@@ -207,22 +229,20 @@ export const exportMarketingReports = async (payload, meta = {}) => {
     [
       { header: 'Source', key: 'source' },
       { header: 'Total Visits', key: 'total_visits', numeric: true },
-      { header: 'Completed', key: 'completed' },
-      { header: 'Upcoming', key: 'scheduled' },
-      { header: 'Cancelled', key: 'cancelled' },
-      { header: 'Leads Visited', key: 'leads_visited' },
       { header: 'Booked', key: 'booked' },
-      { header: 'Visit → Booking %', key: 'conv' },
+      { header: 'Negotiation', key: 'negotiation' },
+      { header: 'Re Visit', key: 'revisit' },
+      { header: 'Follow Up', key: 'follow_up' },
+      { header: 'Cold', key: 'cold' },
     ],
     svBySource.map((r) => ({
       source: r.source_name,
       total_visits: n(r.total_visits),
-      completed: n(r.completed),
-      scheduled: n(r.scheduled),
-      cancelled: n(r.cancelled),
-      leads_visited: n(r.leads_visited),
       booked: n(r.booked),
-      conv: pct(r.booked, r.leads_visited),
+      negotiation: n(r.negotiation),
+      revisit: n(r.revisit),
+      follow_up: n(r.follow_up),
+      cold: n(r.cold),
     })),
   );
 

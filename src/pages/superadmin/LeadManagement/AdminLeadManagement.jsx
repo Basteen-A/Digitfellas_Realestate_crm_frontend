@@ -8,6 +8,8 @@ import locationApi from '../../../api/locationApi';
 import leadStatusApi from '../../../api/leadStatusApi';
 import bookingStatusApi from '../../../api/bookingStatusApi';
 import paymentStatusApi from '../../../api/paymentStatusApi';
+import leadSourceApi from '../../../api/leadSourceApi';
+import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { formatDateTime, cleanRepeatingLocation } from '../../../utils/formatters';
 import {
   MagnifyingGlassIcon,
@@ -119,6 +121,8 @@ const AdminLeadManagement = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedBookingStatus, setSelectedBookingStatus] = useState(''); // booking_statuses.id
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState(''); // payment_statuses.id
+  const [selectedSourceId, setSelectedSourceId] = useState('');
+  const [selectedSubSourceId, setSelectedSubSourceId] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
 
@@ -132,6 +136,8 @@ const AdminLeadManagement = () => {
   const [leadStatuses, setLeadStatuses] = useState([]);
   const [bookingStatuses, setBookingStatuses] = useState([]);
   const [paymentStatuses, setPaymentStatuses] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [subSources, setSubSources] = useState([]);
 
   // ── Bulk transfer (user → user) ──
   const [transferOpen, setTransferOpen] = useState(false);
@@ -186,6 +192,10 @@ const AdminLeadManagement = () => {
     paymentStatusApi.getDropdown()
       .then((res) => setPaymentStatuses(pick(res)))
       .catch((err) => { console.error('Load payment statuses failed:', err); setPaymentStatuses([]); });
+
+    leadSourceApi.getDropdown()
+      .then((res) => setSources(pick(res)))
+      .catch((err) => { console.error('Load sources failed:', err); setSources([]); });
   }, [loadUsers]);
 
   // A search term is looked up across every date, so the date range is suppressed
@@ -220,14 +230,24 @@ const AdminLeadManagement = () => {
       if (selectedPaymentStatus) params.paymentStatusId = selectedPaymentStatus;
       if (selectedProjectId) params.project_id = selectedProjectId;
       if (selectedLocationId) params.location_id = selectedLocationId;
+      if (selectedSourceId) params.sourceId = selectedSourceId;
+      if (selectedSubSourceId) params.subSourceId = selectedSubSourceId;
 
+      // A specific user always wins; with no user picked but a ROLE selected, filter by
+      // every user of that role for the active mode (e.g. "Assigned To" + "Sales Head"
+      // → leads assigned to any Sales Head). The role dropdown used to only narrow the
+      // user list, so choosing a role without a user silently filtered nothing.
       if (filterMode === 'created') {
         if (selectedUserId) params.createdBy = selectedUserId;
+        else if (selectedRole) params.createdByRole = selectedRole;
       } else if (filterMode === 'assigned') {
         if (selectedUserId) params.userId = selectedUserId;
+        else if (selectedRole) params.assignedRole = selectedRole;
       } else if (filterMode === 'handoff') {
-        // A specific user → leads they handed off; no user → every handoff lead
+        // A specific user → leads they handed off; a role → leads handed off by any user
+        // of that role; neither → every handoff lead.
         if (selectedUserId) params.handoffBy = selectedUserId;
+        else if (selectedRole) params.handoffByRole = selectedRole;
         else params.handoffOnly = 'true';
       }
 
@@ -244,7 +264,7 @@ const AdminLeadManagement = () => {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserId, filterMode, selectedStatus, selectedBookingStatus, selectedPaymentStatus, selectedProjectId, selectedLocationId]);
+  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserId, selectedRole, filterMode, selectedStatus, selectedBookingStatus, selectedPaymentStatus, selectedProjectId, selectedLocationId, selectedSourceId, selectedSubSourceId]);
 
   useEffect(() => {
     fetchLeads();
@@ -295,7 +315,10 @@ const AdminLeadManagement = () => {
     setSelectedStatus('');
     setSelectedBookingStatus('');
     setSelectedPaymentStatus('');
+    setSelectedSourceId('');
+    setSelectedSubSourceId('');
     setFilterMode('created');
+    setSubSources([]);
     setPage(1);
   };
 
@@ -755,6 +778,48 @@ const AdminLeadManagement = () => {
             ))}
           </select>
         </div>
+
+        {/* Source Filter */}
+        <div className="alm-filter-group">
+          <select
+            className="alm-select"
+            value={selectedSourceId}
+            onChange={(e) => {
+              const sourceId = e.target.value;
+              setSelectedSourceId(sourceId);
+              setSelectedSubSourceId('');
+              setSubSources([]);
+              setPage(1);
+              if (sourceId) {
+                leadSubSourceApi.getBySource(sourceId)
+                  .then((res) => setSubSources(Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []))
+                  .catch((err) => { console.error('Load sub-sources failed:', err); setSubSources([]); });
+              }
+            }}
+            title="Filter by lead source"
+          >
+            <option value="">All Sources</option>
+            {sources.map((s) => (
+              <option key={s.id} value={s.id}>{s.source_name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sub Source Filter */}
+        <div className="alm-filter-group">
+          <select
+            className="alm-select"
+            value={selectedSubSourceId}
+            onChange={(e) => { setSelectedSubSourceId(e.target.value); setPage(1); }}
+            title="Filter by lead sub-source"
+            disabled={!selectedSourceId}
+          >
+            <option value="">All Sub-Sources</option>
+            {subSources.map((s) => (
+              <option key={s.id} value={s.id}>{s.sub_source_name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Stats Bar */}
@@ -799,6 +864,16 @@ const AdminLeadManagement = () => {
         {selectedPaymentStatus && (
           <span className="alm-stat alm-stat--filter">
             Payment status: {paymentStatuses.find((s) => s.id === selectedPaymentStatus)?.status_name || '—'}
+          </span>
+        )}
+        {selectedSourceId && (
+          <span className="alm-stat alm-stat--filter">
+            Source: {sources.find((s) => s.id === selectedSourceId)?.source_name || '—'}
+          </span>
+        )}
+        {selectedSubSourceId && (
+          <span className="alm-stat alm-stat--filter">
+            Sub-source: {subSources.find((s) => s.id === selectedSubSourceId)?.sub_source_name || '—'}
           </span>
         )}
       </div>
