@@ -1988,24 +1988,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   </div>
                   <button className="qa-drawer-close" onClick={closeActionModal}>×</button>
                 </div>
-
-                <div className="qa-drawer-divider" />
               </>
             )}
 
             {actionMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  {/* Inline budget summary for Record Payment */}
-                  <div style={{
-                    display: 'flex', gap: 16, background: 'var(--bg-secondary)', 
-                    padding: '8px 12px', borderRadius: 6, marginBottom: 16, fontSize: 12
-                  }}>
-                    <div>Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(liveTotalValue)}</strong></div>
-                    <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaid)}</strong></div>
-                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(liveTotalValue - totalPaid)}</strong></div>
-                  </div>
-
+                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{editingPaymentId ? 'Edit Payment' : 'Record New Payment'}</div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group" style={{ flex: 1 }}>
@@ -2491,7 +2480,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               </div>
               <button className="qa-drawer-close" onClick={() => { setWorkflowMode(null); setRefundSourcePayment(null); }}>×</button>
             </div>
-            <div className="qa-drawer-divider" />
 
             {workflowMode === 'register' && (
               <div style={{ padding: '16px 20px' }}>

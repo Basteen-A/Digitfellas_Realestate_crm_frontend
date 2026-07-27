@@ -430,8 +430,6 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
               <button className="qa-drawer-close" onClick={closeAction}>×</button>
             </div>
 
-            <div className="qa-drawer-divider" />
-
             {/* ── BOOKING STATUS UPDATE MODE ── */}
             {actionMode === 'status' && (
               <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
@@ -597,11 +595,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
             {actionMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
-                    <div>Net: <strong>{formatCurrency(getComputedTotalValue(booking))}</strong></div>
-                    <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(booking.total_paid || 0)}</strong></div>
-                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(getComputedTotalValue(booking) - (booking.total_paid || 0))}</strong></div>
-                  </div>
+                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
                   {(() => {
                     const buckets = getDrawerCategoryBuckets(booking);

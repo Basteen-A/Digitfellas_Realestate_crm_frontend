@@ -1060,8 +1060,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               <button className="qa-drawer-close" onClick={closeDrawer}>×</button>
             </div>
 
-            <div className="qa-drawer-divider" />
-
             {/* ── BOOKING STATUS UPDATE MODE ── */}
             {drawerMode === 'status' && (
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
@@ -1320,11 +1318,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             {drawerMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
-                    <div>Net: <strong>{formatCurrency(getComputedTotalValue(drawerBooking))}</strong></div>
-                    <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(drawerBooking.total_paid || 0)}</strong></div>
-                    <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(getComputedTotalValue(drawerBooking) - (drawerBooking.total_paid || 0))}</strong></div>
-                  </div>
+                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
                   {(() => {
                     const buckets = getDrawerCategoryBuckets(drawerBooking);
@@ -1466,7 +1460,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               </div>
               <button className="qa-drawer-close" onClick={closeWorkflow}>×</button>
             </div>
-            <div className="qa-drawer-divider" />
 
             {workflowMode === 'register' && (
               <div style={{ padding: '16px 20px' }}>

@@ -224,20 +224,13 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
           <button className="qa-drawer-close" onClick={onClose}>×</button>
         </div>
 
-        <div className="qa-drawer-divider" />
-
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
               <fieldset disabled={readOnly} style={{ border: 'none', margin: 0, padding: 0, minWidth: 0 }}>
-              <div style={{ display: 'flex', gap: 16, background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: 6, marginBottom: 16, fontSize: 12 }}>
-                <div>Net: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalValue)}</strong></div>
-                <div>Paid: <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaid)}</strong></div>
-                <div>Balance: <strong style={{ color: 'var(--accent-red)' }}>{formatCurrency(totalValue - totalPaid)}</strong></div>
-              </div>
-
+              {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
               <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{readOnly ? 'Payment Details' : isEditing ? 'Edit Payment' : 'Record New Payment'}</div>
               <div className="bkd-form-row">
                 <div className="bkd-form-group" style={{ flex: 1 }}>
