@@ -69,6 +69,8 @@ import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns
 import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
 import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
 import MarketingReports from '../pages/superadmin/MarketingReports';
+import CollectionReports from '../pages/superadmin/CollectionReports';
+import MarketingMetrix from '../pages/superadmin/MarketingMetrix';
 import TelephonyCallSettings from '../pages/superadmin/Telephony/CallSettings';
 import TelephonyCallLogs from '../pages/superadmin/Telephony/CallLogs';
 import TelephonyCallAllocationHistory from '../pages/superadmin/Telephony/CallAllocationHistory';
@@ -296,6 +298,11 @@ const AppRoutes = () => {
             <Route path="/super-admin/reports/:module" element={<Reports />} />
             {/* Marketing › Reports — same reports gate as the main Reports page */}
             <Route path="/super-admin/marketing-reports" element={<MarketingReports />} />
+            {/* Collection Report — org-wide twin of the Collection Manager portal screen */}
+            <Route path="/super-admin/collection-reports" element={<CollectionReports />} />
+            {/* Marketing Metrix — spend vs lead/SV/booking volume + the cost-per reports.
+                Budget entry lives inside the page, so it shares the reports gate. */}
+            <Route path="/super-admin/marketing-metrix" element={<MarketingMetrix />} />
           </Route>
           <Route element={<GrantRoute check={canAccessBookingApprovals} />}>
             <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />

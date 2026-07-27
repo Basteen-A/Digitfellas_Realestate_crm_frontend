@@ -31,9 +31,14 @@ const fmtDay = (d) => {
   return Number.isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 };
 
+// Default value rendering: plain Indian-grouped integers. Money charts pass their own
+// `format` (exact rupees) so the figure you actually read is never abbreviated — only
+// the axis scale is (see `tickFormat` below).
+const defaultValueFormat = (v) => (Number(v) || 0).toLocaleString('en-IN');
+
 // Shared, theme-aware tooltip — replaces recharts' default white box so every
 // chart reads consistently and respects dark mode.
-const ChartTooltip = ({ active, payload, label, labelFormatter, total }) => {
+const ChartTooltip = ({ active, payload, label, labelFormatter, total, format = defaultValueFormat }) => {
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{
@@ -52,7 +57,7 @@ const ChartTooltip = ({ active, payload, label, labelFormatter, total }) => {
             <span style={{ width: 9, height: 9, borderRadius: 2, background: p.color || p.fill, flexShrink: 0 }} />
             <span style={{ flex: 1, paddingRight: 10 }}>{p.name}</span>
             <strong style={{ color: 'var(--text-primary, #0f172a)', fontVariantNumeric: 'tabular-nums' }}>
-              {v.toLocaleString('en-IN')}{total ? ` · ${Math.round((v / total) * 100)}%` : ''}
+              {format(v)}{total ? ` · ${Math.round((v / total) * 100)}%` : ''}
             </strong>
           </div>
         );
@@ -134,7 +139,10 @@ export const CallsPerDayLine = ({ data }) => {
 // Generic multi-series trend over a day/month bucket. The first series gets a
 // soft gradient area under it (the volume line); the rest render as plain lines.
 // Used by the marketing acquisition trend.
-export const TrendLine = ({ data, xKey = 'bucket', lines = [], monthly = false }) => {
+export const TrendLine = ({
+  data, xKey = 'bucket', lines = [], monthly = false,
+  valueFormat = defaultValueFormat, tickFormat,
+}) => {
   const isMobile = useIsMobile();
   const fmtBucket = (b) => {
     if (!b) return b;
@@ -156,8 +164,8 @@ export const TrendLine = ({ data, xKey = 'bucket', lines = [], monthly = false }
         </defs>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
         <XAxis dataKey={xKey} tickFormatter={fmtBucket} tick={axisTick} interval="preserveStartEnd" minTickGap={isMobile ? 24 : 12} tickLine={false} axisLine={{ stroke: GRID }} />
-        <YAxis tick={axisTick} allowDecimals={false} width={32} tickLine={false} axisLine={false} />
-        <Tooltip content={<ChartTooltip labelFormatter={fmtBucket} />} />
+        <YAxis tick={axisTick} allowDecimals={false} width={tickFormat ? 52 : 32} tickFormatter={tickFormat} tickLine={false} axisLine={false} />
+        <Tooltip content={<ChartTooltip labelFormatter={fmtBucket} format={valueFormat} />} />
         <Legend {...legendProps} />
         {lines[0] && <Area type="monotone" dataKey={lines[0].key} name={lines[0].name} stroke="none" fill="url(#trendPrimaryFill)" />}
         {lines.map((l, i) => (
@@ -170,20 +178,23 @@ export const TrendLine = ({ data, xKey = 'bucket', lines = [], monthly = false }
 
 // Generic bar for project / member breakdowns. Single-series bars get value
 // labels on top; rotated x labels collapse gracefully on phones.
-export const SimpleBar = ({ data, xKey, bars }) => {
+export const SimpleBar = ({ data, xKey, bars, valueFormat = defaultValueFormat, tickFormat }) => {
   const isMobile = useIsMobile();
   const single = bars.length === 1;
+  // Top-of-bar labels are dropped on money charts — a full rupee figure over every
+  // bar is unreadable; the tooltip carries the exact number instead.
+  const showLabels = single && !isMobile && !tickFormat;
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: single ? 18 : 8, right: 8, left: isMobile ? -20 : -10, bottom: 44 }} barCategoryGap={isMobile ? '12%' : '20%'}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
         <XAxis dataKey={xKey} tick={{ ...axisTick, fontSize: isMobile ? 9 : 10 }} angle={-30} textAnchor="end" interval={0} height={60} tickLine={false} axisLine={{ stroke: GRID }} />
-        <YAxis tick={axisTick} allowDecimals={false} width={32} tickLine={false} axisLine={false} />
-        <Tooltip cursor={{ fill: 'rgba(99,102,241,0.07)' }} content={<ChartTooltip />} />
+        <YAxis tick={axisTick} allowDecimals={false} width={tickFormat ? 52 : 32} tickFormatter={tickFormat} tickLine={false} axisLine={false} />
+        <Tooltip cursor={{ fill: 'rgba(99,102,241,0.07)' }} content={<ChartTooltip format={valueFormat} />} />
         {!single && <Legend {...legendProps} />}
         {bars.map((b, i) => (
           <Bar key={b.key} dataKey={b.key} name={b.name} stackId={b.stack} fill={b.color || SERIES[i % SERIES.length]} radius={[3, 3, 0, 0]} maxBarSize={isMobile ? 40 : 56} minPointSize={2}>
-            {single && !isMobile && <LabelList dataKey={b.key} position="top" formatter={num} style={{ fontSize: 10, fill: 'var(--text-muted, #64748b)', fontWeight: 600 }} />}
+            {showLabels && <LabelList dataKey={b.key} position="top" formatter={num} style={{ fontSize: 10, fill: 'var(--text-muted, #64748b)', fontWeight: 600 }} />}
           </Bar>
         ))}
       </BarChart>
@@ -191,7 +202,7 @@ export const SimpleBar = ({ data, xKey, bars }) => {
   );
 };
 
-export const FunnelDonut = ({ data }) => {
+export const FunnelDonut = ({ data, valueFormat = defaultValueFormat, centreLabel = 'Total', centreSize = 22 }) => {
   const total = data.reduce((a, d) => a + (Number(d.value) || 0), 0);
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -205,8 +216,8 @@ export const FunnelDonut = ({ data }) => {
               if (cx == null) return null;
               return (
                 <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
-                  <tspan x={cx} dy="-0.35em" style={{ fontSize: 22, fontWeight: 800, fill: 'var(--text-primary, #0f172a)' }}>{total.toLocaleString('en-IN')}</tspan>
-                  <tspan x={cx} dy="1.5em" style={{ fontSize: 11, fill: 'var(--text-muted, #64748b)' }}>Total</tspan>
+                  <tspan x={cx} dy="-0.35em" style={{ fontSize: centreSize, fontWeight: 800, fill: 'var(--text-primary, #0f172a)' }}>{valueFormat(total)}</tspan>
+                  <tspan x={cx} dy="1.5em" style={{ fontSize: 11, fill: 'var(--text-muted, #64748b)' }}>{centreLabel}</tspan>
                 </text>
               );
             }}

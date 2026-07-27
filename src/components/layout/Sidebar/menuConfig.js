@@ -88,8 +88,11 @@ const buildOrganizationHeadSidebar = (user) => {
         { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
         { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
         { label: 'Sales Head', path: '/super-admin/reports/sales-head' },
-        // Marketing reports share the reports grant, so grant-holders get the link too.
+        // Marketing + Collection reports share the reports grant, so grant-holders
+        // get those links too.
         { label: 'Marketing', path: '/super-admin/marketing-reports' },
+        { label: 'Marketing Metrix', path: '/super-admin/marketing-metrix' },
+        { label: 'Collection', path: '/super-admin/collection-reports' },
       ],
     });
   }
@@ -163,6 +166,8 @@ const adminSidebar = [
   { section: 'FINANCE' },
   { label: 'Revenue', path: '/super-admin/finance/revenue', icon: BanknotesIcon },
   { label: 'Collections', path: '/super-admin/finance/collections', icon: CreditCardIcon },
+  // Org-wide twin of the Collection Manager portal's own "Collection Report" screen.
+  { label: 'Collection Report', path: '/super-admin/collection-reports', icon: ChartBarIcon },
 
   { section: 'AUTOMATION' },
   { label: 'Workflow Actions', path: '/super-admin/workflow-actions', icon: BoltIcon },
@@ -178,6 +183,7 @@ const adminSidebar = [
     icon: ChatBubbleLeftRightIcon,
     children: [
       { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
+      { label: 'Marketing Metrix', path: '/super-admin/marketing-metrix' },
       { label: 'Marketing Campaigns', path: '/super-admin/marketing-campaigns' },
       { label: 'Templates', path: '/super-admin/marketing-templates' },
       { label: 'WhatsApp Settings', path: '/super-admin/whatsapp-settings' },

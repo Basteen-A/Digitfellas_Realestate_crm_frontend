@@ -44,6 +44,34 @@ const reportApi = {
     const { data } = await api.get(`/reports/marketing${buildQuery({ period, from, to, sourceId, subSourceId, projectId })}`);
     return data;
   },
+
+  // Collection Report — item / project wise collection & outstanding.
+  // period = today|wtd|mtd|all (collection blocks only; outstanding is always a live
+  // snapshot), optional from/to (YYYY-MM-DD), projectId, collectionManagerId.
+  // Server decides the scope: org-wide for SA/ADM/OH-with-reports, own book for
+  // Collection Manager / Executive — `collectionManagerId` is ignored for the latter.
+  // The All Time window walks every booking's full payment history, so this call gets
+  // the same longer timeout as the analytics report.
+  getCollectionReports: async ({ period = 'mtd', from, to, projectId, collectionManagerId } = {}) => {
+    const { data } = await api.get(
+      `/reports/collection${buildQuery({ period, from, to, projectId, collectionManagerId })}`,
+      { timeout: 180000 }
+    );
+    return data;
+  },
+
+  // Marketing Metrix — budget vs lead / qualified / site-visit / booking volume,
+  // attributed to each lead's LATEST marketing touch (creation or re-enquiry).
+  // period = today|wtd|mtd|all, optional from/to (YYYY-MM-DD), sourceId, subSourceId.
+  // The All Time window resolves the latest touch across the whole leads table, so this
+  // call gets the same longer timeout as the analytics report.
+  getMarketingMetrix: async ({ period = 'mtd', from, to, sourceId, subSourceId } = {}) => {
+    const { data } = await api.get(
+      `/reports/marketing-metrix${buildQuery({ period, from, to, sourceId, subSourceId })}`,
+      { timeout: 180000 }
+    );
+    return data;
+  },
 };
 
 export default reportApi;
