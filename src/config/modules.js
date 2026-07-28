@@ -75,7 +75,11 @@ export const MODULES = [
   { key: 'roles', label: 'Roles & Permissions', group: 'Configuration', levels: ALL, description: 'This screen — create roles and set their module access' },
   { key: 'org_settings', label: 'Org Settings', group: 'Configuration', levels: ALL, description: 'Branding, site settings and terms' },
   { key: 'attendance', label: 'Attendance', group: 'Configuration', levels: ALL, description: 'Check-in records and attendance settings' },
-  { key: 'masters', label: 'Data Masters', group: 'Configuration', levels: ALL, description: 'Lead, booking and finance master data' },
+  // Master data is split by the sidebar's own grouping so a role can be given, say,
+  // Booking & Finance masters without also handing over every Lead master.
+  { key: 'lead_masters', label: 'Lead Masters', group: 'Configuration', levels: ALL, description: 'Lead types, sources, sub-sources, stages, statuses, remarks, motivations, closed-lost reasons, score master' },
+  { key: 'booking_finance_masters', label: 'Booking & Finance Masters', group: 'Configuration', levels: ALL, description: 'Booking statuses & cancel reasons, payment types / plans / modes / statuses, banks' },
+  { key: 'other_masters', label: 'Other Masters', group: 'Configuration', levels: ALL, description: 'Customer types and terms & conditions' },
 ];
 
 export const MODULE_KEYS = MODULES.map((m) => m.key);

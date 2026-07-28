@@ -104,7 +104,7 @@ const MODULE_LINKS = {
   attendance: { section: 'CONFIGURATION', items: [
     { label: 'Attendance', path: '/super-admin/attendance', icon: FingerPrintIcon, level: 'write' },
   ] },
-  masters: { section: 'CONFIGURATION', items: [
+  lead_masters: { section: 'CONFIGURATION', items: [
     { label: 'Lead Masters', icon: Cog6ToothIcon, level: 'write', children: [
       { label: 'Lead Types', path: '/super-admin/lead-types' },
       { label: 'Lead Sources', path: '/super-admin/lead-sources' },
@@ -116,19 +116,22 @@ const MODULE_LINKS = {
       { label: 'Closed-Lost Reasons', path: '/super-admin/closed-lost-reasons' },
       { label: 'Score Master', path: '/super-admin/score-master' },
     ] },
+  ] },
+  booking_finance_masters: { section: 'CONFIGURATION', items: [
     { label: 'Booking & Finance Masters', icon: BanknotesIcon, level: 'write', children: [
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
+      { label: 'Payment Types', path: '/super-admin/payment-types' },
       { label: 'Payment Plans', path: '/super-admin/payment-plans' },
       { label: 'Payment Modes', path: '/super-admin/payment-modes' },
       { label: 'Payment Statuses', path: '/super-admin/payment-statuses' },
       { label: 'Banks', path: '/super-admin/banks' },
     ] },
+  ] },
+  other_masters: { section: 'CONFIGURATION', items: [
     { label: 'Other Masters', icon: Cog6ToothIcon, level: 'write', children: [
       { label: 'Customer Types', path: '/super-admin/customer-types' },
       { label: 'Terms & Conditions', path: '/super-admin/terms-and-conditions' },
-      { label: 'Departments', path: '/super-admin/departments' },
-      { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
     ] },
   ] },
 };

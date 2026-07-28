@@ -101,6 +101,25 @@ const RolePermissionsPage = () => {
       return { ...d, module_permissions: next };
     });
 
+  // Switch a whole sidebar group at once — the fast way to hand over (or take away)
+  // CONFIGURATION / TELEPHONY / MARKETING without touching each row.
+  const setGroup = (group, level) =>
+    setDraft((d) => {
+      const next = { ...d.module_permissions };
+      catalogue.modules.filter((m) => m.group === group).forEach((m) => {
+        const allowed = m.levels.filter((l) => ORDER.indexOf(l) <= ORDER.indexOf(level));
+        next[m.key] = allowed[allowed.length - 1] || 'none';
+      });
+      return { ...d, module_permissions: next };
+    });
+
+  // How much of a group is granted — drives the "3 / 7" hint on the group header.
+  const groupSummary = (group) => {
+    const mods = catalogue.modules.filter((m) => m.group === group);
+    const on = mods.filter((m) => (draft?.module_permissions?.[m.key] || 'none') !== 'none').length;
+    return { on, total: mods.length };
+  };
+
   const grantedCount = useMemo(() => {
     if (!draft) return 0;
     return Object.values(draft.module_permissions || {}).filter((v) => v && v !== 'none').length;
@@ -315,9 +334,31 @@ const RolePermissionsPage = () => {
                 )}
 
                 {/* The matrix */}
-                {catalogue.groups.map((group) => (
+                {catalogue.groups.map((group) => {
+                  const { on, total } = groupSummary(group);
+                  return (
                   <div className="rp-group" key={group}>
-                    <div className="rp-group__name">{group}</div>
+                    <div className="rp-group__head">
+                      <span className="rp-group__name">
+                        {group}
+                        <span className="rp-group__count">{on} of {total}</span>
+                      </span>
+                      {!isSuperAdmin && (
+                        <span className="rp-group__actions">
+                          {ORDER.map((lvl) => (
+                            <button
+                              key={lvl}
+                              type="button"
+                              className="rp-group__btn"
+                              title={`Set every ${group} module to ${LEVEL_LABELS[lvl]}`}
+                              onClick={() => setGroup(group, lvl)}
+                            >
+                              {LEVEL_LABELS[lvl]}
+                            </button>
+                          ))}
+                        </span>
+                      )}
+                    </div>
                     {(modulesByGroup[group] || []).map((mod) => {
                       const current = isSuperAdmin ? 'full' : (draft.module_permissions?.[mod.key] || 'none');
                       return (
@@ -348,7 +389,8 @@ const RolePermissionsPage = () => {
                       );
                     })}
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="rp-editor__foot">
