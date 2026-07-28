@@ -39,7 +39,7 @@ const LOGO_FIELDS = [
 const SiteSettings = () => {
   const { refresh } = useSiteSettings();
 
-  const [form, setForm] = useState({ site_name: '', logo_full: '', logo_mark: '', favicon: '', mobile_password_login: false });
+  const [form, setForm] = useState({ site_name: '', logo_full: '', logo_mark: '', favicon: '', mobile_password_login: false, web_login_identifier: 'email' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const fileInputs = useRef({});
@@ -55,6 +55,7 @@ const SiteSettings = () => {
         logo_mark: s.logo_mark || '',
         favicon: s.favicon || '',
         mobile_password_login: s.mobile_password_login === true,
+        web_login_identifier: s.web_login_identifier || 'email',
       });
     } catch (err) {
       toast.error('Failed to load site settings');
@@ -101,6 +102,7 @@ const SiteSettings = () => {
         logo_mark: form.logo_mark || '',
         favicon: form.favicon || '',
         mobile_password_login: form.mobile_password_login === true,
+        web_login_identifier: form.web_login_identifier || 'email',
       });
       toast.success('Site settings saved');
       await refresh(); // re-brands sidebars / topbar / login instantly
@@ -142,6 +144,46 @@ const SiteSettings = () => {
             onChange={(e) => setForm((p) => ({ ...p, site_name: e.target.value }))}
           />
           <div className="site-settings__hint">Appears in the top bar, under the sidebar logo, and on the browser tab. Leave blank to show the logo only.</div>
+        </div>
+
+        {/* Web login identity */}
+        <div className="site-settings__card">
+          <div className="site-settings__label">Web login</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+            {[
+              { value: 'email', label: 'Email address only', hint: 'Users sign in with their email — the default.' },
+              { value: 'username', label: 'Login ID only', hint: 'Users sign in with their Login ID (e.g. ramesh.TC), the same one the mobile app uses.' },
+              { value: 'both', label: 'Either one', hint: 'A single field that accepts an email address or a Login ID.' },
+            ].map((opt) => (
+              <label
+                key={opt.value}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                  padding: '9px 11px', borderRadius: 9, fontSize: 14,
+                  border: `1px solid ${form.web_login_identifier === opt.value ? 'var(--accent-blue, #4f46e5)' : 'var(--border-primary, #e5e7eb)'}`,
+                  background: form.web_login_identifier === opt.value ? 'var(--bg-accent-soft, #eef2ff)' : 'transparent',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="web_login_identifier"
+                  value={opt.value}
+                  checked={form.web_login_identifier === opt.value}
+                  onChange={() => setForm((p) => ({ ...p, web_login_identifier: opt.value }))}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <span style={{ display: 'block', fontWeight: 500 }}>{opt.label}</span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted, #6b7280)', marginTop: 2 }}>{opt.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="site-settings__hint">
+            Sets what the sign-in field on the web login page accepts, and how it is labelled.
+            The password is always required. Login ID options are refused while any active user
+            still has no Login ID, so nobody can be locked out.
+          </div>
         </div>
 
         {/* Mobile app login fallback */}

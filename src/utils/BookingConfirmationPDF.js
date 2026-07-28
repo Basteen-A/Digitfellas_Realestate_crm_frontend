@@ -10,6 +10,7 @@
 // ============================================================
 
 import { jsPDF } from 'jspdf';
+import { computeStampValue, computeRegistrationValue, registrationRateOf } from './bookingRates';
 
 /* ── Number → words (international grouping, "... Indian rupees") ── */
 const numberToWords = (num) => {
@@ -127,8 +128,10 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     : (formulaPlotValue > 0 ? formulaPlotValue : toAmt(booking.base_price || booking.total_amount || booking.net_amount));
   const storedStampValue = toAmt(booking.stamp_value || booking.stamp_duty);
   const storedRegistrationValue = toAmt(booking.registration_exp || booking.registration_charges);
-  const stampValue = storedStampValue > 0 ? storedStampValue : plotValue * 0.07;
-  const registrationValue = storedRegistrationValue > 0 ? storedRegistrationValue : plotValue * 0.02;
+  const stampValue = storedStampValue > 0 ? storedStampValue : computeStampValue(plotValue);
+  const registrationValue = storedRegistrationValue > 0
+    ? storedRegistrationValue
+    : computeRegistrationValue(plotValue, registrationRateOf(booking));
 
   const developmentValue = toAmt(booking.development_charges) > 0
     ? toAmt(booking.development_charges)

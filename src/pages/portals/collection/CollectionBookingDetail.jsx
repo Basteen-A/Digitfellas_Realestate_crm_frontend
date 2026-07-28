@@ -13,6 +13,10 @@ import KebabMenu from '../../../components/common/KebabMenu';
 import { formatCurrencyExact as formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { getRoleCode } from '../../../utils/permissions';
+import {
+  computeStampValue, computeRegistrationValue, computeStampCommission,
+  registrationRateOf, REGISTRATION_RATE_CHOICES,
+} from '../../../utils/bookingRates';
 import { ROLE_CODES } from '../../../utils/constants';
 import GenerateBookingFormModal from './GenerateBookingFormModal';
 import termsAndConditionsApi from '../../../api/termsAndConditionsApi';
@@ -121,7 +125,7 @@ const PsSubtotalRow = ({ label, value }) => (
   </div>
 );
 
-const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon, paid = 0 }) => {
+const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon, paid = 0, action = null }) => {
   const target = parseFloat(valueText?.replace(/[^0-9.-]/g, '') || 0);
   const due = target - paid;
   const pct = target > 0 ? Math.round((paid / target) * 100) : 0;
@@ -149,6 +153,7 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
           }}>
             {label}
             {expandIcon}
+            {action}
           </div>
           <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
             {dueText} · {pctText}
@@ -234,6 +239,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // read-only in the same rich modal (matches the Payments page view).
   const [viewPaymentId, setViewPaymentId] = useState(null);
   const [regExpanded, setRegExpanded] = useState(false);
+  // Registration rate editor (the pen next to Registration Fees).
+  const [ratePickerOpen, setRatePickerOpen] = useState(false);
+  const [rateSaving, setRateSaving] = useState(false);
   // Super-Admin approve / reject (from the detail page)
   const [approvalAction, setApprovalAction] = useState(null); // 'approve' | 'reject'
   const [approvalRemarks, setApprovalRemarks] = useState('');
@@ -716,7 +724,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       Object.entries(split).map(([k, v]) => [k, parseFloat(v) || 0])
     );
     // Stamp Commission always saved as 1% of Stamp Value (7% of Plot Value).
-    const savedStampCommission = Math.round(Math.ceil((guideline * area) / 100) * 100 * 0.07 * 0.01);
+    const savedStampCommission = computeStampCommission(computeStampValue(Math.ceil((guideline * area) / 100) * 100));
     setDevCostSaving(true);
     try {
       const res = await bookingApi.updateDevelopmentCost(bookingId, {
@@ -783,8 +791,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     : (formulaPlotValue > 0 ? formulaPlotValue : toAmount(booking.base_price || booking.total_amount || booking.net_amount));
   const storedStampValue = toAmount(booking.stamp_value || booking.stamp_duty);
   const storedRegistrationValue = toAmount(booking.registration_exp || booking.registration_charges);
-  const stampValue = storedStampValue > 0 ? storedStampValue : plotValue * 0.07;
-  const registrationValue = storedRegistrationValue > 0 ? storedRegistrationValue : plotValue * 0.02;
+  // 2% by default; the Collection Manager may have switched this booking to 1%.
+  const registrationRate = registrationRateOf(booking);
+  const stampValue = storedStampValue > 0 ? storedStampValue : computeStampValue(plotValue);
+  const registrationValue = storedRegistrationValue > 0
+    ? storedRegistrationValue
+    : computeRegistrationValue(plotValue, registrationRate);
   const developmentValue = toAmount(booking.development_charges) > 0
     ? toAmount(booking.development_charges)
     : ((perSqftCost > 0 && plotAreaSqft > 0) ? Math.round(plotAreaSqft * perSqftCost * 1.18) : 0);
@@ -796,7 +808,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // Stamp Commission: use the stored split value (what was billed); only derive
   // 1% of Stamp Value when nothing was stored.
   const storedStampCommission = toAmount((costBreakdown.registration_split || {}).stamp_commission);
-  const computedStampCommission = storedStampCommission > 0 ? storedStampCommission : Math.round(stampValue * 0.01);
+  const computedStampCommission = storedStampCommission > 0 ? storedStampCommission : computeStampCommission(stampValue);
   const savedRegSplit = { ...(costBreakdown.registration_split || {}), stamp_commission: computedStampCommission };
   const savedModtEnabled = !!costBreakdown.modt_enabled;
   const savedModtSplit = costBreakdown.modt_split || {};
@@ -877,6 +889,29 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     + (savedModtEnabled ? Object.values(modtPaidByKey).reduce((s, v) => s + v, 0) : 0);
 
   const canEditPayments = getRoleCode(user) === ROLE_CODES.SUPER_ADMIN;
+  // Registration rate is the Collection Manager's call (Super Admin can always).
+  // A cancelled or registered booking is settled — its legal charges stay put.
+  const canEditRegistrationRate =
+    [ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user))
+    && !booking?.is_cancelled;
+
+  // Switch the booking between 2% and 1%. The server recomputes and STORES the
+  // registration amount from the plot value at the new rate (rounded up to the
+  // nearest 10), then we reload so every dependent figure on the page follows.
+  const handleRegistrationRateChange = async (rate) => {
+    if (rate === registrationRate) { setRatePickerOpen(false); return; }
+    setRateSaving(true);
+    try {
+      await bookingApi.updateRegistrationRate(booking.id, rate);
+      toast.success(`Registration set to ${rate}%`);
+      setRatePickerOpen(false);
+      await loadBooking();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to change the registration rate'));
+    } finally {
+      setRateSaving(false);
+    }
+  };
   // Diff snapshot (old → new) shown inline while a cost edit awaits SA approval.
   const pendingCostChanges = booking?.custom_fields?.pending_cost_changes;
   // Permanent booking delete is restricted to Super Admin / Admin.
@@ -886,8 +921,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
   // Plot Value = ROUNDUP(rate × sqft, -2) — nearest 100; Stamp (7%) & Registration (2%) exact, no rounding.
   const previewPlotValue = Math.ceil((devCostGuidelineValue * devCostPlotAreaValue) / 100) * 100;
-  const previewStampValue = previewPlotValue * 0.07;
-  const previewRegistrationValue = previewPlotValue * 0.02;
+  const previewStampValue = computeStampValue(previewPlotValue);
+  const previewRegistrationValue = computeRegistrationValue(previewPlotValue, registrationRate);
   const previewDevelopmentValue = Math.round((devCostPlotAreaValue * devCostPerSqftValue) * 1.18);
   // Stamp Commission auto-derives from the previewed Stamp Value (1%).
   const previewStampCommission = Math.round(previewStampValue * 0.01);
@@ -1504,7 +1539,81 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
                 <BkdLedgerRow label="Plot Value" valueText={fmtFull(plotValue)} paid={paidByCategory['Plot Value'] || 0} />
                 <BkdLedgerRow label="Stamp Duty" valueText={fmtFull(stampValue)} paid={paidByCategory['Stamp Duty'] || 0} />
-                <BkdLedgerRow label="Registration Fees" valueText={fmtFull(registrationValue)} paid={paidByCategory['Registration'] || 0} />
+                <BkdLedgerRow
+                  label={`Registration Fees (${registrationRate}%)`}
+                  valueText={fmtFull(registrationValue)}
+                  paid={paidByCategory['Registration'] || 0}
+                  action={canEditRegistrationRate ? (
+                    <span style={{ position: 'relative', display: 'inline-flex' }}>
+                      <button
+                        type="button"
+                        title="Change the registration rate"
+                        aria-label="Change the registration rate"
+                        disabled={rateSaving}
+                        onClick={(e) => { e.stopPropagation(); setRatePickerOpen((v) => !v); }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 22, height: 22, padding: 0, marginLeft: 2,
+                          border: 'none', background: 'transparent', cursor: rateSaving ? 'wait' : 'pointer',
+                          color: 'var(--accent-blue, #4f46e5)', opacity: rateSaving ? 0.5 : 1,
+                        }}
+                      >
+                        <PencilSquareIcon style={{ width: 15, height: 15 }} />
+                      </button>
+                      {ratePickerOpen && (
+                        <>
+                          {/* Click-away catcher so the popover behaves like a menu. */}
+                          <span
+                            onClick={(e) => { e.stopPropagation(); setRatePickerOpen(false); }}
+                            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                          />
+                          <span
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              position: 'absolute', top: 26, left: 0, zIndex: 41,
+                              background: 'var(--bg-card, #fff)',
+                              border: '1px solid var(--col-border, #e2e8f0)',
+                              borderRadius: 10, padding: 8, minWidth: 210,
+                              boxShadow: '0 8px 24px rgba(15,23,42,.14)',
+                            }}
+                          >
+                            <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted, #6b7280)', marginBottom: 6 }}>
+                              REGISTRATION RATE
+                            </span>
+                            {REGISTRATION_RATE_CHOICES.map((r) => {
+                              const preview = computeRegistrationValue(plotValue, r);
+                              const isOn = r === registrationRate;
+                              return (
+                                <button
+                                  key={r}
+                                  type="button"
+                                  disabled={rateSaving}
+                                  onClick={() => handleRegistrationRateChange(r)}
+                                  style={{
+                                    display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between',
+                                    gap: 10, padding: '7px 8px', marginBottom: 2,
+                                    border: 'none', borderRadius: 7, cursor: rateSaving ? 'wait' : 'pointer',
+                                    background: isOn ? 'var(--bg-accent-soft, #eef2ff)' : 'transparent',
+                                    color: 'var(--col-text, #111827)', fontSize: 13,
+                                    fontWeight: isOn ? 600 : 400, textAlign: 'left',
+                                  }}
+                                >
+                                  <span>{r}%{r === 2 ? ' (default)' : ''}</span>
+                                  <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-muted, #6b7280)' }}>
+                                    {fmtFull(preview)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-muted, #9ca3af)', marginTop: 4, lineHeight: 1.45 }}>
+                              Rounded up to the nearest ₹10. Payments already collected are not changed.
+                            </span>
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  ) : null}
+                />
                 <BkdLedgerRow label="Development" valueText={fmtFull(developmentValue)} paid={paidByCategory['Development'] || 0} />
 
                 {(otherChargesTotal > 0) && (
@@ -2362,7 +2471,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     {[
                       { label: 'Plot Value', value: fmtFull(previewPlotValue || plotValue) },
                       { label: 'Stamp Duty (7%)', value: fmtFull(previewStampValue || stampValue) },
-                      { label: 'Registration (2%)', value: fmtFull(previewRegistrationValue || registrationValue) },
+                      { label: `Registration (${registrationRate}%)`, value: fmtFull(previewRegistrationValue || registrationValue) },
                       { label: 'Development', value: fmtFull(previewDevelopmentValue || developmentValue) },
                     ].map((c, i, arr) => (
                       <div key={c.label} style={{ flex: 1, padding: '12px 14px', borderRight: i < arr.length - 1 ? `1px solid ${PS.border}` : 'none', minWidth: 0 }}>

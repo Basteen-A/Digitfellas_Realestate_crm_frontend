@@ -29,6 +29,9 @@ const bookingApi = {
 
   // Development cost (Collection Manager)
   updateDevelopmentCost: (bookingId, data) => api.patch(`/bookings/${bookingId}/development-cost`, data),
+  // Switch Registration Charges between 2% (default) and 1% — Collection Manager / Super Admin.
+  updateRegistrationRate: (bookingId, registrationPercentage) =>
+    api.patch(`/bookings/${bookingId}/registration-rate`, { registration_percentage: registrationPercentage }),
 
   // Payment status (Collection Manager)
   updatePaymentStatus: (bookingId, data) => api.patch(`/bookings/${bookingId}/payment-status`, data),

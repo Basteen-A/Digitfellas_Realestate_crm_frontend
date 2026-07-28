@@ -19,6 +19,8 @@ const toEffective = (settings) => {
     logoFull: settings?.logo_full || defaultLogoFull,
     logoMark: settings?.logo_mark || defaultLogoMark,
     favicon: settings?.favicon || null,
+    // What the web login form accepts: 'email' (default) | 'username' | 'both'.
+    webLoginIdentifier: settings?.web_login_identifier || 'email',
     raw: settings || null,
   };
 };
@@ -75,6 +77,7 @@ export const useSiteSettings = () => {
     return {
       siteName: APP_NAME,
       siteTitle: APP_NAME,
+      webLoginIdentifier: 'email',
       logoFull: defaultLogoFull,
       logoMark: defaultLogoMark,
       favicon: null,

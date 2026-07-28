@@ -5,6 +5,9 @@ import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 import PortalRoute from './PortalRoute';
 import RoleRoute from './RoleRoute';
+import ModuleRoute from './ModuleRoute';
+import { usesGenericPortal } from '../utils/modulePermissions';
+import { buildGenericSidebar } from '../components/layout/Sidebar/genericMenu';
 import AttendanceGate from './AttendanceGate';
 import TaskAccessRoute from './TaskAccessRoute';
 import GrantRoute from './GrantRoute';
@@ -118,6 +121,15 @@ const RoleHomeRedirect = () => {
     if (canViewAllReports(user)) return <Navigate to="/super-admin/reports" replace />;
     if (canAccessBookingApprovals(user)) return <Navigate to="/super-admin/booking-approvals" replace />;
     if (hasTaskPortalAccess(user)) return <Navigate to="/super-admin/tasks" replace />;
+  }
+
+  // A role created in Roles & Permissions has no home of its own, so land on the
+  // first destination its matrix actually opens. Falling straight through to
+  // /dashboard would strand a role that was never granted the dashboard.
+  if (usesGenericPortal(user)) {
+    const first = buildGenericSidebar(user).find((item) => item.path)
+      || (buildGenericSidebar(user).find((item) => item.children?.length)?.children || [])[0];
+    if (first?.path) return <Navigate to={first.path} replace />;
   }
 
   return <Navigate to="/dashboard" replace />;
@@ -236,7 +248,10 @@ const AppRoutes = () => {
           <Route path="/tasks/departments" element={<Navigate to="/task-portal/departments" replace />} />
           <Route path="/tasks/sub-departments" element={<Navigate to="/task-portal/sub-departments" replace />} />
 
-          <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
+          {/* Admin screens. SA / ADM pass on role; any other role passes when its
+              permission matrix grants the module that path maps to (routeModules.js),
+              which is what makes a custom role's sidebar links actually work. */}
+          <Route element={<ModuleRoute allowedRoles={['SA', 'ADM']} />}>
             <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />
             {/* Task Management — Departments/Sub-Departments stay SA/ADM only; the Tasks
                 list moves below so grant-holding Organization Heads can reach it too. */}

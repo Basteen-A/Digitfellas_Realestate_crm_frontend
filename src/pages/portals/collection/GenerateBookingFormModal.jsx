@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { computeStampValue, computeRegistrationValue, registrationRateOf } from '../../../utils/bookingRates';
 import { generateBookingConfirmationPDF } from '../../../utils/BookingConfirmationPDF';
 
 /* ── helpers ── */
@@ -30,8 +31,8 @@ export const computeBookingTotals = (booking) => {
   const rs = booking.custom_fields?.cost_breakdown?.registration_split || {};
   const storedStamp = toNum(booking.stamp_value || booking.stamp_duty);
   const storedReg = toNum(booking.registration_exp || booking.registration_charges);
-  const stamp = storedStamp > 0 ? storedStamp : plotTotal * 0.07;
-  const reg = storedReg > 0 ? storedReg : plotTotal * 0.02;
+  const stamp = storedStamp > 0 ? storedStamp : computeStampValue(plotTotal);
+  const reg = storedReg > 0 ? storedReg : computeRegistrationValue(plotTotal, registrationRateOf(booking));
   const commission = toNum(rs.stamp_commission) > 0 ? toNum(rs.stamp_commission) : Math.round(stamp * 0.01);
   const regExpenses = toNum(rs.registration_expenses) + toNum(rs.writer_expenses) + toNum(rs.patta_charges);
   const other = toNum(rs.other_registration_expenses);

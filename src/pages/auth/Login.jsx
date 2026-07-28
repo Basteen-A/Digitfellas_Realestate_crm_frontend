@@ -12,13 +12,26 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoading, error } = useSelector((state) => state.auth);
-  const { siteTitle, logoFull } = useSiteSettings();
+  const { siteTitle, logoFull, webLoginIdentifier } = useSiteSettings();
 
   const [form, setForm] = useState({
     email: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+
+  // The org decides what the identity field accepts (Super Admin → Org Settings).
+  // The field is still submitted as `email` — the server treats that as "the
+  // identifier" and resolves it against whichever identities are enabled.
+  const identityLabel = webLoginIdentifier === 'username'
+    ? 'Login ID'
+    : webLoginIdentifier === 'both' ? 'Email or Login ID' : 'Email';
+  const identityPlaceholder = webLoginIdentifier === 'username'
+    ? 'e.g. ramesh.TC'
+    : webLoginIdentifier === 'both' ? 'you@company.com or ramesh.TC' : 'you@company.com';
+  // Only constrain the input to an email address when nothing else is accepted —
+  // type="email" would otherwise reject a perfectly valid Login ID.
+  const identityInputType = webLoginIdentifier === 'email' ? 'email' : 'text';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,11 +59,13 @@ const Login = () => {
 
       <form className="auth-card__form" onSubmit={handleSubmit}>
         <label className="auth-card__label" htmlFor="login-email">
-          Email
+          {identityLabel}
         </label>
         <input
           id="login-email"
-          type="email"
+          type={identityInputType}
+          autoComplete="username"
+          placeholder={identityPlaceholder}
           className="auth-card__input"
           value={form.email}
           onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}

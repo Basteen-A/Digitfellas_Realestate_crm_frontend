@@ -4,6 +4,7 @@ import bookingApi from '../../api/bookingApi';
 import { formatCurrency } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
 import { badgeColors } from '../../utils/badgeColors';
+import { computeStampValue, computeRegistrationValue, computeStampCommission, registrationRateOf } from '../../utils/bookingRates';
 import '../../pages/portals/common/LeadWorkspacePage.css';
 import '../../pages/portals/collection/CollectionWorkspace.css';
 
@@ -50,8 +51,8 @@ const computeBudget = (booking) => {
   let registrationValue;
   if (guidelineRate > 0 && plotAreaSqft > 0) {
     plotValue = Math.ceil((guidelineRate * plotAreaSqft) / 100) * 100; // ROUNDUP to nearest 100
-    stampValue = plotValue * 0.07;        // exact 7%, no rounding
-    registrationValue = plotValue * 0.02; // exact 2%, no rounding
+    stampValue = computeStampValue(plotValue);                                     // ROUNDUP(7%, -1)
+    registrationValue = computeRegistrationValue(plotValue, registrationRateOf(booking)); // ROUNDUP(rate%, -1)
   } else {
     plotValue = toAmount(booking?.plot_value || booking?.base_price || booking?.total_amount || booking?.net_amount);
     stampValue = toAmount(booking?.stamp_value || booking?.stamp_duty);
@@ -64,7 +65,7 @@ const computeBudget = (booking) => {
   const sumSplit = (split) => Object.values(split || {}).reduce((sum, v) => sum + toAmount(v), 0);
   const costBreakdown = booking?.custom_fields?.cost_breakdown || {};
   // Stamp Commission is always 1% of Stamp Value (computed).
-  const stampCommission = Math.round(stampValue * 0.01);
+  const stampCommission = computeStampCommission(stampValue);
   const savedRegSplit = { ...(costBreakdown.registration_split || {}), stamp_commission: stampCommission };
   const savedModtEnabled = !!costBreakdown.modt_enabled;
   const savedModtSplit = costBreakdown.modt_split || {};
