@@ -65,7 +65,7 @@ const CollectionDemandSchedule = ({ user }) => {
   return (
     <div className="col-dashboard-new">
       <div className="col-greeting-new">
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Demand Schedule</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Demand Schedule</h1>
         <p style={{ color: 'var(--col-text-secondary)', marginTop: 4, fontSize: '0.875rem' }}>
           Upcoming payment demands and installment schedule for your bookings
         </p>

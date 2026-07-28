@@ -127,7 +127,7 @@ const CheckInPage = () => {
             : <MapPinIcon style={{ width: 32, height: 32, color: '#1d4ed8' }} />}
         </div>
 
-        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Daily Check-In</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>Daily Check-In</h1>
         <p style={{ color: 'var(--text-muted, #6b7280)', fontSize: 13, marginBottom: 12 }}>
           {now.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
           {' · '}

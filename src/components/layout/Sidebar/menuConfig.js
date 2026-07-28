@@ -32,6 +32,8 @@ import {
   FolderOpenIcon,
 } from '@heroicons/react/24/outline';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
+import { usesGenericPortal, BUILT_IN_PORTAL_CODES } from '../../../utils/modulePermissions';
+import { buildGenericSidebar } from './genericMenu';
 
 /**
  * Returns the sidebar menu based on the user's role code.
@@ -40,8 +42,15 @@ import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } fro
  * SM     → Sales Manager sidebar (leads, site visits, incoming)
  * SH     → Sales Head sidebar (negotiations, bookings)
  * COL    → Collection sidebar
+ *
+ * Any role NOT in this switch was created in Super Admin → Roles & Permissions
+ * and has no bespoke portal, so its menu is assembled from its module matrix by
+ * buildGenericSidebar(). That is what makes custom roles self-serve.
  */
 export const getSidebarMenuForRole = (roleCode, user = null) => {
+  if (user && usesGenericPortal(user) && !BUILT_IN_PORTAL_CODES.includes(roleCode)) {
+    return buildGenericSidebar(user);
+  }
   switch (roleCode) {
     case 'SA':
       return adminSidebar;
@@ -69,7 +78,9 @@ export const getSidebarMenuForRole = (roleCode, user = null) => {
     case 'CE':
       return collectionExecSidebar;
     default:
-      return telecallerSidebar;
+      // Unknown code with no matrix to work from — fall back to the generic
+      // build, which yields [] and lets the shell explain itself.
+      return user ? buildGenericSidebar(user) : telecallerSidebar;
   }
 };
 
@@ -370,6 +381,13 @@ export const collectionMenu = [
   { label: 'Payments', key: 'payments', icon: BanknotesIcon, badge: null },
   { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },
   { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
+  // Telecalling floor — the same org-wide screens Super Admin sees. The
+  // Collection Manager monitors telecaller performance and inbound-call
+  // allocation, so these render inside the collection portal too.
+  { group: 'Telecalling' },
+  { label: 'Telecaller Reports', key: 'tc-reports', icon: ChartBarIcon, badge: null },
+  { label: 'Call Logs', key: 'call-logs', icon: PhoneIcon, badge: null },
+  { label: 'Allocation History', key: 'call-allocations', icon: PhoneArrowDownLeftIcon, badge: null },
 ];
 
 export const accountsMenu = [

@@ -19,7 +19,7 @@
 
 .master-page__header h1 {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.3px;
 }

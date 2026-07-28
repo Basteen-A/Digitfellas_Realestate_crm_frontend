@@ -105,7 +105,7 @@ const computeBudget = (booking) => {
   return { totalValue, totalPaid, filteredCategories, categoryBuckets };
 };
 
-const emptyForm = { payment_type: '', payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' };
+const emptyForm = { payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' };
 
 const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onClose, onSaved }) => {
   const [booking, setBooking] = useState(null);
@@ -113,7 +113,6 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [paymentModeOptions, setPaymentModeOptions] = useState([]);
-  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [bankOptions, setBankOptions] = useState([]);
   const [payForm, setPayForm] = useState(emptyForm);
 
@@ -131,7 +130,6 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
         if (p) {
           setPayment(p);
           setPayForm({
-            payment_type: p.payment_type || '',
             payment_category: p.payment_category || '',
             payment_mode_id: p.payment_mode_id || '',
             payment_mode: p.payment_mode || '',
@@ -156,11 +154,9 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
-      setPaymentTypeOptions(payload.payment_types || []);
       setBankOptions(payload.banks || []);
     }).catch(() => {
       setPaymentModeOptions([]);
-      setPaymentTypeOptions([]);
       setBankOptions([]);
     });
   }, []);
@@ -171,7 +167,6 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
       toast.error('Please select what this payment is for (Plot, Stamp, Registration, Development, or MODT)');
       return;
     }
-    if (!payForm.payment_type) { toast.error('Please select a payment type'); return; }
     const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(payForm.payment_mode_id));
     const selectedModeName = selectedMode?.mode_name || payForm.payment_mode;
     if (!payForm.payment_mode_id || !selectedModeName) { toast.error('Please select a payment mode'); return; }
@@ -201,7 +196,7 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
   const { totalValue, totalPaid, filteredCategories, categoryBuckets } = computeBudget(booking || {});
   const statusBadge = badgeColors(booking?.status_color, '#1D4ED8');
 
-  const saveDisabled = saving || !payForm.amount || !payForm.payment_category || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()));
+  const saveDisabled = saving || !payForm.amount || !payForm.payment_category || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()));
   const statusLabel = payment?.is_verified ? 'verified' : payment?.is_bounced ? 'rejected' : payment?.is_refund ? 'a refund' : 'locked';
 
   return (
@@ -294,11 +289,6 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
                     ))}
                   </select>
                 </div>
-                <div className="bkd-form-group"><label className="bkd-form-label">Payment Type</label>
-                  <select className="bkd-form-control" value={payForm.payment_type} onChange={(e) => setPayForm((p) => ({ ...p, payment_type: e.target.value }))}>
-                    <option value="">Select payment type</option>
-                    {paymentTypeOptions.map((type) => <option key={type.id} value={type.type_name}>{type.type_name}</option>)}
-                  </select></div>
               </div>
               <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={(e) => setPayForm((p) => ({ ...p, remarks: e.target.value }))} /></div>
               {readOnly ? (

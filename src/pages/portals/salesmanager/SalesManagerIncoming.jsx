@@ -381,7 +381,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
          
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Incoming Leads</h1>
+            <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Incoming Leads</h1>
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>Accept and manage site visits handed over by Telecallers</p>
           </div>
         </div>

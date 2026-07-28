@@ -180,7 +180,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
     <div className="col-dashboard-new">
       {/* Page Header */}
       <div className="col-greeting-new">
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>
           {filter === 'unverified' ? 'Payment Verification' : filter === 'verified' ? 'Verified Payments' : 'Rejected Payments'}
         </h1>
         <p style={{ color: 'var(--col-text-secondary)', marginTop: 4, fontSize: '0.875rem' }}>
@@ -335,10 +335,6 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Payment Mode</span>
                 <span>{selected.payment_mode}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--col-text-secondary)' }}>Payment Type</span>
-                <span>{selected.payment_type}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Payment Date</span>

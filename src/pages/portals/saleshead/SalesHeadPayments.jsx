@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
-import paymentTypeApi from '../../../api/paymentTypeApi';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { CreditCardIcon, ClockIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -14,9 +13,8 @@ const SalesHeadPayments = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [paymentModal, setPaymentModal] = useState(false);
-  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [paymentForm, setPaymentForm] = useState({
-    payment_type: '', payment_mode: 'NEFT',
+    payment_mode: 'NEFT',
     amount: '', payment_date: '', account_name: '', remarks: '',
   });
 
@@ -34,21 +32,10 @@ const SalesHeadPayments = ({ user }) => {
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
 
-  useEffect(() => {
-    paymentTypeApi.getDropdown()
-      .then((resp) => {
-        const rows = resp.data?.data || resp.data || [];
-        setPaymentTypeOptions(rows);
-      })
-      .catch(() => {
-        setPaymentTypeOptions([]);
-      });
-  }, []);
-
   const openPaymentModal = (booking) => {
     setSelectedBooking(booking);
     setPaymentForm({
-      payment_type: paymentTypeOptions[0]?.type_name || '', payment_mode: 'NEFT',
+      payment_mode: 'NEFT',
       amount: '', payment_date: new Date().toISOString().split('T')[0],
       account_name: '', remarks: '',
     });
@@ -59,10 +46,6 @@ const SalesHeadPayments = ({ user }) => {
     e.preventDefault();
     if (!selectedBooking || !paymentForm.amount || !paymentForm.payment_date) {
       toast.error('Amount and date are required'); return;
-    }
-    if (!paymentForm.payment_type) {
-      toast.error('Payment type is required');
-      return;
     }
     try {
       await bookingApi.addPayment(selectedBooking.id, paymentForm);
@@ -182,13 +165,6 @@ const SalesHeadPayments = ({ user }) => {
                   <div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Balance Due</div><div style={{ fontWeight: 700, color: 'var(--accent-red)' }}>{formatCurrency(selectedBooking.total_due ?? (parseFloat(selectedBooking.net_amount || 0) - parseFloat(selectedBooking.total_paid || 0)))}</div></div>
                 </div>
                 <div className="col-form-grid">
-                  <div className="col-form-group">
-                    <label className="col-form-label">Payment Type *</label>
-                    <select className="col-form-select" value={paymentForm.payment_type} onChange={e => setPaymentForm(p => ({ ...p, payment_type: e.target.value }))}>
-                      <option value="">Select payment type</option>
-                      {paymentTypeOptions.map(t => <option key={t.id} value={t.type_name}>{t.type_name}</option>)}
-                    </select>
-                  </div>
                   <div className="col-form-group">
                     <label className="col-form-label">Payment Mode *</label>
                     <select className="col-form-select" value={paymentForm.payment_mode} onChange={e => setPaymentForm(p => ({ ...p, payment_mode: e.target.value }))}>

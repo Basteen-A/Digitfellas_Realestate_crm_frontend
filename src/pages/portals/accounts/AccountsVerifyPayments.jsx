@@ -194,7 +194,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
       {/* Page Header */}
       <div className="col-greeting-new" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>
             {normalizedFilter === 'unverified' ? 'Payment Verification'
               : normalizedFilter === 'verified' ? 'Verified Payments'
               : normalizedFilter === 'rejected' ? 'Rejected Payments'
@@ -356,10 +356,6 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Payment Mode</span>
                 <span className="acct-detail-value">{selected.payment_mode}</span>
-              </div>
-              <div className="acct-detail-item">
-                <span className="acct-detail-label">Payment Type</span>
-                <span className="acct-detail-value">{selected.payment_type}</span>
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Payment Date</span>

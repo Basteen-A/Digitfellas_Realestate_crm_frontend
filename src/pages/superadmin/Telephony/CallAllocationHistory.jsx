@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { FunnelIcon, ArrowPathIcon, MagnifyingGlassIcon, PhoneArrowDownLeftIcon } from '@heroicons/react/24/outline';
 import telephonyApi from '../../../api/telephonyApi';
-import marketingAllocationRuleApi from '../../../api/marketingAllocationRuleApi';
+import userApi from '../../../api/userApi';
 import leadSourceApi from '../../../api/leadSourceApi';
 import Pagination from '../../../components/common/Pagination';
 import RecordingCell from '../../../components/telephony/RecordingCell';
@@ -50,12 +50,14 @@ const CallAllocationHistory = () => {
   useEffect(() => {
     (async () => {
       try {
+        // Name/role-only picker list — the Collection Manager renders this same
+        // screen and is not allowed the admin-only allocation-rule endpoints.
         const [srcResp, tcResp] = await Promise.all([
           leadSourceApi.getDropdown(),
-          marketingAllocationRuleApi.getTelecallers(),
+          userApi.getDropdown(),
         ]);
         setSources(srcResp.data || []);
-        setTelecallers(tcResp.data || []);
+        setTelecallers((tcResp.data || []).filter((u) => u.userType?.short_code === 'TC'));
       } catch (err) {
         toast.error(getErrorMessage(err, 'Failed to load filter options'));
       }

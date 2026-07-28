@@ -204,7 +204,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [ciIdentityOpen, setCiIdentityOpen] = useState(false);
   const [ciTeamOpen, setCiTeamOpen] = useState(false);
   const [showDeleteBooking, setShowDeleteBooking] = useState(false);
-  const [payForm, setPayForm] = useState({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
+  const [payForm, setPayForm] = useState({ payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
   const [paySaving, setPaySaving] = useState(false);
   const [newStatusId, setNewStatusId] = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
@@ -215,7 +215,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [cancelRemarks, setCancelRemarks] = useState('');
   const [cancelVoice, setCancelVoice] = useState(null); // cancel remarks voice note
   const [paymentModeOptions, setPaymentModeOptions] = useState([]);
-  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [bankOptions, setBankOptions] = useState([]);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [paymentStatusId, setPaymentStatusId] = useState('');
@@ -385,11 +384,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
-      setPaymentTypeOptions(payload.payment_types || []);
       setBankOptions(payload.banks || []);
     }).catch(() => {
       setPaymentModeOptions([]);
-      setPaymentTypeOptions([]);
       setBankOptions([]);
     });
     loadPaymentPlans();
@@ -464,7 +461,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
     if (mode === 'pay') {
       setEditingPaymentId(null);
-      setPayForm({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
+      setPayForm({ payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
       return;
     }
     if (mode === 'devCost') {
@@ -510,10 +507,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       toast.error('Please select what this payment is for (Plot, Stamp, Registration, Development, or MODT)');
       return;
     }
-    if (!payForm.payment_type) {
-      toast.error('Please select a payment type');
-      return;
-    }
     const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(payForm.payment_mode_id));
     const selectedModeName = selectedMode?.mode_name || payForm.payment_mode;
     if (!payForm.payment_mode_id || !selectedModeName) {
@@ -535,7 +528,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         toast.success('Payment recorded');
       }
       closeActionModal();
-      setPayForm({ payment_type:'', payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
+      setPayForm({ payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
       loadBooking();
       loadActivities();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
@@ -551,7 +544,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     setEditingPaymentId(p.id);
     setActionMode('pay');
     setPayForm({
-      payment_type: p.payment_type || '',
       payment_category: p.payment_category || '',
       payment_mode_id: p.payment_mode_id || '',
       payment_mode: p.payment_mode || '',
@@ -1610,7 +1602,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <div style={{padding:30,textAlign:'center',color:'var(--text-muted,#9ca3af)',fontSize:13}}>No payments recorded yet</div>
           ) : (
             <table className="bkd-table"><thead><tr>
-              <th>Date</th><th>Paid For</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Type</th><th>Status</th><th>Actions</th>
+              <th>Date</th><th>Paid For</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Status</th><th>Actions</th>
             </tr></thead><tbody>
               {payments.map(p => {
                 const isRefund = !!p.is_refund;
@@ -1629,7 +1621,6 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <td>{p.payment_mode}</td>
                   <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
                   <td style={{fontSize:12}}>{p.bank_name || '—'}</td>
-                  <td style={{fontSize:12}}>{p.payment_type}</td>
                   <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
                     : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
                     : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
@@ -2061,17 +2052,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         ))}
                       </select>
                     </div>
-                    <div className="bkd-form-group"><label className="bkd-form-label">Payment Type</label>
-                      <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({...p, payment_type:e.target.value}))}>
-                        <option value="">Select payment type</option>
-                        {paymentTypeOptions.map((type) => <option key={type.id} value={type.type_name}>{type.type_name}</option>)}
-                      </select></div>
                   </div>
                   <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({...p, remarks:e.target.value}))}/></div>
                   <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
                     {paySaving ? 'Saving...' : (editingPaymentId ? 'Update Payment' : 'Submit Payment')}
                   </button>
                 </div>

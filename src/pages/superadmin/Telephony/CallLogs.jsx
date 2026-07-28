@@ -32,8 +32,10 @@ const leadName = (l) => (l ? `${l.first_name || ''} ${l.last_name || ''}`.trim()
 const EMPTY_FILTERS = { date_from: '', date_to: '', status: '', agent_user_id: '', search: '' };
 const LIVE_INTERVAL_MS = 20000;
 
-// Super Admin → Telephony → Call Logs. Every call captured from Tata Smartflo,
-// matched to a telecaller + lead, with recording playback and filters.
+// Telephony → Call Logs. Every call captured from Tata Smartflo, matched to a
+// telecaller + lead, with recording playback and filters. Rendered both under
+// Super Admin and inside the Collection Manager portal; the server scopes the
+// rows (org-wide for SA / ADM / COL, own-or-team for everyone else).
 const CallLogs = () => {
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -44,8 +46,10 @@ const CallLogs = () => {
   const [agents, setAgents] = useState([]);
   const [live, setLive] = useState(true);
 
+  // Name/role-only picker list — the Collection Manager renders this same screen
+  // and is not allowed the full admin user list.
   useEffect(() => {
-    userApi.getAll({ limit: 500, is_active: 'true' })
+    userApi.getDropdown()
       .then((resp) => setAgents((resp.data || []).filter((u) => AGENT_ROLES.includes(u.userType?.short_code))))
       .catch(() => {});
   }, []);

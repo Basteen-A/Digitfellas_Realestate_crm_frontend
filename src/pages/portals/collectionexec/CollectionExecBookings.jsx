@@ -122,7 +122,6 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
   const [statusOptions, setStatusOptions] = useState([]);
   const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
   const [paymentModeOptions, setPaymentModeOptions] = useState([]);
-  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [cancelReasons, setCancelReasons] = useState([]);
 
   // status form
@@ -141,7 +140,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
   const [payStatusSaving, setPayStatusSaving] = useState(false);
 
   // add payment form
-  const [payForm, setPayForm] = useState({ payment_type: '', payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+  const [payForm, setPayForm] = useState({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
   const [paySaving, setPaySaving] = useState(false);
 
   // mobile expansion
@@ -169,7 +168,6 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
-      setPaymentTypeOptions(payload.payment_types || []);
     }).catch(() => {});
   }, []);
 
@@ -231,7 +229,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
       setPaymentStatusId(booking?.payment_status_id || matched?.id || '');
       setFollowUpDate(''); setPayStatusRemarks('');
     } else if (mode === 'pay') {
-      setPayForm({ payment_type: '', payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
+      setPayForm({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', remarks: '' });
     }
   };
 
@@ -289,7 +287,6 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
     if (!activeBooking) return;
     if (!payForm.amount || parseFloat(payForm.amount) <= 0) { toast.error('Enter a valid amount'); return; }
     if (!payForm.payment_category) { toast.error('Select what this payment is for'); return; }
-    if (!payForm.payment_type) { toast.error('Select a payment type'); return; }
     const selMode = paymentModeOptions.find((m) => String(m.id) === String(payForm.payment_mode_id));
     const modeName = selMode?.mode_name || payForm.payment_mode;
     if (!payForm.payment_mode_id || !modeName) { toast.error('Select a payment mode'); return; }
@@ -881,15 +878,6 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                       <input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({ ...p, transaction_ref: e.target.value }))} />
                     </div>
                   </div>
-                  <div className="bkd-form-row">
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Payment Type *</label>
-                      <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({ ...p, payment_type: e.target.value }))}>
-                        <option value="">Select payment type</option>
-                        {paymentTypeOptions.map((type) => <option key={type.id} value={type.type_name}>{type.type_name}</option>)}
-                      </select>
-                    </div>
-                  </div>
                   <div className="bkd-form-group">
                     <label className="bkd-form-label">Remarks</label>
                     <textarea className="bkd-form-control" rows={2} placeholder="Remarks..." value={payForm.remarks} onChange={e => setPayForm(p => ({ ...p, remarks: e.target.value }))} />
@@ -897,7 +885,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                   <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
                     {paySaving ? 'Saving...' : 'Submit Payment'}
                   </button>
                 </div>

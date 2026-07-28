@@ -1182,7 +1182,7 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
 
 .page-header-left h1 {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0;
 }

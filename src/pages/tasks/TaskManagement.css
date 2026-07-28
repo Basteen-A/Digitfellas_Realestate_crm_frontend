@@ -10,7 +10,7 @@
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: 12px; flex-wrap: wrap;
 }
-.tm-header h1 { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; margin: 0; }
+.tm-header h1 { font-size: 22px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; margin: 0; }
 .tm-header p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
 
 .tm-btn {

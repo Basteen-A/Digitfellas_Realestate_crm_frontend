@@ -33,8 +33,10 @@ const KPI_CARDS = [
   { key: 'overdue', label: 'Overdue', sub: 'past due', icon: ExclamationTriangleIcon, variant: 'danger' },
 ];
 
-// Status / priority chips render exactly as they do on the task list screen:
-// the canonical badge-system text colour, with badgeStyle deriving bg + border.
+// Status renders exactly as it does on the task list screen: the canonical
+// badge-system text colour, with badgeStyle deriving bg + border. Priority is
+// deliberately NOT a chip — it sits as coloured text under the task title so a
+// row never shows two competing badge styles side by side.
 const Chip = ({ hex, children }) => (
   <span className="status-chip" style={{ ...badgeStyle(hex), textTransform: 'capitalize' }}>{children}</span>
 );
@@ -167,7 +169,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
             <div className="col-table-scroll-y">
               <table className="col-table-new">
                 <thead>
-                  <tr><th>Task</th><th>Priority</th><th>Status</th><th>Updated</th></tr>
+                  <tr><th>Task</th><th>Status</th><th>Updated</th></tr>
                 </thead>
                 <tbody>
                   {recent.map((t) => {
@@ -178,12 +180,11 @@ const TaskDashboard = ({ onOpenTasks }) => {
                         <td>
                           <div className="col-cell-primary">{t.title}</div>
                           <div className="col-cell-secondary">
+                            <span style={{ color: TASK_PRIORITY_TEXT[t.priority] || '#64748b', fontWeight: 500, textTransform: 'capitalize' }}>{t.priority}</span>
+                            {' · '}
                             {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'}
                             {note && ` · ${note}`}
                           </div>
-                        </td>
-                        <td>
-                          <Chip hex={TASK_PRIORITY_TEXT[t.priority] || '#64748b'}>{t.priority}</Chip>
                         </td>
                         <td>
                           <Chip hex={TASK_STATUS_TEXT[t.status] || '#64748b'}>{STATUS_LABELS[t.status] || t.status}</Chip>

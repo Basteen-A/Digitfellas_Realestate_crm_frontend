@@ -16,7 +16,7 @@
 .doc-mgmt__header h1 {
   margin: 0;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary, #0f172a);
 }
 

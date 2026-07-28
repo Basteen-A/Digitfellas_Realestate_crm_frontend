@@ -77,10 +77,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [cancelReasons, setCancelReasons] = useState([]);
   const [cancelRemarks, setCancelRemarks] = useState('');
   const [paymentModeOptions, setPaymentModeOptions] = useState([]);
-  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
   const [bankOptions, setBankOptions] = useState([]);
   // Payment form
-  const [payForm, setPayForm] = useState({ payment_type: '', payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
+  const [payForm, setPayForm] = useState({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
   const [paySaving, setPaySaving] = useState(false);
   // Payment status form
   const [paymentStatus, setPaymentStatus] = useState('');
@@ -212,11 +211,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
-      setPaymentTypeOptions(payload.payment_types || []);
       setBankOptions(payload.banks || []);
     }).catch(() => {
       setPaymentModeOptions([]);
-      setPaymentTypeOptions([]);
       setBankOptions([]);
     });
   }, []);
@@ -380,7 +377,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setNewStatusId(selectedStatusId);
     setStatusRemarks('');
     setCancelReasonId(''); setCancelRemarks('');
-    setPayForm({ payment_type: '', payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
+    setPayForm({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
     setPaymentStatus(booking.payment_status || '');
     const matched = paymentStatusOptions.find(p => p.status_name === booking.payment_status || p.status_code === booking.payment_status);
     setPaymentStatusId(booking.payment_status_id || matched?.id || '');
@@ -584,10 +581,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     if (!payForm.amount || parseFloat(payForm.amount) <= 0 || !drawerBooking) { toast.error('Enter valid amount'); return; }
     if (!payForm.payment_category) {
       toast.error('Please select what this payment is for (Plot, Stamp, Registration, Development, or MODT)');
-      return;
-    }
-    if (!payForm.payment_type) {
-      toast.error('Please select a payment type');
       return;
     }
     const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(payForm.payment_mode_id));
@@ -1410,13 +1403,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                         ))}
                       </select>
                     </div>
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Payment Type</label>
-                      <select className="bkd-form-control" value={payForm.payment_type} onChange={e => setPayForm(p => ({...p, payment_type:e.target.value}))}>
-                        <option value="">Select payment type</option>
-                        {paymentTypeOptions.map((type) => <option key={type.id} value={type.type_name}>{type.type_name}</option>)}
-                      </select>
-                    </div>
                   </div>
                   <div className="bkd-form-group">
                     <label className="bkd-form-label">Remarks</label>
@@ -1427,7 +1413,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   {renderActivityHistory()}
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
-                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_type || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
+                  <button className="qa-drawer-save-btn" disabled={paySaving || !payForm.amount || !payForm.payment_category || !payForm.payment_mode_id || (payForm.payment_mode !== 'Cash' && (!payForm.transaction_ref || !payForm.transaction_ref.trim()))} onClick={handleAddPayment}>
                     {paySaving ? 'Saving...' : 'Submit Payment'}
                   </button>
                 </div>

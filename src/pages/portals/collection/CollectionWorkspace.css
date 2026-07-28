@@ -1109,7 +1109,7 @@
 }
 .col-page-header-left h1 {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.3px;
   color: var(--text-primary, #111827);
 }
@@ -1679,7 +1679,7 @@
 .bkd-header-left { display:flex; align-items:center; gap:12px; }
 .bkd-back-btn { background:var(--col-surface,#fff); border:1px solid var(--col-border,#e5e7eb); border-radius:6px; padding:6px 8px; cursor:pointer; display:flex; align-items:center; }
 .bkd-back-btn:hover { background:var(--col-bg,#f4f5f9); }
-.bkd-title { font-size:20px; font-weight:700; letter-spacing:-0.3px; color:var(--col-text,#111827); line-height:1.2; }
+.bkd-title { font-size:20px; font-weight: 600; letter-spacing:-0.3px; color:var(--col-text,#111827); line-height:1.2; }
 .bkd-subtitle { font-size:13px; color:var(--col-text-secondary,#9ca3af); margin-top:2px; }
 .bkd-booking-badge-inline { display:inline-flex; align-items:center; vertical-align:middle; margin-left:8px; padding:2px 8px; border-radius:999px; background:#ecfdf5; color:#059669; font-size:11px; font-weight:700; border:1px solid #d1fae5; line-height:1; white-space:nowrap; }
 .bkd-header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }

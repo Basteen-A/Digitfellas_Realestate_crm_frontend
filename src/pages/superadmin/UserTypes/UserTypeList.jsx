@@ -1,7 +1,5 @@
-import React from 'react';
-import MasterCrudPage from '../common/MasterCrudPage';
-import { masterConfigs } from '../common/masterConfigs';
+// The Roles & Permissions screen. Kept at this filename so the existing route
+// (/super-admin/user-types) and its imports do not have to move.
+import RolePermissionsPage from './RolePermissionsPage';
 
-const UserTypeList = () => <MasterCrudPage config={masterConfigs.userTypes} />;
-
-export default UserTypeList;
+export default RolePermissionsPage;

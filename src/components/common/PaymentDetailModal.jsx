@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import bookingApi from '../../api/bookingApi';
-import paymentTypeApi from '../../api/paymentTypeApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
 import { CreditCardIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
@@ -34,16 +33,14 @@ const PaymentDetailModal = ({ payment, onClose, onSaved }) => {
   const editable = payment && !payment.is_verified && !payment.is_bounced;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [typeOptions, setTypeOptions] = useState([]);
   const [form, setForm] = useState({
-    payment_type: '', payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '',
+    payment_mode: 'NEFT', amount: '', payment_date: '', account_name: '', remarks: '',
   });
 
   useEffect(() => {
     if (!payment) return;
     setEditing(false);
     setForm({
-      payment_type: payment.payment_type || '',
       payment_mode: payment.payment_mode || 'NEFT',
       amount: payment.amount ?? '',
       payment_date: toDateInput(payment.payment_date),
@@ -52,18 +49,11 @@ const PaymentDetailModal = ({ payment, onClose, onSaved }) => {
     });
   }, [payment]);
 
-  useEffect(() => {
-    paymentTypeApi.getDropdown()
-      .then((resp) => setTypeOptions(resp.data?.data || resp.data || []))
-      .catch(() => setTypeOptions([]));
-  }, []);
-
   if (!payment) return null;
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.amount || !form.payment_date) { toast.error('Amount and date are required'); return; }
-    if (!form.payment_type) { toast.error('Payment type is required'); return; }
     setSaving(true);
     try {
       await bookingApi.updatePayment(payment.booking_id, payment.id, form);
@@ -94,7 +84,6 @@ const PaymentDetailModal = ({ payment, onClose, onSaved }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <Field label="Customer">{payment.customer_name || '—'}</Field>
                 <Field label="Booking">{payment.booking_number || '—'}</Field>
-                <Field label="Type">{payment.payment_type || '—'}</Field>
                 <Field label="Mode">{payment.payment_mode || '—'}</Field>
                 <Field label="Amount"><span style={{ color: 'var(--accent-green)' }}>{formatCurrency(payment.amount)}</span></Field>
                 <Field label="Date">{formatDate(payment.payment_date)}</Field>
@@ -121,13 +110,6 @@ const PaymentDetailModal = ({ payment, onClose, onSaved }) => {
           <form onSubmit={handleSave}>
             <div className="col-modal-body">
               <div className="col-form-grid">
-                <div className="col-form-group">
-                  <label className="col-form-label">Payment Type *</label>
-                  <select className="col-form-select" value={form.payment_type} onChange={(e) => setForm((p) => ({ ...p, payment_type: e.target.value }))}>
-                    <option value="">Select payment type</option>
-                    {typeOptions.map((t) => <option key={t.id} value={t.type_name}>{t.type_name}</option>)}
-                  </select>
-                </div>
                 <div className="col-form-group">
                   <label className="col-form-label">Payment Mode *</label>
                   <select className="col-form-select" value={form.payment_mode} onChange={(e) => setForm((p) => ({ ...p, payment_mode: e.target.value }))}>

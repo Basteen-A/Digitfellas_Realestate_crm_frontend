@@ -1,15 +1,18 @@
 // ============================================================
 // MARKETING METRIX › BUDGET ENTRY
 // The spend ledger every cost-per figure on this page divides by.
-// One line = Budget + Source + Sub Source + Date — the four fields the brief asks for.
+// One line = Budget + Source + Sub Source + a FROM/TO date range. The range is what the
+// leads and conversions are counted over, and the reports pro-rate the amount by day, so
+// a line that only partly overlaps the report window contributes only its share.
 //
 // Leaving Sub Source blank books the spend against the WHOLE source: it counts in the
 // source totals and shows under "Not specified" on the sub-source view, which is the
 // same bucket leads carrying no sub-source fall into — so spend and volume line up.
 //
-// The server refuses a second live line for the same source / sub-source / day, because
-// a duplicate silently doubles the spend and halves every cost-per metric. The conflict
-// comes back as a plain message, surfaced here as-is.
+// The server refuses a second live line whose period OVERLAPS an existing one for the
+// same source / sub-source, because overlapping spend is counted twice and skews every
+// cost-per metric while looking perfectly legitimate on screen. The conflict comes back
+// as a plain message naming the clashing period, surfaced here as-is.
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -43,7 +46,25 @@ const toInputDate = (v) => {
 
 const todayInput = () => toInputDate(new Date());
 
-const EMPTY_FORM = { id: null, lead_source_id: '', lead_sub_source_id: '', spend_date: '', amount: '', remarks: '' };
+const EMPTY_FORM = {
+  id: null, lead_source_id: '', lead_sub_source_id: '',
+  start_date: '', end_date: '', amount: '', remarks: '',
+};
+
+// Inclusive day count — the divisor the server pro-rates by, echoed in the form so the
+// per-day figure is visible before saving.
+const dayCount = (a, b) => {
+  if (!a || !b) return 0;
+  const days = Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000) + 1;
+  return days > 0 ? days : 0;
+};
+
+// "01 Sep 2026 – 30 Sep 2026", or just the one date when the period is a single day.
+const fmtPeriod = (a, b) => {
+  if (!a) return '—';
+  if (!b || a === b) return fmtDate(a);
+  return `${fmtDate(a)} – ${fmtDate(b)}`;
+};
 
 const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) => {
   const [rows, setRows] = useState([]);
@@ -87,7 +108,14 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
   }, [form.lead_source_id]);
 
   const openCreate = () => {
-    setForm({ ...EMPTY_FORM, lead_source_id: sourceId || '', spend_date: todayInput() });
+    // Default to the report's own window when one is set — that is almost always the
+    // period the spend being entered belongs to.
+    setForm({
+      ...EMPTY_FORM,
+      lead_source_id: sourceId || '',
+      start_date: toInputDate(from) || todayInput(),
+      end_date: toInputDate(to) || todayInput(),
+    });
     setModalOpen(true);
   };
 
@@ -96,7 +124,8 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
       id: row.id,
       lead_source_id: row.lead_source_id || '',
       lead_sub_source_id: row.lead_sub_source_id || '',
-      spend_date: toInputDate(row.spend_date),
+      start_date: toInputDate(row.start_date),
+      end_date: toInputDate(row.end_date),
       amount: String(row.amount ?? ''),
       remarks: row.remarks || '',
     });
@@ -107,7 +136,11 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
 
   const save = async () => {
     if (!form.lead_source_id) { toast.error('Pick a source'); return; }
-    if (!form.spend_date) { toast.error('Pick a date'); return; }
+    if (!form.start_date) { toast.error('Pick a From date'); return; }
+    if (!form.end_date) { toast.error('Pick a To date'); return; }
+    if (new Date(form.end_date) < new Date(form.start_date)) {
+      toast.error('To date cannot be before the From date'); return;
+    }
     const amount = Number(form.amount);
     if (!Number.isFinite(amount) || amount < 0) { toast.error('Enter a valid budget amount'); return; }
 
@@ -116,7 +149,8 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
       const payload = {
         lead_source_id: form.lead_source_id,
         lead_sub_source_id: form.lead_sub_source_id || null,
-        spend_date: form.spend_date,
+        start_date: form.start_date,
+        end_date: form.end_date,
         amount,
         remarks: form.remarks || null,
       };
@@ -134,7 +168,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
   };
 
   const remove = async (row) => {
-    const label = `${row.source_name || 'this source'}${row.sub_source_name ? ` › ${row.sub_source_name}` : ''} on ${fmtDate(row.spend_date)}`;
+    const label = `${row.source_name || 'this source'}${row.sub_source_name ? ` › ${row.sub_source_name}` : ''} for ${fmtPeriod(row.start_date, row.end_date)}`;
     if (!window.confirm(`Delete the ${money(row.amount)} budget for ${label}?`)) return;
     try {
       await marketingBudgetApi.delete(row.id);
@@ -164,23 +198,30 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
 
       <Card
         title="Budget Ledger"
-        sub="Spend recorded against a source / sub-source on a date"
+        sub="Spend recorded against a source / sub-source over a date range"
         right={`Total ${money(total)}`}
       >
         <Table
-          head={['Date', 'Source', 'Sub Source', 'Budget', 'Remarks', '']}
-          colSpan={6}
+          head={['Period', 'Days', 'Source', 'Sub Source', 'Budget', 'Per day', 'Remarks', '']}
+          colSpan={8}
           empty={!loading && rows.length === 0}
           emptyLabel="No budget recorded for this period. Add a line to start measuring cost per lead."
         >
           {rows.map((r) => (
             <Tr key={r.id}>
-              <Td bold>{fmtDate(r.spend_date)}</Td>
+              <Td bold>{fmtPeriod(r.start_date, r.end_date)}</Td>
+              <Td className="opacity-70">{r.day_count || dayCount(r.start_date, r.end_date) || '—'}</Td>
               <Td>{r.source_name || r.leadSource?.source_name || '—'}</Td>
               <Td className={r.lead_sub_source_id ? '' : 'opacity-60'}>
                 {r.sub_source_name || r.leadSubSource?.sub_source_name || 'Whole source'}
               </Td>
               <Td bold>{money(r.amount)}</Td>
+              <Td className="opacity-70">
+                {(() => {
+                  const d = r.day_count || dayCount(r.start_date, r.end_date);
+                  return d > 0 ? money((Number(r.amount) || 0) / d) : '—';
+                })()}
+              </Td>
               <Td className="opacity-70">{r.remarks || '—'}</Td>
               <Td className="whitespace-nowrap text-right">
                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(r)} title="Edit">
@@ -267,15 +308,42 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
                 </div>
               </div>
 
-              <div>
-                <label style={labelStyle} htmlFor="bg-date">Date</label>
-                <input
-                  id="bg-date"
-                  style={inputStyle}
-                  type="date"
-                  value={form.spend_date}
-                  onChange={(e) => setForm((f) => ({ ...f, spend_date: e.target.value }))}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={labelStyle} htmlFor="bg-from">From date</label>
+                  <input
+                    id="bg-from"
+                    style={inputStyle}
+                    type="date"
+                    value={form.start_date}
+                    onChange={(e) => setForm((f) => ({
+                      ...f,
+                      start_date: e.target.value,
+                      // Keep the range valid as you type rather than erroring on save.
+                      end_date: f.end_date && f.end_date < e.target.value ? e.target.value : f.end_date,
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle} htmlFor="bg-to">To date</label>
+                  <input
+                    id="bg-to"
+                    style={inputStyle}
+                    type="date"
+                    min={form.start_date || undefined}
+                    value={form.end_date}
+                    onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: 'var(--text-muted)', marginTop: -4 }}>
+                  {(() => {
+                    const d = dayCount(form.start_date, form.end_date);
+                    const amt = Number(form.amount) || 0;
+                    if (!d) return 'Leads and conversions are counted over this period.';
+                    const per = amt > 0 ? ` · ${money(amt / d)} per day` : '';
+                    return `${d} day${d === 1 ? '' : 's'}${per} — leads and conversions in this window are what the cost-per figures divide by.`;
+                  })()}
+                </div>
               </div>
 
               <div>

@@ -64,7 +64,7 @@ const CollectionOverdue = ({ user, onSelectBooking }) => {
   return (
     <div className="col-dashboard-new">
       <div className="col-greeting-new">
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ExclamationTriangleIcon style={{ width: 24, height: 24, color: '#dc2626' }} />
           Overdue Payments
         </h1>

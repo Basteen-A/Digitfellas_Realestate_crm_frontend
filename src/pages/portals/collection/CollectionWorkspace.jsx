@@ -9,6 +9,11 @@ import CollectionBookingDetail from './CollectionBookingDetail';
 import CollectionDemandSchedule from './CollectionDemandSchedule';
 import CollectionOverdue from './CollectionOverdue';
 import CollectionReports from './CollectionReports';
+// Telecalling floor — the same components Super Admin renders. The server decides
+// the scope; for COL that is org-wide, telecaller-only.
+import ReportsPage from '../../superadmin/Reports/ReportsPage';
+import CallLogs from '../../superadmin/Telephony/CallLogs';
+import CallAllocationHistory from '../../superadmin/Telephony/CallAllocationHistory';
 import { TaskListPage } from '../../tasks';
 import { collectionMenu } from '../../../components/layout/Sidebar/menuConfig';
 
@@ -101,6 +106,15 @@ const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelect
       )}
       {activeScreen === 'reports' && (
         <CollectionReports user={user} />
+      )}
+      {activeScreen === 'tc-reports' && (
+        <ReportsPage />
+      )}
+      {activeScreen === 'call-logs' && (
+        <CallLogs />
+      )}
+      {activeScreen === 'call-allocations' && (
+        <CallAllocationHistory />
       )}
       {activeScreen === 'tasks' && (
         <TaskListPage />
