@@ -74,9 +74,9 @@ const R = {
 const ROLE_REPORT_OVERRIDES = {
   TC: {
     svratio: {
-      title: 'Leads Sent to Sales',
-      sub: 'Handed off for a site visit ÷ Total leads',
-      rs: 'Sent to sales ÷ Total',
+      title: 'SV Done Ratio',
+      sub: 'SV Done ÷ Total leads',
+      rs: 'SV Done ÷ Total',
     },
   },
 };
@@ -498,34 +498,33 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
     }
     case 'svratio': {
       const r = d?.siteVisitRatio || {};
-      // A telecaller does not attend visits — for TC this metric counts the leads
-      // they HANDED OFF to Sales (server: svColumn(handoffSv)). Labelling that
-      // "Completed visits" made the number look wrong whenever a handoff had no
-      // visit yet, or when two telecallers each handed off one lead and the total
-      // read 2 against a single visit. Say what is actually being counted.
+      // TC "SV Done" and SM/SH "SV Completed" are DIFFERENT measures and are named
+      // differently on purpose. TC = leads the telecaller moved to SV Done and handed
+      // to Sales (leads.sv_done_date, never cleared, so the credit survives a later
+      // status change). SM/SH = visits their team actually completed. Do not merge them.
       const svIsHandoff = role === 'TC';
       return (
         <>
           <KpiRow>
             <KpiCard
-              label={svIsHandoff ? 'Leads Sent to Sales' : 'Total SV Done'}
+              label={svIsHandoff ? 'Total SV Done' : 'Total SV Completed'}
               value={num(f.siteVisits)}
-              sub={svIsHandoff ? 'Handed off for a site visit' : 'Completed visits'}
+              sub={svIsHandoff ? 'Moved to SV Done, credit is permanent' : 'Visits completed by this team'}
               color={COLORS.qualified}
               icon={BuildingOffice2Icon}
             />
             <KpiCard
-              label={svIsHandoff ? 'Handoff Ratio' : 'SV Ratio'}
+              label={svIsHandoff ? 'SV Done Ratio' : 'SV Completed Ratio'}
               value={`${r.pct || 0}%`}
-              sub={svIsHandoff ? 'Sent to sales ÷ Total leads' : 'SV ÷ Total leads'}
+              sub={svIsHandoff ? 'SV Done ÷ Total leads' : 'SV Completed ÷ Total leads'}
               color={COLORS.booking}
               icon={ScaleIcon}
             />
             <KpiCard label="Total Leads" value={num(f.totalLeads)} sub="Cohort size" color={COLORS.siteVisit} icon={UsersIcon} />
           </KpiRow>
-          <Card title={svIsHandoff ? 'Member Handoff Conversion' : 'Member Site Visit Conversion'}>
+          <Card title={svIsHandoff ? 'Member SV Done Conversion' : 'Member Site Visit Conversion'}>
             <Table
-              head={['Member', 'Total Leads', svIsHandoff ? 'Sent to Sales' : 'Site Visits', svIsHandoff ? 'Handoff Ratio' : 'SV Ratio', 'Progress']}
+              head={['Member', 'Total Leads', svIsHandoff ? 'SV Done' : 'SV Completed', svIsHandoff ? 'SV Done Ratio' : 'SV Completed Ratio', 'Progress']}
               colSpan={5}
               empty={lb.length === 0}
             >

@@ -108,7 +108,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
       <div className="page-header">
         <div className="page-header-left">
           <h1>{workspaceRole === 'TC' ? 'SV Leads' : (workspaceRole === 'SM' ? 'Negotiations' : 'Bookings')}</h1>
-          <p>{workspaceRole === 'TC' ? 'Leads you have handed off to Sales Managers.' : (workspaceRole === 'SM' ? 'Leads currently in negotiation phase.' : '')}</p>
+          <p>{workspaceRole === 'TC' ? 'Leads you moved to SV Done and handed to Sales. They stay listed here even after the status moves on.' : (workspaceRole === 'SM' ? 'Leads currently in negotiation phase.' : '')}</p>
         </div>
         <div className="page-header-right">
           <button

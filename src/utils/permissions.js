@@ -29,6 +29,7 @@ export const hasTaskPortalAccess = (user) => {
   if (!user) return false;
   const code = getRoleCode(user);
   if (code === 'SA' || code === 'ADM' || code === 'SE') return true;
+  if (holds(user, 'tasks', 'read')) return true;
   // Per-user grant: legacy task_portal_access OR the Organization Head tasks read/write grant.
   return user.taskPortalAccess === true || user.task_portal_access === true
     || user.tasksReadWrite === true || user.tasks_read_write === true;
@@ -36,31 +37,50 @@ export const hasTaskPortalAccess = (user) => {
 
 export const isTaskAdmin = (user) => ['SA', 'ADM'].includes(getRoleCode(user));
 
-// ── Per-module access grants (Organization Head). Helpers tolerate both the login
-// payload (camelCase) and the /auth/me payload (snake_case). Each = the base role
-// that always had access OR the matching grant. Mirrors server/src/utils/accessGrants.js.
+// ── Per-module access. Mirrors server/src/utils/accessGrants.js — and it MUST,
+// because these same predicates drive GrantRoute. When only the server copy was
+// made matrix-aware, a custom role granted Booking Approvals sailed past the API
+// and was still bounced to /dashboard by the client guard.
+//
+// Each = the base role that always had access, OR the role permission matrix, OR
+// the legacy per-user grant boolean (kept for sessions issued before the matrix).
 const hasGrant = (user, camel, snake) => user?.[camel] === true || user?.[snake] === true;
 
-// Reports — view all reports like a Super Admin (SA/ADM always; granted OH users too).
+// Level held on a module, straight off the auth payload's `permissions` map.
+const moduleLevelOf = (user, key) => user?.permissions?.[key] || 'none';
+const RANK = { none: 0, read: 1, write: 2, full: 3 };
+const holds = (user, key, required) => RANK[moduleLevelOf(user, key)] >= RANK[required];
+
+// Reports — view ALL reports like a Super Admin. Keyed to reports:'full', NOT
+// 'read': TC / SM / SH hold reports:'read' for their own self-service numbers and
+// must never satisfy this. Same split as the server.
 export const canViewAllReports = (user) => {
   const code = getRoleCode(user);
-  return code === 'SA' || code === 'ADM' || hasGrant(user, 'reportsAccess', 'reports_access');
+  return code === 'SA' || code === 'ADM'
+    || holds(user, 'reports', 'full')
+    || hasGrant(user, 'reportsAccess', 'reports_access');
 };
 
 // Tasks — All Access: see / edit / delete EVERY task.
 export const canManageAllTasks = (user) => {
   const code = getRoleCode(user);
-  return code === 'SA' || code === 'ADM' || hasGrant(user, 'tasksAllAccess', 'tasks_all_access');
+  return code === 'SA' || code === 'ADM'
+    || holds(user, 'tasks', 'full')
+    || hasGrant(user, 'tasksAllAccess', 'tasks_all_access');
 };
 
 // Booking Approval — view queue + approve/reject. SA-only by design (Admin cannot approve)
 // plus granted OH users.
 export const canAccessBookingApprovals = (user) =>
-  getRoleCode(user) === 'SA' || hasGrant(user, 'bookingApprovalReadWrite', 'booking_approval_read_write');
+  getRoleCode(user) === 'SA'
+  || holds(user, 'booking_approvals', 'read')
+  || hasGrant(user, 'bookingApprovalReadWrite', 'booking_approval_read_write');
 
 // Booking Approval — All Access: act on EVERY booking.
 export const canApproveAllBookings = (user) =>
-  getRoleCode(user) === 'SA' || hasGrant(user, 'bookingApprovalAllAccess', 'booking_approval_all_access');
+  getRoleCode(user) === 'SA'
+  || holds(user, 'booking_approvals', 'full')
+  || hasGrant(user, 'bookingApprovalAllAccess', 'booking_approval_all_access');
 
 export const isAdminLevel = (user) => hasAnyRole(user, ROLE_GROUPS.ADMIN_LEVEL);
 
