@@ -85,7 +85,7 @@ const FinanceCollections = () => {
         <Metric label="Total Value" value={formatCurrency(t.totalValue || 0)} />
         <Metric label="Received" value={formatCurrency(t.totalReceived || 0)} />
         <Metric label="Due" value={formatCurrency(t.totalDue || 0)} />
-        <Metric label="Refunds" value={formatCurrency(t.totalRefund || 0)} color="var(--accent-yellow)" />
+        <Metric label="Refunds" value={formatCurrency(t.totalRefund || 0)} />
         <Metric label="Received (period)" value={formatCurrency(t.receivedInPeriod || 0)} />
       </div>
 
