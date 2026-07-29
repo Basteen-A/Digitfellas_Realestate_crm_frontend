@@ -332,6 +332,16 @@ export const masterConfigs = {
         loadOptions: loadUserTypeOptions,
       },
       { name: 'employee_id', label: 'Employee ID' },
+      // Login ID — the credential people sign in with when the org allows it
+      // (Org Settings → Web login), and what the mobile app always uses.
+      // Free-form and unique; the server rejects a duplicate with a plain
+      // "already taken" message. Left blank on create, one is generated.
+      {
+        name: 'username',
+        label: 'Login ID',
+        placeholder: 'e.g. ambika.TC — leave blank to generate one',
+        helpText: 'Must be unique. Letters, numbers, dot, underscore and hyphen. This is what the user signs in with.',
+      },
       { name: 'first_name', label: 'First Name', required: true },
       { name: 'last_name', label: 'Last Name', required: true },
       { name: 'email', label: 'Email', type: 'email', required: true },

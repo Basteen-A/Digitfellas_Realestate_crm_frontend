@@ -14,13 +14,13 @@ const PERIODS = [
   { key: 'all', label: 'All Time' },
 ];
 
-const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
+const th = { padding: '10px 12px', fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)' };
 
-const Metric = ({ label, value, color }) => (
+const Metric = ({ label, value }) => (
   <div className="crm-card" style={{ padding: 16, minWidth: 140, flex: 1 }}>
-    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
-    <div style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--text-primary)', marginTop: 4 }}>{value}</div>
+    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, textTransform: 'uppercase' }}>{label}</div>
+    <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', marginTop: 4 }}>{value}</div>
   </div>
 );
 
@@ -82,15 +82,15 @@ const FinanceCollections = () => {
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <Metric label="Total Value" value={formatCurrency(t.totalValue || 0)} color="var(--accent-blue)" />
-        <Metric label="Received" value={formatCurrency(t.totalReceived || 0)} color="var(--accent-green)" />
-        <Metric label="Due" value={formatCurrency(t.totalDue || 0)} color="var(--accent-red)" />
+        <Metric label="Total Value" value={formatCurrency(t.totalValue || 0)} />
+        <Metric label="Received" value={formatCurrency(t.totalReceived || 0)} />
+        <Metric label="Due" value={formatCurrency(t.totalDue || 0)} />
         <Metric label="Refunds" value={formatCurrency(t.totalRefund || 0)} color="var(--accent-yellow)" />
-        <Metric label="Received (period)" value={formatCurrency(t.receivedInPeriod || 0)} color="var(--accent-green)" />
+        <Metric label="Received (period)" value={formatCurrency(t.receivedInPeriod || 0)} />
       </div>
 
       <div className="crm-card" style={{ overflowX: 'auto' }}>
-        <div style={{ padding: '12px 14px', fontWeight: 700, fontSize: 14, borderBottom: '1px solid var(--border-primary)' }}>By Project</div>
+        <div style={{ padding: '12px 14px', fontWeight: 500, fontSize: 14, borderBottom: '1px solid var(--border-primary)' }}>By Project</div>
         {loading ? (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
         ) : (
@@ -112,13 +112,13 @@ const FinanceCollections = () => {
                 const pct = value > 0 ? Math.round((Number(r.total_received || 0) / value) * 100) : 0;
                 return (
                   <tr key={i}>
-                    <td style={{ ...td, fontWeight: 600 }}>{r.project_name || '—'}</td>
+                    <td style={{ ...td, fontWeight: 500 }}>{r.project_name || '—'}</td>
                     <td style={td}>{r.booked_units || 0}/{r.total_units || 0}</td>
                     <td style={td}>{formatCurrency(value)}</td>
-                    <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(r.total_received || 0)}</td>
-                    <td style={{ ...td, color: 'var(--accent-red)' }}>{formatCurrency(dueOf(r))}</td>
+                    <td style={{ ...td, fontWeight: 500 }}>{formatCurrency(r.total_received || 0)}</td>
+                    <td style={td}>{formatCurrency(dueOf(r))}</td>
                     <td style={td}>{r.total_refund ? formatCurrency(r.total_refund) : '—'}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{pct}%</td>
+                    <td style={{ ...td, fontWeight: 500 }}>{pct}%</td>
                   </tr>
                 );
               })}

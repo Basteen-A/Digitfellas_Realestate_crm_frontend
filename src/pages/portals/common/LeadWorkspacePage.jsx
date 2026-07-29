@@ -2004,12 +2004,17 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     if (createOptionsLoading) return;
     setCreateOptionsLoading(true);
     try {
+      // Each dropdown is fetched independently. A plain Promise.all here meant a
+      // single 403 (e.g. no access to Customer Types) rejected the whole batch and
+      // left EVERY dropdown empty — the Location picker looked broken because an
+      // unrelated master call had failed. One missing list must not blank the form.
+      const settle = (p) => p.then((r) => r).catch(() => ({ data: [] }));
       const [pResp, ctResp, motResp, lResp, sResp] = await Promise.all([
-        projectApi.getDropdown(),
-        customerTypeApi.getDropdown(),
-        motivationApi.getDropdown(),
-        locationApi.getDropdown(),
-        leadSourceApi.getWithSubSources().catch(() => leadSourceApi.getDropdown()),
+        settle(projectApi.getDropdown()),
+        settle(customerTypeApi.getDropdown()),
+        settle(motivationApi.getDropdown()),
+        settle(locationApi.getDropdown()),
+        settle(leadSourceApi.getWithSubSources().catch(() => leadSourceApi.getDropdown())),
       ]);
       const projects = pResp.data || [];
       const customerTypes = ctResp.data || [];

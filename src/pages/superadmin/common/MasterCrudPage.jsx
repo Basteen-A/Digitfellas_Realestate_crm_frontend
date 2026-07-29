@@ -519,6 +519,11 @@ const MasterCrudPage = ({ config }) => {
           placeholder={field.placeholder}
           onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
         />
+        {field.helpText && (
+          <small style={{ display: 'block', marginTop: 4, fontSize: 11.5, color: 'var(--text-muted, #9ca3af)', fontWeight: 400 }}>
+            {field.helpText}
+          </small>
+        )}
       </label>
     );
   };
