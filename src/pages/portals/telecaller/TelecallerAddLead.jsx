@@ -9,6 +9,7 @@ import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatLocation } from '../../../utils/formatters';
 import CalendarPicker from '../../../components/common/CalendarPicker';
+import { followUpMaxDate, followUpLimitError } from '../../../utils/followUpLimits';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_STATUS_CODES = ['NEW', 'RNR', 'FOLLOW_UP', 'SV_SCHEDULED', 'LOST', 'JUNK', 'SPAM'];
@@ -138,6 +139,10 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
       if (!form.nextFollowUpAt) errors.push('Next follow up date is required');
       if (!form.callResult) errors.push('Call status is required');
     }
+    {
+      const capError = followUpLimitError(form.nextFollowUpAt, selectedStatusCode);
+      if (capError) errors.push(capError);
+    }
 
     if (needsRemark && !form.remark?.trim()) {
       errors.push('Notes & Remarks are required');
@@ -156,7 +161,7 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
         whatsappPhone,
       },
     };
-  }, [form, tcStatusNeedsFullDetails, isTerminalStatus, needsRemark]);
+  }, [form, tcStatusNeedsFullDetails, isTerminalStatus, needsRemark, selectedStatusCode]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -510,6 +515,7 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
                   onChange={(val) => setForm((p) => ({ ...p, nextFollowUpAt: val }))}
                   placeholder="Select Date..."
                   minDate={new Date().toISOString()}
+                  maxDate={followUpMaxDate(selectedStatusCode).toISOString()}
                 />
               </div>
 

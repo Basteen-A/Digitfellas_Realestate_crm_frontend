@@ -163,13 +163,13 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
 
   useEffect(() => { loadBooking(); loadDocuments(); loadActivities(); }, [loadBooking, loadDocuments, loadActivities]);
   useEffect(() => {
-    bookingStatusApi.getDropdown().then((r) => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
-    paymentStatusApi.getDropdown().then((r) => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => {});
-    bookingApi.getCancelReasons().then((r) => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
+    bookingStatusApi.getDropdown().then((r) => setStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    paymentStatusApi.getDropdown().then((r) => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    bookingApi.getCancelReasons().then((r) => setCancelReasons(r.data?.data || r.data || [])).catch(() => { });
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const refresh = () => { loadBooking(); loadActivities(); };
@@ -601,7 +601,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
                       <>
                         <div className="bkd-form-row">
                           <div className="bkd-form-group" style={{ flex: 1 }}>
-                            <label className="bkd-form-label">Payment For (Category) *</label>
+                            <label className="bkd-form-label">Payment Towards *</label>
                             <select className="bkd-form-control" value={payForm.payment_category}
                               onChange={e => setPayForm(p => ({ ...p, payment_category: e.target.value }))}>
                               <option value="">Select what this payment is for</option>

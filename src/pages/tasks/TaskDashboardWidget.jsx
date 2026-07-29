@@ -130,27 +130,32 @@ const TaskDashboardWidget = ({ onOpenTasks }) => {
             ) : (
               <div className="col-table-scroll">
                 <table className="col-table-new">
+                  {/* Rows mirror the Task List screen exactly: title in .lead-title with
+                      priority · creator · last remark inline underneath, and the status
+                      chip carrying the Overdue flag. Priority is therefore NOT its own
+                      column here — same as the Task List. */}
                   <thead>
-                    <tr><th>Task</th><th>Priority</th><th>Status</th><th>Updated</th></tr>
+                    <tr><th>Task</th><th>Status</th><th>Updated</th></tr>
                   </thead>
                   <tbody>
                     {recent.map((t) => {
                       const last = (t.remarks || [])[(t.remarks || []).length - 1];
-                      const note = last && last.content && last.content !== 'Task created.' ? `"${last.content}"` : '';
+                      const note = last && last.content && last.content !== 'Task created.' ? last.content : '';
                       return (
                         <tr key={t.id} className="col-clickable-row" onClick={() => setOpenTaskId(t.id)}>
                           <td>
-                            <div className="col-cell-primary">{t.title}</div>
-                            <div className="col-cell-secondary">
-                              {t.creator ? `${t.creator.first_name} ${t.creator.last_name || ''}` : '—'}
-                              {note && ` · ${note}`}
-                            </div>
+                            <p className="lead-title">{t.title}</p>
+                            <small style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                              <span style={{ color: TASK_PRIORITY_TEXT[t.priority] || '#64748b', fontWeight: 500, textTransform: 'capitalize' }}>{t.priority}</span>
+                              {t.creator && <span>· {`${t.creator.first_name || ''} ${t.creator.last_name || ''}`.trim()}</span>}
+                              {note && <span style={{ opacity: 0.85 }}>· “{note.length > 28 ? `${note.slice(0, 28)}…` : note}”</span>}
+                            </small>
                           </td>
-                          <td>
-                            <Chip hex={TASK_PRIORITY_TEXT[t.priority] || '#64748b'}>{t.priority}</Chip>
-                          </td>
-                          <td>
+                          <td className="lead-col-status">
                             <Chip hex={TASK_STATUS_TEXT[t.status] || '#64748b'}>{STATUS_LABELS[t.status] || t.status}</Chip>
+                            {t.is_overdue && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#dc2626' }}>Overdue</div>
+                            )}
                           </td>
                           <td className="col-cell-secondary" style={{ whiteSpace: 'nowrap' }}>{timeAgo(t.created_at)}</td>
                         </tr>

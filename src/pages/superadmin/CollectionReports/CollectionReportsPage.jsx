@@ -6,8 +6,13 @@
 //   2. Collection — Project wise   (how much came in, split by project)
 //   3. Outstanding — Item wise     (what is still owed, split by cost item)
 //   4. Outstanding — Project wise  (what is still owed, split by project + ageing)
-// One fetch (GET /reports/collection) feeds all four; switching reports is instant
+//   5. Overdue 90+ Days            (bookings past their payment due date by 90+ days)
+// One fetch (GET /reports/collection) feeds all five; switching reports is instant
 // and never re-hits the API.
+//
+// Reports 4 and 5 age the same balance on DIFFERENT axes, deliberately: report 4
+// ages from the BOOKING DATE, report 5 from the PAYMENT DUE DATE — which is the
+// collection follow-up date entered when a booking's payment status is updated.
 //
 // ── Two date dimensions, by design ──────────────────────────────────────────
 // COLLECTION blocks are anchored on the PAYMENT DATE — money that landed inside the
@@ -135,11 +140,17 @@ const CR = {
     sub: 'Balance still owed today, split by project, with ageing',
     rs: 'Dues by project',
   },
+  'overdue-90': {
+    icon: ExclamationTriangleIcon,
+    title: 'Overdue 90+ Days',
+    sub: 'Bookings whose payment due date passed more than 90 days ago',
+    rs: 'Critical overdue',
+  },
 };
 
 const GROUPS = [
   { label: 'Collection', keys: ['collection-item', 'collection-project'] },
-  { label: 'Outstanding', keys: ['outstanding-item', 'outstanding-project'] },
+  { label: 'Outstanding', keys: ['outstanding-item', 'outstanding-project', 'overdue-90'] },
 ];
 const FIRST_KEY = GROUPS[0].keys[0];
 
@@ -211,6 +222,16 @@ const AGE_COLS = [
   { key: 'b31_60', label: '31–60 days' },
   { key: 'b61_90', label: '61–90 days' },
   { key: 'b90p', label: '90+ days' },
+];
+
+// Overdue buckets are measured from the DUE DATE (the collection follow-up entered
+// on the last payment-status update) — a different axis from AGE_COLS above, which
+// measures from the booking date.
+const OVERDUE_COLS = [
+  { key: 'd0_30', label: '1–30 days' },
+  { key: 'd31_60', label: '31–60 days' },
+  { key: 'd61_90', label: '61–90 days' },
+  { key: 'd90p', label: '90+ days' },
 ];
 
 // ── report panels ────────────────────────────────────────────────────────────
@@ -702,6 +723,118 @@ const Panel = ({ rkey, d, registerRef }) => {
                   </Tr>
                 );
               })}
+            </Table>
+          </Card>
+        </>
+      );
+    }
+
+    // ── 5. Overdue 90+ Days ──
+    // Aged from the DUE DATE (bookings.next_follow_up_at — the follow-up the
+    // collection team commits to when updating a booking's payment status), not
+    // from the booking date. The shorter buckets sit alongside so the page shows
+    // what is heading toward 90 days, not just a bare count.
+    case 'overdue-90': {
+      const od = d?.overdue90 || {};
+      const s = od.summary || {};
+      const buckets = od.buckets || {};
+      const rows = od.rows || [];
+      const noDue = od.noDueDate || { bookings: 0, outstanding: 0 };
+      const threshold = od.thresholdDays || 90;
+      const share = pct(num(s.outstanding), num(s.overdue_outstanding_total));
+      const chart = OVERDUE_COLS.map((c) => ({
+        name: c.label,
+        outstanding: num(buckets[c.key]?.outstanding),
+      }));
+
+      return (
+        <>
+          <KpiRow>
+            <KpiCard label={`Overdue ${threshold}+ Days`} value={cnt(s.bookings)}
+              sub="Bookings past their due date by 90+ days" color={COLORS.cancelled} icon={ExclamationTriangleIcon} />
+            <KpiCard label="Amount at Risk" value={money(s.outstanding)}
+              sub={`${share}% of all past-due money`} color={COLORS.cancelled} icon={BanknotesIcon} valueSize={19} />
+            <KpiCard label="Oldest Overdue" value={s.oldest_days ? `${cnt(s.oldest_days)}d` : '—'}
+              sub="Longest a due date has been missed" color={COLORS.negotiation} icon={ClockIcon} />
+            <KpiCard label="All Past Due" value={cnt(s.overdue_bookings_total)}
+              sub={`${money(s.overdue_outstanding_total)} owed past due date`} color={COLORS.negotiation} icon={BuildingOffice2Icon} />
+          </KpiRow>
+
+          <Card title="Overdue Pipeline" sub="Outstanding balance by how long the due date has been missed">
+            <Table head={['Bucket', 'Bookings', 'Outstanding', 'Share']} colSpan={4} empty={false}>
+              {OVERDUE_COLS.map((c) => {
+                const b = buckets[c.key] || {};
+                const isCritical = c.key === 'd90p';
+                return (
+                  <Tr key={c.key}>
+                    <Td bold={isCritical} color={isCritical ? COLORS.cancelled : undefined}>{c.label}</Td>
+                    <Td>{cnt(b.bookings)}</Td>
+                    <Td bold={isCritical} color={isCritical ? COLORS.cancelled : undefined}>{money(b.outstanding)}</Td>
+                    <Td><Pill tone={isCritical ? 'bad' : 'neutral'}>{pct(num(b.outstanding), num(s.overdue_outstanding_total))}%</Pill></Td>
+                  </Tr>
+                );
+              })}
+              <TotalRow cells={[
+                cnt(s.overdue_bookings_total),
+                money(s.overdue_outstanding_total),
+                '100%',
+              ]} />
+              {noDue.bookings > 0 && (
+                <Tr>
+                  <Td color={COLORS.pending}>No due date set</Td>
+                  <Td>{cnt(noDue.bookings)}</Td>
+                  <Td>{money(noDue.outstanding)}</Td>
+                  <Td>—</Td>
+                </Tr>
+              )}
+            </Table>
+          </Card>
+
+          {chart.some((c) => c.outstanding !== 0) && (
+            <Card title="Overdue by Bucket" sub="Where the past-due money sits">
+              <SimpleBar data={chart} xKey="name"
+                bars={[{ key: 'outstanding', name: 'Outstanding', color: COLORS.cancelled }]} />
+            </Card>
+          )}
+
+          <Card
+            title={`Bookings Overdue by ${threshold}+ Days`}
+            sub="Due date missed by more than 90 days and still carrying a balance — the escalation list"
+            right={`${rows.length} booking${rows.length === 1 ? '' : 's'}`}
+          >
+            <Table
+              head={['Booking', 'Buyer', 'Project', 'Due Date', 'Days Overdue', 'Last Payment', 'Billed', 'Collected', 'Outstanding', 'Payment Status']}
+              colSpan={10}
+              empty={rows.length === 0}
+              emptyLabel={`No booking is more than ${threshold} days past its due date.`}
+            >
+              {rows.map((b) => (
+                <Tr key={b.booking_id}>
+                  <Td bold>{b.booking_number}</Td>
+                  <Td>{b.buyer_name}</Td>
+                  <Td>{b.project_name}</Td>
+                  <Td>{fmtDate(b.due_date)}</Td>
+                  <Td bold color={COLORS.cancelled}>{cnt(b.days_overdue)}d</Td>
+                  <Td>
+                    {b.last_payment_date
+                      ? `${fmtDate(b.last_payment_date)} (${cnt(b.days_since_payment)}d)`
+                      : 'Never'}
+                  </Td>
+                  <Td>{money(b.demand)}</Td>
+                  <Td color={COLORS.booking}>{money(b.collected)}</Td>
+                  <Td bold color={COLORS.cancelled}>{money(b.outstanding)}</Td>
+                  <Td>{b.payment_status || '—'}</Td>
+                </Tr>
+              ))}
+              {rows.length > 0 && (
+                <TotalRow cells={[
+                  '', '', '', '', '',
+                  money(sumBy(rows, 'demand')),
+                  money(sumBy(rows, 'collected')),
+                  money(sumBy(rows, 'outstanding')),
+                  '',
+                ]} />
+              )}
             </Table>
           </Card>
         </>

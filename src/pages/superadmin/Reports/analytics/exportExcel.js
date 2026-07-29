@@ -45,7 +45,10 @@ const BLOCKS = (role) => {
     { header: 'RNR', key: 'rnr' },
     { header: 'Unqualified', key: 'unqualified' },
     { header: 'Unassigned', key: 'unassigned' },
-    { header: 'Site Visits', key: 'site_visits' },
+    // Two SV Done columns, matching the on-screen cards: work done in the window
+    // vs the ratio's cohort-restricted numerator. See AnalyticsDashboard.
+    { header: 'SV Done in Period', key: 'site_visits_in_period' },
+    { header: "SV Done (This Period's Leads)", key: 'site_visits' },
     { header: 'Bookings', key: 'bookings' },
     { header: 'Calls', key: 'calls' },
     { header: 'Answered', key: 'calls_answered' },

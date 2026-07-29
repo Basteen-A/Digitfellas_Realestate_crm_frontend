@@ -226,77 +226,77 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
           <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
               <fieldset disabled={readOnly} style={{ border: 'none', margin: 0, padding: 0, minWidth: 0 }}>
-              {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
-              <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{readOnly ? 'Payment Details' : isEditing ? 'Edit Payment' : 'Record New Payment'}</div>
-              <div className="bkd-form-row">
-                <div className="bkd-form-group" style={{ flex: 1 }}>
-                  <label className="bkd-form-label">Payment For (Category) *</label>
-                  <select className="bkd-form-control" value={payForm.payment_category}
-                    onChange={(e) => setPayForm((p) => ({ ...p, payment_category: e.target.value }))}>
-                    <option value="">Select what this payment is for</option>
-                    {filteredCategories.map((cat) => {
-                      const bucket = categoryBuckets.find((b) => b.key === cat);
-                      const target = bucket?.target || 0;
-                      const paid = bucket?.paid || 0;
-                      const balance = Math.max(target - paid, 0);
-                      const suffix = target > 0
-                        ? ` — Balance ${formatCurrency(balance)}`
-                        : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
-                      return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
-                    })}
-                  </select>
-                </div>
-              </div>
-              {payForm.payment_category && (() => {
-                const bucket = categoryBuckets.find((b) => b.key === payForm.payment_category);
-                if (!bucket) return null;
-                const c = CATEGORY_COLORS[payForm.payment_category] || CATEGORY_COLORS.Other;
-                const balance = Math.max(bucket.target - bucket.paid, 0);
-                const pct = bucket.target > 0 ? Math.min(100, Math.round((bucket.paid / bucket.target) * 100)) : 0;
-                return (
-                  <div style={{ marginBottom: 12, padding: '10px 12px', background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, color: c.text, fontSize: 12, fontWeight: 600 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span>{categoryLabel(payForm.payment_category)}</span>
-                      <span>Target {formatCurrency(bucket.target)} · Paid {formatCurrency(bucket.paid)} · Balance {formatCurrency(balance)}</span>
-                    </div>
-                    <div style={{ height: 6, background: '#FFFFFF80', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: c.text, transition: 'width 0.3s' }} />
-                    </div>
+                {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
+                <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{readOnly ? 'Payment Details' : isEditing ? 'Edit Payment' : 'Record New Payment'}</div>
+                <div className="bkd-form-row">
+                  <div className="bkd-form-group" style={{ flex: 1 }}>
+                    <label className="bkd-form-label">Payment Towards *</label>
+                    <select className="bkd-form-control" value={payForm.payment_category}
+                      onChange={(e) => setPayForm((p) => ({ ...p, payment_category: e.target.value }))}>
+                      <option value="">Select what this payment is for</option>
+                      {filteredCategories.map((cat) => {
+                        const bucket = categoryBuckets.find((b) => b.key === cat);
+                        const target = bucket?.target || 0;
+                        const paid = bucket?.paid || 0;
+                        const balance = Math.max(target - paid, 0);
+                        const suffix = target > 0
+                          ? ` — Balance ${formatCurrency(balance)}`
+                          : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
+                        return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
+                      })}
+                    </select>
                   </div>
-                );
-              })()}
-              <div className="bkd-form-row">
-                <div className="bkd-form-group"><label className="bkd-form-label">Payment Date *</label><input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={(e) => setPayForm((p) => ({ ...p, payment_date: e.target.value }))} /></div>
-                <div className="bkd-form-group"><label className="bkd-form-label">Amount (₹) *</label><input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} /></div>
-              </div>
-              <div className="bkd-form-row">
-                <div className="bkd-form-group"><label className="bkd-form-label">Payment Mode *</label>
-                  <select className="bkd-form-control" value={payForm.payment_mode_id} onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(selectedId));
-                    setPayForm((p) => ({ ...p, payment_mode_id: selectedId, payment_mode: selectedMode?.mode_name || '' }));
-                  }}>
-                    <option value="">Select payment mode</option>
-                    {paymentModeOptions.map((mode) => <option key={mode.id} value={mode.id}>{mode.mode_name}</option>)}
-                  </select></div>
-                <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={(e) => setPayForm((p) => ({ ...p, transaction_ref: e.target.value }))} /></div>
-              </div>
-              <div className="bkd-form-row">
-                <div className="bkd-form-group"><label className="bkd-form-label">Company Bank</label>
-                  <select className="bkd-form-control" value={payForm.bank_id || ''} onChange={(e) => setPayForm((p) => ({ ...p, bank_id: e.target.value }))}>
-                    <option value="">Select bank</option>
-                    {bankOptions.map((bank) => (
-                      <option key={bank.id} value={bank.id}>{bank.bank_name} - {bank.account_number}</option>
-                    ))}
-                  </select>
                 </div>
-              </div>
-              <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={(e) => setPayForm((p) => ({ ...p, remarks: e.target.value }))} /></div>
-              {readOnly ? (
-                <div className="bkd-info-banner">This payment is {statusLabel} and can no longer be edited.</div>
-              ) : (
-                <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
-              )}
+                {payForm.payment_category && (() => {
+                  const bucket = categoryBuckets.find((b) => b.key === payForm.payment_category);
+                  if (!bucket) return null;
+                  const c = CATEGORY_COLORS[payForm.payment_category] || CATEGORY_COLORS.Other;
+                  const balance = Math.max(bucket.target - bucket.paid, 0);
+                  const pct = bucket.target > 0 ? Math.min(100, Math.round((bucket.paid / bucket.target) * 100)) : 0;
+                  return (
+                    <div style={{ marginBottom: 12, padding: '10px 12px', background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, color: c.text, fontSize: 12, fontWeight: 600 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span>{categoryLabel(payForm.payment_category)}</span>
+                        <span>Target {formatCurrency(bucket.target)} · Paid {formatCurrency(bucket.paid)} · Balance {formatCurrency(balance)}</span>
+                      </div>
+                      <div style={{ height: 6, background: '#FFFFFF80', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: c.text, transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="bkd-form-row">
+                  <div className="bkd-form-group"><label className="bkd-form-label">Payment Date *</label><input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={(e) => setPayForm((p) => ({ ...p, payment_date: e.target.value }))} /></div>
+                  <div className="bkd-form-group"><label className="bkd-form-label">Amount (₹) *</label><input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} /></div>
+                </div>
+                <div className="bkd-form-row">
+                  <div className="bkd-form-group"><label className="bkd-form-label">Payment Mode *</label>
+                    <select className="bkd-form-control" value={payForm.payment_mode_id} onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedMode = paymentModeOptions.find((mode) => String(mode.id) === String(selectedId));
+                      setPayForm((p) => ({ ...p, payment_mode_id: selectedId, payment_mode: selectedMode?.mode_name || '' }));
+                    }}>
+                      <option value="">Select payment mode</option>
+                      {paymentModeOptions.map((mode) => <option key={mode.id} value={mode.id}>{mode.mode_name}</option>)}
+                    </select></div>
+                  <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={(e) => setPayForm((p) => ({ ...p, transaction_ref: e.target.value }))} /></div>
+                </div>
+                <div className="bkd-form-row">
+                  <div className="bkd-form-group"><label className="bkd-form-label">Company Bank</label>
+                    <select className="bkd-form-control" value={payForm.bank_id || ''} onChange={(e) => setPayForm((p) => ({ ...p, bank_id: e.target.value }))}>
+                      <option value="">Select bank</option>
+                      {bankOptions.map((bank) => (
+                        <option key={bank.id} value={bank.id}>{bank.bank_name} - {bank.account_number}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={(e) => setPayForm((p) => ({ ...p, remarks: e.target.value }))} /></div>
+                {readOnly ? (
+                  <div className="bkd-info-banner">This payment is {statusLabel} and can no longer be edited.</div>
+                ) : (
+                  <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
+                )}
               </fieldset>
             </div>
             <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>

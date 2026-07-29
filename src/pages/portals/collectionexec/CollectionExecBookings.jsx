@@ -162,13 +162,13 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
   useEffect(() => { loadBookings(); }, [loadBookings]);
 
   useEffect(() => {
-    bookingStatusApi.getDropdown().then((r) => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
-    paymentStatusApi.getDropdown().then((r) => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => {});
-    bookingApi.getCancelReasons().then((r) => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
+    bookingStatusApi.getDropdown().then((r) => setStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    paymentStatusApi.getDropdown().then((r) => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    bookingApi.getCancelReasons().then((r) => setCancelReasons(r.data?.data || r.data || [])).catch(() => { });
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const projects = useMemo(() => {
@@ -362,7 +362,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
             placeholder="Search by booking number, buyer, project or unit"
           />
         </div>
-        
+
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, order: 2 }}>
           <div style={{ position: 'relative' }} ref={projectFilterRef}>
             <button
@@ -805,7 +805,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                       <>
                         <div className="bkd-form-row">
                           <div className="bkd-form-group" style={{ flex: 1 }}>
-                            <label className="bkd-form-label">Payment For (Category) *</label>
+                            <label className="bkd-form-label">Payment Towards *</label>
                             <select className="bkd-form-control" value={payForm.payment_category}
                               onChange={e => setPayForm(p => ({ ...p, payment_category: e.target.value }))}>
                               <option value="">Select what this payment is for</option>

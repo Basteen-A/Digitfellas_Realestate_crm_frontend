@@ -205,9 +205,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     }
   };
   useEffect(() => {
-    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => {});
-    paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => {});
-    bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
+    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => { });
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
@@ -387,7 +387,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
     // Load activities
     setActivitiesLoading(true);
-    bookingApi.getActivities(booking.id).then(r => setActivities(r.data?.data || r.data || [])).catch(() => {}).finally(() => setActivitiesLoading(false));
+    bookingApi.getActivities(booking.id).then(r => setActivities(r.data?.data || r.data || [])).catch(() => { }).finally(() => setActivitiesLoading(false));
   };
   const closeDrawer = () => { setDrawerBooking(null); setDrawerMode(null); setActivities([]); };
 
@@ -547,7 +547,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
 
   const handlePaymentStatusUpdate = async () => {
     if (!paymentStatus || !drawerBooking) return;
-    
+
     const sel = paymentStatusOptions.find(p => p.id === paymentStatusId);
     const needsFollowup = sel ? sel.needs_followup : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
     const needsRemarks = sel ? sel.needs_remarks : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
@@ -635,17 +635,17 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                   background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
-                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
+                      act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' : '#6B728022',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
-                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
+                      act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' : '#6B7280',
                   fontSize: 12, fontWeight: 700,
                 }}>
                   {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
+                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
+                      act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
+                        act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
@@ -688,7 +688,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             placeholder="Search bookings by number, customer, project or unit"
           />
         </div>
-        
+
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, order: 2 }}>
           <div style={{ position: 'relative' }} ref={projectFilterRef}>
             <button
@@ -853,12 +853,13 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                       ? new Date(booking.next_follow_up_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                       : '—';
                     const paymentBadge = booking.payment_status ? (
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
                         background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
                         color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
                       }}>{booking.payment_status}</span>
                     ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>;
-                    
+
                     const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
                     const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
                     const displayStatusColor = isCancelApproved ? '#C2410C' : booking.status_color;
@@ -1256,24 +1257,24 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     return (
                       <div style={{ marginTop: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
                         {isFullPayment && (
-                          <div style={{background:'#DCFCE7',border:'1px solid #BBF7D0',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#166534'}}>
+                          <div style={{ background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: '#166534' }}>
                             <strong>✓ Full Payment:</strong> Booking will be auto-registered and the unit will be marked as <strong>Sold</strong>.
                           </div>
                         )}
                         {isRegScheduled && (
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
+                          <div className="bkd-form-group" style={{ marginBottom: 10 }}>
                             <label className="bkd-form-label">Registration Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusRegDate} onChange={e => setPayStatusRegDate(e.target.value)} />
                           </div>
                         )}
                         {isPaymentDateReq && (
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
+                          <div className="bkd-form-group" style={{ marginBottom: 10 }}>
                             <label className="bkd-form-label">Payment Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusPaymentDate} onChange={e => setPayStatusPaymentDate(e.target.value)} />
                           </div>
                         )}
                         {needsFollowup && (
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
+                          <div className="bkd-form-group" style={{ marginBottom: 10 }}>
                             <label className="bkd-form-label">Next Follow-Up Date *</label>
                             <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
                           </div>
@@ -1291,8 +1292,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   {/* Current follow-up info */}
                   {drawerBooking.next_follow_up_at && (
                     <div style={{ marginTop: 12, padding: '8px 12px', background: '#FEF3C7', borderRadius: 8, fontSize: 12, color: '#92400E', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <CalendarDaysIcon style={{width:14,height:14}} />
-                      Current follow-up: <strong>{new Date(drawerBooking.next_follow_up_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</strong>
+                      <CalendarDaysIcon style={{ width: 14, height: 14 }} />
+                      Current follow-up: <strong>{new Date(drawerBooking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
                       {drawerBooking.custom_fields?.last_payment_remarks && <span> · {drawerBooking.custom_fields.last_payment_remarks}</span>}
                     </div>
                   )}
@@ -1320,7 +1321,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                       <>
                         <div className="bkd-form-row">
                           <div className="bkd-form-group" style={{ flex: 1 }}>
-                            <label className="bkd-form-label">Payment For (Category) *</label>
+                            <label className="bkd-form-label">Payment Towards *</label>
                             <select className="bkd-form-control" value={payForm.payment_category}
                               onChange={e => setPayForm(p => ({ ...p, payment_category: e.target.value }))}>
                               <option value="">Select what this payment is for</option>
@@ -1367,11 +1368,11 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   <div className="bkd-form-row">
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Payment Date *</label>
-                      <input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={e => setPayForm(p => ({...p, payment_date:e.target.value}))}/>
+                      <input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} />
                     </div>
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Amount (₹) *</label>
-                      <input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={e => setPayForm(p => ({...p, amount:e.target.value}))}/>
+                      <input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} />
                     </div>
                   </div>
                   <div className="bkd-form-row">
@@ -1388,7 +1389,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     </div>
                     <div className="bkd-form-group">
                       <label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label>
-                      <input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/>
+                      <input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({ ...p, transaction_ref: e.target.value }))} />
                     </div>
                   </div>
                   <div className="bkd-form-row">
@@ -1406,7 +1407,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   </div>
                   <div className="bkd-form-group">
                     <label className="bkd-form-label">Remarks</label>
-                    <textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({...p, remarks:e.target.value}))}/>
+                    <textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({ ...p, remarks: e.target.value }))} />
                   </div>
                   <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
 
@@ -1505,135 +1506,135 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             {workflowMode === 'confirmCancel' && (() => {
               const totalPaidAmt = parseFloat(workflowBooking?.total_paid || 0);
               return (
-              <div style={{ padding: '16px 20px' }}>
-                <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 16, marginBottom: 16, fontSize: 13 }}>
-                  <strong>⚠ Confirm Cancellation</strong>
-                  <p style={{ margin: '8px 0 0', color: '#991B1B' }}>SH has approved this cancellation. This action is permanent: the booking is cancelled, the unit is released back to <strong>Available</strong>, and the lead is moved to <strong>Lost</strong>.</p>
-                </div>
+                <div style={{ padding: '16px 20px' }}>
+                  <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 16, marginBottom: 16, fontSize: 13 }}>
+                    <strong>⚠ Confirm Cancellation</strong>
+                    <p style={{ margin: '8px 0 0', color: '#991B1B' }}>SH has approved this cancellation. This action is permanent: the booking is cancelled, the unit is released back to <strong>Available</strong>, and the lead is moved to <strong>Lost</strong>.</p>
+                  </div>
 
-                <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Total Collected</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaidAmt)}</strong>
+                  <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Total Collected</span>
+                      <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(totalPaidAmt)}</strong>
+                    </div>
                   </div>
-                </div>
 
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
-                  Refund (required — must equal total collected amount)
-                </div>
-                <div className="bkd-form-row">
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Amount (₹)</label>
-                    <input type="number" min="0" max={totalPaidAmt} className="bkd-form-control"
-                      placeholder={`Up to ${formatCurrency(totalPaidAmt)}`}
-                      value={cancelRefundForm.refund_amount}
-                      onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+                    Refund (required — must equal total collected amount)
+                  </div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Amount (₹)</label>
+                      <input type="number" min="0" max={totalPaidAmt} className="bkd-form-control"
+                        placeholder={`Up to ${formatCurrency(totalPaidAmt)}`}
+                        value={cancelRefundForm.refund_amount}
+                        onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Date</label>
+                      <input type="date" className="bkd-form-control"
+                        value={cancelRefundForm.refund_date}
+                        onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Mode</label>
+                      <select className="bkd-form-control" value={cancelRefundForm.refund_mode_id}
+                        onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
+                        <option value="">Select mode</option>
+                        {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
+                      </select>
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Reference / UTR</label>
+                      <input className="bkd-form-control" placeholder="e.g. UTR123456"
+                        value={cancelRefundForm.refund_reference}
+                        onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
+                    </div>
                   </div>
                   <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Date</label>
-                    <input type="date" className="bkd-form-control"
-                      value={cancelRefundForm.refund_date}
-                      onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
+                    <label className="bkd-form-label">Remarks</label>
+                    <textarea rows={2} className="bkd-form-control"
+                      placeholder="Refund details..."
+                      value={cancelRefundForm.refund_remarks}
+                      onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
                   </div>
-                </div>
-                <div className="bkd-form-row">
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Mode</label>
-                    <select className="bkd-form-control" value={cancelRefundForm.refund_mode_id}
-                      onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
-                      <option value="">Select mode</option>
-                      {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
-                    </select>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>
+                    Refund is operator-entered. It is subtracted from collected balance — never auto-derived from plot value.
                   </div>
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Reference / UTR</label>
-                    <input className="bkd-form-control" placeholder="e.g. UTR123456"
-                      value={cancelRefundForm.refund_reference}
-                      onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
-                  </div>
-                </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Remarks</label>
-                  <textarea rows={2} className="bkd-form-control"
-                    placeholder="Refund details..."
-                    value={cancelRefundForm.refund_remarks}
-                    onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>
-                  Refund is operator-entered. It is subtracted from collected balance — never auto-derived from plot value.
-                </div>
 
-                <div className="qa-drawer-save-row">
-                  <button className="qa-drawer-save-btn" style={{ background: '#DC2626' }} disabled={confirmCancelSaving} onClick={handleConfirmCancel}>
-                    {confirmCancelSaving ? 'Processing...' : 'Confirm Cancel Booking'}
-                  </button>
+                  <div className="qa-drawer-save-row">
+                    <button className="qa-drawer-save-btn" style={{ background: '#DC2626' }} disabled={confirmCancelSaving} onClick={handleConfirmCancel}>
+                      {confirmCancelSaving ? 'Processing...' : 'Confirm Cancel Booking'}
+                    </button>
+                  </div>
                 </div>
-              </div>
               );
             })()}
 
             {workflowMode === 'refund' && (() => {
               const refundable = parseFloat(workflowBooking?.refundable_amount ?? workflowBooking?.total_paid ?? 0);
               return (
-              <div style={{ padding: '16px 20px' }}>
-                <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
-                  <strong>Record Refund Payment</strong>
-                  <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
-                </div>
+                <div style={{ padding: '16px 20px' }}>
+                  <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
+                    <strong>Record Refund Payment</strong>
+                    <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
+                  </div>
 
-                <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Verified collected (refundable)</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundable)}</strong>
+                  <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Verified collected (refundable)</span>
+                      <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundable)}</strong>
+                    </div>
                   </div>
-                </div>
 
-                <div className="bkd-form-row">
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Amount (₹) *</label>
-                    <input type="number" min="0" max={refundable} className="bkd-form-control"
-                      placeholder={`Up to ${formatCurrency(refundable)}`}
-                      value={refundForm.refund_amount}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Amount (₹) *</label>
+                      <input type="number" min="0" max={refundable} className="bkd-form-control"
+                        placeholder={`Up to ${formatCurrency(refundable)}`}
+                        value={refundForm.refund_amount}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Date</label>
+                      <input type="date" className="bkd-form-control"
+                        value={refundForm.refund_date}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Mode *</label>
+                      <select className="bkd-form-control" value={refundForm.refund_mode_id}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
+                        <option value="">Select mode</option>
+                        {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
+                      </select>
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Reference / UTR</label>
+                      <input className="bkd-form-control" placeholder="e.g. UTR123456"
+                        value={refundForm.refund_reference}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
+                    </div>
                   </div>
                   <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Date</label>
-                    <input type="date" className="bkd-form-control"
-                      value={refundForm.refund_date}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
+                    <label className="bkd-form-label">Remarks</label>
+                    <textarea rows={2} className="bkd-form-control"
+                      value={refundForm.refund_remarks}
+                      onChange={(e) => setRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
                   </div>
-                </div>
-                <div className="bkd-form-row">
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Mode *</label>
-                    <select className="bkd-form-control" value={refundForm.refund_mode_id}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
-                      <option value="">Select mode</option>
-                      {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Reference / UTR</label>
-                    <input className="bkd-form-control" placeholder="e.g. UTR123456"
-                      value={refundForm.refund_reference}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
-                  </div>
-                </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Remarks</label>
-                  <textarea rows={2} className="bkd-form-control"
-                    value={refundForm.refund_remarks}
-                    onChange={(e) => setRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
-                </div>
 
-                <div className="qa-drawer-save-row">
-                  <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
-                    disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0}
-                    onClick={handleProcessRefund}>
-                    {refundSaving ? 'Recording...' : 'Record Refund'}
-                  </button>
+                  <div className="qa-drawer-save-row">
+                    <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
+                      disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0}
+                      onClick={handleProcessRefund}>
+                      {refundSaving ? 'Recording...' : 'Record Refund'}
+                    </button>
+                  </div>
                 </div>
-              </div>
               );
             })()}
           </div>

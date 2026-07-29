@@ -55,6 +55,7 @@ import {
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import { canUseVoiceNotes } from '../../../utils/voiceNotes';
+import { followUpMaxDate, followUpLimitError } from '../../../utils/followUpLimits';
 import './LeadDetailsPage.css';
 
 const QUICK_REMARKS = [
@@ -888,6 +889,11 @@ const LeadDetailsPage = () => {
         toast.error('Follow-up date is required');
         return;
       }
+      const actionCapError = followUpLimitError(
+        actionForm.nextFollowUpAt,
+        selectedAction?.targetStatusCode || lead?.statusCode
+      );
+      if (actionCapError) { toast.error(actionCapError); return; }
       payload.nextFollowUpAt = new Date(actionForm.nextFollowUpAt).toISOString();
     }
 
@@ -1091,6 +1097,8 @@ const LeadDetailsPage = () => {
       toast.error('Follow-up date cannot be in the past');
       return;
     }
+    const quickCapError = followUpLimitError(quickActionForm.nextFollowUpAt, quickSelectedAction?.targetStatusCode || lead?.statusCode);
+    if (quickCapError) { toast.error(quickCapError); return; }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
       const pF = customerProfileForm;
@@ -1703,6 +1711,7 @@ const LeadDetailsPage = () => {
                               onChange={(val) => setActionForm((p) => ({ ...p, nextFollowUpAt: val || '' }))}
                               placeholder="Select Date..."
                               minDate={getFollowUpMinimumTime().toISOString()}
+                              maxDate={followUpMaxDate(selectedAction?.targetStatusCode || lead?.statusCode).toISOString()}
                             />
                             <div className="qa-remarks-wrap" style={{ marginTop: 8 }}>
                               <button type="button" className="qa-remark-chip" onClick={() => setActionForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0) }))}>Today</button>
@@ -2620,6 +2629,7 @@ const LeadDetailsPage = () => {
                         type="date"
                         value={quickActionForm.nextFollowUpAt}
                         onChange={(val) => setQuickActionForm((p) => ({ ...p, nextFollowUpAt: val }))}
+                        maxDate={followUpMaxDate(quickSelectedAction?.targetStatusCode || lead?.statusCode).toISOString()}
                         placeholder="Select follow-up date..."
                         minDate={new Date().toISOString()}
                       />

@@ -506,30 +506,56 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
       return (
         <>
           <KpiRow>
+            {/* TC carries TWO SV Done numbers and they are different on purpose:
+                "SV Done in period" is the work actually done in the window (any
+                lead, whenever created) and is what the SV Leads page and the
+                Leaderboard show; "From this period's leads" is the ratio's
+                numerator, restricted to the same cohort as Total Leads so the
+                percentage stays meaningful. Showing only the second one hid SV
+                Done earned on older leads. */}
+            {svIsHandoff && (
+              <KpiCard
+                label="SV Done in period"
+                value={num(f.siteVisitsInPeriod)}
+                sub="Visits done in this window (any lead)"
+                color={COLORS.qualified}
+                icon={BuildingOffice2Icon}
+              />
+            )}
             <KpiCard
-              label={svIsHandoff ? 'Total SV Done' : 'Total SV Completed'}
+              label={svIsHandoff ? "From this period's leads" : 'Total SV Completed'}
               value={num(f.siteVisits)}
-              sub={svIsHandoff ? 'Moved to SV Done, credit is permanent' : 'Visits completed by this team'}
-              color={COLORS.qualified}
+              sub={svIsHandoff ? 'Converted from the leads below' : 'Visits completed by this team'}
+              color={svIsHandoff ? COLORS.siteVisit : COLORS.qualified}
               icon={BuildingOffice2Icon}
             />
             <KpiCard
               label={svIsHandoff ? 'SV Done Ratio' : 'SV Completed Ratio'}
               value={`${r.pct || 0}%`}
-              sub={svIsHandoff ? 'SV Done ÷ Total leads' : 'SV Completed ÷ Total leads'}
+              sub={svIsHandoff ? "This period's leads ÷ Total leads" : 'SV Completed ÷ Total leads'}
               color={COLORS.booking}
               icon={ScaleIcon}
             />
-            <KpiCard label="Total Leads" value={num(f.totalLeads)} sub="Cohort size" color={COLORS.siteVisit} icon={UsersIcon} />
+            <KpiCard
+              label="Total Leads"
+              value={num(f.totalLeads)}
+              sub={svIsHandoff ? 'Created in this period' : 'Cohort size'}
+              color={COLORS.siteVisit}
+              icon={UsersIcon}
+            />
           </KpiRow>
           <Card title={svIsHandoff ? 'Member SV Done Conversion' : 'Member Site Visit Conversion'}>
             <Table
-              head={['Member', 'Total Leads', svIsHandoff ? 'SV Done' : 'SV Completed', svIsHandoff ? 'SV Done Ratio' : 'SV Completed Ratio', 'Progress']}
-              colSpan={5}
+              head={svIsHandoff
+                ? ['Member', 'SV Done in period', 'Total Leads', "From this period's leads", 'SV Done Ratio', 'Progress']
+                : ['Member', 'Total Leads', 'SV Completed', 'SV Completed Ratio', 'Progress']}
+              colSpan={svIsHandoff ? 6 : 5}
               empty={lb.length === 0}
             >
               {lb.map((u) => { const p = pct(num(u.site_visits), num(u.leads)); return (
-                <Tr key={u.id}><Td bold>{fullName(u)}</Td><Td bold>{num(u.leads)}</Td><Td bold>{num(u.site_visits)}</Td>
+                <Tr key={u.id}><Td bold>{fullName(u)}</Td>
+                  {svIsHandoff && <Td bold>{num(u.site_visits_in_period)}</Td>}
+                  <Td bold>{num(u.leads)}</Td><Td bold>{num(u.site_visits)}</Td>
                   <Td><Pill tone={ratioTone(p * 3)}>{p}%</Pill></Td>
                   <Td><ProgressBar value={p * 3} color={p >= 20 ? COLORS.booking : COLORS.siteVisit} /></Td></Tr>
               ); })}

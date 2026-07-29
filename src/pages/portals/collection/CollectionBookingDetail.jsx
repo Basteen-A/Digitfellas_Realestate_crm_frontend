@@ -33,7 +33,7 @@ import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
 /* ── tiny helpers ── */
-const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 // Full rupee value (no Lakh/Crore shortening) — used inside the edit popup where
 // the actual figures must be visible.
 const fmtFull = (v) => {
@@ -213,7 +213,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [ciIdentityOpen, setCiIdentityOpen] = useState(false);
   const [ciTeamOpen, setCiTeamOpen] = useState(false);
   const [showDeleteBooking, setShowDeleteBooking] = useState(false);
-  const [payForm, setPayForm] = useState({ payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
+  const [payForm, setPayForm] = useState({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
   const [paySaving, setPaySaving] = useState(false);
   const [newStatusId, setNewStatusId] = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
@@ -389,10 +389,10 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => {
-    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
-    termsAndConditionsApi.getDropdown().then(r => setTerms(r.data?.data || r.data || [])).catch(() => {});
-    paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(()=>{});
-    bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => {});
+    bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    termsAndConditionsApi.getDropdown().then(r => setTerms(r.data?.data || r.data || [])).catch(() => { });
+    paymentStatusApi.getDropdown().then(r => setPaymentStatusOptions(r.data?.data || r.data || [])).catch(() => { });
+    bookingApi.getCancelReasons().then(r => setCancelReasons(r.data?.data || r.data || [])).catch(() => { });
     bookingApi.getPaymentFormMasters().then((r) => {
       const payload = r.data?.data || r.data || {};
       setPaymentModeOptions(payload.payment_modes || []);
@@ -473,7 +473,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     }
     if (mode === 'pay') {
       setEditingPaymentId(null);
-      setPayForm({ payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
+      setPayForm({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
       return;
     }
     if (mode === 'devCost') {
@@ -540,7 +540,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         toast.success('Payment recorded');
       }
       closeActionModal();
-      setPayForm({ payment_category:'', payment_mode_id:'', payment_mode:'', amount:'', payment_date:'', transaction_ref:'', bank_id:'', remarks:'' });
+      setPayForm({ payment_category: '', payment_mode_id: '', payment_mode: '', amount: '', payment_date: '', transaction_ref: '', bank_id: '', remarks: '' });
       loadBooking();
       loadActivities();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
@@ -680,7 +680,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const handlePaymentStatusUpdate = async () => {
     if (!paymentStatus) return;
-    
+
     const sel = paymentStatusOptions.find(p => p.id === paymentStatusId);
     const needsFollowup = sel ? sel.needs_followup : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
     const needsRemarks = sel ? sel.needs_remarks : ['Bank Loan Applied', 'OSR Received', 'Registration Scheduled', 'Part Payment Received', 'Follow Up'].includes(paymentStatus);
@@ -937,7 +937,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const previewGrandTotal = previewPlotValue + previewStampValue + previewRegistrationValue + previewDevelopmentValue + previewOtherChargesTotal;
   const liveTotalValue = actionMode === 'devCost' ? previewGrandTotal : totalValue;
 
-  const unverifiedAmt = payments.filter(p => !p.is_verified && !p.is_bounced).reduce((s,p) => s + parseFloat(p.amount||0), 0);
+  const unverifiedAmt = payments.filter(p => !p.is_verified && !p.is_bounced).reduce((s, p) => s + parseFloat(p.amount || 0), 0);
   const verifiedCount = payments.filter(p => p.is_verified).length;
   const pendingCount = payments.filter(p => !p.is_verified && !p.is_bounced).length;
   // Only VERIFIED money is refundable, at any status: verified collected − refunds.
@@ -999,20 +999,20 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                   background: act.activity_type === 'STATUS_CHANGE' ? '#3B82F622' :
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F122' :
-                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' :
-                    act.activity_type === 'POINTS_AWARDED' ? '#EAB30822' : '#6B728022',
+                      act.activity_type === 'PAYMENT_RECORDED' ? '#10B98122' :
+                        act.activity_type === 'POINTS_AWARDED' ? '#EAB30822' : '#6B728022',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: act.activity_type === 'STATUS_CHANGE' ? '#3B82F6' :
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? '#6366F1' :
-                    act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' :
-                    act.activity_type === 'POINTS_AWARDED' ? '#EAB308' : '#6B7280',
+                      act.activity_type === 'PAYMENT_RECORDED' ? '#10B981' :
+                        act.activity_type === 'POINTS_AWARDED' ? '#EAB308' : '#6B7280',
                   fontSize: 12, fontWeight: 700,
                 }}>
                   {act.activity_type === 'STATUS_CHANGE' ? <ClipboardDocumentListIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> :
-                   act.activity_type === 'POINTS_AWARDED' ? <span style={{ fontSize: 13 }}>🏆</span> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
+                    act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
+                      act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
+                        act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> :
+                          act.activity_type === 'POINTS_AWARDED' ? <span style={{ fontSize: 13 }}>🏆</span> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
@@ -1022,7 +1022,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       {act.metadata.changes.map((c, ci) => {
                         const fmtVal = (v) => (c.kind === 'bool' ? (v ? 'Yes' : 'No')
                           : c.kind === 'number' ? Number(v).toLocaleString('en-IN')
-                          : fmtFull(v));
+                            : fmtFull(v));
                         return (
                           <div key={ci} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
                             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.label}</span>
@@ -1051,15 +1051,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       {/* Page Header */}
       <div className="bkd-header">
         <div className="bkd-header-left">
-          <button className="bkd-back-btn" onClick={onBack}><ArrowLeftIcon style={{width:16,height:16}}/></button>
+          <button className="bkd-back-btn" onClick={onBack}><ArrowLeftIcon style={{ width: 16, height: 16 }} /></button>
           <div>
             <h1 className="bkd-title">
               Booking Details — {booking.booking_number}{' '}
-                
-        <span className="bkd-status-badge" style={{background:effectiveStatusBadge.bg,color:effectiveStatusBadge.text,border:`1px solid ${effectiveStatusBadge.border}`}}>
-          <span style={{width:6,height:6,borderRadius:'50%',background:effectiveStatusBadge.text,display:'inline-block'}}/> {effectiveStatusLabel}
-        </span>
-     
+
+              <span className="bkd-status-badge" style={{ background: effectiveStatusBadge.bg, color: effectiveStatusBadge.text, border: `1px solid ${effectiveStatusBadge.border}` }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: effectiveStatusBadge.text, display: 'inline-block' }} /> {effectiveStatusLabel}
+              </span>
+
             </h1>
             <p className="bkd-subtitle">{booking.project_name} · {booking.unit_display || booking.unit_number || 'N/A'} · {fmtD(booking.booking_date)}</p>
           </div>
@@ -1067,37 +1067,37 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         <div className="bkd-header-actions">
           {/* Contextual state-transition CTAs stay visible; routine actions moved to the ⋮ menu below. */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by && (
-            <button className="bkd-btn bkd-btn-primary" style={{background:'#DC2626'}} onClick={() => setWorkflowMode('confirmCancel')}><XCircleIcon style={{width:14,height:14}}/> Confirm Cancel</button>
+            <button className="bkd-btn bkd-btn-primary" style={{ background: '#DC2626' }} onClick={() => setWorkflowMode('confirmCancel')}><XCircleIcon style={{ width: 14, height: 14 }} /> Confirm Cancel</button>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && !booking.custom_fields?.cancel_rejected_by && (
-            <span style={{fontSize:12, color:'#F59E0B', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting SH Approval</span>
+            <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, padding: '6px 12px', background: '#F59E0B18', borderRadius: 6 }}>⏳ Awaiting SH Approval</span>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_rejected_by && (
             <>
-              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#16A34A',color:'#16A34A'}} onClick={() => setWorkflowMode('revertCancel')}><ArrowPathIcon style={{width:14,height:14}}/> Customer Wants to Continue</button>
-              <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#EF4444',color:'#EF4444'}} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{width:14,height:14}}/> Resubmit Cancellation</button>
+              <button className="bkd-btn bkd-btn-outline" style={{ borderColor: '#16A34A', color: '#16A34A' }} onClick={() => setWorkflowMode('revertCancel')}><ArrowPathIcon style={{ width: 14, height: 14 }} /> Customer Wants to Continue</button>
+              <button className="bkd-btn bkd-btn-outline" style={{ borderColor: '#EF4444', color: '#EF4444' }} onClick={() => setWorkflowMode('requestCancel')}><ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Resubmit Cancellation</button>
             </>
           )}
           {/* Booking Open → send to Super Admin for approval (unit reserved).
               This is a Collection action — the Super Admin never sends for approval. */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_OPEN' && !canEditPayments && (
             <button className="bkd-btn bkd-btn-primary" disabled={sendingApproval} onClick={() => setShowApprovalConfirm(true)}>
-              <CheckCircleIcon style={{width:14,height:14}}/> {sendingApproval ? 'Sending…' : 'Send for Approval'}
+              <CheckCircleIcon style={{ width: 14, height: 14 }} /> {sendingApproval ? 'Sending…' : 'Send for Approval'}
             </button>
           )}
           {/* Booking Pending → Super Admin approves/rejects right here; others just wait. */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_PENDING' && (
             canEditPayments ? (
               <>
-                <button className="bkd-btn bkd-btn-primary" style={{background:'#16A34A'}} disabled={approvalSaving} onClick={() => setApprovalAction('approve')}>
-                  <CheckCircleIcon style={{width:14,height:14}}/> Approve
+                <button className="bkd-btn bkd-btn-primary" style={{ background: '#16A34A' }} disabled={approvalSaving} onClick={() => setApprovalAction('approve')}>
+                  <CheckCircleIcon style={{ width: 14, height: 14 }} /> Approve
                 </button>
-                <button className="bkd-btn bkd-btn-outline" style={{borderColor:'#DC2626',color:'#DC2626'}} disabled={approvalSaving} onClick={() => { setApprovalRemarks(''); setApprovalAction('reject'); }}>
-                  <XCircleIcon style={{width:14,height:14}}/> Reject
+                <button className="bkd-btn bkd-btn-outline" style={{ borderColor: '#DC2626', color: '#DC2626' }} disabled={approvalSaving} onClick={() => { setApprovalRemarks(''); setApprovalAction('reject'); }}>
+                  <XCircleIcon style={{ width: 14, height: 14 }} /> Reject
                 </button>
               </>
             ) : (
-              <span style={{fontSize:12, color:'#B45309', fontWeight:600, padding:'6px 12px', background:'#F59E0B18', borderRadius:6}}>⏳ Awaiting Super Admin Approval</span>
+              <span style={{ fontSize: 12, color: '#B45309', fontWeight: 600, padding: '6px 12px', background: '#F59E0B18', borderRadius: 6 }}>⏳ Awaiting Super Admin Approval</span>
             )
           )}
           {/* Collection Executive assignees — circle avatars (like the task assignee UI). */}
@@ -1147,7 +1147,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             ((booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments) && { key: 'pay', label: 'Add Payment', Icon: PlusIcon, onClick: () => openActionModal('pay') },
             canDeleteBooking && { key: 'delete', label: 'Delete Booking', Icon: ExclamationTriangleIcon, color: '#DC2626', onClick: () => setShowDeleteBooking(true) },
           ].filter(Boolean)} />
-          <button className="bkd-btn bkd-btn-ghost bkd-btn-icon" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{width:16,height:16}}/></button>
+          <button className="bkd-btn bkd-btn-ghost bkd-btn-icon" onClick={loadBooking} title="Refresh"><ArrowPathIcon style={{ width: 16, height: 16 }} /></button>
         </div>
       </div>
 
@@ -1180,7 +1180,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       {/* Overdue Alert Banner */}
       {isOverdue && balanceDue > 0 && (
         <div className="bkd-alert-banner">
-          <ExclamationTriangleIcon style={{width:18,height:18,flexShrink:0}}/>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
           <div>
             <span className="bkd-alert-title">Payment Overdue</span>
             <span className="bkd-alert-text">Balance of {formatCurrency(balanceDue)} — {overdueDays} days overdue (due {fmtD(booking.next_follow_up_at)})</span>
@@ -1191,465 +1191,465 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       <div className="bkd-two-col">
         {/* Left column: Customer Information + Award Points stacked */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            <div className="bkd-card ci-card">
-              {/* Header */}
-              <div className="ci-header">
-                <div className="ci-header-icon"><UserIcon style={{ width: 20, height: 20 }} /></div>
-                <div className="ci-header-text">
-                  <div className="ci-title">Customer Information</div>
-                  <div className="ci-subtitle">Buyer, property &amp; booking details</div>
-                </div>
-                {/* Collection Owner = the Collection Manager the SH selected at booking
+          <div className="bkd-card ci-card">
+            {/* Header */}
+            <div className="ci-header">
+              <div className="ci-header-icon"><UserIcon style={{ width: 20, height: 20 }} /></div>
+              <div className="ci-header-text">
+                <div className="ci-title">Customer Information</div>
+                <div className="ci-subtitle">Buyer, property &amp; booking details</div>
+              </div>
+              {/* Collection Owner = the Collection Manager the SH selected at booking
                     time. Shown here as an always-visible assignee profile (the lead
                     itself stays with the SH — lead ⇄ collection decoupling). */}
-                {collectionOwner && (
-                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ textAlign: 'right', minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)' }}>Collection Manager</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--col-text, #000000)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{execName(collectionOwner)}</div>
-                    </div>
-                    <span
-                      title={getUserLabel(collectionOwner)}
-                      style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: colorFor(collectionOwner.id), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}
-                    >
-                      {initialsOf(collectionOwner)}
-                    </span>
+              {collectionOwner && (
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ textAlign: 'right', minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)' }}>Collection Manager</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--col-text, #000000)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{execName(collectionOwner)}</div>
                   </div>
-                )}
-              </div>
-
-              {/* Flat label / value rows — mirrors the Financial Summary card, but
-                  with left-aligned string values (see BkdInfoRow). */}
-              <div>
-                <BkdInfoRow label="Buyer Name" value={buyerName || '—'} />
-                <BkdInfoRow label="Lead Name" value={leadFullName || '—'} />
-                <BkdInfoRow label="Customer Phone" value={customerPhone || '—'} mono />
-                <BkdInfoRow label="Project" value={booking.project_name || '—'} />
-                <BkdInfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
-                <BkdInfoRow label="Area" value={ciAreaLabel} />
-                <BkdInfoRow label="Booking Date" value={fmtD(booking.booking_date)} />
-                <BkdInfoRow label="Payment Plan" value={paymentPlanLabel} />
-                <BkdInfoRow label="Plan Type" value={paymentPlanType || '—'} />
-                <BkdInfoRow label="Unit Reserved" value={ciReservedDate} />
-              </div>
-
-              {/* Identity (collapsible) */}
-              <button type="button" className="ci-collapsible-head" onClick={() => setCiIdentityOpen((v) => !v)}>
-                {ciIdentityOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
-                <span className="ci-section-label" style={{ margin: 0 }}>Identity</span>
-                <span className="ci-collapsible-summary">
-                  {[customer.pan_number ? 'PAN' : null, customer.aadhar_number ? 'Aadhaar' : null].filter(Boolean).join(' · ') || '—'}
-                </span>
-              </button>
-              {ciIdentityOpen && (
-                <div className="ci-collapsible-body">
-                  <div className="ci-grid ci-grid-3">
-                    <div className="ci-field">
-                      <div className="ci-field-label">PAN</div>
-                      <div className="ci-field-value mono">{customer.pan_number || '—'}</div>
-                    </div>
-                    <div className="ci-field">
-                      <div className="ci-field-label">Aadhaar</div>
-                      <div className="ci-field-value mono">{customer.aadhar_number || '—'}</div>
-                    </div>
-                    <div className="ci-field">
-                      <div className="ci-field-label">Email</div>
-                      <div className="ci-field-value mono">{customer.email || '—'}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Team & ownership (collapsible) */}
-              <button type="button" className="ci-collapsible-head" onClick={() => setCiTeamOpen((v) => !v)}>
-                {ciTeamOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
-                <span className="ci-section-label" style={{ margin: 0 }}>Team &amp; Ownership</span>
-                <span className="ci-collapsible-summary">
-                  {ciTeamMembers.length ? `${ciTeamMembers.length} ${ciTeamMembers.length === 1 ? 'person' : 'people'}` : '—'}
-                </span>
-              </button>
-              {ciTeamOpen && (
-                <div className="ci-collapsible-body">
-                  {ciTeamMembers.length ? ciTeamMembers.map((m) => (
-                    <div key={m.role} className="ci-team-row">
-                      <span className="ci-team-role">{m.role}</span>
-                      <span className="ci-team-name">{getUserLabel(m.person)}</span>
-                    </div>
-                  )) : <div className="ci-field-value">No team members recorded</div>}
-                </div>
-              )}
-
-              {/* Status */}
-              <div className="ci-section ci-section-last">
-                <div className="ci-section-label">Status</div>
-                <div className="ci-pill-row">
-                  <span className="ci-pill" style={{ background: effectiveStatusBadge.bg, color: effectiveStatusBadge.text, borderColor: effectiveStatusBadge.border }}>
-                    <span className="ci-pill-dot" style={{ background: effectiveStatusColor || 'currentColor' }} />
-                    {effectiveStatusLabel || 'Booking Pending'}
-                  </span>
-                  <span className={`ci-pill ${ciPaid > 0 ? 'ci-pill-success' : 'ci-pill-muted'}`}>
-                    <span className="ci-pill-dot" />
-                    {ciPaymentStatusLabel}
+                  <span
+                    title={getUserLabel(collectionOwner)}
+                    style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: colorFor(collectionOwner.id), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}
+                  >
+                    {initialsOf(collectionOwner)}
                   </span>
                 </div>
-              </div>
+              )}
             </div>
 
-            {leadAssignee && (
-              <div className="bkd-card">
-                <div className="ci-header">
-                  <div className="ci-header-icon"><CheckCircleIcon style={{ width: 20, height: 20 }} /></div>
-                  <div className="ci-header-text">
-                    <div className="ci-title">Award Points</div>
-                    <div className="ci-subtitle">Recognize the sales team for this booking (optional)</div>
+            {/* Flat label / value rows — mirrors the Financial Summary card, but
+                  with left-aligned string values (see BkdInfoRow). */}
+            <div>
+              <BkdInfoRow label="Buyer Name" value={buyerName || '—'} />
+              <BkdInfoRow label="Lead Name" value={leadFullName || '—'} />
+              <BkdInfoRow label="Customer Phone" value={customerPhone || '—'} mono />
+              <BkdInfoRow label="Project" value={booking.project_name || '—'} />
+              <BkdInfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
+              <BkdInfoRow label="Area" value={ciAreaLabel} />
+              <BkdInfoRow label="Booking Date" value={fmtD(booking.booking_date)} />
+              <BkdInfoRow label="Payment Plan" value={paymentPlanLabel} />
+              <BkdInfoRow label="Plan Type" value={paymentPlanType || '—'} />
+              <BkdInfoRow label="Unit Reserved" value={ciReservedDate} />
+            </div>
+
+            {/* Identity (collapsible) */}
+            <button type="button" className="ci-collapsible-head" onClick={() => setCiIdentityOpen((v) => !v)}>
+              {ciIdentityOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
+              <span className="ci-section-label" style={{ margin: 0 }}>Identity</span>
+              <span className="ci-collapsible-summary">
+                {[customer.pan_number ? 'PAN' : null, customer.aadhar_number ? 'Aadhaar' : null].filter(Boolean).join(' · ') || '—'}
+              </span>
+            </button>
+            {ciIdentityOpen && (
+              <div className="ci-collapsible-body">
+                <div className="ci-grid ci-grid-3">
+                  <div className="ci-field">
+                    <div className="ci-field-label">PAN</div>
+                    <div className="ci-field-value mono">{customer.pan_number || '—'}</div>
                   </div>
-                </div>
-                <div className="bkd-card-body">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {/* Sales Manager Row */}
-                    {salesManager ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px solid var(--col-border, #E5E7EB)' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Manager</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--col-text, #000000)' }}>
-                            {salesManager.first_name} {salesManager.last_name}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <input
-                            type="number"
-                            className="bkd-form-control"
-                            placeholder="Points"
-                            value={smPointsValue}
-                            onChange={(e) => setSmPointsValue(e.target.value)}
-                            style={{ width: 80, fontSize: 13, textAlign: 'center' }}
-                          />
-                          <button
-                            type="button"
-                            className="crm-btn crm-btn-sm"
-                            disabled={!smPointsValue || statusSaving}
-                            style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
-                            onClick={async () => {
-                              if (!smPointsValue || isNaN(parseInt(smPointsValue)) || parseInt(smPointsValue) === 0) {
-                                toast.error('Enter valid points value');
-                                  return;
-                                }
-                                const points = parseInt(smPointsValue, 10);
-                                setStatusSaving(true);
-                try {
-                  const reason = `Lead conversion / Booking ${booking.booking_number}`;
-                  // Use updatePointsForBooking to replace existing points
-                  await userApi.updatePointsForBooking(salesManager.id, points, reason, bookingId, booking.lead?.id);
-                  toast.success(`Updated ${points} points for SM`);
-                  // Keep the saved value in the input for editing
-                  setSmPointsValue(String(points));
-                  loadActivities();
-                } catch (err) {
-                  toast.error(getErrorMessage(err, 'Failed to award points'));
-                } finally {
-                  setStatusSaving(false);
-                }
-                              }}
-                            >
-                              {statusSaving ? '...' : 'Save'}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
-                          No Sales Manager assigned
-                        </div>
-                      )}
-  
-                      {/* Sales Head Row */}
-                      {salesHead ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px solid var(--col-border, #E5E7EB)' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Head</div>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--col-text, #000000)' }}>
-                              {salesHead.first_name} {salesHead.last_name}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <input
-                              type="number"
-                              className="bkd-form-control"
-                              placeholder="Points"
-                              value={shPointsValue}
-                              onChange={(e) => setShPointsValue(e.target.value)}
-                              style={{ width: 80, fontSize: 13, textAlign: 'center' }}
-                            />
-                            <button
-                              type="button"
-                              className="crm-btn crm-btn-sm"
-                              disabled={!shPointsValue || statusSaving}
-                              style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
-                              onClick={async () => {
-                                if (!shPointsValue || isNaN(parseInt(shPointsValue)) || parseInt(shPointsValue) === 0) {
-                                  toast.error('Enter valid points value');
-                                  return;
-                                }
-                                const points = parseInt(shPointsValue, 10);
-                                setStatusSaving(true);
-                try {
-                  const reason = `Lead conversion / Booking ${booking.booking_number}`;
-                  // Use updatePointsForBooking to replace existing points
-                  await userApi.updatePointsForBooking(salesHead.id, points, reason, bookingId, booking.lead?.id);
-                  toast.success(`Updated ${points} points for SH`);
-                  // Keep the saved value in the input for editing
-                  setShPointsValue(String(points));
-                  loadActivities();
-                } catch (err) {
-                  toast.error(getErrorMessage(err, 'Failed to award points'));
-                } finally {
-                  setStatusSaving(false);
-                }
-                              }}
-                            >
-                              {statusSaving ? '...' : 'Save'}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
-                          No Sales Head assigned
-                        </div>
-                      )}
-                    {activities.filter((a) => a.activity_type === 'POINTS_AWARDED').length > 0 && (
-                      <div style={{ marginTop: 20 }}>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.4px',
-                            color: 'var(--text-secondary)',
-                            marginBottom: 8,
-                          }}
-                        >
-                          Award History
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {activities
-                            .filter((a) => a.activity_type === 'POINTS_AWARDED')
-                            .map((act, idx) => (
-                              <div
-                                key={act.id || idx}
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  padding: '8px 10px',
-                                  borderRadius: 6,
-                                  border: '1px solid var(--border-primary, #e2e8f0)',
-                                  background: 'var(--bg-secondary, #f8fafc)',
-                                  fontSize: 12.5,
-                                }}
-                              >
-                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{act.title}</div>
-                                {act.description && (
-                                  <div style={{ color: 'var(--text-secondary)', fontSize: 11.5, marginTop: 2 }}>
-                                    {act.description}
-                                  </div>
-                                )}
-                                <div style={{ color: 'var(--text-muted, #9ca3af)', fontSize: 10.5, marginTop: 4 }}>
-                                  By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'} on{' '}
-                                  {new Date(act.performed_at).toLocaleDateString('en-IN', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
+                  <div className="ci-field">
+                    <div className="ci-field-label">Aadhaar</div>
+                    <div className="ci-field-value mono">{customer.aadhar_number || '—'}</div>
+                  </div>
+                  <div className="ci-field">
+                    <div className="ci-field-label">Email</div>
+                    <div className="ci-field-value mono">{customer.email || '—'}</div>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* Team & ownership (collapsible) */}
+            <button type="button" className="ci-collapsible-head" onClick={() => setCiTeamOpen((v) => !v)}>
+              {ciTeamOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
+              <span className="ci-section-label" style={{ margin: 0 }}>Team &amp; Ownership</span>
+              <span className="ci-collapsible-summary">
+                {ciTeamMembers.length ? `${ciTeamMembers.length} ${ciTeamMembers.length === 1 ? 'person' : 'people'}` : '—'}
+              </span>
+            </button>
+            {ciTeamOpen && (
+              <div className="ci-collapsible-body">
+                {ciTeamMembers.length ? ciTeamMembers.map((m) => (
+                  <div key={m.role} className="ci-team-row">
+                    <span className="ci-team-role">{m.role}</span>
+                    <span className="ci-team-name">{getUserLabel(m.person)}</span>
+                  </div>
+                )) : <div className="ci-field-value">No team members recorded</div>}
+              </div>
+            )}
+
+            {/* Status */}
+            <div className="ci-section ci-section-last">
+              <div className="ci-section-label">Status</div>
+              <div className="ci-pill-row">
+                <span className="ci-pill" style={{ background: effectiveStatusBadge.bg, color: effectiveStatusBadge.text, borderColor: effectiveStatusBadge.border }}>
+                  <span className="ci-pill-dot" style={{ background: effectiveStatusColor || 'currentColor' }} />
+                  {effectiveStatusLabel || 'Booking Pending'}
+                </span>
+                <span className={`ci-pill ${ciPaid > 0 ? 'ci-pill-success' : 'ci-pill-muted'}`}>
+                  <span className="ci-pill-dot" />
+                  {ciPaymentStatusLabel}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {leadAssignee && (
+            <div className="bkd-card">
+              <div className="ci-header">
+                <div className="ci-header-icon"><CheckCircleIcon style={{ width: 20, height: 20 }} /></div>
+                <div className="ci-header-text">
+                  <div className="ci-title">Award Points</div>
+                  <div className="ci-subtitle">Recognize the sales team for this booking (optional)</div>
+                </div>
+              </div>
+              <div className="bkd-card-body">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Sales Manager Row */}
+                  {salesManager ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px solid var(--col-border, #E5E7EB)' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Manager</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--col-text, #000000)' }}>
+                          {salesManager.first_name} {salesManager.last_name}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="number"
+                          className="bkd-form-control"
+                          placeholder="Points"
+                          value={smPointsValue}
+                          onChange={(e) => setSmPointsValue(e.target.value)}
+                          style={{ width: 80, fontSize: 13, textAlign: 'center' }}
+                        />
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-sm"
+                          disabled={!smPointsValue || statusSaving}
+                          style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
+                          onClick={async () => {
+                            if (!smPointsValue || isNaN(parseInt(smPointsValue)) || parseInt(smPointsValue) === 0) {
+                              toast.error('Enter valid points value');
+                              return;
+                            }
+                            const points = parseInt(smPointsValue, 10);
+                            setStatusSaving(true);
+                            try {
+                              const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                              // Use updatePointsForBooking to replace existing points
+                              await userApi.updatePointsForBooking(salesManager.id, points, reason, bookingId, booking.lead?.id);
+                              toast.success(`Updated ${points} points for SM`);
+                              // Keep the saved value in the input for editing
+                              setSmPointsValue(String(points));
+                              loadActivities();
+                            } catch (err) {
+                              toast.error(getErrorMessage(err, 'Failed to award points'));
+                            } finally {
+                              setStatusSaving(false);
+                            }
+                          }}
+                        >
+                          {statusSaving ? '...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
+                      No Sales Manager assigned
+                    </div>
+                  )}
+
+                  {/* Sales Head Row */}
+                  {salesHead ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px solid var(--col-border, #E5E7EB)' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Sales Head</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--col-text, #000000)' }}>
+                          {salesHead.first_name} {salesHead.last_name}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="number"
+                          className="bkd-form-control"
+                          placeholder="Points"
+                          value={shPointsValue}
+                          onChange={(e) => setShPointsValue(e.target.value)}
+                          style={{ width: 80, fontSize: 13, textAlign: 'center' }}
+                        />
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-sm"
+                          disabled={!shPointsValue || statusSaving}
+                          style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
+                          onClick={async () => {
+                            if (!shPointsValue || isNaN(parseInt(shPointsValue)) || parseInt(shPointsValue) === 0) {
+                              toast.error('Enter valid points value');
+                              return;
+                            }
+                            const points = parseInt(shPointsValue, 10);
+                            setStatusSaving(true);
+                            try {
+                              const reason = `Lead conversion / Booking ${booking.booking_number}`;
+                              // Use updatePointsForBooking to replace existing points
+                              await userApi.updatePointsForBooking(salesHead.id, points, reason, bookingId, booking.lead?.id);
+                              toast.success(`Updated ${points} points for SH`);
+                              // Keep the saved value in the input for editing
+                              setShPointsValue(String(points));
+                              loadActivities();
+                            } catch (err) {
+                              toast.error(getErrorMessage(err, 'Failed to award points'));
+                            } finally {
+                              setStatusSaving(false);
+                            }
+                          }}
+                        >
+                          {statusSaving ? '...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
+                      No Sales Head assigned
+                    </div>
+                  )}
+                  {activities.filter((a) => a.activity_type === 'POINTS_AWARDED').length > 0 && (
+                    <div style={{ marginTop: 20 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.4px',
+                          color: 'var(--text-secondary)',
+                          marginBottom: 8,
+                        }}
+                      >
+                        Award History
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {activities
+                          .filter((a) => a.activity_type === 'POINTS_AWARDED')
+                          .map((act, idx) => (
+                            <div
+                              key={act.id || idx}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                padding: '8px 10px',
+                                borderRadius: 6,
+                                border: '1px solid var(--border-primary, #e2e8f0)',
+                                background: 'var(--bg-secondary, #f8fafc)',
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{act.title}</div>
+                              {act.description && (
+                                <div style={{ color: 'var(--text-secondary)', fontSize: 11.5, marginTop: 2 }}>
+                                  {act.description}
+                                </div>
+                              )}
+                              <div style={{ color: 'var(--text-muted, #9ca3af)', fontSize: 10.5, marginTop: 4 }}>
+                                By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'} on{' '}
+                                {new Date(act.performed_at).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         {/* Right column: Payment Summary */}
 
-            <div style={{
-              background: "var(--col-surface, #ffffff)",
-              borderRadius: 12,
-              border: "1px solid var(--col-border, #e2e8f0)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-              overflow: "hidden"
-            }}>
-              {/* Payment Summary Header */}
-              <div className="ci-header">
-                <div className="ci-header-icon"><BanknotesIcon style={{ width: 20, height: 20 }} /></div>
-                <div className="ci-header-text">
-                  <div className="ci-title">Financial Summary</div>
-                  <div className="ci-subtitle">Booking value, collections &amp; balance</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openActionModal('devCost')}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "7px 12px", borderRadius: 8, border: "1px solid var(--col-text, #000000)",
-                    background: "var(--col-surface, #ffffff)", color: "var(--col-text, #000000)", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  }}
-                >
-                  <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
-                </button>
+        <div style={{
+          background: "var(--col-surface, #ffffff)",
+          borderRadius: 12,
+          border: "1px solid var(--col-border, #e2e8f0)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+          overflow: "hidden"
+        }}>
+          {/* Payment Summary Header */}
+          <div className="ci-header">
+            <div className="ci-header-icon"><BanknotesIcon style={{ width: 20, height: 20 }} /></div>
+            <div className="ci-header-text">
+              <div className="ci-title">Financial Summary</div>
+              <div className="ci-subtitle">Booking value, collections &amp; balance</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => openActionModal('devCost')}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 12px", borderRadius: 8, border: "1px solid var(--col-text, #000000)",
+                background: "var(--col-surface, #ffffff)", color: "var(--col-text, #000000)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              <PencilSquareIcon style={{ width: 13, height: 13 }} /> Edit
+            </button>
+          </div>
+
+          {/* Pending cost changes — highlighted inline for the approver */}
+          {pendingCostChanges?.changes?.length > 0 && (
+            <div style={{ padding: '14px 24px', background: '#FFFBEB', borderBottom: '1px solid #FDE68A' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#92400E', marginBottom: 10 }}>
+                <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
+                Cost edited — awaiting approval
+                <span style={{ fontWeight: 500, color: '#B45309' }}>
+                  · by {pendingCostChanges.submitted_by_name || 'user'}{pendingCostChanges.submitted_at ? ` · ${new Date(pendingCostChanges.submitted_at).toLocaleString()}` : ''}
+                </span>
               </div>
-
-              {/* Pending cost changes — highlighted inline for the approver */}
-              {pendingCostChanges?.changes?.length > 0 && (
-                <div style={{ padding: '14px 24px', background: '#FFFBEB', borderBottom: '1px solid #FDE68A' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#92400E', marginBottom: 10 }}>
-                    <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
-                    Cost edited — awaiting approval
-                    <span style={{ fontWeight: 500, color: '#B45309' }}>
-                      · by {pendingCostChanges.submitted_by_name || 'user'}{pendingCostChanges.submitted_at ? ` · ${new Date(pendingCostChanges.submitted_at).toLocaleString()}` : ''}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {pendingCostChanges.changes.map((c, i) => {
-                      const fmtVal = (v) => (c.kind === 'bool' ? (v ? 'Yes' : 'No')
-                        : c.kind === 'number' ? Number(v).toLocaleString('en-IN')
-                        : fmtFull(v));
-                      return (
-                        <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                          <span style={{ minWidth: 160, fontWeight: 700, color: 'var(--col-text, #000000)' }}>{c.label}</span>
-                          <span style={{ color: '#6B7280', textDecoration: 'line-through' }}>{fmtVal(c.from)}</span>
-                          <span style={{ color: '#9CA3AF' }}>→</span>
-                          <span style={{ fontWeight: 800, color: '#065F46', background: '#D1FAE5', padding: '1px 8px', borderRadius: 4 }}>{fmtVal(c.to)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Stat Strip */}
-              <div style={{ display: "flex", borderBottom: "1px solid var(--col-border, #e2e8f0)", flexWrap: "wrap" }}>
-                <BkdStatCell label="Total value" value={fmtFull(liveTotalValue)} />
-                <BkdStatCell label="Collected" value={fmtFull(totalPaid)} />
-                <BkdStatCell label="Balance due" value={fmtFull(liveTotalValue - totalPaid)} />
-                <BkdStatCell label="Unverified" value={fmtFull(unverifiedAmt)} border={false} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {pendingCostChanges.changes.map((c, i) => {
+                  const fmtVal = (v) => (c.kind === 'bool' ? (v ? 'Yes' : 'No')
+                    : c.kind === 'number' ? Number(v).toLocaleString('en-IN')
+                      : fmtFull(v));
+                  return (
+                    <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                      <span style={{ minWidth: 160, fontWeight: 700, color: 'var(--col-text, #000000)' }}>{c.label}</span>
+                      <span style={{ color: '#6B7280', textDecoration: 'line-through' }}>{fmtVal(c.from)}</span>
+                      <span style={{ color: '#9CA3AF' }}>→</span>
+                      <span style={{ fontWeight: 800, color: '#065F46', background: '#D1FAE5', padding: '1px 8px', borderRadius: 4 }}>{fmtVal(c.to)}</span>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
+          )}
 
-              {/* Cost Breakdown */}
-              <div style={{ padding: "18px 24px 8px" }}>
-                {/* <div style={{ marginBottom: 10 }}>
+          {/* Stat Strip */}
+          <div style={{ display: "flex", borderBottom: "1px solid var(--col-border, #e2e8f0)", flexWrap: "wrap" }}>
+            <BkdStatCell label="Total value" value={fmtFull(liveTotalValue)} />
+            <BkdStatCell label="Collected" value={fmtFull(totalPaid)} />
+            <BkdStatCell label="Balance due" value={fmtFull(liveTotalValue - totalPaid)} />
+            <BkdStatCell label="Unverified" value={fmtFull(unverifiedAmt)} border={false} />
+          </div>
+
+          {/* Cost Breakdown */}
+          <div style={{ padding: "18px 24px 8px" }}>
+            {/* <div style={{ marginBottom: 10 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Cost Breakdown</div>
                   <div style={{ fontSize: 12, color: "var(--col-text, #000000)" }}>Detailed property pricing structure</div>
                 </div> */}
 
-                <BkdLedgerRow label="Plot Value" valueText={fmtFull(plotValue)} paid={paidByCategory['Plot Value'] || 0} />
-                <BkdLedgerRow label="Stamp Duty" valueText={fmtFull(stampValue)} paid={paidByCategory['Stamp Duty'] || 0} />
-                <BkdLedgerRow
-                  label={ratePickerOpen ? 'Registration Fees' : `Registration Fees (${registrationRate}%)`}
-                  valueText={fmtFull(registrationValue)}
-                  paid={paidByCategory['Registration'] || 0}
-                  action={canEditRegistrationRate ? (
-                    // Edited INLINE rather than in a popover: this row is
-                    // `overflow: hidden`, which clipped an absolutely-positioned
-                    // menu into invisibility — the pen appeared dead because the
-                    // panel it opened was never painted.
-                    ratePickerOpen ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 2 }}>
-                        {REGISTRATION_RATE_CHOICES.map((r) => {
-                          const isOn = r === registrationRate;
-                          return (
-                            <button
-                              key={r}
-                              type="button"
-                              disabled={rateSaving}
-                              title={`${r}% — ${fmtFull(computeRegistrationValue(plotValue, r))}`}
-                              onClick={(e) => { e.stopPropagation(); handleRegistrationRateChange(r); }}
-                              style={{
-                                padding: '2px 9px', borderRadius: 6, fontSize: 12, lineHeight: 1.6,
-                                border: `1px solid ${isOn ? 'var(--accent-blue, #4f46e5)' : 'var(--col-border, #cbd5e1)'}`,
-                                background: isOn ? 'var(--accent-blue, #4f46e5)' : 'transparent',
-                                color: isOn ? '#fff' : 'var(--col-text, #334155)',
-                                cursor: rateSaving ? 'wait' : 'pointer',
-                                fontWeight: 500, whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {r}%
-                            </button>
-                          );
-                        })}
+            <BkdLedgerRow label="Plot Value" valueText={fmtFull(plotValue)} paid={paidByCategory['Plot Value'] || 0} />
+            <BkdLedgerRow label="Stamp Duty" valueText={fmtFull(stampValue)} paid={paidByCategory['Stamp Duty'] || 0} />
+            <BkdLedgerRow
+              label={ratePickerOpen ? 'Registration Fees' : `Registration Fees (${registrationRate}%)`}
+              valueText={fmtFull(registrationValue)}
+              paid={paidByCategory['Registration'] || 0}
+              action={canEditRegistrationRate ? (
+                // Edited INLINE rather than in a popover: this row is
+                // `overflow: hidden`, which clipped an absolutely-positioned
+                // menu into invisibility — the pen appeared dead because the
+                // panel it opened was never painted.
+                ratePickerOpen ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 2 }}>
+                    {REGISTRATION_RATE_CHOICES.map((r) => {
+                      const isOn = r === registrationRate;
+                      return (
                         <button
+                          key={r}
                           type="button"
-                          title="Cancel"
-                          aria-label="Cancel"
                           disabled={rateSaving}
-                          onClick={(e) => { e.stopPropagation(); setRatePickerOpen(false); }}
+                          title={`${r}% — ${fmtFull(computeRegistrationValue(plotValue, r))}`}
+                          onClick={(e) => { e.stopPropagation(); handleRegistrationRateChange(r); }}
                           style={{
-                            border: 'none', background: 'transparent', cursor: 'pointer',
-                            color: 'var(--col-text-secondary, #64748b)', fontSize: 15,
-                            lineHeight: 1, padding: '0 2px',
+                            padding: '2px 9px', borderRadius: 6, fontSize: 12, lineHeight: 1.6,
+                            border: `1px solid ${isOn ? 'var(--accent-blue, #4f46e5)' : 'var(--col-border, #cbd5e1)'}`,
+                            background: isOn ? 'var(--accent-blue, #4f46e5)' : 'transparent',
+                            color: isOn ? '#fff' : 'var(--col-text, #334155)',
+                            cursor: rateSaving ? 'wait' : 'pointer',
+                            fontWeight: 500, whiteSpace: 'nowrap',
                           }}
                         >
-                          ×
+                          {r}%
                         </button>
-                        {rateSaving && (
-                          <span style={{ fontSize: 11, color: 'var(--col-text-secondary, #64748b)' }}>saving…</span>
-                        )}
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        title="Change the registration rate"
-                        aria-label="Change the registration rate"
-                        onClick={(e) => { e.stopPropagation(); setRatePickerOpen(true); }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          width: 22, height: 22, padding: 0, marginLeft: 2,
-                          border: 'none', background: 'transparent', cursor: 'pointer',
-                          color: 'var(--accent-blue, #4f46e5)',
-                        }}
-                      >
-                        <PencilSquareIcon style={{ width: 15, height: 15 }} />
-                      </button>
-                    )
-                  ) : null}
-                />
-                <BkdLedgerRow label="Development" valueText={fmtFull(developmentValue)} paid={paidByCategory['Development'] || 0} />
-
-                {(otherChargesTotal > 0) && (
-                  <>
-                    <BkdLedgerRow
-                      label="Registration Charges"
-                      note={`Subtotal: ${fmtFull(otherChargesTotal)}`}
-                      valueText={fmtFull(otherChargesTotal)}
-                      paid={regChargesPaid}
-                      onClick={() => setRegExpanded((v) => !v)}
-                      expandIcon={regExpanded ? <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)" }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)", transform: "rotate(-90deg)" }} />}
-                    />
-                    {regExpanded && (
-                      <>
-                        {Object.entries(savedRegSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
-                          <BkdLedgerRow key={k} label={labelize(k)} valueText={fmtFull(toAmount(v))} indent={22} paid={regPaidByKey[k] || 0} />
-                        ))}
-                        {savedModtEnabled && Object.entries(savedModtSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
-                          <BkdLedgerRow key={`modt-${k}`} label={`MODT · ${labelize(k)}`} valueText={fmtFull(toAmount(v))} indent={22} paid={modtPaidByKey[k] || 0} />
-                        ))}
-                      </>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      title="Cancel"
+                      aria-label="Cancel"
+                      disabled={rateSaving}
+                      onClick={(e) => { e.stopPropagation(); setRatePickerOpen(false); }}
+                      style={{
+                        border: 'none', background: 'transparent', cursor: 'pointer',
+                        color: 'var(--col-text-secondary, #64748b)', fontSize: 15,
+                        lineHeight: 1, padding: '0 2px',
+                      }}
+                    >
+                      ×
+                    </button>
+                    {rateSaving && (
+                      <span style={{ fontSize: 11, color: 'var(--col-text-secondary, #64748b)' }}>saving…</span>
                     )}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    title="Change the registration rate"
+                    aria-label="Change the registration rate"
+                    onClick={(e) => { e.stopPropagation(); setRatePickerOpen(true); }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 22, height: 22, padding: 0, marginLeft: 2,
+                      border: 'none', background: 'transparent', cursor: 'pointer',
+                      color: 'var(--accent-blue, #4f46e5)',
+                    }}
+                  >
+                    <PencilSquareIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                )
+              ) : null}
+            />
+            <BkdLedgerRow label="Development" valueText={fmtFull(developmentValue)} paid={paidByCategory['Development'] || 0} />
+
+            {(otherChargesTotal > 0) && (
+              <>
+                <BkdLedgerRow
+                  label="Registration Charges"
+                  note={`Subtotal: ${fmtFull(otherChargesTotal)}`}
+                  valueText={fmtFull(otherChargesTotal)}
+                  paid={regChargesPaid}
+                  onClick={() => setRegExpanded((v) => !v)}
+                  expandIcon={regExpanded ? <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)" }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--col-text, #000000)", transform: "rotate(-90deg)" }} />}
+                />
+                {regExpanded && (
+                  <>
+                    {Object.entries(savedRegSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
+                      <BkdLedgerRow key={k} label={labelize(k)} valueText={fmtFull(toAmount(v))} indent={22} paid={regPaidByKey[k] || 0} />
+                    ))}
+                    {savedModtEnabled && Object.entries(savedModtSplit).filter(([, v]) => toAmount(v) > 0).map(([k, v]) => (
+                      <BkdLedgerRow key={`modt-${k}`} label={`MODT · ${labelize(k)}`} valueText={fmtFull(toAmount(v))} indent={22} paid={modtPaidByKey[k] || 0} />
+                    ))}
                   </>
                 )}
+              </>
+            )}
 
-                <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "baseline",
-                  marginTop: 10, paddingTop: 14, borderTop: "3px double var(--col-text, #000000)",
-                }}>
-                  <span style={{ fontSize: 14.5, fontWeight: 500, color: "var(--col-text, #000000)" }}>Grand Total</span>
-                  <span style={{ fontSize: 22, fontWeight: 500, color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums" }}>
-                    {fmtFull(totalValue)}
-                  </span>
-                </div>
-              </div>
+            <div style={{
+              display: "flex", justifyContent: "space-between", alignItems: "baseline",
+              marginTop: 10, paddingTop: 14, borderTop: "3px double var(--col-text, #000000)",
+            }}>
+              <span style={{ fontSize: 14.5, fontWeight: 500, color: "var(--col-text, #000000)" }}>Grand Total</span>
+              <span style={{ fontSize: 22, fontWeight: 500, color: "var(--col-text, #000000)", fontVariantNumeric: "tabular-nums" }}>
+                {fmtFull(totalValue)}
+              </span>
+            </div>
+          </div>
 
-              {/* Collection Progress */}
-              {/* <div style={{ padding: "16px 24px", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
+          {/* Collection Progress */}
+          {/* <div style={{ padding: "16px 24px", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--col-text, #000000)" }}>Collection Progress</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
@@ -1665,13 +1665,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </div>
               </div> */}
 
-              {/* Payments Strip */}
-              <div style={{ display: "flex", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
-                <BkdStatCell label="Payments" value={payments.length} />
-                <BkdStatCell label="Verified" value={verifiedCount} />
-                <BkdStatCell label="Pending" value={pendingCount} border={false} />
-              </div>
-            </div>
+          {/* Payments Strip */}
+          <div style={{ display: "flex", borderTop: "1px solid var(--col-border, #e2e8f0)" }}>
+            <BkdStatCell label="Payments" value={payments.length} />
+            <BkdStatCell label="Verified" value={verifiedCount} />
+            <BkdStatCell label="Pending" value={pendingCount} border={false} />
+          </div>
+        </div>
 
       </div>
 
@@ -1695,82 +1695,82 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       {activeTab === 'payment-history' && (
         <div className="bkd-card">
           <div className="ci-header">
-            <div className="ci-header-icon"><CreditCardIcon style={{width:20,height:20}}/></div>
+            <div className="ci-header-icon"><CreditCardIcon style={{ width: 20, height: 20 }} /></div>
             <div className="ci-header-text">
               <div className="ci-title">Payment History</div>
               <div className="ci-subtitle">All payments recorded for this booking</div>
             </div>
             {/* Payments blocked until sent for approval (Pending+); hidden for Super Admin review. */}
             {(booking.bookingStatus?.status_code || booking.status_code) !== 'BOOKING_OPEN' && !canEditPayments && (
-              <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{width:13,height:13}}/> Add Payment</button>
+              <button className="bkd-btn bkd-btn-primary bkd-btn-sm" onClick={() => openActionModal('pay')}><PlusIcon style={{ width: 13, height: 13 }} /> Add Payment</button>
             )}
           </div>
           <div>{payments.length === 0 ? (
-            <div style={{padding:30,textAlign:'center',color:'var(--text-muted,#9ca3af)',fontSize:13}}>No payments recorded yet</div>
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted,#9ca3af)', fontSize: 13 }}>No payments recorded yet</div>
           ) : (
             <table className="bkd-table"><thead><tr>
               <th>Date</th><th>Paid For</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Status</th><th>Actions</th>
             </tr></thead><tbody>
-              {payments.map(p => {
-                const isRefund = !!p.is_refund;
-                const catKey = isRefund ? 'Refund' : (p.payment_category || 'Other');
-                const editable = canEditThisPayment(p);
-                return (
-                <tr key={p.id} className={p.is_bounced ? 'bkd-row-bounced' : ''}
-                  style={{ cursor: 'pointer' }}
-                  title={editable ? 'Click to edit this payment' : 'Click to view this payment'}
-                  onClick={editable ? () => openEditPayment(p) : () => setViewPaymentId(p.id)}>
-                  <td>{fmtD(p.payment_date)}</td>
-                  <td style={{ fontWeight: 400, color: '#1f2937' }}>{isRefund ? '↩ Refund' : catKey}</td>
-                  <td style={{ color: isRefund ? '#DC2626' : undefined }}>
-                    {isRefund ? '−' : ''}{(p.amount)}
-                  </td>
-                  <td>{p.payment_mode}</td>
-                  <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
-                  <td style={{fontSize:12}}>{p.bank_name || '—'}</td>
-                  <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
-                    : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
-                    : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
-                    : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      {editable ? (
-                        <button className="view-link" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
-                          Edit
-                        </button>
-                      ) : (
-                        <button className="view-link" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
-                          View
-                        </button>
-                      )}
-                      {/* Per-row refund — only for verified (non-refund, non-bounced) money,
+                {payments.map(p => {
+                  const isRefund = !!p.is_refund;
+                  const catKey = isRefund ? 'Refund' : (p.payment_category || 'Other');
+                  const editable = canEditThisPayment(p);
+                  return (
+                    <tr key={p.id} className={p.is_bounced ? 'bkd-row-bounced' : ''}
+                      style={{ cursor: 'pointer' }}
+                      title={editable ? 'Click to edit this payment' : 'Click to view this payment'}
+                      onClick={editable ? () => openEditPayment(p) : () => setViewPaymentId(p.id)}>
+                      <td>{fmtD(p.payment_date)}</td>
+                      <td style={{ fontWeight: 400, color: '#1f2937' }}>{isRefund ? '↩ Refund' : catKey}</td>
+                      <td style={{ color: isRefund ? '#DC2626' : undefined }}>
+                        {isRefund ? '−' : ''}{(p.amount)}
+                      </td>
+                      <td>{p.payment_mode}</td>
+                      <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
+                      <td style={{ fontSize: 12 }}>{p.bank_name || '—'}</td>
+                      <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
+                        : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
+                          : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
+                            : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          {editable ? (
+                            <button className="view-link" onClick={(e) => { e.stopPropagation(); openEditPayment(p); }}>
+                              Edit
+                            </button>
+                          ) : (
+                            <button className="view-link" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
+                              View
+                            </button>
+                          )}
+                          {/* Per-row refund — only for verified (non-refund, non-bounced) money,
                           capped at this row's amount (and the booking's overall refundable). */}
-                      {p.is_verified && !isRefund && !p.is_bounced && refundableAmt > 0.01 && (
-                        <button
-                          className="view-link"
-                          style={{ color: '#B45309' }}
-                          title={`Refund up to ${formatCurrency(Math.min(parseFloat(p.amount || 0), refundableAmt))} from this payment`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const cap = Math.min(parseFloat(p.amount || 0), refundableAmt);
-                            setRefundSourcePayment(p);
-                            setRefundForm({
-                              refund_amount: cap > 0 ? String(cap) : '',
-                              refund_mode_id: '', refund_reference: '', refund_date: '',
-                              refund_remarks: `Refund of ${catKey} payment${p.transaction_ref ? ` · Ref ${p.transaction_ref}` : ''}`,
-                            });
-                            setWorkflowMode('refund');
-                          }}
-                        >
-                          Refund
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody></table>
+                          {p.is_verified && !isRefund && !p.is_bounced && refundableAmt > 0.01 && (
+                            <button
+                              className="view-link"
+                              style={{ color: '#B45309' }}
+                              title={`Refund up to ${formatCurrency(Math.min(parseFloat(p.amount || 0), refundableAmt))} from this payment`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const cap = Math.min(parseFloat(p.amount || 0), refundableAmt);
+                                setRefundSourcePayment(p);
+                                setRefundForm({
+                                  refund_amount: cap > 0 ? String(cap) : '',
+                                  refund_mode_id: '', refund_reference: '', refund_date: '',
+                                  refund_remarks: `Refund of ${catKey} payment${p.transaction_ref ? ` · Ref ${p.transaction_ref}` : ''}`,
+                                });
+                                setWorkflowMode('refund');
+                              }}
+                            >
+                              Refund
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody></table>
           )}</div>
         </div>
       )}
@@ -1788,35 +1788,35 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
       {activeTab === 'activity-log' && (
         <div className="bkd-card">
           <div className="ci-header">
-            <div className="ci-header-icon"><ClockIcon style={{width:20,height:20}}/></div>
+            <div className="ci-header-icon"><ClockIcon style={{ width: 20, height: 20 }} /></div>
             <div className="ci-header-text">
               <div className="ci-title">Activity</div>
               <div className="ci-subtitle">Status changes and actions on this booking</div>
             </div>
             <button className="bkd-btn bkd-btn-ghost bkd-btn-sm" onClick={() => {
               setActivitiesLoading(true);
-              bookingApi.getActivities(bookingId).then(r=>setActivities(r.data?.data||r.data||[])).catch(()=>{}).finally(()=>setActivitiesLoading(false));
-            }}><ArrowPathIcon style={{width:14,height:14}}/></button>
+              bookingApi.getActivities(bookingId).then(r => setActivities(r.data?.data || r.data || [])).catch(() => { }).finally(() => setActivitiesLoading(false));
+            }}><ArrowPathIcon style={{ width: 14, height: 14 }} /></button>
           </div>
           <div className="bkd-card-body">
-            {activitiesLoading ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)'}}>Loading...</div>
-            : activities.length === 0 ? <div style={{textAlign:'center',padding:20,color:'var(--text-muted,#9ca3af)',fontSize:13}}>No activity recorded yet</div>
-            : (
-              <div className="bkd-timeline">
-                {activities.map((act,i) => {
-                  const color = act.activity_type==='PAYMENT_RECORDED'?'#10b981':act.activity_type==='STATUS_CHANGE'?'#3b82f6':act.activity_type==='POINTS_AWARDED'?'#eab308':act.activity_type==='CANCELLED'?'#ef4444':'#6b7280';
-                  return (
-                    <div className="bkd-timeline-item" key={act.id||i}>
-                      <div className="bkd-timeline-dot" style={{borderColor:color}}/>
-                      <div className="bkd-timeline-time">{new Date(act.performed_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
-                      <div className="bkd-timeline-text">{act.title}</div>
-                      {act.description && <div className="bkd-timeline-sub">{act.description}</div>}
-                      <div className="bkd-timeline-sub">By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {activitiesLoading ? <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted,#9ca3af)' }}>Loading...</div>
+              : activities.length === 0 ? <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted,#9ca3af)', fontSize: 13 }}>No activity recorded yet</div>
+                : (
+                  <div className="bkd-timeline">
+                    {activities.map((act, i) => {
+                      const color = act.activity_type === 'PAYMENT_RECORDED' ? '#10b981' : act.activity_type === 'STATUS_CHANGE' ? '#3b82f6' : act.activity_type === 'POINTS_AWARDED' ? '#eab308' : act.activity_type === 'CANCELLED' ? '#ef4444' : '#6b7280';
+                      return (
+                        <div className="bkd-timeline-item" key={act.id || i}>
+                          <div className="bkd-timeline-dot" style={{ borderColor: color }} />
+                          <div className="bkd-timeline-time">{new Date(act.performed_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="bkd-timeline-text">{act.title}</div>
+                          {act.description && <div className="bkd-timeline-sub">{act.description}</div>}
+                          <div className="bkd-timeline-sub">By {act.performedBy ? `${act.performedBy.first_name} ${act.performedBy.last_name}` : 'System'}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
           </div>
         </div>
       )}
@@ -2096,7 +2096,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{editingPaymentId ? 'Edit Payment' : 'Record New Payment'}</div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group" style={{ flex: 1 }}>
-                      <label className="bkd-form-label">Payment For (Category) *</label>
+                      <label className="bkd-form-label">Payment Towards *</label>
                       <select className="bkd-form-control" value={payForm.payment_category}
                         onChange={e => setPayForm(p => ({ ...p, payment_category: e.target.value }))}>
                         <option value="">Select what this payment is for</option>
@@ -2135,8 +2135,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     );
                   })()}
                   <div className="bkd-form-row">
-                    <div className="bkd-form-group"><label className="bkd-form-label">Payment Date *</label><input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={e => setPayForm(p => ({...p, payment_date:e.target.value}))}/></div>
-                    <div className="bkd-form-group"><label className="bkd-form-label">Amount (₹) *</label><input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={e => setPayForm(p => ({...p, amount:e.target.value}))}/></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Payment Date *</label><input type="date" className="bkd-form-control" value={payForm.payment_date} onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} /></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Amount (₹) *</label><input type="number" className="bkd-form-control" placeholder="e.g. 500000" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} /></div>
                   </div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group"><label className="bkd-form-label">Payment Mode *</label>
@@ -2148,7 +2148,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         <option value="">Select payment mode</option>
                         {paymentModeOptions.map((mode) => <option key={mode.id} value={mode.id}>{mode.mode_name}</option>)}
                       </select></div>
-                    <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({...p, transaction_ref:e.target.value}))}/></div>
+                    <div className="bkd-form-group"><label className="bkd-form-label">Reference / UTR / Cheque No. {payForm.payment_mode !== 'Cash' ? '*' : ''}</label><input type="text" className="bkd-form-control" placeholder="e.g. UTR123456" value={payForm.transaction_ref} onChange={e => setPayForm(p => ({ ...p, transaction_ref: e.target.value }))} /></div>
                   </div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group"><label className="bkd-form-label">Company Bank</label>
@@ -2160,7 +2160,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       </select>
                     </div>
                   </div>
-                  <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({...p, remarks:e.target.value}))}/></div>
+                  <div className="bkd-form-group"><label className="bkd-form-label">Remarks</label><textarea className="bkd-form-control" rows={2} placeholder="Notes for accounts team..." value={payForm.remarks} onChange={e => setPayForm(p => ({ ...p, remarks: e.target.value }))} /></div>
                   <div className="bkd-info-banner">This payment will be sent to <strong>Accounts Executive</strong> for verification. Status will show as <em>Unverified</em> until approved.</div>
                 </div>
                 <div className="qa-drawer-save-row" style={{ padding: '16px 20px', position: 'relative', borderTop: '1px solid var(--border-primary)' }}>
@@ -2383,24 +2383,24 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     return (
                       <div style={{ marginTop: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
                         {isFullPayment && (
-                          <div style={{background:'#DCFCE7',border:'1px solid #BBF7D0',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#166534'}}>
+                          <div style={{ background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: '#166534' }}>
                             <strong>✓ Full Payment:</strong> Booking will be auto-registered and the unit will be marked as <strong>Sold</strong>.
                           </div>
                         )}
                         {isRegScheduled && (
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
+                          <div className="bkd-form-group" style={{ marginBottom: 10 }}>
                             <label className="bkd-form-label">Registration Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusRegDate} onChange={e => setPayStatusRegDate(e.target.value)} />
                           </div>
                         )}
                         {isPaymentDateReq && (
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
+                          <div className="bkd-form-group" style={{ marginBottom: 10 }}>
                             <label className="bkd-form-label">Payment Date *</label>
                             <input type="date" className="bkd-form-control" value={payStatusPaymentDate} onChange={e => setPayStatusPaymentDate(e.target.value)} />
                           </div>
                         )}
                         {needsFollowup && (
-                          <div className="bkd-form-group" style={{marginBottom:10}}>
+                          <div className="bkd-form-group" style={{ marginBottom: 10 }}>
                             <label className="bkd-form-label">Next Follow-Up Date *</label>
                             <input type="date" className="bkd-form-control" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
                           </div>
@@ -2424,8 +2424,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   {/* Current follow-up info */}
                   {booking?.next_follow_up_at && (
                     <div style={{ marginTop: 12, padding: '8px 12px', background: '#FEF3C7', borderRadius: 8, fontSize: 12, color: '#92400E', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <CalendarDaysIcon style={{width:14,height:14}} />
-                      Current follow-up: <strong>{new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</strong>
+                      <CalendarDaysIcon style={{ width: 14, height: 14 }} />
+                      Current follow-up: <strong>{new Date(booking.next_follow_up_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
                       {booking.custom_fields?.last_payment_remarks && <span> · {booking.custom_fields.last_payment_remarks}</span>}
                     </div>
                   )}
@@ -2463,87 +2463,87 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 modt_split: { ...p.modt_split, [key]: val },
               }));
               return (
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, maxHeight: 'calc(88vh - 90px)' }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px' }}>
-                  <div style={{ display: 'flex', border: `1px solid ${PS.border}`, borderRadius: 10, overflow: 'hidden', margin: '10px 0 4px' }}>
-                    {[
-                      { label: 'Plot Value', value: fmtFull(previewPlotValue || plotValue) },
-                      { label: 'Stamp Duty (7%)', value: fmtFull(previewStampValue || stampValue) },
-                      { label: `Registration (${registrationRate}%)`, value: fmtFull(previewRegistrationValue || registrationValue) },
-                      { label: 'Development', value: fmtFull(previewDevelopmentValue || developmentValue) },
-                    ].map((c, i, arr) => (
-                      <div key={c.label} style={{ flex: 1, padding: '12px 14px', borderRight: i < arr.length - 1 ? `1px solid ${PS.border}` : 'none', minWidth: 0 }}>
-                        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', color: PS.muted, textTransform: 'uppercase', marginBottom: 5, whiteSpace: 'nowrap' }}>{c.label}</div>
-                        <div style={{ fontSize: 16, fontWeight: 500, color: PS.text, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.value}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <PsSectionLabel info="Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).">Property pricing</PsSectionLabel>
-                  <PsFieldRow label="Guideline Value" note="per sq.ft" required>
-                    <PsAmountInput value={devCostForm.guideline_value} placeholder="5000"
-                      onChange={(v) => setDevCostForm(p => ({ ...p, guideline_value: v }))} />
-                  </PsFieldRow>
-                  <PsFieldRow label="Plot Area" note="sq.ft" required>
-                    <PsAmountInput value={devCostForm.plot_area} placeholder="1200"
-                      onChange={(v) => setDevCostForm(p => ({ ...p, plot_area: v }))} />
-                  </PsFieldRow>
-                  <PsFieldRow label="Development Cost" note="per sq.ft (× 1.18 GST)">
-                    <PsAmountInput value={devCostForm.development_cost_per_sqft} placeholder="250"
-                      onChange={(v) => setDevCostForm(p => ({ ...p, development_cost_per_sqft: v }))} />
-                  </PsFieldRow>
-
-                  <PsSectionLabel top={18}>Registration charges</PsSectionLabel>
-                  <PsFieldRow label="Stamp Commission" note="1% of Stamp Duty — auto">
-                    <PsAmountInput value={previewStampCommission} readOnly title="Auto-computed as 1% of Stamp Value" />
-                  </PsFieldRow>
-                  {regSplitFields.map(f => (
-                    <PsFieldRow key={f.key} label={f.label}>
-                      <PsAmountInput value={devCostForm.registration_split[f.key]}
-                        onChange={(v) => setRegField(f.key, v)} />
-                    </PsFieldRow>
-                  ))}
-                  <PsSubtotalRow label="Subtotal — registration charges" value={fmtFull(previewRegSplitTotal)} />
-
-                  <PsSectionLabel top={18}>MODT charges</PsSectionLabel>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 0 8px' }}>
-                    <input type="checkbox" checked={!!devCostForm.modt_enabled}
-                      onChange={e => setDevCostForm(p => ({ ...p, modt_enabled: e.target.checked }))}
-                      style={{ width: 15, height: 15 }} />
-                    <span style={{ fontSize: 13.5, fontWeight: 600, color: PS.text }}>Add MODT charges</span>
-                    <span style={{ fontSize: 11.5, color: PS.muted }}>(if applicable)</span>
-                  </label>
-                  {devCostForm.modt_enabled && (
-                    <>
-                      {modtSplitFields.map(f => (
-                        <PsFieldRow key={f.key} label={f.label}>
-                          <PsAmountInput value={devCostForm.modt_split[f.key]}
-                            onChange={(v) => setModtField(f.key, v)} />
-                        </PsFieldRow>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, maxHeight: 'calc(88vh - 90px)' }}>
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px' }}>
+                    <div style={{ display: 'flex', border: `1px solid ${PS.border}`, borderRadius: 10, overflow: 'hidden', margin: '10px 0 4px' }}>
+                      {[
+                        { label: 'Plot Value', value: fmtFull(previewPlotValue || plotValue) },
+                        { label: 'Stamp Duty (7%)', value: fmtFull(previewStampValue || stampValue) },
+                        { label: `Registration (${registrationRate}%)`, value: fmtFull(previewRegistrationValue || registrationValue) },
+                        { label: 'Development', value: fmtFull(previewDevelopmentValue || developmentValue) },
+                      ].map((c, i, arr) => (
+                        <div key={c.label} style={{ flex: 1, padding: '12px 14px', borderRight: i < arr.length - 1 ? `1px solid ${PS.border}` : 'none', minWidth: 0 }}>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', color: PS.muted, textTransform: 'uppercase', marginBottom: 5, whiteSpace: 'nowrap' }}>{c.label}</div>
+                          <div style={{ fontSize: 16, fontWeight: 500, color: PS.text, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.value}</div>
+                        </div>
                       ))}
-                      <PsSubtotalRow label="Subtotal — MODT" value={fmtFull(previewModtSplitTotal)} />
-                    </>
-                  )}
+                    </div>
 
-                  <div style={{ marginTop: 10, paddingTop: 14, borderTop: `3px double ${PS.borderStrong}`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: PS.text }}>Grand total</span>
-                    <span style={{ fontSize: 22, fontWeight: 700, color: PS.text, fontVariantNumeric: 'tabular-nums' }}>{fmtFull(previewGrandTotal || totalValue)}</span>
+                    <PsSectionLabel info="Plot Value = ROUNDUP(Guideline × Area) · Stamp Duty = 7% of Plot Value · Registration = 2% of Plot Value · Stamp Commission = 1% of Stamp Duty · Development = Area × Cost/sqft × 1.18 (GST).">Property pricing</PsSectionLabel>
+                    <PsFieldRow label="Guideline Value" note="per sq.ft" required>
+                      <PsAmountInput value={devCostForm.guideline_value} placeholder="5000"
+                        onChange={(v) => setDevCostForm(p => ({ ...p, guideline_value: v }))} />
+                    </PsFieldRow>
+                    <PsFieldRow label="Plot Area" note="sq.ft" required>
+                      <PsAmountInput value={devCostForm.plot_area} placeholder="1200"
+                        onChange={(v) => setDevCostForm(p => ({ ...p, plot_area: v }))} />
+                    </PsFieldRow>
+                    <PsFieldRow label="Development Cost" note="per sq.ft (× 1.18 GST)">
+                      <PsAmountInput value={devCostForm.development_cost_per_sqft} placeholder="250"
+                        onChange={(v) => setDevCostForm(p => ({ ...p, development_cost_per_sqft: v }))} />
+                    </PsFieldRow>
+
+                    <PsSectionLabel top={18}>Registration charges</PsSectionLabel>
+                    <PsFieldRow label="Stamp Commission" note="1% of Stamp Duty — auto">
+                      <PsAmountInput value={previewStampCommission} readOnly title="Auto-computed as 1% of Stamp Value" />
+                    </PsFieldRow>
+                    {regSplitFields.map(f => (
+                      <PsFieldRow key={f.key} label={f.label}>
+                        <PsAmountInput value={devCostForm.registration_split[f.key]}
+                          onChange={(v) => setRegField(f.key, v)} />
+                      </PsFieldRow>
+                    ))}
+                    <PsSubtotalRow label="Subtotal — registration charges" value={fmtFull(previewRegSplitTotal)} />
+
+                    <PsSectionLabel top={18}>MODT charges</PsSectionLabel>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 0 8px' }}>
+                      <input type="checkbox" checked={!!devCostForm.modt_enabled}
+                        onChange={e => setDevCostForm(p => ({ ...p, modt_enabled: e.target.checked }))}
+                        style={{ width: 15, height: 15 }} />
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: PS.text }}>Add MODT charges</span>
+                      <span style={{ fontSize: 11.5, color: PS.muted }}>(if applicable)</span>
+                    </label>
+                    {devCostForm.modt_enabled && (
+                      <>
+                        {modtSplitFields.map(f => (
+                          <PsFieldRow key={f.key} label={f.label}>
+                            <PsAmountInput value={devCostForm.modt_split[f.key]}
+                              onChange={(v) => setModtField(f.key, v)} />
+                          </PsFieldRow>
+                        ))}
+                        <PsSubtotalRow label="Subtotal — MODT" value={fmtFull(previewModtSplitTotal)} />
+                      </>
+                    )}
+
+                    <div style={{ marginTop: 10, paddingTop: 14, borderTop: `3px double ${PS.borderStrong}`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PS.text }}>Grand total</span>
+                      <span style={{ fontSize: 22, fontWeight: 700, color: PS.text, fontVariantNumeric: 'tabular-nums' }}>{fmtFull(previewGrandTotal || totalValue)}</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-primary, #E3E8EE)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                    <button type="button" onClick={closeActionModal} disabled={devCostSaving} style={{
+                      padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border-strong, #C1C9D2)',
+                      background: '#fff', color: 'var(--text-primary, #0A2540)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                    }}>Cancel</button>
+                    <button type="button" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving} style={{
+                      padding: '9px 18px', borderRadius: 8, border: 'none',
+                      background: '#635BFF', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                      <CheckIcon style={{ width: 15, height: 15 }} /> {devCostSaving ? 'Saving…' : 'Save changes'}
+                    </button>
                   </div>
                 </div>
-                <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-primary, #E3E8EE)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                  <button type="button" onClick={closeActionModal} disabled={devCostSaving} style={{
-                    padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border-strong, #C1C9D2)',
-                    background: '#fff', color: 'var(--text-primary, #0A2540)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-                  }}>Cancel</button>
-                  <button type="button" onClick={handleDevelopmentCostUpdate} disabled={devCostSaving} style={{
-                    padding: '9px 18px', borderRadius: 8, border: 'none',
-                    background: '#635BFF', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                    <CheckIcon style={{ width: 15, height: 15 }} /> {devCostSaving ? 'Saving…' : 'Save changes'}
-                  </button>
-                </div>
-              </div>
               );
             })()}
           </div>
@@ -2778,91 +2778,91 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 : refundableAmt;
               const overCap = parseFloat(refundForm.refund_amount || 0) > refundCap + 0.01;
               return (
-              <div style={{ padding: '16px 20px' }}>
-                <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
-                  <strong>Record Refund Payment</strong>
-                  <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
-                </div>
+                <div style={{ padding: '16px 20px' }}>
+                  <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
+                    <strong>Record Refund Payment</strong>
+                    <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
+                  </div>
 
-                <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
-                  {refundSourcePayment && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 6, borderBottom: '1px solid var(--border-primary, #E2E8F0)' }}>
-                      <span>Refunding payment{refundSourcePayment.payment_category ? ` · ${refundSourcePayment.payment_category}` : ''}{refundSourcePayment.payment_date ? ` · ${fmtD(refundSourcePayment.payment_date)}` : ''}</span>
-                      <strong>{formatCurrency(parseFloat(refundSourcePayment.amount || 0))}</strong>
+                  <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
+                    {refundSourcePayment && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 6, borderBottom: '1px solid var(--border-primary, #E2E8F0)' }}>
+                        <span>Refunding payment{refundSourcePayment.payment_category ? ` · ${refundSourcePayment.payment_category}` : ''}{refundSourcePayment.payment_date ? ` · ${fmtD(refundSourcePayment.payment_date)}` : ''}</span>
+                        <strong>{formatCurrency(parseFloat(refundSourcePayment.amount || 0))}</strong>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{refundSourcePayment ? 'Refundable from this payment' : 'Verified collected (refundable)'}</span>
+                      <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundCap)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Amount (₹) *</label>
+                      <input type="number" min="0" max={refundCap} className="bkd-form-control"
+                        placeholder={`Up to ${formatCurrency(refundCap)}`}
+                        value={refundForm.refund_amount}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Date</label>
+                      <input type="date" className="bkd-form-control"
+                        value={refundForm.refund_date}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="bkd-form-row">
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Refund Mode *</label>
+                      <select className="bkd-form-control" value={refundForm.refund_mode_id}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
+                        <option value="">Select mode</option>
+                        {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
+                      </select>
+                    </div>
+                    <div className="bkd-form-group">
+                      <label className="bkd-form-label">Reference / UTR</label>
+                      <input className="bkd-form-control" placeholder="e.g. UTR123456"
+                        value={refundForm.refund_reference}
+                        onChange={(e) => setRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="bkd-form-group">
+                    <label className="bkd-form-label">Remarks</label>
+                    <textarea rows={2} className="bkd-form-control"
+                      value={refundForm.refund_remarks}
+                      onChange={(e) => setRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
+                  </div>
+                  {overCap && (
+                    <div style={{ fontSize: 12, color: '#DC2626', marginTop: -4, marginBottom: 8 }}>
+                      Refund cannot exceed {formatCurrency(refundCap)}{refundSourcePayment ? ' for this payment' : ''}.
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{refundSourcePayment ? 'Refundable from this payment' : 'Verified collected (refundable)'}</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundCap)}</strong>
-                  </div>
-                </div>
 
-                <div className="bkd-form-row">
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Amount (₹) *</label>
-                    <input type="number" min="0" max={refundCap} className="bkd-form-control"
-                      placeholder={`Up to ${formatCurrency(refundCap)}`}
-                      value={refundForm.refund_amount}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
-                  </div>
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Date</label>
-                    <input type="date" className="bkd-form-control"
-                      value={refundForm.refund_date}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
-                  </div>
-                </div>
-                <div className="bkd-form-row">
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Refund Mode *</label>
-                    <select className="bkd-form-control" value={refundForm.refund_mode_id}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
-                      <option value="">Select mode</option>
-                      {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Reference / UTR</label>
-                    <input className="bkd-form-control" placeholder="e.g. UTR123456"
-                      value={refundForm.refund_reference}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
+                  <div className="qa-drawer-save-row">
+                    <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
+                      disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0 || overCap}
+                      onClick={async () => {
+                        if (parseFloat(refundForm.refund_amount) > refundCap + 0.01) {
+                          toast.error(`Refund cannot exceed ${formatCurrency(refundCap)}${refundSourcePayment ? ' for this payment' : ' (verified collected balance)'}`);
+                          return;
+                        }
+                        setRefundSaving(true);
+                        try {
+                          await bookingApi.processRefund(bookingId, refundForm);
+                          toast.success('Refund recorded');
+                          setWorkflowMode(null);
+                          setRefundSourcePayment(null);
+                          setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
+                          loadBooking(); loadActivities();
+                        } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
+                        finally { setRefundSaving(false); }
+                      }}>
+                      {refundSaving ? 'Recording...' : 'Record Refund'}
+                    </button>
                   </div>
                 </div>
-                <div className="bkd-form-group">
-                  <label className="bkd-form-label">Remarks</label>
-                  <textarea rows={2} className="bkd-form-control"
-                    value={refundForm.refund_remarks}
-                    onChange={(e) => setRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
-                </div>
-                {overCap && (
-                  <div style={{ fontSize: 12, color: '#DC2626', marginTop: -4, marginBottom: 8 }}>
-                    Refund cannot exceed {formatCurrency(refundCap)}{refundSourcePayment ? ' for this payment' : ''}.
-                  </div>
-                )}
-
-                <div className="qa-drawer-save-row">
-                  <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
-                    disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0 || overCap}
-                    onClick={async () => {
-                      if (parseFloat(refundForm.refund_amount) > refundCap + 0.01) {
-                        toast.error(`Refund cannot exceed ${formatCurrency(refundCap)}${refundSourcePayment ? ' for this payment' : ' (verified collected balance)'}`);
-                        return;
-                      }
-                      setRefundSaving(true);
-                      try {
-                        await bookingApi.processRefund(bookingId, refundForm);
-                        toast.success('Refund recorded');
-                        setWorkflowMode(null);
-                        setRefundSourcePayment(null);
-                        setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
-                        loadBooking(); loadActivities();
-                      } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
-                      finally { setRefundSaving(false); }
-                    }}>
-                    {refundSaving ? 'Recording...' : 'Record Refund'}
-                  </button>
-                </div>
-              </div>
               );
             })()}
           </div>

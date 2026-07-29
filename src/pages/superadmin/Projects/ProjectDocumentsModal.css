@@ -180,3 +180,116 @@
 .proj-docs__icon-btn.danger {
   color: #dc2626;
 }
+
+/* ── Folder tree: breadcrumb, create bar, folder rows ─────────────────────── */
+
+.proj-docs__crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.proj-docs__crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent-blue, #2563eb);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proj-docs__crumb:hover:not(:disabled) {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+/* The last crumb is where you already are — inert, not a link. */
+.proj-docs__crumb.is-current {
+  color: var(--text-primary, #0f172a);
+  cursor: default;
+}
+
+.proj-docs__crumb-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.proj-docs__crumb-sep {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--text-muted, #94a3b8);
+}
+
+.proj-docs__folder-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--border-primary, #e2e8f0);
+  border-radius: var(--border-radius-md, 8px);
+  background: var(--bg-tertiary, #f8fafc);
+}
+
+.proj-docs__folder-create input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border-input, #cbd5e1);
+  border-radius: var(--border-radius-md, 8px);
+  background: var(--bg-input, #fff);
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+}
+
+/* Folder rows sit above the documents; the whole left block is the open target. */
+.proj-docs__row--folder {
+  padding: 0;
+}
+
+.proj-docs__folder-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proj-docs__folder-open:hover .proj-docs__row-name {
+  text-decoration: underline;
+}
+
+.proj-docs__folder-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-blue, #2563eb);
+}
+
+@media (max-width: 640px) {
+  .proj-docs__folder-create {
+    flex-wrap: wrap;
+  }
+
+  .proj-docs__folder-create input {
+    flex: 1 1 100%;
+    font-size: 16px;
+    min-height: 40px;
+  }
+}

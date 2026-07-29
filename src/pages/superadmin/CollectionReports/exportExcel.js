@@ -119,6 +119,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
   const projectItem = payload.projectItem || [];
   const aging = payload.aging || [];
   const topOutstanding = payload.topOutstanding || [];
+  const overdue90 = payload.overdue90 || {};
   const trend = payload.trend || [];
   const modes = payload.modes || [];
 
@@ -410,6 +411,65 @@ export const exportCollectionReports = async (payload, meta = {}) => {
       refunds: n(r.refunds),
       payments: n(r.payments),
     })),
+  );
+
+  // ── 5. Overdue 90+ days ──
+  // Aged from the DUE DATE (the collection follow-up on the last payment-status
+  // update), not the booking date — a different axis from the Ageing sheet.
+  addSheet(
+    wb,
+    'Overdue 90+ Days',
+    [
+      { header: 'Booking', key: 'booking_number' },
+      { header: 'Buyer', key: 'buyer_name' },
+      { header: 'Project', key: 'project_name' },
+      { header: 'Due Date', key: 'due_date' },
+      { header: 'Days Overdue', key: 'days_overdue', numeric: true },
+      { header: 'Last Payment', key: 'last_payment_date' },
+      { header: 'Days Since Payment', key: 'days_since_payment' },
+      { header: 'Billed', key: 'demand', money: true },
+      { header: 'Collected', key: 'collected', money: true },
+      { header: 'Outstanding', key: 'outstanding', money: true },
+      { header: 'Payment Status', key: 'payment_status' },
+    ],
+    (overdue90.rows || []).map((r) => ({
+      booking_number: r.booking_number,
+      buyer_name: r.buyer_name,
+      project_name: r.project_name,
+      due_date: r.due_date ? new Date(r.due_date).toLocaleDateString('en-IN') : '',
+      days_overdue: n(r.days_overdue),
+      last_payment_date: r.last_payment_date ? new Date(r.last_payment_date).toLocaleDateString('en-IN') : 'Never',
+      days_since_payment: r.days_since_payment == null ? '' : n(r.days_since_payment),
+      demand: n(r.demand),
+      collected: n(r.collected),
+      outstanding: n(r.outstanding),
+      payment_status: r.payment_status || '',
+    })),
+  );
+
+  // The pipeline behind that list — every past-due bucket, plus the balances that
+  // have no due date set at all and so cannot be aged.
+  addSheet(
+    wb,
+    'Overdue Pipeline',
+    [
+      { header: 'Bucket', key: 'bucket' },
+      { header: 'Bookings', key: 'bookings' },
+      { header: 'Outstanding', key: 'outstanding', money: true, numeric: true },
+    ],
+    [
+      ...[['1-30 days','d0_30'],['31-60 days','d31_60'],['61-90 days','d61_90'],['90+ days','d90p']]
+        .map(([label,key]) => ({
+          bucket: label,
+          bookings: n(overdue90.buckets?.[key]?.bookings),
+          outstanding: n(overdue90.buckets?.[key]?.outstanding),
+        })),
+      {
+        bucket: 'No due date set',
+        bookings: n(overdue90.noDueDate?.bookings),
+        outstanding: n(overdue90.noDueDate?.outstanding),
+      },
+    ],
   );
 
   await triggerDownload(wb, `collection_report_${Date.now()}.xlsx`);

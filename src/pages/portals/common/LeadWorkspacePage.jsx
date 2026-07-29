@@ -68,6 +68,7 @@ import {
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js/max';
+import { followUpMaxDate, followUpLimitError } from '../../../utils/followUpLimits';
 import './LeadWorkspacePage.css';
 
 const INDIAN_STATES_UTS = [
@@ -1458,6 +1459,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       if (newLeadForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(newLeadForm.nextFollowUpAt)) {
         errors.push('Next follow up must be at least 5 minutes from now');
       }
+      {
+        const capError = followUpLimitError(newLeadForm.nextFollowUpAt, selectedNewLeadStatusCode);
+        if (capError) errors.push(capError);
+      }
 
       if (isTerminalCreateStatus) {
         if (!newLeadForm.closure_reason_id) errors.push('Closure reason is required');
@@ -1494,6 +1499,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
       if (newLeadForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(newLeadForm.nextFollowUpAt)) {
         errors.push('Next follow up must be at least 5 minutes from now');
+      }
+      {
+        const capError = followUpLimitError(newLeadForm.nextFollowUpAt, selectedNewLeadStatusCode);
+        if (capError) errors.push(capError);
       }
     }
 
@@ -2328,6 +2337,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       toast.error('Follow-up date cannot be in the past');
       return;
     }
+    const actionCapError = followUpLimitError(actionState.nextFollowUpAt, action?.targetStatusCode || selectedLead?.statusCode);
+    if (actionCapError) { toast.error(actionCapError); return; }
     if (action.needsAssignee && !payload.assignToUserId) { toast.error('Please select user to assign'); return; }
 
     try {
@@ -2676,6 +2687,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       toast.error('Follow-up date cannot be in the past');
       return;
     }
+    const stageCapError = followUpLimitError(stagePopupData.followUpAt, stagePopupAction?.targetStatusCode || selectedLead?.statusCode);
+    if (stageCapError) { toast.error(stageCapError); return; }
 
     if (!selectedLeadHasLocation || !selectedLeadHasProject) {
       if (!selectedLeadHasLocation && !quickMissingLocationId) {
@@ -2746,6 +2759,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       toast.error('Follow-up date cannot be in the past');
       return;
     }
+    const manualCapError = followUpLimitError(manualNextFollowUpAt, toCanonicalStatusCode(manualStatus) || selectedLead?.statusCode);
+    if (manualCapError) { toast.error(manualCapError); return; }
 
     setManualUpdateSaving(true);
     try {
@@ -3030,6 +3045,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           setQuickActionLoading(false);
           return;
         }
+        const quickCapError = followUpLimitError(f.nextFollowUpAt, quickWorkflowAction?.targetStatusCode || selectedLead?.statusCode);
+        if (quickCapError) { toast.error(quickCapError); setQuickActionLoading(false); return; }
 
         if (isRemarkMandatoryForAction(quickWorkflowAction)) {
           const hasRemark = Boolean((f.statusRemarkText || '').trim() || (f.note || '').trim());
@@ -4333,6 +4350,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         placeholder="Select Date..."
                         className="lead-detail__calendar-input"
                         minDate={getFollowUpMinimumTime().toISOString()}
+                        maxDate={followUpMaxDate(toCanonicalStatusCode(manualStatus) || selectedLead?.statusCode).toISOString()}
                         disabled={selectedLeadReadOnly}
                       />
                       <div className="lead-detail__calendar-shortcuts">
@@ -4447,6 +4465,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   placeholder="Select Date..."
                   className="lead-detail__calendar-input"
                   minDate={getFollowUpMinimumTime().toISOString()}
+                  maxDate={followUpMaxDate(stagePopupAction?.targetStatusCode || selectedLead?.statusCode).toISOString()}
                 />
                 <div className="lead-detail__calendar-shortcuts">
                   <button type="button" className="calendar-shortcut-btn" onClick={() => setStagePopupData((p) => ({ ...p, followUpAt: getQuickFollowUpValue(0, 18, 0) }))}>Today </button>
@@ -5049,6 +5068,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             onChange={(val) => setNewLeadForm((p) => ({ ...p, nextFollowUpAt: val }))}
                             placeholder="Select follow-up date..."
                             minDate={getFollowUpMinimumTime().toISOString()}
+                            maxDate={followUpMaxDate(selectedNewLeadStatusCode).toISOString()}
                           />
                         </div>
                       )}
@@ -5990,6 +6010,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
                         placeholder="Select follow-up date..."
                         minDate={getFollowUpMinimumTime().toISOString()}
+                        maxDate={followUpMaxDate(quickWorkflowAction?.targetStatusCode || selectedLead?.statusCode).toISOString()}
                       />
                     </div>
                   )}
