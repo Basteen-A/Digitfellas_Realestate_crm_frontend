@@ -67,6 +67,23 @@ const R = {
   revenue: { icon: BanknotesIcon, accent: COLORS.booking, title: 'Revenue Snapshot', sub: 'Booking value & area — org-wide', rs: 'Financial overview' },
 };
 
+// Per-role wording overrides for a shared catalogue entry. The Telecaller's
+// "site visit" figure is really a HANDOFF count (see svColumn(handoffSv) on the
+// server) — a telecaller never attends the visit — so it is named accordingly
+// everywhere it appears, not just on the KPI tile.
+const ROLE_REPORT_OVERRIDES = {
+  TC: {
+    svratio: {
+      title: 'Leads Sent to Sales',
+      sub: 'Handed off for a site visit ÷ Total leads',
+      rs: 'Sent to sales ÷ Total',
+    },
+  },
+};
+
+// Catalogue entry for (role, key), with any role override applied.
+const reportCfg = (role, key) => ({ ...(R[key] || {}), ...((ROLE_REPORT_OVERRIDES[role] || {})[key] || {}) });
+
 const ROLES = {
   TC: {
     label: 'Telecaller', accent: COLORS.booking,
@@ -481,15 +498,37 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
     }
     case 'svratio': {
       const r = d?.siteVisitRatio || {};
+      // A telecaller does not attend visits — for TC this metric counts the leads
+      // they HANDED OFF to Sales (server: svColumn(handoffSv)). Labelling that
+      // "Completed visits" made the number look wrong whenever a handoff had no
+      // visit yet, or when two telecallers each handed off one lead and the total
+      // read 2 against a single visit. Say what is actually being counted.
+      const svIsHandoff = role === 'TC';
       return (
         <>
           <KpiRow>
-            <KpiCard label="Total SV Done" value={num(f.siteVisits)} sub="Completed visits" color={COLORS.qualified} icon={BuildingOffice2Icon} />
-            <KpiCard label="SV Ratio" value={`${r.pct || 0}%`} sub="SV ÷ Total leads" color={COLORS.booking} icon={ScaleIcon} />
+            <KpiCard
+              label={svIsHandoff ? 'Leads Sent to Sales' : 'Total SV Done'}
+              value={num(f.siteVisits)}
+              sub={svIsHandoff ? 'Handed off for a site visit' : 'Completed visits'}
+              color={COLORS.qualified}
+              icon={BuildingOffice2Icon}
+            />
+            <KpiCard
+              label={svIsHandoff ? 'Handoff Ratio' : 'SV Ratio'}
+              value={`${r.pct || 0}%`}
+              sub={svIsHandoff ? 'Sent to sales ÷ Total leads' : 'SV ÷ Total leads'}
+              color={COLORS.booking}
+              icon={ScaleIcon}
+            />
             <KpiCard label="Total Leads" value={num(f.totalLeads)} sub="Cohort size" color={COLORS.siteVisit} icon={UsersIcon} />
           </KpiRow>
-          <Card title="Member Site Visit Conversion">
-            <Table head={['Member', 'Total Leads', 'Site Visits', 'SV Ratio', 'Progress']} colSpan={5} empty={lb.length === 0}>
+          <Card title={svIsHandoff ? 'Member Handoff Conversion' : 'Member Site Visit Conversion'}>
+            <Table
+              head={['Member', 'Total Leads', svIsHandoff ? 'Sent to Sales' : 'Site Visits', svIsHandoff ? 'Handoff Ratio' : 'SV Ratio', 'Progress']}
+              colSpan={5}
+              empty={lb.length === 0}
+            >
               {lb.map((u) => { const p = pct(num(u.site_visits), num(u.leads)); return (
                 <Tr key={u.id}><Td bold>{fullName(u)}</Td><Td bold>{num(u.leads)}</Td><Td bold>{num(u.site_visits)}</Td>
                   <Td><Pill tone={ratioTone(p * 3)}>{p}%</Pill></Td>
@@ -888,7 +927,7 @@ export const ReportBrowser = ({
   // `groups` lets a caller show a curated subset of reports (e.g. the self-service
   // portal view, which hides leaderboards / other users' data).
   const grp = groups || ROLES[role].groups;
-  const cfg = R[selected] || R[firstKey(role)];
+  const cfg = reportCfg(role, selected) || reportCfg(role, firstKey(role));
   const Icon = cfg.icon;
   const roleAccent = ROLES[role].accent;
 
@@ -900,7 +939,7 @@ export const ReportBrowser = ({
         <select id="an-report" className="reports-select mt-1" value={selected} onChange={(e) => setSelected(e.target.value)}>
           {grp.map((g) => (
             <optgroup key={g.label} label={g.label}>
-              {g.keys.map((k) => <option key={k} value={k}>{R[k].title}</option>)}
+              {g.keys.map((k) => <option key={k} value={k}>{reportCfg(role, k).title}</option>)}
             </optgroup>
           ))}
         </select>
@@ -914,7 +953,7 @@ export const ReportBrowser = ({
               <div key={g.label} className="mb-1">
                 <div className="px-2.5 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{g.label}</div>
                 {g.keys.map((k) => {
-                  const r = R[k]; const RIcon = r.icon; const on = selected === k;
+                  const r = reportCfg(role, k); const RIcon = r.icon; const on = selected === k;
                   return (
                     <button key={k} type="button" onClick={() => setSelected(k)}
                       className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
