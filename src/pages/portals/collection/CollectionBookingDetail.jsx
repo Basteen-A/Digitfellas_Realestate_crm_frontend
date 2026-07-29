@@ -146,7 +146,11 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
           <div style={{
             fontSize: 14, fontWeight: 500,
             color: "var(--col-text, #000000)",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            // A row carrying an interactive control must not clip it — the
+            // ellipsis treatment is for long labels, not for buttons.
+            overflow: action ? "visible" : "hidden",
+            textOverflow: action ? "clip" : "ellipsis",
             display: "flex",
             alignItems: "center",
             gap: 6
@@ -1540,78 +1544,72 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <BkdLedgerRow label="Plot Value" valueText={fmtFull(plotValue)} paid={paidByCategory['Plot Value'] || 0} />
                 <BkdLedgerRow label="Stamp Duty" valueText={fmtFull(stampValue)} paid={paidByCategory['Stamp Duty'] || 0} />
                 <BkdLedgerRow
-                  label={`Registration Fees (${registrationRate}%)`}
+                  label={ratePickerOpen ? 'Registration Fees' : `Registration Fees (${registrationRate}%)`}
                   valueText={fmtFull(registrationValue)}
                   paid={paidByCategory['Registration'] || 0}
                   action={canEditRegistrationRate ? (
-                    <span style={{ position: 'relative', display: 'inline-flex' }}>
+                    // Edited INLINE rather than in a popover: this row is
+                    // `overflow: hidden`, which clipped an absolutely-positioned
+                    // menu into invisibility — the pen appeared dead because the
+                    // panel it opened was never painted.
+                    ratePickerOpen ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 2 }}>
+                        {REGISTRATION_RATE_CHOICES.map((r) => {
+                          const isOn = r === registrationRate;
+                          return (
+                            <button
+                              key={r}
+                              type="button"
+                              disabled={rateSaving}
+                              title={`${r}% — ${fmtFull(computeRegistrationValue(plotValue, r))}`}
+                              onClick={(e) => { e.stopPropagation(); handleRegistrationRateChange(r); }}
+                              style={{
+                                padding: '2px 9px', borderRadius: 6, fontSize: 12, lineHeight: 1.6,
+                                border: `1px solid ${isOn ? 'var(--accent-blue, #4f46e5)' : 'var(--col-border, #cbd5e1)'}`,
+                                background: isOn ? 'var(--accent-blue, #4f46e5)' : 'transparent',
+                                color: isOn ? '#fff' : 'var(--col-text, #334155)',
+                                cursor: rateSaving ? 'wait' : 'pointer',
+                                fontWeight: 500, whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {r}%
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          title="Cancel"
+                          aria-label="Cancel"
+                          disabled={rateSaving}
+                          onClick={(e) => { e.stopPropagation(); setRatePickerOpen(false); }}
+                          style={{
+                            border: 'none', background: 'transparent', cursor: 'pointer',
+                            color: 'var(--col-text-secondary, #64748b)', fontSize: 15,
+                            lineHeight: 1, padding: '0 2px',
+                          }}
+                        >
+                          ×
+                        </button>
+                        {rateSaving && (
+                          <span style={{ fontSize: 11, color: 'var(--col-text-secondary, #64748b)' }}>saving…</span>
+                        )}
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         title="Change the registration rate"
                         aria-label="Change the registration rate"
-                        disabled={rateSaving}
-                        onClick={(e) => { e.stopPropagation(); setRatePickerOpen((v) => !v); }}
+                        onClick={(e) => { e.stopPropagation(); setRatePickerOpen(true); }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           width: 22, height: 22, padding: 0, marginLeft: 2,
-                          border: 'none', background: 'transparent', cursor: rateSaving ? 'wait' : 'pointer',
-                          color: 'var(--accent-blue, #4f46e5)', opacity: rateSaving ? 0.5 : 1,
+                          border: 'none', background: 'transparent', cursor: 'pointer',
+                          color: 'var(--accent-blue, #4f46e5)',
                         }}
                       >
                         <PencilSquareIcon style={{ width: 15, height: 15 }} />
                       </button>
-                      {ratePickerOpen && (
-                        <>
-                          {/* Click-away catcher so the popover behaves like a menu. */}
-                          <span
-                            onClick={(e) => { e.stopPropagation(); setRatePickerOpen(false); }}
-                            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-                          />
-                          <span
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              position: 'absolute', top: 26, left: 0, zIndex: 41,
-                              background: 'var(--bg-card, #fff)',
-                              border: '1px solid var(--col-border, #e2e8f0)',
-                              borderRadius: 10, padding: 8, minWidth: 210,
-                              boxShadow: '0 8px 24px rgba(15,23,42,.14)',
-                            }}
-                          >
-                            <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted, #6b7280)', marginBottom: 6 }}>
-                              REGISTRATION RATE
-                            </span>
-                            {REGISTRATION_RATE_CHOICES.map((r) => {
-                              const preview = computeRegistrationValue(plotValue, r);
-                              const isOn = r === registrationRate;
-                              return (
-                                <button
-                                  key={r}
-                                  type="button"
-                                  disabled={rateSaving}
-                                  onClick={() => handleRegistrationRateChange(r)}
-                                  style={{
-                                    display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between',
-                                    gap: 10, padding: '7px 8px', marginBottom: 2,
-                                    border: 'none', borderRadius: 7, cursor: rateSaving ? 'wait' : 'pointer',
-                                    background: isOn ? 'var(--bg-accent-soft, #eef2ff)' : 'transparent',
-                                    color: 'var(--col-text, #111827)', fontSize: 13,
-                                    fontWeight: isOn ? 600 : 400, textAlign: 'left',
-                                  }}
-                                >
-                                  <span>{r}%{r === 2 ? ' (default)' : ''}</span>
-                                  <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-muted, #6b7280)' }}>
-                                    {fmtFull(preview)}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                            <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-muted, #9ca3af)', marginTop: 4, lineHeight: 1.45 }}>
-                              Rounded up to the nearest ₹10. Payments already collected are not changed.
-                            </span>
-                          </span>
-                        </>
-                      )}
-                    </span>
+                    )
                   ) : null}
                 />
                 <BkdLedgerRow label="Development" valueText={fmtFull(developmentValue)} paid={paidByCategory['Development'] || 0} />
