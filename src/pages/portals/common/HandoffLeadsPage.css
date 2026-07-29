@@ -42,6 +42,65 @@
   flex: 1;
 }
 
+/* Handoff-date presets — segmented control sitting beside the search box. */
+.handoff-leads__periods {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-tertiary);
+}
+
+.handoff-period-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: calc(var(--border-radius-md) - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.handoff-period-btn:hover {
+  color: var(--text-primary);
+}
+
+.handoff-period-btn.is-active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.handoff-leads__custom-range {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.handoff-leads__custom-range label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.handoff-leads__custom-range input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.handoff-leads__custom-range small {
+  color: var(--text-secondary);
+}
+
 .handoff-leads__table-wrap {
   overflow: auto;
 }
@@ -159,6 +218,23 @@
   .handoff-leads__filters input,
   .handoff-leads__filters select {
     width: 100%;
+    font-size: 16px;
+    min-height: 40px;
+  }
+
+  /* Presets wrap into a scrollable strip rather than squeezing the labels. */
+  .handoff-leads__periods {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .handoff-period-btn {
+    flex: 1 0 auto;
+    min-height: 36px;
+  }
+
+  .handoff-leads__custom-range input {
+    flex: 1;
     font-size: 16px;
     min-height: 40px;
   }

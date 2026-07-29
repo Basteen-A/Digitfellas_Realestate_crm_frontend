@@ -33,12 +33,36 @@ const dedupePipeText = (value) => {
 // Badge-system triple (bg/text/border) derived from the DB status color.
 const statusChipStyle = (statusColor) => badgeStyle(statusColor);
 
+// Handoff-date presets. Keys match the dateFilter vocabulary the dashboard
+// endpoints already use, so "Week"/"Month" mean the same thing app-wide
+// (Monday-start week-to-date, calendar month-to-date). The window is resolved
+// server-side, so a preset filters the whole trail, not just the fetched page.
+const DATE_PRESETS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Today' },
+  { key: 'wtd', label: 'This Week' },
+  { key: 'mtd', label: 'This Month' },
+  { key: 'custom', label: 'Custom' },
+];
+
 const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = false, stageCode = null, currentOnly = false }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState([]);
-  const [filters, setFilters] = useState({ type: defaultType, search: '' });
+  const [filters, setFilters] = useState({
+    type: defaultType,
+    search: '',
+    dateFilter: 'all',
+    startDate: '',
+    endDate: '',
+  });
+
+  // A custom range only takes effect once both ends are picked, so half-filled
+  // inputs don't blank the list while the user is still choosing.
+  const customRangeReady = Boolean(filters.startDate && filters.endDate);
+  const dateFilterActive = filters.dateFilter !== 'all'
+    && (filters.dateFilter !== 'custom' || customRangeReady);
 
   // One row per lead (rows arrive newest-first, so the first occurrence is the
   // latest handoff). The metric is "leads this user shared to the next role", so a
@@ -63,8 +87,11 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
     return {
       total,
       incoming: visibleRows.filter((row) => row.direction === 'incoming').length,
-      // TC "SV Done (Accepted)" = leads shared minus those still awaiting SM acceptance.
-      outgoing: workspaceRole === 'TC' ? Math.max(0, total - pending) : visibleRows.filter((row) => row.direction === 'outgoing').length,
+      // TC "SV Done" = every lead in this list: marked SV Done and handed up to
+      // Sales. Awaiting the SM's acceptance does NOT subtract — the telecaller's
+      // work is done at handoff, and the Telecaller report counts it the same
+      // way. Pending is surfaced as its own card instead.
+      outgoing: workspaceRole === 'TC' ? total : visibleRows.filter((row) => row.direction === 'outgoing').length,
       pending,
       current: visibleRows.filter((row) => row.isCurrent).length,
     };
@@ -88,6 +115,10 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
         limit: 100,
         stageCode,
         currentOnly,
+        dateFilter: filters.dateFilter === 'custom' && !customRangeReady ? 'all' : filters.dateFilter,
+        ...(filters.dateFilter === 'custom' && customRangeReady
+          ? { startDate: filters.startDate, endDate: filters.endDate }
+          : {}),
       });
 
       setRows(response.data || []);
@@ -97,7 +128,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, workspaceRole, stageCode, currentOnly]);
+  }, [filters, customRangeReady, workspaceRole, stageCode, currentOnly]);
 
   useEffect(() => {
     loadHandoffs();
@@ -127,7 +158,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
           <article className="crm-card handoff-stat-card"><p>Total</p><strong>{stats.total}</strong></article>
           {workspaceRole !== 'TC' && defaultType !== 'outgoing' && <article className="crm-card handoff-stat-card"><p>Incoming (page)</p><strong>{stats.incoming}</strong></article>}
           {workspaceRole === 'TC' && <article className="crm-card handoff-stat-card handoff-stat-card--pending"><p>Pending Acceptance</p><strong>{stats.pending}</strong></article>}
-          <article className="crm-card handoff-stat-card"><p>{workspaceRole === 'TC' ? 'SV Done (Accepted)' : 'Outgoing (page)'}</p><strong>{stats.outgoing}</strong></article>
+          <article className="crm-card handoff-stat-card"><p>{workspaceRole === 'TC' ? 'SV Done' : 'Outgoing (page)'}</p><strong>{stats.outgoing}</strong></article>
           {workspaceRole !== 'TC' && <article className="crm-card handoff-stat-card"><p>Current Ownership</p><strong>{stats.current}</strong></article>}
         </div>
       )}
@@ -138,7 +169,47 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
           onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
           placeholder="Search by lead number, name, phone, email"
         />
+        <div className="handoff-leads__periods" role="group" aria-label="Filter by handoff date">
+          {DATE_PRESETS.map((preset) => (
+            <button
+              key={preset.key}
+              type="button"
+              className={`handoff-period-btn${filters.dateFilter === preset.key ? ' is-active' : ''}`}
+              aria-pressed={filters.dateFilter === preset.key}
+              onClick={() => setFilters((prev) => ({
+                ...prev,
+                dateFilter: preset.key,
+                // Leaving Custom clears the range so the next visit starts fresh.
+                ...(preset.key === 'custom' ? {} : { startDate: '', endDate: '' }),
+              }))}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {filters.dateFilter === 'custom' && (
+        <div className="crm-card handoff-leads__custom-range">
+          <label htmlFor="handoff-date-from">From</label>
+          <input
+            id="handoff-date-from"
+            type="date"
+            value={filters.startDate}
+            max={filters.endDate || undefined}
+            onChange={(event) => setFilters((prev) => ({ ...prev, startDate: event.target.value }))}
+          />
+          <label htmlFor="handoff-date-to">To</label>
+          <input
+            id="handoff-date-to"
+            type="date"
+            value={filters.endDate}
+            min={filters.startDate || undefined}
+            onChange={(event) => setFilters((prev) => ({ ...prev, endDate: event.target.value }))}
+          />
+          {!customRangeReady && <small>Pick both dates to apply the range.</small>}
+        </div>
+      )}
 
       <div className="crm-card handoff-leads__table-wrap">
         <table className="handoff-leads__table">
@@ -147,7 +218,9 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               {(isTC || isSH) ? (
                 <>
                   <th>Lead</th>
-                  <th>When</th>
+                  {/* TC counts and filters on the SV Done date, so that is the
+                      date the row must show — not the handoff timestamp. */}
+                  <th>{isTC ? 'SV Done' : 'When'}</th>
                 </>
               ) : (
                 <>
@@ -183,7 +256,9 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
             )}
             {!loading && visibleRows.length === 0 && (
               <tr>
-                <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">No handoff leads found</td>
+                <td colSpan={showStage ? 10 : 9} className="handoff-leads__empty">
+                  {dateFilterActive ? 'No handoff leads in the selected date range' : 'No handoff leads found'}
+                </td>
               </tr>
             )}
             {!loading && pageItems.map((row) => (
@@ -194,7 +269,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                       <div className="handoff-lead-name">{row.leadName || '-'}</div>
                       <small>{row.leadNumber || '-'}</small>
                     </td>
-                    <td>{formatDateTime(row.handedOffAt)}</td>
+                    <td>{formatDateTime(isTC ? (row.svDoneDate || row.handedOffAt) : row.handedOffAt)}</td>
                   </>
                 ) : (
                   <>
