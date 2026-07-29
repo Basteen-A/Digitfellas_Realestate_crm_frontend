@@ -4,6 +4,7 @@ import PortalLayout from '../common/PortalLayout';
 import RecordManagerBookings from './RecordManagerBookings';
 import RecordManagerBookingDetail from './RecordManagerBookingDetail';
 import DocumentManagement from '../../superadmin/DocumentManagement';
+import { TaskListPage } from '../../tasks';
 import { recordManagerMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const RecordManagerWorkspaceContent = ({ selectedBookingId, setSelectedBookingId, user }) => {
@@ -36,17 +37,17 @@ const RecordManagerWorkspace = () => {
       defaultScreen="bookings"
       searchPlaceholder="Search registered bookings..."
     >
-      {({ activeScreen }) => (
-        activeScreen === 'documents' ? (
-          <DocumentManagement />
-        ) : (
+      {({ activeScreen }) => {
+        if (activeScreen === 'documents') return <DocumentManagement />;
+        if (activeScreen === 'tasks') return <TaskListPage />;
+        return (
           <RecordManagerWorkspaceContent
             selectedBookingId={selectedBookingId}
             setSelectedBookingId={setSelectedBookingId}
             user={user}
           />
-        )
-      )}
+        );
+      }}
     </PortalLayout>
   );
 };

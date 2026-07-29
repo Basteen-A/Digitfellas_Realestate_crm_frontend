@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import PortalLayout from '../common/PortalLayout';
 import CollectionExecBookings from './CollectionExecBookings';
 import CollectionExecBookingDetail from './CollectionExecBookingDetail';
+import { TaskListPage } from '../../tasks';
 import { collectionExecMenu } from '../../../components/layout/Sidebar/menuConfig';
 
 const CollectionExecWorkspace = () => {
@@ -17,8 +18,9 @@ const CollectionExecWorkspace = () => {
       defaultScreen="bookings"
       searchPlaceholder="Search my collections..."
     >
-      {() => (
-        selectedBookingId ? (
+      {({ activeScreen }) => {
+        if (activeScreen === 'tasks') return <TaskListPage />;
+        return selectedBookingId ? (
           <CollectionExecBookingDetail
             user={user}
             bookingId={selectedBookingId}
@@ -29,8 +31,8 @@ const CollectionExecWorkspace = () => {
             user={user}
             onSelectBooking={setSelectedBookingId}
           />
-        )
-      )}
+        );
+      }}
     </PortalLayout>
   );
 };
