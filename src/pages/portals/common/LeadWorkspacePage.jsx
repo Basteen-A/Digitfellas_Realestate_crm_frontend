@@ -2915,7 +2915,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         : (quickActionLead?.projectId ? [String(quickActionLead.projectId)] : []),
       // Prefill from the same-day previous update so it can be edited (rewritten).
       ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
-      ...(prefill?.nextFollowUpAt ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
+      // Only actions that actually ask for a follow-up date get the prefill. The
+      // field is hidden for the rest, so a prefilled value would be invisible and
+      // unclearable — that is what blocked a second booking on an already-booked
+      // lead, whose stale follow-up date is in the past.
+      ...(prefill?.nextFollowUpAt && action.needsFollowUp ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
       ...(prefill?.callResult ? { callResult: prefill.callResult } : {}),
     });
 
@@ -3033,19 +3037,24 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
       // 2. Handle Workflow Transition if action selected
       if (quickWorkflowAction) {
+        // The follow-up field only renders for actions that need one, so anything
+        // left in state for the others is invisible to the user and must not be
+        // validated or submitted.
+        const quickFollowUpAt = quickWorkflowAction.needsFollowUp ? f.nextFollowUpAt : '';
+
         // Validation: Follow-up date is required for certain actions
-        if (quickWorkflowAction.needsFollowUp && !f.nextFollowUpAt) {
+        if (quickWorkflowAction.needsFollowUp && !quickFollowUpAt) {
           toast.error('Please select a follow-up date');
           setQuickActionLoading(false);
           return;
         }
 
-        if (f.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(f.nextFollowUpAt)) {
+        if (quickFollowUpAt && !isFollowUpAtLeastMinutesAhead(quickFollowUpAt)) {
           toast.error('Follow-up date cannot be in the past');
           setQuickActionLoading(false);
           return;
         }
-        const quickCapError = followUpLimitError(f.nextFollowUpAt, quickWorkflowAction?.targetStatusCode || selectedLead?.statusCode);
+        const quickCapError = followUpLimitError(quickFollowUpAt, quickWorkflowAction?.targetStatusCode || selectedLead?.statusCode);
         if (quickCapError) { toast.error(quickCapError); setQuickActionLoading(false); return; }
 
         if (isRemarkMandatoryForAction(quickWorkflowAction)) {
@@ -3178,7 +3187,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           statusRemarkResponseType: quickWorkflowAction.code === 'SH_BOOKING'
             ? undefined
             : (quickRemarkAnsNonAns || f.callResult || undefined),
-          nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : undefined,
+          nextFollowUpAt: quickFollowUpAt ? new Date(quickFollowUpAt).toISOString() : undefined,
           assignToUserId: f.assignToUserId || undefined,
           closureReasonId: f.closureReasonId || undefined,
           callResult: undefined,

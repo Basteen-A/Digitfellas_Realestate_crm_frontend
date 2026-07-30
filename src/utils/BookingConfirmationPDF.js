@@ -148,7 +148,8 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const docOther = toAmt(savedRegSplit.other_registration_expenses);
   const documentationAmount = stampValue + docStampCommission + registrationValue + docOnline + docWriter + docPatta + docOther;
   const totalValue = plotValue + developmentValue + documentationAmount;
-  const balanceAmount = toAmt(booking.balance_amount);
+  // NOTE: booking.balance_amount is intentionally NOT used — the "Balance Amount"
+  // row on the cost sheet prints docOther (see the cost table below).
 
   const bookingNumber = safe(booking.booking_number, 'UNKNOWN');
   const bookingD = booking.booking_date ? new Date(booking.booking_date) : null;
@@ -353,16 +354,21 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     amtRow('Development Charges (Base)', devBase),
     amtRow('Development GST (18%)', devGst),
     amtRow('Development Amount (incl. GST)', developmentValue),
-    amtRow('Balance Amount', balanceAmount),
-    amtRow('Documentation Amount', documentationAmount),
+    // "Balance Amount" deliberately carries the OTHER REGISTRATION EXPENSES figure.
+    // The customer copy shows that amount without naming it, so the charge has no
+    // row of its own further down — it is still counted inside documentationAmount
+    // and therefore inside TOTAL VALUE.
+    amtRow('Balance Amount', docOther),
+    // The group header comes first, then its total as the group's opening row.
     { cells: [cell('Documentation Amount', contentW, 'center', true)] },
+    amtRow('Documentation Amount (Total)', documentationAmount),
     amtRow('Stamp Value (7%)', stampValue),
     amtRow('Stamp Commission', docStampCommission),
     amtRow('Registration Fees (2%)', registrationValue),
     amtRow('Online Commission, Computer Fees, Extra pages, Survey Fees, CD Etc..', docOnline),
     amtRow('Writer Charges', docWriter),
     amtRow('Patta Transfer Charges', docPatta),
-    amtRow('Other Registration Expenses', docOther),
+    // No 'Other Registration Expenses' row — it prints as Balance Amount above.
     { cells: [cell('TOTAL VALUE', LW[0], 'center', true), cell(`Rs. ${fmtAmt(totalValue)}\n${w(totalValue)}`, LW[1], 'left', true)] },
   ]);
 
@@ -420,9 +426,30 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     doc.text(`${bookingNumber}  |  Page ${i} of ${totalPages}`, pageW / 2, pageH - 8, { align: 'center' });
   }
 
-  // ── Trigger download ──
+  // ── Open in a new tab — never save to the user's machine automatically ──
+  // The form is normally reviewed on screen and printed, so a silent download into
+  // the Downloads folder was unwanted. The viewer's own toolbar still offers Save
+  // and Print. `doc.save()` remains only as the popup-blocked fallback, so a
+  // blocked popup can never lose the generated document.
   const sanitizeFileName = (s) => String(s || '').replace(/[^a-zA-Z0-9 _-]/g, '').trim().replace(/\s+/g, '_');
   const formName = extra && extra.formName ? sanitizeFileName(extra.formName) : '';
   const fileName = formName ? `${formName}.pdf` : `Booking_Form_${bookingNumber}.pdf`;
-  doc.save(fileName);
+  doc.setProperties({ title: fileName });
+
+  let blobUrl = '';
+  try {
+    blobUrl = URL.createObjectURL(doc.output('blob'));
+  } catch {
+    doc.save(fileName);
+    return;
+  }
+  // Must stay inside the click's user-gesture window or the browser blocks it.
+  const win = window.open(blobUrl, '_blank');
+  if (!win) {
+    URL.revokeObjectURL(blobUrl);
+    doc.save(fileName);
+    return;
+  }
+  // Revoke late: the tab has to finish loading the blob first.
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 };

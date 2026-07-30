@@ -1,11 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import toast from 'react-hot-toast';
-import { getSidebarMenuForRole, getTaskMenuItem, ROLE_LABELS } from './menuConfig';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { getSidebarMenuForRole, getTaskMenuItem } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
-import { logout } from '../../../redux/slices/authSlice';
-import { XMarkIcon, ChevronRightIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './Sidebar.css';
 
@@ -26,21 +24,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const user = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(user);
   const location = useLocation();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { siteTitle, logoFull, logoMark } = useSiteSettings();
-
-  const fullName = user?.fullName || user?.full_name
-    || `${user?.firstName || user?.first_name || ''} ${user?.lastName || user?.last_name || ''}`.trim()
-    || 'User';
-  const initials = (`${(user?.firstName || user?.first_name || '')[0] || ''}${(user?.lastName || user?.last_name || '')[0] || ''}`).toUpperCase() || 'U';
-  const roleLabel = ROLE_LABELS[roleCode] || user?.userType || '';
-
-  const handleLogout = async () => {
-    try { await dispatch(logout()); } catch { /* ignore */ }
-    toast.success('Logged out');
-    navigate('/login');
-  };
 
   // Determine which group contains the current path so it auto-opens
   const menu = React.useMemo(() => {
@@ -180,26 +164,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         })}
       </nav>
 
-      {/* Footer — profile + logout (mirrors the header user menu) */}
-      <div className="app-sidebar__footer">
-        <div className="app-sidebar__profile">
-          <NavLink
-            to="/profile"
-            onClick={handleLinkClick}
-            className={({ isActive }) => `app-sidebar__profile-link ${isActive ? 'is-active' : ''}`}
-            title={fullName}
-          >
-            <span className="app-sidebar__profile-avatar">{initials}</span>
-            <span className="app-sidebar__profile-info">
-              <span className="app-sidebar__profile-name">{fullName}</span>
-              {roleLabel && <span className="app-sidebar__profile-role">{roleLabel}</span>}
-            </span>
-          </NavLink>
-          <button type="button" className="app-sidebar__logout-btn" onClick={handleLogout} title="Logout" aria-label="Logout">
-            <ArrowRightOnRectangleIcon className="sidebar-icon" />
-          </button>
-        </div>
-      </div>
+      {/* No profile/logout footer here — the header user menu is the single place
+          for profile and logout, and carrying both duplicated the same controls. */}
 
     </aside>
     </>

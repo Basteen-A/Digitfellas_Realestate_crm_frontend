@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { XMarkIcon, PlusIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlusIcon, TrashIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { computeStampValue, computeRegistrationValue, registrationRateOf } from '../../../utils/bookingRates';
 import { generateBookingConfirmationPDF } from '../../../utils/BookingConfirmationPDF';
 
@@ -257,9 +257,9 @@ const GenerateBookingFormModal = ({ booking, banks, terms, onClose }) => {
             className="bkd-btn bkd-btn-primary"
             disabled={!canGenerate}
             onClick={handleGenerate}
-            title={canGenerate ? 'Generate Booking Form' : 'Ensure all entered bank rows have both a bank and a valid amount selected'}
+            title={canGenerate ? 'Generate the booking form and open it in a new tab' : 'Ensure all entered bank rows have both a bank and a valid amount selected'}
           >
-            <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Generate Booking Form
+            <ArrowTopRightOnSquareIcon style={{ width: 14, height: 14 }} /> Generate Booking Form
           </button>
         </div>
       </div>

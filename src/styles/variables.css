@@ -37,7 +37,9 @@
   --sidebar-separator: #edf2f7;
 
   /* ── Text Colors (Light Default) ── */
-  --text-primary: #0f172a;
+  /* Primary/body text is pure black — matches the mobile app's `text` token.
+     Secondary/tertiary/muted stay grey so hierarchy still reads. */
+  --text-primary: #000000;
   --text-secondary: #334155;
   --text-tertiary: #475569;
   --text-muted: #64748b;

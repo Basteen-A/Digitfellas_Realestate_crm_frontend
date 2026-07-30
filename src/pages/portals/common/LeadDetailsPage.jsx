@@ -998,7 +998,11 @@ const LeadDetailsPage = () => {
       callResult: action.targetStatusCode === 'RNR' || action.code.includes('RNR') ? 'Not Answered' : 'Answered',
       // Prefill from the same-day previous update so it can be edited (rewritten).
       ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
-      ...(prefill?.nextFollowUpAt ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
+      // Only actions that actually ask for a follow-up date get the prefill. The
+      // field is hidden for the rest, so a prefilled value would be invisible and
+      // unclearable — that is what blocked a second booking on an already-booked
+      // lead, whose stale follow-up date is in the past.
+      ...(prefill?.nextFollowUpAt && action.needsFollowUp ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
       ...(prefill?.callResult ? { callResult: prefill.callResult } : {}),
     }));
 
@@ -1093,11 +1097,16 @@ const LeadDetailsPage = () => {
       }
     }
 
-    if (quickActionForm.nextFollowUpAt && !isFollowUpAtLeastMinutesAhead(quickActionForm.nextFollowUpAt)) {
+    // The follow-up field only renders for actions that need one, so anything left
+    // in state for the others is invisible to the user and must not be validated
+    // or submitted.
+    const quickFollowUpAt = quickSelectedAction.needsFollowUp ? quickActionForm.nextFollowUpAt : '';
+
+    if (quickFollowUpAt && !isFollowUpAtLeastMinutesAhead(quickFollowUpAt)) {
       toast.error('Follow-up date cannot be in the past');
       return;
     }
-    const quickCapError = followUpLimitError(quickActionForm.nextFollowUpAt, quickSelectedAction?.targetStatusCode || lead?.statusCode);
+    const quickCapError = followUpLimitError(quickFollowUpAt, quickSelectedAction?.targetStatusCode || lead?.statusCode);
     if (quickCapError) { toast.error(quickCapError); return; }
 
     if (quickSelectedAction.needsCustomerProfile || quickSelectedAction.code === 'SH_BOOKING') {
@@ -1119,7 +1128,7 @@ const LeadDetailsPage = () => {
       statusRemarkResponseType: quickSelectedAction.code === 'SH_BOOKING'
         ? undefined
         : (quickRemarkAnsNonAns || quickActionForm.callResult || undefined),
-      nextFollowUpAt: quickActionForm.nextFollowUpAt ? new Date(quickActionForm.nextFollowUpAt).toISOString() : undefined,
+      nextFollowUpAt: quickFollowUpAt ? new Date(quickFollowUpAt).toISOString() : undefined,
       assignToUserId: quickActionForm.assignToUserId || undefined,
       closureReasonId: quickActionForm.closureReasonId || undefined,
       reason: quickActionForm.reason.trim() || undefined,
@@ -1183,11 +1192,11 @@ const LeadDetailsPage = () => {
     }
 
     if (quickSelectedAction.needsFollowUp) {
-      if (!quickActionForm.nextFollowUpAt) {
+      if (!quickFollowUpAt) {
         toast.error('Follow-up date is required');
         return;
       }
-      if (!isFollowUpAtLeastMinutesAhead(quickActionForm.nextFollowUpAt)) {
+      if (!isFollowUpAtLeastMinutesAhead(quickFollowUpAt)) {
         toast.error('Follow-up date cannot be in the past');
         return;
       }

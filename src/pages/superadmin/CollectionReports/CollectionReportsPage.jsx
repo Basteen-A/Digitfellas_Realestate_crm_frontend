@@ -67,8 +67,9 @@ const sumBy = (rows, key) => (rows || []).reduce((a, r) => a + num(r[key]), 0);
 const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '—' : '—');
 
 // Every rupee figure on this page is EXACT — Collection & Accounts screens never
-// abbreviate to Lakh/Crore.
-const money = (v) => formatCurrencyExact(num(v));
+// abbreviate to Lakh/Crore. Rounded to whole rupees: paise carry no meaning on a
+// report read at this altitude, and they made the KPI figures hard to scan.
+const money = (v) => formatCurrencyExact(Math.round(num(v)));
 // …with one exception: a chart's Y axis is a scale, not a figure you read off, and a
 // full ₹1,25,00,000 tick simply doesn't fit. Ticks are shortened; the tooltip that you
 // actually read the number from stays exact.
@@ -118,25 +119,25 @@ const pivot = (rows, field) => {
 const CR = {
   'collection-item': {
     icon: BanknotesIcon,
-    title: 'Total Collection — Item wise',
+    title: 'Collection Item wise',
     sub: 'Money received in this period, split by cost item',
     rs: 'Receipts by item',
   },
   'collection-project': {
     icon: BuildingOffice2Icon,
-    title: 'Total Collection — Project wise',
+    title: 'Collection Project wise',
     sub: 'Money received in this period, split by project',
     rs: 'Receipts by project',
   },
   'outstanding-item': {
     icon: ExclamationTriangleIcon,
-    title: 'Total Outstanding — Item wise',
+    title: 'Outstanding Item wise',
     sub: 'Balance still owed today, split by cost item',
     rs: 'Dues by item',
   },
   'outstanding-project': {
     icon: ClockIcon,
-    title: 'Total Outstanding — Project wise',
+    title: 'Outstanding Project wise',
     sub: 'Balance still owed today, split by project, with ageing',
     rs: 'Dues by project',
   },

@@ -236,86 +236,8 @@
   }
 }
 
-/* ── Footer / Profile ── */
-.app-sidebar__footer {
-  border-top: 1px solid var(--sidebar-separator, var(--border-primary));
-  padding: 10px 8px;
-  margin-top: auto;
-}
-
-.app-sidebar__profile {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.app-sidebar__profile-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: var(--border-radius-md, 8px);
-  text-decoration: none;
-  transition: all var(--transition-fast, 0.15s);
-}
-
-.app-sidebar__profile-link:hover {
-  background: var(--sidebar-hover-bg, var(--bg-card-hover));
-}
-
-.app-sidebar__profile-link.is-active {
-  background: var(--sidebar-active-bg, rgba(98, 90, 250, 0.12));
-}
-
-.app-sidebar__profile-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple, #8B5CF6) 100%);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.app-sidebar__profile-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.app-sidebar__profile-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.app-sidebar__profile-role {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.app-sidebar__logout-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 6px 8px;
-  border-radius: var(--border-radius-md, 8px);
-  transition: background 0.15s;
-  flex-shrink: 0;
-}
-
-.app-sidebar__logout-btn:hover {
-  background: var(--sidebar-hover-bg, var(--bg-card-hover));
-}
+/* The sidebar has no profile/logout footer — profile and logout live in the
+   header user menu only. */
 
 /* ── Heroicon SVG sizing ── */
 .sidebar-icon {
@@ -390,19 +312,6 @@
 .app-sidebar--collapsed:hover .app-sidebar__group-button { justify-content: flex-start; padding: 8px 16px; margin: 1px 8px; width: calc(100% - 16px); }
 .app-sidebar--collapsed:hover .app-sidebar__link--child { padding: 8px 16px 8px 46px; }
 .app-sidebar--collapsed:hover .app-sidebar__subnav { display: block; }
-
-/* Footer (profile + logout) on the collapsed rail: avatar only, reveal on hover */
-.app-sidebar--collapsed .app-sidebar__profile { justify-content: center; }
-.app-sidebar--collapsed .app-sidebar__profile-link { justify-content: center; padding: 8px; flex: none; }
-.app-sidebar--collapsed .app-sidebar__profile-info,
-.app-sidebar--collapsed .app-sidebar__logout-btn { display: none; }
-.app-sidebar--collapsed:hover .app-sidebar__profile-link { justify-content: flex-start; padding: 8px 10px; flex: 1; }
-.app-sidebar--collapsed:hover .app-sidebar__profile-info { display: flex; }
-.app-sidebar--collapsed:hover .app-sidebar__logout-btn { display: inline-flex; }
-
-/* Logout button: center the icon */
-.app-sidebar__logout-btn { display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); }
-.app-sidebar__logout-btn:hover { color: var(--accent-red, #ef4444); }
 
 /* ── Mobile drawer close button — mirrors the telecaller portal sidebar
    (.portal-sidebar__close) for a consistent look across roles. ── */
