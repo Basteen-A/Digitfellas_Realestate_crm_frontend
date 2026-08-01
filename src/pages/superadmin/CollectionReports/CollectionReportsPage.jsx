@@ -2,7 +2,8 @@
 // COLLECTION REPORTS
 // Same shell, filter bar, sidebar catalogue and report atoms as the Reports and
 // Marketing Reports pages — only the report set differs:
-//   1. Collection — Item wise      (how much came in, split by cost item)
+//   1. Collection — Item wise      (how much came in, split by cost item, drilling
+//                                   item → project → phase → unit)
 //   2. Collection — Project wise   (how much came in, split by project)
 //   3. Outstanding — Item wise     (what is still owed, split by cost item)
 //   4. Outstanding — Project wise  (what is still owed, split by project + ageing)
@@ -32,7 +33,7 @@ import toast from 'react-hot-toast';
 import {
   BanknotesIcon, ArrowPathIcon, ArrowDownTrayIcon, FunnelIcon, ChevronDownIcon,
   ChevronRightIcon, Squares2X2Icon, BuildingOffice2Icon, ExclamationTriangleIcon,
-  CheckBadgeIcon, ClockIcon, ScaleIcon, TrophyIcon, ReceiptRefundIcon,
+  CheckBadgeIcon, ClockIcon, TrophyIcon, ReceiptRefundIcon,
   CreditCardIcon, ChartPieIcon, ArrowTrendingUpIcon, DocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import reportApi from '../../../api/reportApi';
@@ -92,6 +93,23 @@ const mixOf = (rows, nameKey, valueKey, top = 7) => {
   }));
   const rest = sumBy(ranked.slice(top), valueKey);
   return rest > 0 ? [...head, { name: 'Others', value: rest, color: COLORS.muted }] : head;
+};
+
+// The drill-down's leaf: booking × item rows folded onto the UNIT they belong to. A
+// unit normally carries exactly one booking, but nothing in the schema guarantees it —
+// so a re-booked unit sums, and names both bookings rather than showing one of them.
+const unitsOf = (rows) => {
+  const m = new Map();
+  rows.forEach((r) => {
+    if (!m.has(r.unit_label)) {
+      m.set(r.unit_label, { unit_label: r.unit_label, collected: 0, bookings: [], buyers: [] });
+    }
+    const u = m.get(r.unit_label);
+    u.collected += num(r.collected);
+    if (!u.bookings.includes(r.booking_number)) u.bookings.push(r.booking_number);
+    if (r.buyer_name && !u.buyers.includes(r.buyer_name)) u.buyers.push(r.buyer_name);
+  });
+  return [...m.values()].sort((a, b) => b.collected - a.collected);
 };
 
 // Project × item rows → one row per project with a per-item amount map, plus the item
@@ -207,6 +225,64 @@ const GroupRows = ({ groups, head, renderRow, totalCells, emptyLabel }) => {
   );
 };
 
+// ── nested drill-down (item → project → phase → unit) ────────────────────────
+// GroupRows above only expresses one level, so a branch recurses instead: every node
+// renders the same expandable header, and the deepest one renders the unit table.
+const Branch = ({ node, depth, leafHead, renderLeaf, leafTotals }) => {
+  const [open, setOpen] = useState(false);
+  // An empty children array is a leaf, not a branch — otherwise expanding it would
+  // render nothing at all instead of the table's own empty state.
+  const kids = node.children?.length ? node.children : null;
+
+  return (
+    <div style={{ borderTop: '1px solid var(--border-primary)' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 py-2.5 pr-4 text-left transition-colors hover:bg-[var(--bg-hover,#FAFAFA)]"
+        style={{ paddingLeft: 16 + depth * 20 }}
+      >
+        <ChevronRightIcon
+          className="w-4 h-4 flex-shrink-0 transition-transform"
+          style={{ color: 'var(--text-muted)', transform: open ? 'rotate(90deg)' : 'none' }}
+        />
+        <span
+          className={`text-[13px] truncate ${depth === 0 ? 'font-medium' : ''}`}
+          style={{ color: depth === 0 ? 'var(--text-primary)' : 'var(--text-secondary, var(--text-primary))' }}
+        >
+          {node.label}
+        </span>
+        <span className="ml-auto flex items-center gap-3 flex-shrink-0">
+          {node.stats.map((s) => (
+            <span key={s.label} className="text-[12px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+              {s.label} <strong style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{s.value}</strong>
+            </span>
+          ))}
+        </span>
+      </button>
+      {open && (kids
+        ? kids.map((c) => (
+          <Branch key={c.key} node={c} depth={depth + 1} leafHead={leafHead} renderLeaf={renderLeaf} leafTotals={leafTotals} />
+        ))
+        : (
+          <div style={{ background: 'var(--bg-hover, #FAFAFA)' }}>
+            <Table head={leafHead} colSpan={leafHead.length} empty={!node.rows?.length}>
+              {(node.rows || []).map(renderLeaf)}
+              {node.rows?.length > 0 && leafTotals && <TotalRow cells={leafTotals(node.rows)} />}
+            </Table>
+          </div>
+        ))}
+    </div>
+  );
+};
+
+const TreeRows = ({ nodes, emptyLabel, ...leaf }) => {
+  if (!nodes.length) {
+    return <div className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>{emptyLabel}</div>;
+  }
+  return <div>{nodes.map((n) => <Branch key={n.key} node={n} depth={0} {...leaf} />)}</div>;
+};
+
 // Item label with its raw payment_category underneath, so a collection user can match
 // a row to the category they pick in the Record Payment drawer.
 const ItemCell = ({ row }) => (
@@ -241,9 +317,9 @@ const Panel = ({ rkey, d, registerRef }) => {
   const byItem = d?.byItem || [];
   const byProject = d?.byProject || [];
   const projectItem = d?.projectItem || [];
+  const itemUnit = d?.itemUnit || [];
   const aging = d?.aging || [];
   const topOutstanding = d?.topOutstanding || [];
-  const modes = d?.modes || [];
   const monthly = d?.meta?.trendGranularity === 'month';
   const itemLabel = (key) => byItem.find((i) => i.item === key)?.item_label || key;
 
@@ -257,15 +333,52 @@ const Panel = ({ rkey, d, registerRef }) => {
       const trend = (d?.trend || []).map((r) => ({
         bucket: r.bucket, collected: num(r.collected), gross: num(r.gross), refunds: num(r.refunds),
       }));
-      // Item → which projects that item's money came from.
-      const groups = ranked.map((i) => ({
-        key: i.item,
-        label: i.item_label,
-        rows: projectItem
-          .filter((r) => r.item === i.item && num(r.collected) !== 0)
-          .sort((a, b) => num(b.collected) - num(a.collected)),
-        stats: [{ label: 'Collected', value: money(i.collected) }],
-      }));
+      // Item → project → phase → unit. The server ships one row per booking × item
+      // that took money in this window, so the tree only ever holds money that moved.
+      const groups = ranked.map((i) => {
+        const itemTotal = num(i.collected);
+        const projects = new Map();
+
+        itemUnit.filter((r) => r.item === i.item && num(r.collected) !== 0).forEach((r) => {
+          const p = projects.get(r.project_id) || {
+            key: `${i.item}::${r.project_id}`, label: r.project_name, value: 0, phases: new Map(),
+          };
+          p.value += num(r.collected);
+          const ph = p.phases.get(r.phase_id) || {
+            key: `${p.key}::${r.phase_id}`, label: r.phase_name || 'No phase', value: 0, rows: [],
+          };
+          ph.value += num(r.collected);
+          ph.rows.push(r);
+          p.phases.set(r.phase_id, ph);
+          projects.set(r.project_id, p);
+        });
+
+        return {
+          key: i.item,
+          label: i.item_label,
+          stats: [{ label: 'Collected', value: money(i.collected) }],
+          children: [...projects.values()].sort((a, b) => b.value - a.value).map((p) => ({
+            key: p.key,
+            label: p.label,
+            stats: [
+              { label: 'Collected', value: money(p.value) },
+              { label: 'Share', value: `${pct1(p.value, itemTotal)}%` },
+            ],
+            children: [...p.phases.values()].sort((a, b) => b.value - a.value).map((ph) => {
+              const units = unitsOf(ph.rows);
+              return {
+                key: ph.key,
+                label: ph.label,
+                stats: [
+                  { label: 'Collected', value: money(ph.value) },
+                  { label: 'Units', value: cnt(units.length) },
+                ],
+                rows: units,
+              };
+            }),
+          })),
+        };
+      });
 
       return (
         <>
@@ -331,39 +444,21 @@ const Panel = ({ rkey, d, registerRef }) => {
             </Table>
           </Card>
 
-          <Card title="Where Each Item Was Collected" sub="Expand an item to see the projects that paid it">
-            <GroupRows
-              groups={groups}
+          <Card title="Where Each Item Was Collected" sub="Item → project → phase → unit; expand to follow the money down">
+            <TreeRows
+              nodes={groups}
               emptyLabel="No collection in this period."
-              head={['Project', 'Collected', 'Share of item']}
-              renderRow={(r) => {
-                const itemTotal = num(byItem.find((i) => i.item === r.item)?.collected);
-                return (
-                  <Tr key={`${r.item}-${r.project_id}`}>
-                    <Td bold>{r.project_name}</Td>
-                    <Td>{money(r.collected)}</Td>
-                    <Td><Pill tone="blue">{pct1(num(r.collected), itemTotal)}%</Pill></Td>
-                  </Tr>
-                );
-              }}
-              totalCells={(rows) => [money(sumBy(rows, 'collected')), '100%']}
-            />
-          </Card>
-
-          <Card title="How the Money Came In" sub="Payment mode split for this period" right={`${modes.length} mode${modes.length === 1 ? '' : 's'}`}>
-            <Table head={['Payment Mode', 'Net Collected', 'Share', 'Payments']} colSpan={4} empty={modes.length === 0}>
-              {modes.map((m) => (
-                <Tr key={m.mode}>
-                  <Td bold>{m.mode}</Td>
-                  <Td bold>{money(m.collected)}</Td>
-                  <Td><Pill tone="blue">{pct1(num(m.collected), num(t.collected))}%</Pill></Td>
-                  <Td>{cnt(m.payments)}</Td>
+              leafHead={['Unit', 'Booking', 'Buyer', 'Collected']}
+              renderLeaf={(u) => (
+                <Tr key={u.unit_label}>
+                  <Td bold>{u.unit_label}</Td>
+                  <Td>{u.bookings.join(', ')}</Td>
+                  <Td>{u.buyers.join(', ') || '—'}</Td>
+                  <Td>{money(u.collected)}</Td>
                 </Tr>
-              ))}
-              {modes.length > 0 && (
-                <TotalRow cells={[money(sumBy(modes, 'collected')), '100%', cnt(sumBy(modes, 'payments'))]} />
               )}
-            </Table>
+              leafTotals={(rows) => ['', '', money(sumBy(rows, 'collected'))]}
+            />
           </Card>
         </>
       );
@@ -376,7 +471,6 @@ const Panel = ({ rkey, d, registerRef }) => {
       const top = collecting[0];
       const chart = collecting.slice(0, 12).map((p) => ({ name: p.project_name, collected: num(p.collected) }));
       const { projects, itemCols } = pivot(projectItem, 'collected');
-      const avg = num(t.bookingsPaying) > 0 ? num(t.collected) / num(t.bookingsPaying) : 0;
       // Project → its item split for the period.
       const groups = collecting.map((p) => ({
         key: p.project_id,
@@ -396,7 +490,6 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="Net Collected" value={money(t.collected)} sub="Across every project, this period" color={COLORS.booking} icon={BanknotesIcon} valueSize={19} />
             <KpiCard label="Projects Collecting" value={cnt(collecting.length)} sub={`of ${cnt(t.projects)} with live bookings`} color={COLORS.negotiation} icon={BuildingOffice2Icon} />
             <KpiCard label="Top Project" value={top?.project_name || '—'} sub={top ? `${money(top.collected)} · ${pct(num(top.collected), num(t.collected))}% share` : ''} color={COLORS.qualified} icon={TrophyIcon} valueSize={16} />
-            <KpiCard label="Avg per Booking" value={money(avg)} sub={`${cnt(t.bookingsPaying)} booking${num(t.bookingsPaying) === 1 ? '' : 's'} paid this period`} color={COLORS.leads} icon={ScaleIcon} valueSize={19} />
             <KpiCard label="Payments" value={cnt(t.payments)} sub={`${money(t.refunds)} refunded`} color={COLORS.siteVisit} icon={CreditCardIcon} />
           </KpiRow>
 
@@ -594,7 +687,6 @@ const Panel = ({ rkey, d, registerRef }) => {
       }));
       const { projects, itemCols } = pivot(projectItem, 'outstanding');
       const realisation = pct1(num(t.collectedLtd), num(t.demand));
-      const avgDue = num(t.bookingsPending) > 0 ? num(t.outstanding) / num(t.bookingsPending) : 0;
       const agingTotals = AGE_COLS.reduce((m, c) => { m[c.key] = sumBy(aging, c.key); return m; }, {});
       const overdue90 = agingTotals.b90p;
 
@@ -602,9 +694,7 @@ const Panel = ({ rkey, d, registerRef }) => {
         <>
           <KpiRow>
             <KpiCard label="Total Outstanding" value={money(t.outstanding)} sub={SNAPSHOT_NOTE} color={COLORS.cancelled} icon={ExclamationTriangleIcon} valueSize={19} />
-            <KpiCard label="Bookings Pending" value={cnt(t.bookingsPending)} sub={`${cnt(t.bookingsSettled)} fully settled`} color={COLORS.negotiation} icon={Squares2X2Icon} />
-            <KpiCard label="Avg per Booking" value={money(avgDue)} sub="Average balance still owed" color={COLORS.leads} icon={ScaleIcon} valueSize={19} />
-            <KpiCard label="Projects with Dues" value={cnt(withDues.length)} sub={`of ${cnt(t.projects)} with live bookings`} color={COLORS.siteVisit} icon={BuildingOffice2Icon} />
+            <KpiCard label="Bookings Pending" value={cnt(t.bookingsPending)} sub={`${cnt(t.bookingsFullyPaid)} fully paid`} color={COLORS.negotiation} icon={Squares2X2Icon} />
             <KpiCard label="Overdue 90+ days" value={money(overdue90)} sub={`${pct1(overdue90, num(t.outstanding))}% of the balance`} color={COLORS.cancelled} icon={ClockIcon} valueSize={19} />
             <KpiCard label="Realisation" value={`${realisation}%`} sub={`${money(t.collectedLtd)} of ${money(t.demand)}`} color={COLORS.booking} icon={CheckBadgeIcon} />
           </KpiRow>
@@ -627,8 +717,11 @@ const Panel = ({ rkey, d, registerRef }) => {
             </ChartCard>
           </div>
 
+          {/* Fully Paid counts only bookings that were BILLED something and owe nothing —
+              a booking with no pricing captured yet has no balance by arithmetic, and is
+              neither pending nor fully paid. */}
           <Card title="Outstanding by Project" sub={SNAPSHOT_NOTE}>
-            <Table head={['Project', 'Billed', 'Collected', 'Outstanding', 'Collected %', 'Progress', 'Bookings Pending', 'Settled']} colSpan={8} empty={ranked.length === 0}>
+            <Table head={['Project', 'Billed', 'Collected', 'Outstanding', 'Collected %', 'Progress', 'Bookings Pending', 'Fully Paid']} colSpan={8} empty={ranked.length === 0}>
               {ranked.map((p) => {
                 const r = pct(num(p.collected_ltd), num(p.demand));
                 return (
@@ -640,7 +733,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <Td><Pill tone={ratioTone(r)}>{r}%</Pill></Td>
                     <Td><ProgressBar value={r} color={r >= 100 ? COLORS.booking : COLORS.negotiation} /></Td>
                     <Td>{cnt(p.bookings_pending)}</Td>
-                    <Td>{cnt(p.bookings_settled)}</Td>
+                    <Td>{cnt(p.bookings_fully_paid)}</Td>
                   </Tr>
                 );
               })}
@@ -651,7 +744,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <TotalRow cells={[
                     money(dem), money(col), money(sumBy(ranked, 'outstanding')),
                     <Pill tone={ratioTone(pct(col, dem))}>{pct(col, dem)}%</Pill>,
-                    '', cnt(sumBy(ranked, 'bookings_pending')), cnt(sumBy(ranked, 'bookings_settled')),
+                    '', cnt(sumBy(ranked, 'bookings_pending')), cnt(sumBy(ranked, 'bookings_fully_paid')),
                   ]} />
                 );
               })()}

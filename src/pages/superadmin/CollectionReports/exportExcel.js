@@ -1,8 +1,8 @@
 // Excel export for the Collection Report — one styled workbook holding every report
 // on screen (so a collection review needs one file, not four):
-//   Overview · Collection by Item · Collection by Project · Project x Item (Collected)
-//   · Outstanding by Item · Outstanding by Project · Project x Item (Outstanding)
-//   · Ageing · Top Outstanding · Collection Trend · Payment Modes
+//   Overview · Collection by Item · Collection by Unit · Collection by Project
+//   · Project x Item (Collected) · Outstanding by Item · Outstanding by Project
+//   · Project x Item (Outstanding) · Ageing · Top Outstanding · Collection Trend
 // Built client-side from the already-fetched payload, with the live charts of the
 // active report embedded on the Overview sheet.
 //
@@ -117,11 +117,14 @@ export const exportCollectionReports = async (payload, meta = {}) => {
   const byItem = payload.byItem || [];
   const byProject = payload.byProject || [];
   const projectItem = payload.projectItem || [];
+  const itemUnit = payload.itemUnit || [];
   const aging = payload.aging || [];
   const topOutstanding = payload.topOutstanding || [];
   const overdue90 = payload.overdue90 || {};
   const trend = payload.trend || [];
-  const modes = payload.modes || [];
+  // Drill-down rows carry the raw payment_category; byItem is where its display label
+  // lives, so the sheet reads the same as the screen.
+  const itemLabels = new Map(byItem.map((i) => [i.item, i.item_label || i.item]));
 
   // ── Overview ──
   const ov = wb.addWorksheet('Overview', { properties: { defaultColWidth: 18 } });
@@ -148,7 +151,10 @@ export const exportCollectionReports = async (payload, meta = {}) => {
     ['Outstanding', t.outstanding, COLORS.cancelled, true],
     ['Live Bookings', t.bookings, COLORS.primary, false],
     ['Bookings Pending', t.bookingsPending, COLORS.negotiation, false],
-    ['Bookings Settled', t.bookingsSettled, COLORS.siteVisit, false],
+    ['Bookings Fully Paid', t.bookingsFullyPaid, COLORS.siteVisit, false],
+    // Billed nothing, so owe nothing — counted apart from "fully paid" rather than
+    // inflating it. Pending + Fully Paid + Unbilled = Live Bookings.
+    ['Bookings Unbilled', t.bookingsUnbilled, COLORS.muted, false],
   ];
   let kr = 5;
   kpis.forEach(([label, value, color, isMoney], i) => {
@@ -301,7 +307,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
       { header: 'Excess', key: 'excess', money: true },
       { header: 'Collected %', key: 'collected_pct' },
       { header: 'Bookings Pending', key: 'bookings_pending' },
-      { header: 'Bookings Settled', key: 'bookings_settled' },
+      { header: 'Bookings Fully Paid', key: 'bookings_fully_paid' },
     ],
     [...byProject]
       .sort((a, b) => n(b.outstanding) - n(a.outstanding))
@@ -313,7 +319,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
         excess: n(r.excess),
         collected_pct: pct(r.collected_ltd, r.demand),
         bookings_pending: n(r.bookings_pending),
-        bookings_settled: n(r.bookings_settled),
+        bookings_fully_paid: n(r.bookings_fully_paid),
       })),
   );
 
@@ -394,22 +400,28 @@ export const exportCollectionReports = async (payload, meta = {}) => {
     })),
   );
 
+  // The item → project → phase → unit drill-down, flattened: one row per unit × item,
+  // so the sheet pivots on any level of the hierarchy the page shows.
   addSheet(
     wb,
-    'Payment Modes',
+    'Collection by Unit',
     [
-      { header: 'Payment Mode', key: 'mode' },
+      { header: 'Item', key: 'item' },
+      { header: 'Project', key: 'project' },
+      { header: 'Phase', key: 'phase' },
+      { header: 'Unit', key: 'unit' },
+      { header: 'Booking', key: 'booking' },
+      { header: 'Buyer', key: 'buyer' },
       { header: 'Net Collected', key: 'collected', money: true, numeric: true },
-      { header: 'Gross Receipts', key: 'gross', money: true },
-      { header: 'Refunds', key: 'refunds', money: true },
-      { header: 'Payments', key: 'payments' },
     ],
-    modes.map((r) => ({
-      mode: r.mode,
+    itemUnit.map((r) => ({
+      item: itemLabels.get(r.item) || r.item,
+      project: r.project_name,
+      phase: r.phase_name || 'No phase',
+      unit: r.unit_label,
+      booking: r.booking_number,
+      buyer: r.buyer_name,
       collected: n(r.collected),
-      gross: n(r.gross),
-      refunds: n(r.refunds),
-      payments: n(r.payments),
     })),
   );
 

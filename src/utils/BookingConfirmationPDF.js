@@ -5,36 +5,50 @@
 //   Page 2 — Terms and Conditions
 //   Page 3 — Documentation / cost calculation table
 //   Page 4 — Account Details (one bordered block per split account)
-// MUST stay byte-identical to the server copy at
-// server/src/utils/bookingConfirmationPdf.js (shared, duplicated code).
+// Kept in lock-step with the server copy at
+// server/src/utils/bookingConfirmationPdf.js (shared, duplicated code) with ONE
+// deliberate exception — see "Balance Amount" below:
+//   • Balance Amount prints Other Registration Expenses × 5, and that figure is kept
+//     OUT of the Documentation Amount total and out of TOTAL VALUE.
+// That divergence is intentional and web-only; do NOT port it to the server copy, and
+// do not "fix" the two files back into agreement on that row.
 // ============================================================
 
 import { jsPDF } from 'jspdf';
 import { computeStampValue, computeRegistrationValue, registrationRateOf } from './bookingRates';
 
-/* ── Number → words (international grouping, "... Indian rupees") ── */
+/* ── Number → words (INDIAN system: crore / lakh / thousand) ── */
+// Matches the Indian digit grouping the amounts are printed in
+// (toLocaleString('en-IN') → 16,63,360), so the figure and the words agree:
+// "Rs. 16,63,360" reads "Rupees Sixteen lakhs sixty-three thousand three hundred sixty only".
+// International grouping (million/billion) was used before and disagreed with the digits.
 const numberToWords = (num) => {
   const n = Math.floor(Math.abs(Number(num) || 0));
-  if (n === 0) return 'Indian Rupees Zero only';
+  if (n === 0) return 'Rupees Zero only';
   const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
     'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-  const below1000 = (x) => {
-    let s = '';
-    if (x >= 100) { s += ones[Math.floor(x / 100)] + ' hundred'; x %= 100; if (x) s += ' '; }
-    if (x >= 20) { s += tens[Math.floor(x / 10)]; if (x % 10) s += '-' + ones[x % 10]; }
-    else if (x > 0) s += ones[x];
-    return s;
+  const twoDigits = (x) => (x >= 20
+    ? tens[Math.floor(x / 10)] + (x % 10 ? '-' + ones[x % 10] : '')
+    : ones[x]);
+  // Every group below crore is at most two digits; the crore group itself can run
+  // past 99 (100 crore and up), so it recurses through the same conversion.
+  const convert = (value) => {
+    let x = value;
+    const parts = [];
+    const crore = Math.floor(x / 10000000);
+    if (crore) { parts.push(convert(crore) + ' crore' + (crore > 1 ? 's' : '')); x %= 10000000; }
+    const lakh = Math.floor(x / 100000);
+    if (lakh) { parts.push(twoDigits(lakh) + ' lakh' + (lakh > 1 ? 's' : '')); x %= 100000; }
+    const thousand = Math.floor(x / 1000);
+    if (thousand) { parts.push(twoDigits(thousand) + ' thousand'); x %= 1000; }
+    const hundred = Math.floor(x / 100);
+    if (hundred) { parts.push(ones[hundred] + ' hundred'); x %= 100; }
+    if (x) parts.push(twoDigits(x));
+    return parts.join(' ');
   };
-  const groups = [{ v: 1e9, n: 'billion' }, { v: 1e6, n: 'million' }, { v: 1e3, n: 'thousand' }];
-  let rem = n;
-  const parts = [];
-  groups.forEach((g) => {
-    if (rem >= g.v) { parts.push(below1000(Math.floor(rem / g.v)) + ' ' + g.n); rem %= g.v; }
-  });
-  if (rem > 0) parts.push(below1000(rem));
-  const words = parts.join(', ');
-  return 'Indian Rupees ' + words.charAt(0).toUpperCase() + words.slice(1) + ' only';
+  const words = convert(n);
+  return 'Rupees ' + words.charAt(0).toUpperCase() + words.slice(1) + ' only';
 };
 
 /* ── Safe text helper ── */
@@ -146,10 +160,17 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const docWriter = toAmt(savedRegSplit.writer_expenses);
   const docPatta = toAmt(savedRegSplit.patta_charges);
   const docOther = toAmt(savedRegSplit.other_registration_expenses);
-  const documentationAmount = stampValue + docStampCommission + registrationValue + docOnline + docWriter + docPatta + docOther;
+  // The "Balance Amount" row on the cost sheet carries Other Registration Expenses at
+  // FIVE TIMES the stored figure. The multiplier is print-only and is never named on the
+  // form — the row is labelled plainly as "Balance Amount".
+  const balanceAmount = docOther * 5;
+  // Other Registration Expenses is deliberately OUTSIDE this total: it is presented on
+  // its own as Balance Amount and must not be counted again here. Because TOTAL VALUE is
+  // built from documentationAmount, it is outside that too.
+  const documentationAmount = stampValue + docStampCommission + registrationValue + docOnline + docWriter + docPatta;
   const totalValue = plotValue + developmentValue + documentationAmount;
   // NOTE: booking.balance_amount is intentionally NOT used — the "Balance Amount"
-  // row on the cost sheet prints docOther (see the cost table below).
+  // row on the cost sheet prints balanceAmount (see the cost table below).
 
   const bookingNumber = safe(booking.booking_number, 'UNKNOWN');
   const bookingD = booking.booking_date ? new Date(booking.booking_date) : null;
@@ -354,11 +375,11 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     amtRow('Development Charges (Base)', devBase),
     amtRow('Development GST (18%)', devGst),
     amtRow('Development Amount (incl. GST)', developmentValue),
-    // "Balance Amount" deliberately carries the OTHER REGISTRATION EXPENSES figure.
-    // The customer copy shows that amount without naming it, so the charge has no
-    // row of its own further down — it is still counted inside documentationAmount
-    // and therefore inside TOTAL VALUE.
-    amtRow('Balance Amount', docOther),
+    // "Balance Amount" deliberately carries the OTHER REGISTRATION EXPENSES figure,
+    // multiplied by 5. The customer copy shows that amount without naming either the
+    // charge or the multiplier, so it has no row of its own further down — and it is
+    // NOT part of the Documentation Amount group, its total, or TOTAL VALUE.
+    amtRow('Balance Amount', balanceAmount),
     // The group header comes first, then its total as the group's opening row.
     { cells: [cell('Documentation Amount', contentW, 'center', true)] },
     amtRow('Documentation Amount (Total)', documentationAmount),
@@ -368,7 +389,8 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     amtRow('Online Commission, Computer Fees, Extra pages, Survey Fees, CD Etc..', docOnline),
     amtRow('Writer Charges', docWriter),
     amtRow('Patta Transfer Charges', docPatta),
-    // No 'Other Registration Expenses' row — it prints as Balance Amount above.
+    // No 'Other Registration Expenses' row — it prints as Balance Amount above, and is
+    // excluded from this group's total.
     { cells: [cell('TOTAL VALUE', LW[0], 'center', true), cell(`Rs. ${fmtAmt(totalValue)}\n${w(totalValue)}`, LW[1], 'left', true)] },
   ]);
 

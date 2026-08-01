@@ -27,7 +27,7 @@ import { COLORS, SERIES } from '../Reports/analytics/palette';
 import { ChartCard, SimpleBar, FunnelDonut, TrendLine } from '../Reports/analytics/charts/Charts';
 import {
   MonoContext, KpiCard, KpiRow, Pill, ratioTone, ProgressBar,
-  Card, Table, Tr, Td, TotalRow,
+  Card, Table, Tr, Td, TotalRow, NoteBar, HeadTip,
 } from '../Reports/analytics/ui';
 import { exportMarketingReports } from './exportExcel';
 import '../Reports/Reports.css';
@@ -38,6 +38,20 @@ const PERIODS = [
   { key: 'mtd', label: 'Month' },
   { key: 'all', label: 'All Time' },
 ];
+
+// ── The two SV numbers on this page, and why they differ ────────────────
+// "SV Done" (reports 2 and 3) is LEAD-anchored: leads created in the window that have
+// ever completed a visit. "Source-wise Site Visits" (report 5) is VISIT-anchored:
+// visits that happened in the window, whoever's lead they belong to. Marketing Metrix
+// carries a THIRD number again — same lead-anchored shape, but its cohort is the
+// latest marketing touch (creation OR re-enquiry), so a re-enquiry moves a lead into a
+// later month there and not here. All three are correct; each is stated where it is
+// read so nobody quotes one while looking at another.
+const SV_DONE_TIP = 'Leads CREATED in this period that have completed a site visit, whenever that visit happened. Once per lead — a revisit never adds a second. Not the same as "visits done in this period": see the Source-wise Site Visits report for that.';
+
+const VISIT_ANCHORED_NOTE = 'This report is anchored on the VISIT DATE — it counts visits that actually happened in this period, no matter when the lead came in. Every other report on this page is anchored on the lead, so this number is normally the higher one. Both are correct; they answer different questions.';
+
+const LEAD_ANCHORED_NOTE = 'Anchored on the LEAD: every figure below belongs to leads created in this period, credited to the source they came in on. The visit or booking itself may have happened later. Marketing › Metrix counts the same outcomes against the latest marketing touch (creation OR re-enquiry), so a re-enquiring lead lands in a different month there.';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const num = (v) => Number(v) || 0;
@@ -224,7 +238,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           </ChartCard>
 
           <Card title="Leads by Source" sub="Share of total, with downstream outcome">
-            <Table head={['Source', 'Leads', 'Share', 'Qualified', 'SV Done', 'Bookings']} colSpan={6} empty={bySource.length === 0}>
+            <Table head={['Source', 'Leads', 'Share', 'Qualified', <HeadTip key="sv" label="SV Done" tip={SV_DONE_TIP} />, 'Bookings']} colSpan={6} empty={bySource.length === 0}>
               {bySource.map((s) => (
                 <Tr key={s.source_id}>
                   <Td bold>{s.source_name}</Td>
@@ -370,9 +384,11 @@ const Panel = ({ rkey, d, registerRef }) => {
 
       return (
         <>
+          <NoteBar>{LEAD_ANCHORED_NOTE}</NoteBar>
+
           <KpiRow>
             <KpiCard label="Leads" value={fmt(t.leads)} sub="Cohort size" color={COLORS.leads} icon={UsersIcon} />
-            <KpiCard label="SV Done" value={fmt(t.siteVisits)} sub="Leads that visited" color={COLORS.siteVisit} icon={BuildingOffice2Icon} />
+            <KpiCard label="SV Done" value={fmt(t.siteVisits)} sub="Leads created here that have visited" color={COLORS.siteVisit} icon={BuildingOffice2Icon} />
             <KpiCard label="SV Ratio" value={`${overall}%`} sub="Site visits ÷ leads" color={COLORS.qualified} icon={ScaleIcon} />
             <KpiCard label="Bookings" value={fmt(t.bookings)} sub={`${pct1(num(t.bookings), num(t.siteVisits))}% of visits booked`} color={COLORS.booking} icon={CheckBadgeIcon} />
             <KpiCard label="Best Converting Source" value={best?.source_name || '—'} sub={best ? `${pct1(num(best.sv_leads), num(best.leads))}% SV ratio` : 'Needs 5+ leads'} color={COLORS.negotiation} icon={TrophyIcon} valueSize={17} />
@@ -390,7 +406,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           </ChartCard>
 
           <Card title="Site Visit Ratio by Source" sub="Leads created in this period that reached a completed visit">
-            <Table head={['Source', 'Leads', 'SV Done', 'SV Ratio', 'Progress', 'Bookings', 'SV → Booking']} colSpan={7} empty={bySource.length === 0}>
+            <Table head={['Source', 'Leads', <HeadTip key="sv" label="SV Done" tip={SV_DONE_TIP} />, 'SV Ratio', 'Progress', 'Bookings', 'SV → Booking']} colSpan={7} empty={bySource.length === 0}>
               {bySource.map((s) => {
                 const r = pct(num(s.sv_leads), num(s.leads));
                 const b = pct(num(s.bookings), num(s.sv_leads));
@@ -534,8 +550,10 @@ const Panel = ({ rkey, d, registerRef }) => {
 
       return (
         <>
+          <NoteBar tone="#D97706">{VISIT_ANCHORED_NOTE}</NoteBar>
+
           <KpiRow>
-            <KpiCard label="Total Visits" value={fmt(totalVisits)} sub="Distinct leads · first visit only" color={COLORS.qualified} icon={MapPinIcon} />
+            <KpiCard label="Total Visits" value={fmt(totalVisits)} sub="Visits done in this period · distinct leads, first visit only" color={COLORS.qualified} icon={MapPinIcon} />
             <KpiCard label="Booked" value={fmt(booked)} sub={`${pct1(booked, totalVisits)}% of visited leads`} color={COLORS.booking} icon={CheckBadgeIcon} />
             <KpiCard label="In Negotiation" value={fmt(negotiation)} sub="Hot / warm" color={COLORS.negotiation} icon={ScaleIcon} />
             <KpiCard label="Follow Up" value={fmt(followUp)} sub="Awaiting next step" color={COLORS.siteVisit} icon={ClockIcon} />

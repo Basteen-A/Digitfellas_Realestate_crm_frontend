@@ -652,10 +652,19 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
     }
     case 'leaderboard': {
       const isTC = role === 'TC';
+      // The TC board ranks on SV DONE IN PERIOD — the work the telecaller actually did
+      // inside the window, on any lead, whenever that lead was created. That is what the
+      // SV Leads page and the portal leaderboard show. r.site_visits is the OTHER TC
+      // number (SV Done among leads CREATED in the window); it belongs to the ratio, not
+      // here — using it silently dropped SV Done earned on older leads. Both still sit
+      // side by side on the SV Done Ratio table.
       return (
-        <Card title={`${ROLES[role].label} Leaderboard`} sub={isTC ? 'Ranked by site visits' : 'Ranked by booked sq ft'}>
+        <Card
+          title={`${ROLES[role].label} Leaderboard`}
+          sub={isTC ? 'Ranked by SV Done in period' : 'Ranked by booked sq ft'}
+        >
           <LeaderList rows={lb.filter((r) => !r.isInactiveGroup)}
-            metric={(r) => (isTC ? r.site_visits : Math.round(num(r.booked_sqft)))} metricLabel={isTC ? 'SV' : 'sq ft'}
+            metric={(r) => (isTC ? num(r.site_visits_in_period) : Math.round(num(r.booked_sqft)))} metricLabel={isTC ? 'SV' : 'sq ft'}
             subFn={(r) => (isTC ? `${num(r.leads)} leads · ${pct(num(r.qualified), num(r.leads))}% qual.` : `${num(r.bookings)} bookings · ${num(r.site_visits)} SV`)} />
         </Card>
       );

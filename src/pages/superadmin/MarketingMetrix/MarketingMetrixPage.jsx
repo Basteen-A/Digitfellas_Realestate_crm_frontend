@@ -25,7 +25,7 @@ import {
   CurrencyRupeeIcon, ArrowPathIcon, ArrowDownTrayIcon, FunnelIcon, ChevronDownIcon,
   ChevronRightIcon, MegaphoneIcon, UsersIcon, CheckBadgeIcon, MapPinIcon,
   BuildingOffice2Icon, TrophyIcon, ScaleIcon, ChartPieIcon, Squares2X2Icon,
-  BanknotesIcon, InformationCircleIcon, ArrowTrendingUpIcon,
+  BanknotesIcon, ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import reportApi from '../../../api/reportApi';
 import leadSourceApi from '../../../api/leadSourceApi';
@@ -35,7 +35,7 @@ import { COLORS, SERIES } from '../Reports/analytics/palette';
 import { ChartCard, SimpleBar, FunnelDonut, TrendLine } from '../Reports/analytics/charts/Charts';
 import {
   MonoContext, KpiCard, KpiRow, Pill, ratioTone, ProgressBar,
-  Card, Table, Tr, Td, TotalRow,
+  Card, Table, Tr, Td, TotalRow, NoteBar, HeadTip,
 } from '../Reports/analytics/ui';
 import BudgetEntry from './BudgetEntry';
 import { exportMarketingMetrix } from './exportExcel';
@@ -49,6 +49,28 @@ const PERIODS = [
 ];
 
 const ATTRIBUTION_NOTE = 'Each lead counts against the source & date of its latest marketing touch — its creation, or its newest re-enquiry, whichever is later.';
+
+// ── What the outcome columns actually count ─────────────────────────────────
+// Every column on this page is an ACQUISITION COHORT: "of the leads this period's
+// spend bought, how many went on to X" — X can have happened at any time, before or
+// after the period. That is the only shape that makes a cost-per figure valid, since
+// it divides this period's money by what this period's money bought.
+//
+// It is emphatically NOT "how many site visits happened this period". Marketing ›
+// Reports answers that question, anchored on the visit date, and the two numbers
+// routinely differ by a lot — on July 2026 this page read 74 site visits for Social
+// Media where the visit-anchored report read 94, with only 42 leads common to both.
+// Users kept reading one number and quoting the other, so both the rule and the
+// pointer to the other report are stated on screen.
+const COHORT_NOTE = 'Leads, Qualified, Site Visits and Bookings are all counted for the leads ACQUIRED in this period — the visit or booking itself may have happened before or after it. That is what makes the cost-per figures valid.';
+
+const SV_TIP = 'Leads acquired in this period (new or re-enquiry) that have completed a site visit — whenever that visit happened. Counted once per lead, so a revisit never adds a second. This is NOT "visits that happened in this period": for that, use Marketing › Reports › Source-wise Site Visits, which is anchored on the visit date and will normally show a different, usually higher, number.';
+
+const COST_SV_TIP = 'Budget for this period ÷ the site visits above. Because both sides belong to the same acquisition cohort, this is what a site visit from this period’s spend actually cost.';
+
+const QUALIFIED_TIP = 'Leads acquired in this period that ever reached a working stage (Follow Up / SV Scheduled / SV Done) — a lead that later went RNR or Lost still counts, because the spend did buy a qualified lead.';
+
+const BOOKINGS_TIP = 'BOOKINGS made by leads acquired in this period, whenever the booking was made. A lead can carry more than one booking, so this can exceed the number of leads that booked.';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const num = (v) => Number(v) || 0;
@@ -85,6 +107,13 @@ const mixOf = (rows, nameKey, valueKey, top = 7) => {
   const rest = sumBy(ranked.slice(top), valueKey);
   return rest > 0 ? [...head, { name: 'Others', value: rest, color: COLORS.muted }] : head;
 };
+
+// The volume and funnel tables rank on SITE VISITS, highest first — a site visit is the
+// outcome this report is read for, so the rows that produced the most sit at the top.
+// (The cost tables stay ranked on spend; there, budget is the axis being compared.)
+const bySvDesc = (rows) => [...(rows || [])].sort(
+  (a, b) => num(b.sv_leads) - num(a.sv_leads) || num(b.budget) - num(a.budget) || num(b.leads) - num(a.leads)
+);
 
 // Cheapest source on a given cost metric, among sources with real volume — a source
 // that produced two leads for ₹100 is not the "best performer".
@@ -205,8 +234,20 @@ const CostRow = ({ r, nameCell, avgCpl }) => {
   );
 };
 
-const VOLUME_HEAD = ['Budget', 'Share', 'Leads', 'Qualified', 'Site Visits', 'Bookings', 'Sq Ft Booked'];
-const COST_HEAD = ['Budget', 'Cost / Lead', 'vs Avg', 'Cost / Qualified', 'Cost / Site Visit', 'Cost / Booking', 'Cost / Sq Ft'];
+// Column headers carry their own definition — see the COHORT_NOTE comment above for
+// why "Site Visits" here is not the same number as "Site Visits" on Marketing Reports.
+const VOLUME_HEAD = [
+  'Budget', 'Share', 'Leads',
+  <HeadTip key="q" label="Qualified" tip={QUALIFIED_TIP} />,
+  <HeadTip key="sv" label="Site Visits" tip={SV_TIP} />,
+  <HeadTip key="bk" label="Bookings" tip={BOOKINGS_TIP} />,
+  'Sq Ft Booked',
+];
+const COST_HEAD = [
+  'Budget', 'Cost / Lead', 'vs Avg', 'Cost / Qualified',
+  <HeadTip key="csv" label="Cost / Site Visit" tip={COST_SV_TIP} />,
+  'Cost / Booking', 'Cost / Sq Ft',
+];
 
 const volumeTotals = (rows) => [
   money(sumBy(rows, 'budget')), '100%',
@@ -248,7 +289,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="Total Budget" value={money(t.budget)} sub={`${cnt(d?.meta?.budgetEntries)} budget line${num(d?.meta?.budgetEntries) === 1 ? '' : 's'}`} color={COLORS.primary} icon={CurrencyRupeeIcon} valueSize={19} />
             <KpiCard label="Cost per Lead" value={cost(t.costPerLead)} sub={`${cnt(t.leads)} leads`} color={COLORS.leads} icon={UsersIcon} valueSize={19} />
             <KpiCard label="Cost per Qualified Lead" value={cost(t.costPerQualified)} sub={`${cnt(t.qualified)} qualified · ${pct1(num(t.qualified), num(t.leads))}% of leads`} color={COLORS.qualified} icon={CheckBadgeIcon} valueSize={19} />
-            <KpiCard label="Cost per Site Visit" value={cost(t.costPerSiteVisit)} sub={`${cnt(t.siteVisits)} site visits`} color={COLORS.siteVisit} icon={MapPinIcon} valueSize={19} />
+            <KpiCard label="Cost per Site Visit" value={cost(t.costPerSiteVisit)} sub={`${cnt(t.siteVisits)} leads bought here have visited`} color={COLORS.siteVisit} icon={MapPinIcon} valueSize={19} />
             <KpiCard label="Cost per Booking" value={cost(t.costPerBooking)} sub={`${cnt(t.bookings)} bookings`} color={COLORS.booking} icon={BuildingOffice2Icon} valueSize={19} />
             <KpiCard label="Cost per Sq Ft" value={cost(t.costPerSqft)} sub={`${cnt(t.bookedSqft)} sq ft booked`} color={COLORS.negotiation} icon={Squares2X2Icon} valueSize={19} />
           </KpiRow>
@@ -262,9 +303,9 @@ const Panel = ({ rkey, d, registerRef }) => {
             </ChartCard>
           </div>
 
-          <Card title="Spend & Volume by Source" sub={`Site Visits = leads from this spend that completed a first visit (revisits not re-counted)${best ? ` · cheapest lead: ${best.source_name}` : ''}`}>
+          <Card title="Spend & Volume by Source" sub={`Ranked by site visits · outcome columns count the leads this spend BOUGHT, whenever they later visited or booked${best ? ` · cheapest lead: ${best.source_name}` : ''}`}>
             <Table head={['Source', ...VOLUME_HEAD]} colSpan={8} empty={bySource.length === 0}>
-              {bySource.map((r) => (
+              {bySvDesc(bySource).map((r) => (
                 <VolumeRow key={r.source_id} r={r} totalBudget={totalBudget} nameCell={<Td bold>{r.source_name}</Td>} />
               ))}
               {bySource.length > 0 && <TotalRow cells={volumeTotals(bySource)} />}
@@ -316,7 +357,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="Total Budget" value={money(t.budget)} sub={`Across ${cnt(t.subSources)} sub-source${num(t.subSources) === 1 ? '' : 's'}`} color={COLORS.primary} icon={CurrencyRupeeIcon} valueSize={19} />
             <KpiCard label="Cost per Lead" value={cost(t.costPerLead)} sub={`${cnt(t.leads)} leads`} color={COLORS.leads} icon={UsersIcon} valueSize={19} />
             <KpiCard label="Cost per Qualified Lead" value={cost(t.costPerQualified)} sub={`${cnt(t.qualified)} qualified`} color={COLORS.qualified} icon={CheckBadgeIcon} valueSize={19} />
-            <KpiCard label="Cost per Site Visit" value={cost(t.costPerSiteVisit)} sub={`${cnt(t.siteVisits)} site visits`} color={COLORS.siteVisit} icon={MapPinIcon} valueSize={19} />
+            <KpiCard label="Cost per Site Visit" value={cost(t.costPerSiteVisit)} sub={`${cnt(t.siteVisits)} leads bought here have visited`} color={COLORS.siteVisit} icon={MapPinIcon} valueSize={19} />
             <KpiCard label="Cost per Booking" value={cost(t.costPerBooking)} sub={`${cnt(t.bookings)} bookings`} color={COLORS.booking} icon={BuildingOffice2Icon} valueSize={19} />
             <KpiCard label="Cheapest Sub Source" value={best?.sub_source_name || '—'} sub={best ? `${cost(best.cost_per_lead)} per lead · ${best.source_name}` : 'Needs 5+ leads'} color={COLORS.negotiation} icon={TrophyIcon} valueSize={16} />
           </KpiRow>
@@ -325,9 +366,9 @@ const Panel = ({ rkey, d, registerRef }) => {
             <SimpleBar data={chart} xKey="name" bars={[{ key: 'cost_per_lead', name: 'Cost / Lead', color: COLORS.primary }]} valueFormat={money} tickFormat={axisMoney} />
           </ChartCard>
 
-          <Card title="Spend & Volume by Sub Source" sub="Spend booked against a whole source shows as “Not specified”, alongside the leads that carry no sub-source">
+          <Card title="Spend & Volume by Sub Source" sub="Ranked by site visits · same acquisition-cohort rule as the source view · spend booked against a whole source shows as “Not specified”, alongside the leads that carry no sub-source">
             <Table head={['Sub Source', ...VOLUME_HEAD]} colSpan={8} empty={ranked.length === 0}>
-              {ranked.map((r) => (
+              {bySvDesc(ranked).map((r) => (
                 <VolumeRow key={`${r.source_id}-${r.sub_source_id}`} r={r} totalBudget={totalBudget} nameCell={nameCell(r)} />
               ))}
               {ranked.length > 0 && <TotalRow cells={volumeTotals(ranked)} />}
@@ -452,9 +493,18 @@ const Panel = ({ rkey, d, registerRef }) => {
             </Table>
           </Card>
 
-          <Card title="Conversion Funnel by Source" sub="How far the leads each source bought actually travelled">
-            <Table head={['Source', 'Leads', 'Qualified', 'Qual %', 'Site Visits', 'SV %', 'Bookings', 'Booking %', 'Progress']} colSpan={9} empty={bySource.length === 0}>
-              {bySource.map((r) => {
+          <Card title="Conversion Funnel by Source" sub="How far the leads each source bought actually travelled — ranked by site visits">
+            <Table
+              head={[
+                'Source', 'Leads',
+                <HeadTip key="q" label="Qualified" tip={QUALIFIED_TIP} />, 'Qual %',
+                <HeadTip key="sv" label="Site Visits" tip={SV_TIP} />, 'SV %',
+                <HeadTip key="bk" label="Bookings" tip={BOOKINGS_TIP} />, 'Booking %', 'Progress',
+              ]}
+              colSpan={9}
+              empty={bySource.length === 0}
+            >
+              {bySvDesc(bySource).map((r) => {
                 const q = pct(num(r.qualified), num(r.leads));
                 const sv = pct(num(r.sv_leads), num(r.leads));
                 const bk = pct(num(r.bookings), num(r.leads));
@@ -597,16 +647,22 @@ const MarketingMetrixPage = () => {
         </div>
       </div>
 
-      {/* The attribution rule changes what every number here means, so it is stated
-          up front rather than buried in a tooltip. */}
-      <div className="crm-card" style={{ padding: 12, marginBottom: 14, borderLeft: '4px solid #2563eb', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <InformationCircleIcon style={{ width: 18, height: 18, flexShrink: 0, color: '#2563eb', marginTop: 1 }} />
-        <div style={{ fontSize: 12.5, color: 'var(--text-secondary, var(--text-muted))', lineHeight: 1.5 }}>
-          {ATTRIBUTION_NOTE}
-          {' '}
-          A re-enquiry through a new campaign therefore credits that campaign, in the month it came in.
-        </div>
-      </div>
+      {/* Two rules change what every number here means, so both are stated up front
+          rather than buried in a tooltip: WHICH period a lead lands in (attribution),
+          and WHAT the outcome columns count (acquisition cohort, not activity). */}
+      <NoteBar>
+        <strong style={{ color: 'var(--text-primary)' }}>How to read this page.</strong>
+        {' '}
+        {ATTRIBUTION_NOTE}
+        {' '}
+        A re-enquiry through a new campaign therefore credits that campaign, in the month it came in.
+        <br />
+        {COHORT_NOTE}
+        {' '}
+        So <em>Site Visits</em> here means “leads bought this period that have visited”, not “visits that
+        happened this period” — for that, open <strong>Marketing › Reports › Source-wise Site Visits</strong>,
+        which anchors on the visit date. The two are both correct and will normally differ.
+      </NoteBar>
 
       {/* Filter bar — identical structure to the Reports / Marketing Reports bar */}
       <div className="reports-filter-bar reports-filter-bar--card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>

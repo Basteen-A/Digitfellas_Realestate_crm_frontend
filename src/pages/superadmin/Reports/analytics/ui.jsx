@@ -7,6 +7,7 @@
 // ============================================================
 
 import React, { createContext, useContext } from 'react';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 // When true, the pieces below render in a flat monochrome style: no accent
 // top-borders on KPI cards, KPI numbers at font-weight 500, primary-text (black in
@@ -32,6 +33,40 @@ export const KpiCard = ({ label, value, sub, color, icon: Icon, valueSize = 22 }
 };
 
 export const KpiRow = ({ children }) => <div className="flex flex-wrap gap-3 mb-4">{children}</div>;
+
+// ── "what am I looking at" atoms ─────────────────────────────────────────────
+// Two report pages can show the same word ("Site Visits") against two honest but
+// different numbers, because they anchor on different dates. Nobody should have to
+// ask which one they are reading, so the definition travels WITH the number instead
+// of living in a spec: NoteBar states the rule for a whole report, HeadTip attaches
+// it to the exact column it governs.
+
+// Standing note above a report. `tone` sets the left rule (blue = how to read this,
+// amber = a caveat that changes what the number means).
+export const NoteBar = ({ children, tone = '#2563eb' }) => (
+  <div
+    className="crm-card"
+    style={{ padding: 12, marginBottom: 14, borderLeft: `4px solid ${tone}`, display: 'flex', gap: 10, alignItems: 'flex-start' }}
+  >
+    <InformationCircleIcon style={{ width: 18, height: 18, flexShrink: 0, color: tone, marginTop: 1 }} />
+    <div style={{ fontSize: 12.5, color: 'var(--text-secondary, var(--text-muted))', lineHeight: 1.5 }}>{children}</div>
+  </div>
+);
+
+// Column header carrying its own definition. `tip` shows on hover / focus and is what
+// a screen reader announces, so the meaning is never more than a pointer away.
+export const HeadTip = ({ label, tip }) => (
+  <span className="inline-flex items-center gap-1 cursor-help" title={tip} tabIndex={0}>
+    {label}
+    <span
+      aria-hidden="true"
+      className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] leading-none font-semibold"
+      style={{ border: '1px solid currentColor', opacity: 0.55 }}
+    >
+      i
+    </span>
+  </span>
+);
 
 export const PILL_TONES = {
   green: { bg: '#E8F5E8', fg: '#1a7a40' }, red: { bg: '#FEF2F2', fg: '#DC2626' },

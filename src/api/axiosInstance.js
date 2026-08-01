@@ -14,6 +14,10 @@ const API_URL =
 const TOKEN_KEY = process.env.REACT_APP_TOKEN_KEY || 'recrm_access_token';
 const REFRESH_KEY = process.env.REACT_APP_REFRESH_KEY || 'recrm_refresh_token';
 
+// Uploads get their own, far longer budget than ordinary JSON calls (see the
+// request interceptor, which applies this to any FormData body).
+const UPLOAD_TIMEOUT = 10 * 60 * 1000;
+
 // ── Create instance ──
 const api = axios.create({
   baseURL: API_URL,
@@ -46,6 +50,14 @@ api.interceptors.request.use(
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // File uploads are not 30-second requests. A multi-MB document on a normal
+    // office connection routinely exceeds the default timeout, and an aborted
+    // upload surfaces with NO response — which used to be reported to the user
+    // as "Network error", hiding the fact that it was simply still uploading.
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      config.timeout = UPLOAD_TIMEOUT;
     }
 
     // Add request timestamp for performance tracking
@@ -135,9 +147,29 @@ api.interceptors.response.use(
       console.warn('Rate limited. Please slow down.');
     }
 
-    // ── Handle network errors ──
+    // ── Handle "no response came back" ──
+    // These three cases used to collapse into one useless "Network error", which
+    // made an upload that timed out, one the server cut off, and a genuinely
+    // offline browser indistinguishable. Keep them apart.
     if (!error.response) {
-      error.message = 'Network error. Please check your connection.';
+      const isUpload = typeof FormData !== 'undefined' && originalRequest.data instanceof FormData;
+      if (error.code === 'ECONNABORTED' || /timeout/i.test(error.message || '')) {
+        error.message = isUpload
+          ? 'Upload timed out. The file may be too large or the connection too slow.'
+          : 'The server took too long to respond. Please try again.';
+      } else if (isUpload) {
+        // The browser was still sending the body when the connection dropped —
+        // typically the server (or a proxy in front of it) rejected the request
+        // early, e.g. on size or permissions, and closed the socket.
+        error.message = 'Upload failed — the connection was closed before the file finished sending. '
+          + 'The file may exceed the maximum allowed size.';
+      } else {
+        error.message = 'Network error. Please check your connection.';
+      }
+      // Keep the real cause in the console for diagnosis.
+      console.error('[api] no response', {
+        url: originalRequest.url, method: originalRequest.method, code: error.code, message: error.message,
+      });
     }
 
     return Promise.reject(error);
