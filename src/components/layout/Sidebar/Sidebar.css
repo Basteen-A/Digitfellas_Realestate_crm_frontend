@@ -313,6 +313,106 @@
 .app-sidebar--collapsed:hover .app-sidebar__link--child { padding: 8px 16px 8px 46px; }
 .app-sidebar--collapsed:hover .app-sidebar__subnav { display: block; }
 
+/* ============================================================ */
+/* Category rail — collapsed state for sectioned menus (admin,    */
+/* super admin, matrix-driven roles). One icon per SECTION, and   */
+/* clicking it opens that section's links in a flyout panel, so   */
+/* the rail carries 8 icons instead of 25+ stacked ones.          */
+/* ============================================================ */
+
+/* 70px matches the collapsed grid track in MainLayout.css — keep them in step. */
+.app-sidebar--rail { width: 70px; }
+
+/* The rail replaces hover-to-expand — the flyout is the way in, so the whole
+   sidebar must not widen underneath it. These rules follow the
+   `.app-sidebar--collapsed:hover` block above and win on source order. */
+.app-sidebar--rail:hover {
+  width: 70px;
+  box-shadow: var(--shadow-sidebar);
+  z-index: 100;
+}
+.app-sidebar--rail:hover .app-sidebar__brand { justify-content: center; padding: 0 8px; }
+.app-sidebar--rail:hover .app-sidebar__logo { width: 40px; height: 40px; }
+.app-sidebar--rail:hover .sidebar-logo--full { display: none; }
+.app-sidebar--rail:hover .sidebar-logo--mark { display: block; }
+
+.app-sidebar__nav--rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0 16px;
+}
+
+.app-sidebar__rail-button {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: var(--border-radius-md, 10px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.app-sidebar__rail-button:hover {
+  background: var(--sidebar-hover-bg, var(--bg-card-hover));
+  color: var(--text-primary);
+}
+
+.app-sidebar__rail-button.is-active,
+.app-sidebar__rail-button.is-open {
+  background: var(--sidebar-active-bg, var(--accent-blue-bg));
+  color: var(--sidebar-active-text, var(--accent-blue));
+}
+
+.sidebar-icon--rail { width: 20px; height: 20px; }
+
+/* ── Flyout panel ──
+   Fixed-positioned next to the rail (the sidebar clips its own overflow, so the
+   panel is a sibling of <aside>). z-index clears the sticky header (400) and the
+   mobile drawer (460). */
+.app-sidebar__flyout {
+  position: fixed;
+  left: 78px;
+  width: 232px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  z-index: 520;
+  padding: 6px 0 10px;
+  background: var(--sidebar-bg, var(--bg-sidebar));
+  border: 1px solid var(--sidebar-border, var(--border-primary));
+  border-radius: var(--border-radius-lg, 12px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  animation: sidebar-flyout-in 0.14s ease-out;
+}
+
+@keyframes sidebar-flyout-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.app-sidebar__flyout::-webkit-scrollbar { width: 3px; }
+.app-sidebar__flyout::-webkit-scrollbar-track { background: transparent; }
+.app-sidebar__flyout::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 4px; }
+
+.app-sidebar__flyout-title {
+  padding: 10px 16px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Panel rows carry no icon column, so children indent from the label edge. */
+.app-sidebar__flyout .app-sidebar__link--child { padding: 8px 16px 8px 28px; }
+
 /* ── Mobile drawer close button — mirrors the telecaller portal sidebar
    (.portal-sidebar__close) for a consistent look across roles. ── */
 .app-sidebar__close {

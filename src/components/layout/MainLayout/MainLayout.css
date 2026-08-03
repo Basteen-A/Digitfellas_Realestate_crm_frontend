@@ -16,8 +16,10 @@
   .main-layout[data-collapsed='true'] { grid-template-columns: 70px 1fr; }
 
   /* When the collapsed rail is hovered it expands to 250px; grow the track to
-     match so content reflows beside it rather than being covered. */
-  .main-layout[data-collapsed='true']:has(.app-sidebar:hover) {
+     match so content reflows beside it rather than being covered. The category
+     rail (--rail) is excluded: it stays 70px and opens a flyout on click, so
+     the track must not widen under it. */
+  .main-layout[data-collapsed='true']:has(.app-sidebar:not(.app-sidebar--rail):hover) {
     grid-template-columns: 250px 1fr;
   }
 }

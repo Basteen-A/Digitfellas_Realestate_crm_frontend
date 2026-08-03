@@ -36,6 +36,24 @@ import { usesGenericPortal, BUILT_IN_PORTAL_CODES } from '../../../utils/moduleP
 import { buildGenericSidebar } from './genericMenu';
 
 /**
+ * Icon per section heading. The collapsed sidebar is a rail of these — one icon
+ * per category instead of one per link — and clicking one opens that section's
+ * items in a flyout (see Sidebar.jsx). Keyed by section name so both the
+ * hand-written admin menu and the matrix-driven generic menu are covered; add an
+ * entry here whenever a new `{ section }` name is introduced.
+ */
+export const SECTION_ICONS = {
+  WORKSPACE: Squares2X2Icon,
+  INSIGHTS: ChartBarIcon,
+  INVENTORY: BuildingStorefrontIcon,
+  FINANCE: BanknotesIcon,
+  AUTOMATION: BoltIcon,
+  MARKETING: MegaphoneIcon,
+  TELEPHONY: PhoneIcon,
+  CONFIGURATION: Cog6ToothIcon,
+};
+
+/**
  * Returns the sidebar menu based on the user's role code.
  * SA/ADM → Admin sidebar with masters + all workspaces
  * TC     → Telecaller sidebar (leads, follow-ups, pipeline)

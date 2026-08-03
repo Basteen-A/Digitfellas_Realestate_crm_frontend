@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { getSidebarMenuForRole, getTaskMenuItem } from './menuConfig';
+import { getSidebarMenuForRole, getTaskMenuItem, SECTION_ICONS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
-import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronRightIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './Sidebar.css';
 
@@ -17,6 +17,31 @@ const MenuIcon = ({ icon, className = 'sidebar-icon' }) => {
     return <Icon className={className} />;
   }
   return <span className={className}>{icon}</span>;
+};
+
+/**
+ * Splits a flat menu into its `{ section }` buckets:
+ *   [{ label, icon, items: [...] }, ...]
+ * Items that appear before the first section divider land in an unnamed bucket.
+ * This is what the collapsed rail renders — one icon per section instead of one
+ * icon per link, which on the admin menu means 8 icons rather than 25+.
+ */
+const buildSections = (menu) => {
+  const out = [];
+  let current = null;
+  menu.forEach((item) => {
+    if (item.section) {
+      current = { label: item.section, icon: item.icon || SECTION_ICONS[item.section], items: [] };
+      out.push(current);
+      return;
+    }
+    if (!current) {
+      current = { label: 'Menu', icon: null, items: [] };
+      out.push(current);
+    }
+    current.items.push(item);
+  });
+  return out.filter((section) => section.items.length);
 };
 
 const Sidebar = ({ isMobileOpen, onMobileClose }) => {
@@ -38,6 +63,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     return base;
   }, [roleCode, user]);
 
+  const sections = React.useMemo(() => buildSections(menu), [menu]);
+
   const getInitialOpenGroups = useCallback(() => {
     const initial = {};
     menu.forEach((item) => {
@@ -51,9 +78,17 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
   const [openGroups, setOpenGroups] = useState(() => getInitialOpenGroups());
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  // Which section's flyout panel is open on the collapsed rail (null = none)
+  const [flyout, setFlyout] = useState(null);
+  const [flyoutTop, setFlyoutTop] = useState(0);
+  const flyoutRef = useRef(null);
+  const railRef = useRef(null);
 
   React.useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setFlyout(null);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -75,12 +110,117 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   };
 
   const handleLinkClick = () => {
+    setFlyout(null);
     if (isMobile && onMobileClose) {
       onMobileClose();
     }
   };
 
   const isCollapsed = !isMobile && sidebarCollapsed;
+  // The category rail only makes sense for a sectioned menu (admin/super admin
+  // and the matrix-driven roles). A flat 3-item portal menu keeps the plain
+  // icon rail it already had.
+  const isRail = isCollapsed && sections.length >= 2;
+
+  const isPathActive = (path) => !!path && (location.pathname === path || location.pathname.startsWith(path + '/'));
+  const isItemActive = (item) => (item.children?.length
+    ? item.children.some((child) => isPathActive(child.path))
+    : isPathActive(item.path));
+
+  // Leaving rail mode (expanded, or dropped to mobile) discards the flyout.
+  useEffect(() => {
+    if (!isRail) setFlyout(null);
+  }, [isRail]);
+
+  // Dismiss on outside click / Escape. Clicks on the rail itself are ignored so
+  // the button's own onClick can toggle the panel.
+  useEffect(() => {
+    if (!flyout) return undefined;
+    const handlePointerDown = (e) => {
+      if (flyoutRef.current?.contains(e.target)) return;
+      if (railRef.current?.contains(e.target)) return;
+      setFlyout(null);
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setFlyout(null);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [flyout]);
+
+  // Keep the panel inside the viewport — it opens level with its icon, then
+  // slides up if it would run off the bottom. Re-runs when a group inside the
+  // panel opens/closes and changes its height.
+  useLayoutEffect(() => {
+    if (!flyout || !flyoutRef.current) return;
+    const height = flyoutRef.current.offsetHeight;
+    setFlyoutTop(Math.max(12, Math.min(flyout.anchor, window.innerHeight - 12 - height)));
+  }, [flyout, openGroups]);
+
+  const toggleFlyout = (section, button) => {
+    const { top } = button.getBoundingClientRect();
+    const anchor = top - 8;
+    setFlyoutTop(anchor);
+    setFlyout((prev) => (prev?.label === section.label
+      ? null
+      : { label: section.label, items: section.items, anchor }));
+  };
+
+  /** One menu entry. `inFlyout` drops the icon column — the panel is already
+      scoped to a section, so labels alone read cleaner (and match the mockup). */
+  const renderMenuItem = (item, inFlyout = false) => {
+    // Section divider label (WORKSPACE / INVENTORY / ADMINISTRATION)
+    if (item.section) {
+      return <div key={`sec-${item.section}`} className="app-sidebar__section-label">{item.section}</div>;
+    }
+    if (item.children?.length) {
+      const isOpen = !!openGroups[item.label];
+      const hasActiveChild = item.children.some((child) => isPathActive(child.path));
+
+      return (
+        <div key={item.label} className={`app-sidebar__group ${hasActiveChild ? 'has-active-child' : ''}`}>
+          <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)} title={item.label}>
+            {!inFlyout && <MenuIcon icon={item.icon} />}
+            <span className="app-sidebar__link-label">{item.label}</span>
+            <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>
+          </button>
+          {isOpen && (
+            <div className="app-sidebar__subnav">
+              {item.children.map((child) => (
+                <NavLink
+                  key={child.path}
+                  to={child.path}
+                  onClick={handleLinkClick}
+                  className={({ isActive }) =>
+                    `app-sidebar__link app-sidebar__link--child ${isActive ? 'is-active' : ''}`
+                  }
+                >
+                  <span className="app-sidebar__link-label">{child.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        onClick={handleLinkClick}
+        className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
+        title={item.label}
+      >
+        {!inFlyout && <MenuIcon icon={item.icon} />}
+        <span className="app-sidebar__link-label">{item.label}</span>
+      </NavLink>
+    );
+  };
 
   return (
     <>
@@ -90,7 +230,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
           onClick={onMobileClose}
         />
       )}
-      <aside className={`app-sidebar ${isCollapsed ? 'app-sidebar--collapsed' : ''} ${isMobile ? 'fixed left-0 top-0 z-[460] w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
+      <aside className={`app-sidebar ${isCollapsed ? 'app-sidebar--collapsed' : ''} ${isRail ? 'app-sidebar--rail' : ''} ${isMobile ? 'fixed left-0 top-0 z-[460] w-64 transform transition-transform duration-300' : ''} ${isMobile && !isMobileOpen ? '-translate-x-full' : ''} ${isMobile ? 'md:relative md:translate-x-0 md:z-auto' : ''}`}>
         {isMobile && (
           <button
             type="button"
@@ -110,64 +250,52 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         </div>
       </div>
 
-      {/* Navigation. Labels/chevrons always render; CSS hides them on the
-          collapsed rail and reveals them again on hover (portal-style). */}
-      <nav className="app-sidebar__nav">
-        {menu.map((item) => {
-          // Section divider label (WORKSPACE / INVENTORY / ADMINISTRATION)
-          if (item.section) {
-            return <div key={`sec-${item.section}`} className="app-sidebar__section-label">{item.section}</div>;
-          }
-          if (item.children?.length) {
-            const isOpen = !!openGroups[item.label];
-            const hasActiveChild = item.children.some((child) => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
-
+      {/* Navigation. Collapsed + sectioned → an icon rail of section categories,
+          each opening a flyout panel. Otherwise the full list; labels/chevrons
+          always render and CSS hides them on the plain collapsed rail. */}
+      <nav className={`app-sidebar__nav ${isRail ? 'app-sidebar__nav--rail' : ''}`} ref={railRef}>
+        {isRail
+          ? sections.map((section) => {
+            const isOpen = flyout?.label === section.label;
+            const hasActive = section.items.some(isItemActive);
             return (
-              <div key={item.label} className={`app-sidebar__group ${hasActiveChild ? 'has-active-child' : ''}`}>
-                <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)} title={item.label}>
-                  <MenuIcon icon={item.icon} />
-                  <span className="app-sidebar__link-label">{item.label}</span>
-                  <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>
-                </button>
-                {isOpen && (
-                  <div className="app-sidebar__subnav">
-                    {item.children.map((child) => (
-                      <NavLink
-                        key={child.path}
-                        to={child.path}
-                        onClick={handleLinkClick}
-                        className={({ isActive }) =>
-                          `app-sidebar__link app-sidebar__link--child ${isActive ? 'is-active' : ''}`
-                        }
-                      >
-                        <span className="app-sidebar__link-label">{child.label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <button
+                key={section.label}
+                type="button"
+                className={`app-sidebar__rail-button ${hasActive ? 'is-active' : ''} ${isOpen ? 'is-open' : ''}`}
+                onClick={(e) => toggleFlyout(section, e.currentTarget)}
+                title={section.label}
+                aria-label={section.label}
+                aria-expanded={isOpen}
+              >
+                <MenuIcon
+                  icon={section.icon || section.items[0]?.icon || EllipsisHorizontalIcon}
+                  className="sidebar-icon sidebar-icon--rail"
+                />
+              </button>
             );
-          }
-
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={handleLinkClick}
-              className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
-              title={item.label}
-            >
-              <MenuIcon icon={item.icon} />
-              <span className="app-sidebar__link-label">{item.label}</span>
-            </NavLink>
-          );
-        })}
+          })
+          : menu.map((item) => renderMenuItem(item))}
       </nav>
 
       {/* No profile/logout footer here — the header user menu is the single place
           for profile and logout, and carrying both duplicated the same controls. */}
 
     </aside>
+
+    {/* Flyout panel for the collapsed rail. Rendered outside <aside> because the
+        sidebar clips its overflow; it is fixed-positioned against the rail. */}
+    {isRail && flyout && (
+      <nav
+        className="app-sidebar__flyout"
+        ref={flyoutRef}
+        style={{ top: flyoutTop }}
+        aria-label={flyout.label}
+      >
+        <div className="app-sidebar__flyout-title">{flyout.label}</div>
+        {flyout.items.map((item) => renderMenuItem(item, true))}
+      </nav>
+    )}
     </>
   );
 };
