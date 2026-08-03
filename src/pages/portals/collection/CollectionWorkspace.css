@@ -2211,6 +2211,150 @@
   justify-items: center;
 }
 
+/* ── Registration document folders ──────────────────────────────────────────
+   The folder bar above the dropzone: breadcrumb, the folders at this level, and
+   the create-folder row. Whatever folder is open is where the next upload lands.
+   Mirrors the project Document Archive panel. */
+.bkd-folder-bar {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bkd-folder-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.bkd-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+  cursor: pointer;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bkd-crumb:hover { background: var(--col-bg, #f4f5f9); }
+
+.bkd-crumb.is-current {
+  color: var(--col-text, #000000);
+  font-weight: 500;
+}
+
+.bkd-crumb-sep {
+  width: 11px;
+  height: 11px;
+  color: var(--text-muted, #9ca3af);
+  flex-shrink: 0;
+}
+
+.bkd-folder-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bkd-folder-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--col-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--col-surface, #fff);
+  overflow: hidden;
+}
+
+.bkd-folder-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--col-text, #000000);
+  max-width: 200px;
+}
+
+.bkd-folder-open:hover { background: var(--col-bg, #f4f5f9); }
+
+.bkd-folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.bkd-folder-count {
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
+  background: var(--col-bg, #f4f5f9);
+  border-radius: 999px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.bkd-folder-del {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 7px;
+  border: none;
+  border-left: 1px solid var(--col-border, #e5e7eb);
+  background: transparent;
+  cursor: pointer;
+  color: var(--accent-red, #dc2626);
+}
+
+.bkd-folder-new {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bkd-folder-new input {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--col-border, #e5e7eb);
+  border-radius: 8px;
+  font-size: 12.5px;
+  background: var(--col-surface, #fff);
+  color: var(--col-text, #000000);
+}
+
+/* Folder a document is filed in, shown on each uploaded row. */
+.bkd-document-folder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
+}
+
+.bkd-document-move {
+  margin-left: 4px;
+  height: 22px;
+  border: 1px solid var(--col-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--col-surface, #fff);
+  font-size: 11px;
+  color: var(--col-text, #000000);
+  cursor: pointer;
+  max-width: 140px;
+}
+
 .bkd-document-list {
   display: grid;
   gap: 10px;

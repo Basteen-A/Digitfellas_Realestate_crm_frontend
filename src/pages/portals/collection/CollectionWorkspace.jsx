@@ -7,18 +7,25 @@ import { CollectionOpenBookings } from './CollectionOpenBookings';
 import { CollectionPayments } from './CollectionPayments';
 import CollectionBookingDetail from './CollectionBookingDetail';
 import CollectionDemandSchedule from './CollectionDemandSchedule';
-import CollectionOverdue from './CollectionOverdue';
 import CollectionReports from './CollectionReports';
 // Telecalling floor — the same components Super Admin renders. The server decides
 // the scope; for COL that is org-wide, telecaller-only.
 import ReportsPage from '../../superadmin/Reports/ReportsPage';
-import CallLogs from '../../superadmin/Telephony/CallLogs';
 import CallAllocationHistory from '../../superadmin/Telephony/CallAllocationHistory';
 import { TaskListPage } from '../../tasks';
 import { collectionMenu } from '../../../components/layout/Sidebar/menuConfig';
 
+// Screens this portal used to have. The active screen is restored from
+// sessionStorage, so a user who was sitting on one of these would land on a
+// blank pane after the retire — send them to the dashboard instead.
+const RETIRED_SCREENS = ['overdue', 'call-logs'];
+
 const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelectedBookingId, user, setActiveScreen }) => {
   const [openedOnScreen, setOpenedOnScreen] = useState(null);
+
+  useEffect(() => {
+    if (RETIRED_SCREENS.includes(activeScreen)) setActiveScreen('dashboard');
+  }, [activeScreen, setActiveScreen]);
 
   useEffect(() => {
     if (selectedBookingId) {
@@ -98,20 +105,11 @@ const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelect
       {activeScreen === 'payments' && (
         <CollectionPayments user={user} onSelectBooking={setSelectedBookingId} />
       )}
-      {activeScreen === 'overdue' && (
-        <CollectionOverdue
-          user={user}
-          onSelectBooking={setSelectedBookingId}
-        />
-      )}
       {activeScreen === 'reports' && (
         <CollectionReports user={user} />
       )}
       {activeScreen === 'tc-reports' && (
         <ReportsPage />
-      )}
-      {activeScreen === 'call-logs' && (
-        <CallLogs />
       )}
       {activeScreen === 'call-allocations' && (
         <CallAllocationHistory />

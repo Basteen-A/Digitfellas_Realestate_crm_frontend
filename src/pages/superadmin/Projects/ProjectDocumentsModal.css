@@ -81,6 +81,74 @@
   cursor: not-allowed;
 }
 
+/* "any file type" hint under the picker — the capability was invisible before,
+   so people assumed the archive only took images. */
+.proj-docs__upload-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted, #6b7280);
+}
+
+/* Staged (not yet uploaded) files. Same chip shape as the mobile
+   PickedFileChip so the two clients read alike. */
+.proj-docs__staged {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.proj-docs__staged-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 320px;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid var(--border-primary, #e5e7eb);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f9fafb);
+}
+
+.proj-docs__staged-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--text-secondary, #475569);
+}
+
+.proj-docs__staged-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary, #000000);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proj-docs__staged-size {
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
+  flex-shrink: 0;
+}
+
+.proj-docs__staged-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.proj-docs__staged-x {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-red, #dc2626);
+}
+
 .proj-docs__list-title {
   font-size: 12px;
   font-weight: 700;

@@ -16,6 +16,8 @@ const bookingApi = {
   approvePaymentAccounts: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/accounts`),
   approvePaymentManagement: (bookingId, paymentId) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/approve/management`),
   verifyPayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/verify`, data),
+  // Second signature on Other Registration Expenses (Admin / Super Admin).
+  verifyPaymentAdmin: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/verify/admin`, data),
   // Super Admin — edit an existing payment
   updatePayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}`, data),
 
@@ -39,11 +41,32 @@ const bookingApi = {
   // Activities
   getActivities: (bookingId) => api.get(`/bookings/${bookingId}/activities`),
 
-  // Documents
+  // Documents — flat list of EVERY document on the booking's lead, as an ARRAY.
+  // Kept that shape on purpose; the folder view is getDocumentTree below.
   getDocuments: (bookingId) => api.get(`/bookings/${bookingId}/documents`),
   uploadDocuments: (bookingId, formData) => api.post(`/bookings/${bookingId}/documents`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+
+  // Document folders. The archive is a folder tree; `folderId` of null/undefined
+  // addresses the root, otherwise a folder id. getDocumentTree returns ONE level
+  // as { folderId, breadcrumb, folders, documents }. Folders are scoped to the
+  // booking's LEAD — the same scope the documents already use.
+  getDocumentTree: (bookingId, folderId = null) => api.get(`/bookings/${bookingId}/document-tree`, {
+    params: folderId ? { folderId } : undefined,
+  }),
+  createDocumentFolder: (bookingId, { folderName, parentId = null }) =>
+    api.post(`/bookings/${bookingId}/document-folders`, {
+      folder_name: folderName,
+      parent_id: parentId,
+    }),
+  renameDocumentFolder: (bookingId, folderId, folderName) =>
+    api.patch(`/bookings/${bookingId}/document-folders/${folderId}`, { folder_name: folderName }),
+  deleteDocumentFolder: (bookingId, folderId) =>
+    api.delete(`/bookings/${bookingId}/document-folders/${folderId}`),
+  // File an already-uploaded document into a folder (null = back to the root).
+  moveDocument: (bookingId, documentId, folderId) =>
+    api.patch(`/bookings/${bookingId}/documents/${documentId}/move`, { folder_id: folderId }),
 
   // Cancel reasons dropdown
   getCancelReasons: () => api.get('/bookings/cancel-reasons'),

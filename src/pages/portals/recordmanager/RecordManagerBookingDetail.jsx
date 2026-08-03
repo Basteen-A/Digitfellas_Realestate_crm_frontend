@@ -10,6 +10,7 @@ import {
   ArrowLeftIcon, ArrowPathIcon, CloudArrowUpIcon, DocumentTextIcon,
   ArrowDownTrayIcon, CheckCircleIcon, UserIcon, IdentificationIcon,
   CheckBadgeIcon, CalendarDaysIcon, BuildingOffice2Icon,
+  FolderIcon, FolderPlusIcon, HomeIcon, ChevronRightIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 import '../collection/CollectionWorkspace.css';
@@ -71,6 +72,15 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Document folders. Registration paperwork is filed into a folder tree — the
+  // same model as the project Document Archive. `folderId` is the folder the
+  // upload lands in; null = the root.
+  const [folderId, setFolderId] = useState(null);
+  const [folders, setFolders] = useState([]);
+  const [breadcrumb, setBreadcrumb] = useState([]);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
+
   const toDateInput = (d) => (d ? String(d).slice(0, 10) : '');
 
   const loadBooking = useCallback(async () => {
@@ -103,8 +113,67 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
     }
   }, [bookingId]);
 
+  // One level of the folder tree — the folders the upload can be filed into and
+  // the breadcrumb back to the root. The document LIST stays flat (loadDocuments
+  // above) so the Uploaded panel keeps showing everything on this booking.
+  const loadFolders = useCallback(async () => {
+    if (!bookingId) return;
+    try {
+      const resp = await bookingApi.getDocumentTree(bookingId, folderId);
+      const payload = resp.data?.data || resp.data || {};
+      setFolders(payload.folders || []);
+      setBreadcrumb(payload.breadcrumb || []);
+    } catch (err) {
+      // Non-fatal — the flat document list and upload still work at the root.
+      setFolders([]);
+      setBreadcrumb([]);
+    }
+  }, [bookingId, folderId]);
+
   useEffect(() => { loadBooking(); }, [loadBooking]);
   useEffect(() => { loadDocuments(); }, [loadDocuments]);
+  useEffect(() => { loadFolders(); }, [loadFolders]);
+
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) { toast.error('Enter a folder name'); return; }
+    setCreatingFolder(true);
+    try {
+      await bookingApi.createDocumentFolder(bookingId, { folderName: name, parentId: folderId });
+      toast.success(`Folder "${name}" created`);
+      setNewFolderName('');
+      loadFolders();
+    } catch (err) {
+      // The server rejects a duplicate name in the same parent and says so.
+      toast.error(getErrorMessage(err, 'Failed to create folder'));
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const handleDeleteFolder = async (folder) => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Delete folder "${folder.folder_name}"?`)) return;
+    try {
+      await bookingApi.deleteDocumentFolder(bookingId, folder.id);
+      toast.success('Folder deleted');
+      loadFolders();
+    } catch (err) {
+      // A non-empty folder is refused, and the message names what is inside.
+      toast.error(getErrorMessage(err, 'Failed to delete folder'));
+    }
+  };
+
+  const handleMoveDocument = async (doc, targetFolderId) => {
+    try {
+      await bookingApi.moveDocument(bookingId, doc.id, targetFolderId || null);
+      toast.success('Document moved');
+      loadDocuments();
+      loadFolders();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to move document'));
+    }
+  };
 
   const handleSaveDetails = async () => {
     if (!docNumber.trim() && !docDate && !seller.trim()) {
@@ -162,11 +231,15 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
       selectedFiles.forEach((file) => formData.append('documents', file));
       formData.append('document_type', documentType || 'Registration Document');
       if (selectedFiles.length === 1 && documentName.trim()) formData.append('document_name', documentName.trim());
+      // Land the files in the folder currently open; absent = the root.
+      if (folderId) formData.append('folder_id', folderId);
       await bookingApi.uploadDocuments(bookingId, formData);
-      toast.success('Documents uploaded');
+      const where = breadcrumb.length ? ` to ${breadcrumb[breadcrumb.length - 1].folder_name}` : '';
+      toast.success(`Documents uploaded${where}`);
       setSelectedFiles([]);
       setDocumentName('');
       loadDocuments();
+      loadFolders();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to upload documents'));
     } finally {
@@ -319,6 +392,89 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                   style={{ display: 'none' }}
                   onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
                 />
+
+                {/* ── Folder bar ──────────────────────────────────────────────
+                    Registration paperwork is filed into a folder tree, the same
+                    model as the project Document Archive. Whatever folder is open
+                    here is where the next upload lands. */}
+                <div className="bkd-folder-bar">
+                  <div className="bkd-folder-crumbs">
+                    <button
+                      type="button"
+                      className={`bkd-crumb ${!folderId ? 'is-current' : ''}`}
+                      onClick={() => setFolderId(null)}
+                    >
+                      <HomeIcon style={{ width: 12, height: 12 }} /> Root
+                    </button>
+                    {breadcrumb.map((c, i) => (
+                      <React.Fragment key={c.id}>
+                        <ChevronRightIcon className="bkd-crumb-sep" />
+                        <button
+                          type="button"
+                          className={`bkd-crumb ${i === breadcrumb.length - 1 ? 'is-current' : ''}`}
+                          onClick={() => setFolderId(c.id)}
+                        >
+                          {c.folder_name}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {folders.length > 0 && (
+                    <div className="bkd-folder-list">
+                      {folders.map((f) => (
+                        <div key={f.id} className="bkd-folder-chip">
+                          <button
+                            type="button"
+                            className="bkd-folder-open"
+                            onClick={() => setFolderId(f.id)}
+                            title={`Open ${f.folder_name}`}
+                          >
+                            <FolderIcon style={{ width: 14, height: 14 }} />
+                            <span className="bkd-folder-name">{f.folder_name}</span>
+                            <span className="bkd-folder-count">
+                              {f.document_count || 0}
+                            </span>
+                          </button>
+                          {!isCompleted && (
+                            <button
+                              type="button"
+                              className="bkd-folder-del"
+                              onClick={() => handleDeleteFolder(f)}
+                              aria-label={`Delete ${f.folder_name}`}
+                            >
+                              <TrashIcon style={{ width: 12, height: 12 }} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!isCompleted && (
+                    <div className="bkd-folder-new">
+                      <input
+                        type="text"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder(); }}
+                        placeholder={breadcrumb.length
+                          ? `New folder inside "${breadcrumb[breadcrumb.length - 1].folder_name}"…`
+                          : 'New folder name…'}
+                        maxLength={200}
+                      />
+                      <button
+                        type="button"
+                        className="bkd-btn bkd-btn-ghost"
+                        disabled={creatingFolder || !newFolderName.trim()}
+                        onClick={handleCreateFolder}
+                      >
+                        <FolderPlusIcon style={{ width: 14, height: 14 }} />
+                        {creatingFolder ? 'Creating…' : 'Create'}
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div
                   className="bkd-upload-dropzone"
                   onClick={() => fileInputRef.current?.click()}
@@ -408,6 +564,25 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                             </div>
                             <div className="bkd-document-meta">
                               {uploader ? `Uploaded by ${uploader} · ` : ''}{fmtDateTime(doc.created_at)}
+                            </div>
+                            {/* Which folder this document is filed in, and a way
+                                to re-file it without re-uploading. */}
+                            <div className="bkd-document-folder">
+                              <FolderIcon style={{ width: 11, height: 11 }} />
+                              <span>{doc.folder_name || 'Root'}</span>
+                              {!isCompleted && (folders.length > 0 || doc.folder_id) && (
+                                <select
+                                  className="bkd-document-move"
+                                  value={doc.folder_id || ''}
+                                  onChange={(e) => handleMoveDocument(doc, e.target.value)}
+                                  title="Move to another folder"
+                                >
+                                  <option value="">Root</option>
+                                  {folders.map((f) => (
+                                    <option key={f.id} value={f.id}>{f.folder_name}</option>
+                                  ))}
+                                </select>
+                              )}
                             </div>
                           </div>
                           <div className="bkd-document-actions" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>

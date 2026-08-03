@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
-  CloudArrowUpIcon, ArrowDownTrayIcon, TrashIcon,
+  CloudArrowUpIcon, ArrowDownTrayIcon, TrashIcon, DocumentTextIcon, XMarkIcon,
   FolderIcon, FolderPlusIcon, PencilSquareIcon, ChevronRightIcon, HomeIcon,
 } from '@heroicons/react/24/outline';
 import projectDocumentApi from '../../../api/projectDocumentApi';
@@ -17,6 +17,14 @@ const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', {
 
 const DOC_TYPES = ['Brochure', 'Approval', 'Legal', 'Layout Plan', 'RERA', 'Agreement', 'Other'];
 
+// Server limits — mirror of middleware/upload.js (uploadDocumentsAuto). Checked
+// client-side only so the user hears "too big" immediately rather than after a
+// long upload ends in a 413.
+const MAX_FILES = 10;
+const MAX_FILE_MB = 25;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+const fmtBytes = (b) => humanFileSize(b);
+
 // Upload / list / delete for a single project's document archive, organised as a
 // folder tree. Navigation is one level at a time with a breadcrumb back to the
 // root — the same model as a file explorer — so nesting can go as deep as needed
@@ -30,7 +38,10 @@ const ProjectDocumentsPanel = ({ project }) => {
   const [folderId, setFolderId] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [file, setFile] = useState(null);
+  // Multi-file: the server takes up to 10 files of ANY type per request
+  // (middleware/upload.js → uploadDocumentsAuto, allowedTypes '*'), so the panel
+  // stages a list rather than a single file.
+  const [files, setFiles] = useState([]);
   const [documentName, setDocumentName] = useState('');
   const [documentType, setDocumentType] = useState(DOC_TYPES[0]);
   const [uploading, setUploading] = useState(false);
@@ -102,19 +113,41 @@ const ProjectDocumentsPanel = ({ project }) => {
     }
   };
 
+  // Add to the staged list rather than replacing it, so the user can pick from
+  // several folders in turn. Oversized files are rejected here with a reason
+  // instead of failing the whole request with a 413 after a long upload.
+  const addFiles = (fileList) => {
+    const incoming = Array.from(fileList || []);
+    if (!incoming.length) return;
+    const tooBig = incoming.filter((f) => f.size > MAX_FILE_BYTES);
+    const ok = incoming.filter((f) => f.size <= MAX_FILE_BYTES);
+    setFiles((prev) => {
+      const room = Math.max(0, MAX_FILES - prev.length);
+      if (ok.length > room) {
+        toast.error(`Only ${MAX_FILES} files can be uploaded at once.`);
+      }
+      return [...prev, ...ok.slice(0, room)];
+    });
+    tooBig.forEach((f) => toast.error(`"${f.name}" is larger than ${MAX_FILE_MB} MB.`));
+  };
+
+  const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
+
   const handleUpload = async () => {
-    if (!file) { toast.error('Choose a file to upload'); return; }
+    if (files.length === 0) { toast.error('Choose at least one file to upload'); return; }
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('documents', file);
+      files.forEach((f) => formData.append('documents', f));
       formData.append('document_type', documentType);
-      if (documentName.trim()) formData.append('document_name', documentName.trim());
-      // Land the file in the folder currently being browsed.
+      // A typed name only makes sense for a single file — with several, each
+      // keeps its own file name (the server applies the same rule).
+      if (files.length === 1 && documentName.trim()) formData.append('document_name', documentName.trim());
+      // Land the files in the folder currently being browsed.
       if (folderId) formData.append('folder_id', folderId);
       await projectDocumentApi.upload(project.id, formData);
-      toast.success('Document uploaded');
-      setFile(null);
+      toast.success(files.length === 1 ? 'Document uploaded' : `${files.length} documents uploaded`);
+      setFiles([]);
       setDocumentName('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       load(folderId);
@@ -194,12 +227,13 @@ const ProjectDocumentsPanel = ({ project }) => {
       <div className="proj-docs__upload">
         <div className="proj-docs__upload-row">
           <div className="proj-docs__field">
-            <label>Document Name <span className="proj-docs__muted">(optional)</span></label>
+            <label>Document Name <span className="proj-docs__muted">(optional, single file only)</span></label>
             <input
               type="text"
               value={documentName}
               onChange={(e) => setDocumentName(e.target.value)}
-              placeholder="Defaults to the file name"
+              disabled={files.length > 1}
+              placeholder={files.length > 1 ? 'Each file keeps its own name' : 'Defaults to the file name'}
             />
           </div>
           <div className="proj-docs__field" style={{ maxWidth: 180 }}>
@@ -210,17 +244,51 @@ const ProjectDocumentsPanel = ({ project }) => {
           </div>
         </div>
         <div className="proj-docs__upload-row">
+          {/* No `accept` on purpose — every format is allowed. */}
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="proj-docs__file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
           />
-          <button type="button" className="proj-docs__upload-btn" disabled={uploading || !file} onClick={handleUpload}>
+          <button
+            type="button"
+            className="proj-docs__upload-btn"
+            disabled={uploading || files.length === 0}
+            onClick={handleUpload}
+          >
             <CloudArrowUpIcon className="master-action-icon" />
-            {uploading ? 'Uploading…' : `Upload${currentFolderName ? ` to ${currentFolderName}` : ''}`}
+            {uploading
+              ? 'Uploading…'
+              : `Upload${files.length ? ` ${files.length} file${files.length === 1 ? '' : 's'}` : ''}${currentFolderName ? ` to ${currentFolderName}` : ''}`}
           </button>
         </div>
+
+        <div className="proj-docs__upload-hint">
+          PDF, Word, Excel, images, ZIP — any file type. Up to {MAX_FILES} files, {MAX_FILE_MB} MB each.
+        </div>
+
+        {/* Staged files, removable before upload */}
+        {files.length > 0 && (
+          <div className="proj-docs__staged">
+            {files.map((f, idx) => (
+              <div key={`${f.name}-${idx}`} className="proj-docs__staged-chip">
+                <DocumentTextIcon className="proj-docs__staged-icon" />
+                <span className="proj-docs__staged-name" title={f.name}>{f.name}</span>
+                <span className="proj-docs__staged-size">{fmtBytes(f.size)}</span>
+                <button
+                  type="button"
+                  className="proj-docs__staged-remove"
+                  onClick={() => removeFile(idx)}
+                  aria-label={`Remove ${f.name}`}
+                >
+                  <XMarkIcon className="proj-docs__staged-x" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Folders at this level */}

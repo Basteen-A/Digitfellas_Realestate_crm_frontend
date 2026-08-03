@@ -75,7 +75,6 @@ const SCREEN_TITLES = {
   'open-bookings': '',
   demands: '',
   payments: '',
-  overdue: '',
   reports: '',
   pullrequests: '',
   pull: '',
@@ -136,11 +135,21 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const storedScreen = getStoredScreen(workspaceScreenStorageKey);
 
   // Append the embedded Tasks screen to this portal's own sidebar when the user
-  // has Standard Executive (task) access, replacing the old external link.
+  // has Standard Executive (task) access, replacing the old external link. A menu
+  // that wants Tasks somewhere other than the bottom marks the spot with
+  // TASK_MENU_SLOT; the slot is dropped for users without access.
   const resolvedMenuItems = useMemo(() => {
-    if (!hasTaskPortalAccess(user)) return menuItems;
-    if (menuItems?.some((item) => item.key === 'tasks')) return menuItems;
-    return [...(menuItems || []), portalTaskMenuItem];
+    const items = menuItems || [];
+    const canUseTasks = hasTaskPortalAccess(user);
+    const slotIndex = items.findIndex((item) => item?.taskSlot);
+    if (slotIndex !== -1) {
+      const next = [...items];
+      next.splice(slotIndex, 1, ...(canUseTasks ? [portalTaskMenuItem] : []));
+      return next;
+    }
+    if (!canUseTasks) return items;
+    if (items.some((item) => item.key === 'tasks')) return items;
+    return [...items, portalTaskMenuItem];
   }, [menuItems, user]);
   
   const [activeScreen, setActiveScreen] = useState(() => queryScreen || location.state?.screen || storedScreen || defaultScreen || 'dashboard');

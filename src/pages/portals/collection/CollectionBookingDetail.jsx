@@ -201,6 +201,56 @@ const colorFor = (id) => {
 const initialsOf = (u) => `${(u?.first_name || '?')[0] || ''}${(u?.last_name || '')[0] || ''}`.toUpperCase();
 const execName = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim() || 'Executive';
 
+// ── Dual verification (Other Registration Expenses) ────────────────────────
+// That one cost item needs two signatures before its money counts: Accounts, and an
+// Admin / Super Admin. `is_verified` stays the single money gate, so a half-signed
+// payment reads as "Partly verified" rather than pretending to be either extreme.
+const ADMIN_VERIFIER_ROLES = ['SA', 'ADMIN'];
+const canAdminVerify = (user) => ADMIN_VERIFIER_ROLES.includes(String(user?.userType?.short_code || user?.userTypeCode || '').toUpperCase());
+
+// Who signed, as circle avatars — the same look as the task assignee UI, so "who
+// touched this" reads identically wherever it appears in the app. A slot the process
+// requires but nobody has signed yet shows as a dashed placeholder, so a missing
+// signature is visible rather than merely absent.
+const VerifierAvatars = ({ payment }) => {
+  const slots = [
+    { key: 'acct', user: payment.verifier, done: payment.accounts_verified ?? payment.is_verified, label: 'Accounts' },
+  ];
+  if (payment.dual_verification_required) {
+    slots.push({ key: 'admin', user: payment.adminVerifier, done: payment.admin_verified, label: 'Admin' });
+  }
+  if (!slots.some((sl) => sl.done || payment.dual_verification_required)) return <span style={{ color: '#9ca3af' }}>—</span>;
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+      {slots.map((sl, i) => (sl.done && sl.user ? (
+        <span
+          key={sl.key}
+          className="bkd-assignee-avatar sm"
+          style={{ background: colorFor(sl.user.id), marginLeft: i ? -6 : 0 }}
+          title={`${sl.label} verified by ${execName(sl.user)}`}
+        >
+          {initialsOf(sl.user)}
+        </span>
+      ) : (
+        <span
+          key={sl.key}
+          className="bkd-assignee-avatar sm"
+          style={{
+            marginLeft: i ? -6 : 0,
+            background: 'transparent',
+            color: '#9ca3af',
+            border: '1px dashed #cbd5e1',
+          }}
+          title={`Awaiting ${sl.label} verification`}
+        >
+          ?
+        </span>
+      )))}
+    </span>
+  );
+};
+
 const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [booking, setBooking] = useState(null);
   const [terms, setTerms] = useState([]);
@@ -1709,7 +1759,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted,#9ca3af)', fontSize: 13 }}>No payments recorded yet</div>
           ) : (
             <table className="bkd-table"><thead><tr>
-              <th>Date</th><th>Paid For</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Status</th><th>Actions</th>
+              <th>Date</th><th>Paid For</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Bank</th><th>Status</th><th>Verified By</th><th>Actions</th>
             </tr></thead><tbody>
                 {payments.map(p => {
                   const isRefund = !!p.is_refund;
@@ -1728,10 +1778,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       <td>{p.payment_mode}</td>
                       <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
                       <td style={{ fontSize: 12 }}>{p.bank_name || '—'}</td>
+                      {/* Three states, not two: a dual-verification payment that has one
+                          signature is neither Verified nor Unverified, and calling it
+                          either would misrepresent the money. */}
                       <td>{p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
                         : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
                           : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
-                            : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
+                            : (p.accounts_verified || p.admin_verified)
+                              ? <span className="bkd-badge bkd-badge-warning" title={p.accounts_verified ? 'Accounts verified — awaiting Admin verification' : 'Admin verified — awaiting Accounts verification'}>Partly verified</span>
+                              : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
+                      <td onClick={(e) => e.stopPropagation()}><VerifierAvatars payment={p} /></td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           {editable ? (
@@ -1741,6 +1797,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           ) : (
                             <button className="view-link" onClick={(e) => { e.stopPropagation(); setViewPaymentId(p.id); }}>
                               View
+                            </button>
+                          )}
+                          {/* The Admin half of the dual verification. Shown only on rows
+                              that actually require it, and hidden from the person who
+                              already gave the Accounts signature — one user must never
+                              be able to supply both (the server refuses it too). */}
+                          {p.dual_verification_required && !p.admin_verified && !p.is_bounced && !isRefund
+                            && canAdminVerify(user) && String(p.verified_by || '') !== String(user?.id || '') && (
+                            <button
+                              className="view-link"
+                              style={{ color: '#1a7a40' }}
+                              title="Give the Admin verification for this Other Registration Expenses payment"
+                              onClick={(e) => { e.stopPropagation(); adminVerifyPayment(p); }}
+                            >
+                              Admin Verify
                             </button>
                           )}
                           {/* Per-row refund — only for verified (non-refund, non-bounced) money,

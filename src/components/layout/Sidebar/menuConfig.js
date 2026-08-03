@@ -333,6 +333,11 @@ export const portalTaskMenuItem = {
   icon: ClipboardDocumentListIcon,
 };
 
+// Placeholder a portal menu can drop anywhere to say "Tasks belongs HERE"
+// instead of at the end. PortalLayout swaps it for portalTaskMenuItem when the
+// user has task access, and strips it when they don't.
+export const TASK_MENU_SLOT = { taskSlot: true };
+
 // Legacy export for backward compatibility
 export const sidebarMenu = adminSidebar;
 
@@ -379,14 +384,14 @@ export const collectionMenu = [
   { label: 'Open Bookings', key: 'open-bookings', icon: PaperAirplaneIcon, badgeColor: 'blue' },
   { label: 'Bookings', key: 'bookings', icon: ClipboardDocumentListIcon, badgeColor: 'green' },
   { label: 'Payments', key: 'payments', icon: BanknotesIcon, badge: null },
-  { label: 'Overdue', key: 'overdue', icon: XCircleIcon, badgeColor: 'red' },
-  { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
-  // Telecalling floor — the same org-wide screens Super Admin sees. The
+  TASK_MENU_SLOT,
+  // Every report this portal can open, collection and telecalling alike. The
+  // telecalling ones are the same org-wide screens Super Admin sees — the
   // Collection Manager monitors telecaller performance and inbound-call
-  // allocation, so these render inside the collection portal too.
-  { group: 'Telecalling' },
+  // allocation, so they render inside the collection portal too.
+  { group: 'Reports' },
+  { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
   { label: 'Telecaller Reports', key: 'tc-reports', icon: ChartBarIcon, badge: null },
-  { label: 'Call Logs', key: 'call-logs', icon: PhoneIcon, badge: null },
   { label: 'Allocation History', key: 'call-allocations', icon: PhoneArrowDownLeftIcon, badge: null },
 ];
 
