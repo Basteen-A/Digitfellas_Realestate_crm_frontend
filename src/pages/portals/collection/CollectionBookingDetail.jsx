@@ -205,7 +205,11 @@ const execName = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim() ||
 // That one cost item needs two signatures before its money counts: Accounts, and an
 // Admin / Super Admin. `is_verified` stays the single money gate, so a half-signed
 // payment reads as "Partly verified" rather than pretending to be either extreme.
-const ADMIN_VERIFIER_ROLES = ['SA', 'ADMIN'];
+// These compare against user_types.short_code, so they must be the codes themselves —
+// Admin is 'ADM', not 'ADMIN'. Spelling it out by hand had hidden this button from
+// every Admin while the server returned 403, making the feature Super-Admin-only.
+// Kept in lock-step with ADMIN_VERIFIER_ROLES in server/src/controllers/bookingController.js.
+const ADMIN_VERIFIER_ROLES = [ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN];
 const canAdminVerify = (user) => ADMIN_VERIFIER_ROLES.includes(String(user?.userType?.short_code || user?.userTypeCode || '').toUpperCase());
 
 // Who signed, as circle avatars — the same look as the task assignee UI, so "who

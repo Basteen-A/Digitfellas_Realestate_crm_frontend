@@ -298,7 +298,7 @@ const InventoryDashboard = () => {
                     <span className="inv-project-card__type-badge">{proj.project_type}</span>
                   )}
                   <span style={{
-                    marginLeft: 8, fontSize: 11, fontWeight: 600, padding: '2px 8px',
+                    marginLeft: 8, fontSize: 11, fontWeight: 500, padding: '2px 8px',
                     borderRadius: 10, background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE',
                   }}>
                     {phaseCountByProject[proj.project_id] || 0} phase{(phaseCountByProject[proj.project_id] || 0) === 1 ? '' : 's'}
@@ -312,7 +312,7 @@ const InventoryDashboard = () => {
                     type="button"
                     onClick={(e) => openPhaseModal(e, proj)}
                     style={{
-                      fontSize: 11, fontWeight: 600, padding: '4px 10px',
+                      fontSize: 11, fontWeight: 500, padding: '4px 10px',
                       borderRadius: 6, border: '1px solid #C7D2FE', background: '#fff',
                       color: '#4338CA', cursor: 'pointer',
                     }}
@@ -323,25 +323,25 @@ const InventoryDashboard = () => {
 
                 <div className="inv-project-card__stats">
                   <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value" style={{ color: '#3b82f6' }}>
+                    <div className="inv-project-card__stat-value">
                       {total}
                     </div>
                     <div className="inv-project-card__stat-label">Total</div>
                   </div>
                   <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value" style={{ color: 'var(--accent-green)' }}>
+                    <div className="inv-project-card__stat-value">
                       {available}
                     </div>
                     <div className="inv-project-card__stat-label">Available</div>
                   </div>
                   {/* <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value" style={{ color: '#f59e0b' }}>
+                    <div className="inv-project-card__stat-value">
                       {booked}
                     </div>
                     <div className="inv-project-card__stat-label">Booked</div>
                   </div>
                   <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value" style={{ color: '#ef4444' }}>
+                    <div className="inv-project-card__stat-value">
                       {sold}
                     </div>
                     <div className="inv-project-card__stat-label">Sold</div>
@@ -398,7 +398,7 @@ const InventoryDashboard = () => {
               padding: '14px 20px', borderBottom: '1px solid #e5e7eb',
             }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>Manage Phases</div>
+                <div style={{ fontSize: 16, fontWeight: 500 }}>Manage Phases</div>
                 <div style={{ fontSize: 12, color: '#6b7280' }}>{phaseModal.project_name}</div>
               </div>
               <button onClick={closePhaseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'inline-flex', padding: 4 }} aria-label="Close"><XMarkIcon style={{ width: 20, height: 20 }} /></button>
@@ -410,7 +410,7 @@ const InventoryDashboard = () => {
               </div>
 
               <div style={{ marginBottom: 18 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Existing phases</div>
+                <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>Existing phases</div>
                 {phaseList.length === 0 ? (
                   <div style={{ fontSize: 12, color: '#6b7280', padding: '12px', background: '#f9fafb', borderRadius: 8 }}>
                     No phases yet — add your first below.
@@ -445,7 +445,7 @@ const InventoryDashboard = () => {
                               onClick={() => togglePhaseApproval(p)}
                               title="Click to toggle approval"
                               style={{
-                                cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                                cursor: 'pointer', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 10,
                                 border: `1px solid ${p.is_approved === false ? '#FCA5A5' : '#A7F3D0'}`,
                                 background: p.is_approved === false ? '#FEF2F2' : '#ECFDF5',
                                 color: p.is_approved === false ? '#B91C1C' : '#047857',
@@ -455,8 +455,8 @@ const InventoryDashboard = () => {
                             </button>
                           </td>
                           <td style={{ padding: '6px 8px' }}>
-                            <button onClick={() => startEditPhase(p)} style={{ background: 'none', border: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer' }}>Edit</button>
-                            <button onClick={() => removePhase(p)} style={{ background: 'none', border: 'none', color: '#dc2626', fontWeight: 600, cursor: 'pointer', marginLeft: 8 }}>Delete</button>
+                            <button onClick={() => startEditPhase(p)} style={{ background: 'none', border: 'none', color: '#4338CA', fontWeight: 500, cursor: 'pointer' }}>Edit</button>
+                            <button onClick={() => removePhase(p)} style={{ background: 'none', border: 'none', color: '#dc2626', fontWeight: 500, cursor: 'pointer', marginLeft: 8 }}>Delete</button>
                           </td>
                         </tr>
                       ))}
@@ -466,12 +466,12 @@ const InventoryDashboard = () => {
               </div>
 
               <form onSubmit={submitPhase} style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+                <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>
                   {phaseModal.mode === 'edit' ? `Edit phase: ${phaseModal.row?.phase_name}` : 'Add new phase'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Phase Name *</label>
+                    <label style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 4 }}>Phase Name *</label>
                     <input
                       value={phaseForm.phase_name} required placeholder="e.g. Phase 1"
                       onChange={(e) => setPhaseForm((p) => ({ ...p, phase_name: e.target.value }))}
@@ -479,7 +479,7 @@ const InventoryDashboard = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Phase Code</label>
+                    <label style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 4 }}>Phase Code</label>
                     <input
                       value={phaseForm.phase_code} placeholder="e.g. P1"
                       onChange={(e) => setPhaseForm((p) => ({ ...p, phase_code: e.target.value }))}
@@ -487,7 +487,7 @@ const InventoryDashboard = () => {
                     />
                   </div>
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Description</label>
+                    <label style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 4 }}>Description</label>
                     <input
                       value={phaseForm.description} placeholder="Optional"
                       onChange={(e) => setPhaseForm((p) => ({ ...p, description: e.target.value }))}
@@ -495,7 +495,7 @@ const InventoryDashboard = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Guideline Value / sq.ft. <span style={{ color: '#dc2626' }}>*</span></label>
+                    <label style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 4 }}>Guideline Value / sq.ft. <span style={{ color: '#dc2626' }}>*</span></label>
                     <input
                       type="number" min="0" step="0.01" value={phaseForm.guideline_value_per_sqft}
                       required={phaseModal.mode !== 'edit'}
@@ -506,7 +506,7 @@ const InventoryDashboard = () => {
                     <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Plot amount = this × plot area</div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Sort Order</label>
+                    <label style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 4 }}>Sort Order</label>
                     <input
                       type="number" value={phaseForm.sort_order}
                       onChange={(e) => setPhaseForm((p) => ({ ...p, sort_order: e.target.value }))}
@@ -519,7 +519,7 @@ const InventoryDashboard = () => {
                       onChange={(e) => setPhaseForm((p) => ({ ...p, is_approved: e.target.checked }))}
                       style={{ width: 16, height: 16, cursor: 'pointer' }}
                     />
-                    <label htmlFor="phase-approved" style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <label htmlFor="phase-approved" style={{ fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                       Approved (shown in phase dropdowns)
                     </label>
                   </div>
@@ -529,14 +529,14 @@ const InventoryDashboard = () => {
                     <button
                       type="button"
                       onClick={() => { setPhaseModal((p) => ({ ...p, mode: 'create', row: null })); setPhaseForm({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0, is_approved: true }); }}
-                      style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                      style={{ padding: '8px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, fontWeight: 500, cursor: 'pointer' }}
                     >
                       Cancel edit
                     </button>
                   )}
                   <button
                     type="submit" disabled={phaseSaving}
-                    style={{ padding: '8px 14px', border: 'none', background: '#4338CA', color: '#fff', borderRadius: 6, fontWeight: 600, cursor: phaseSaving ? 'not-allowed' : 'pointer' }}
+                    style={{ padding: '8px 14px', border: 'none', background: '#4338CA', color: '#fff', borderRadius: 6, fontWeight: 500, cursor: phaseSaving ? 'not-allowed' : 'pointer' }}
                   >
                     {phaseSaving ? 'Saving...' : (phaseModal.mode === 'edit' ? 'Update Phase' : '+ Add Phase')}
                   </button>

@@ -15,7 +15,7 @@
 
 .inventory-dashboard__header h1 {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary);
   margin: 0;
   letter-spacing: -0.3px;
@@ -70,29 +70,34 @@
 
 .inv-stat-card__value {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 500;
   margin-bottom: 4px;
   letter-spacing: -0.5px;
+  color: var(--text-primary);
 }
 
-.inv-stat-card__value--total { color: var(--accent-blue); }
-.inv-stat-card__value--available { color: var(--accent-green); }
-.inv-stat-card__value--booked { color: var(--accent-yellow); }
-.inv-stat-card__value--sold { color: var(--accent-red); }
-.inv-stat-card__value--revenue { color: var(--accent-purple); }
+/* The per-metric modifiers used to tint these figures blue/green/amber/red.
+   Colour is reserved for badges now, so the numbers read as plain text and the
+   label below them carries the meaning. The classes are kept because the markup
+   still sets them and they remain the hook for any future per-metric styling. */
+.inv-stat-card__value--total,
+.inv-stat-card__value--available,
+.inv-stat-card__value--booked,
+.inv-stat-card__value--sold,
+.inv-stat-card__value--revenue { color: var(--text-primary); }
 
 .inv-stat-card__label {
   font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* ── Project Cards Grid ── */
 .inv-projects-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 16px;
 }
@@ -131,7 +136,7 @@
 
 .inv-project-card__name {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 2px;
 }
@@ -145,7 +150,7 @@
 .inv-project-card__type-badge {
   display: inline-block;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   background: var(--accent-blue-bg);
   color: var(--accent-blue);
   padding: 2px 8px;
@@ -168,7 +173,7 @@
 
 .inv-project-card__stat-value {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -177,7 +182,7 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* ── Progress bar ── */
@@ -227,7 +232,7 @@
   font-size: 16px;
   margin-bottom: 8px;
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .inv-empty__sub {

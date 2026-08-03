@@ -392,7 +392,11 @@ export const collectionMenu = [
   { group: 'Reports' },
   { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
   { label: 'Telecaller Reports', key: 'tc-reports', icon: ChartBarIcon, badge: null },
-  { label: 'Allocation History', key: 'call-allocations', icon: PhoneArrowDownLeftIcon, badge: null },
+  // Two different allocation audits, both about which telecaller got which lead:
+  //   • Call Allocation History  — leads created from INBOUND CALLS (Tata Smartflo)
+  //   • API Allocation History   — leads pushed in by the MARKETING API webhook
+  { label: 'Call Allocation History', key: 'call-allocations', icon: PhoneArrowDownLeftIcon, badge: null },
+  { label: 'API Allocation History', key: 'api-allocations', icon: MegaphoneIcon, badge: null },
 ];
 
 export const accountsMenu = [

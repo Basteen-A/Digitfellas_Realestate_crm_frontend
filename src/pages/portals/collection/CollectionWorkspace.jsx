@@ -12,6 +12,9 @@ import CollectionReports from './CollectionReports';
 // the scope; for COL that is org-wide, telecaller-only.
 import ReportsPage from '../../superadmin/Reports/ReportsPage';
 import CallAllocationHistory from '../../superadmin/Telephony/CallAllocationHistory';
+// Inbound-call allocation (above) and marketing-API allocation (below) are two
+// separate audits of the same question: which telecaller received this lead.
+import MarketingAllocationHistory from '../../superadmin/MarketingAllocation/MarketingAllocationHistory';
 import { TaskListPage } from '../../tasks';
 import { collectionMenu } from '../../../components/layout/Sidebar/menuConfig';
 
@@ -113,6 +116,9 @@ const CollectionWorkspaceContent = ({ activeScreen, selectedBookingId, setSelect
       )}
       {activeScreen === 'call-allocations' && (
         <CallAllocationHistory />
+      )}
+      {activeScreen === 'api-allocations' && (
+        <MarketingAllocationHistory />
       )}
       {activeScreen === 'tasks' && (
         <TaskListPage />
