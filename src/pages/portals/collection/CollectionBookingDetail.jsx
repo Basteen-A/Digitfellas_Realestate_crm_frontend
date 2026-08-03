@@ -597,6 +597,28 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     finally { setPaySaving(false); }
   };
 
+  // The Admin half of the dual verification on "Other Registration Expenses".
+  // Every rule lives on the server (the payment must actually require a second
+  // signature, must not already carry one, and must not be signed by the same
+  // user who gave the Accounts signature) — this only surfaces its refusal, so
+  // the two sides can never drift apart.
+  const [adminVerifyingId, setAdminVerifyingId] = useState(null);
+
+  const adminVerifyPayment = async (p) => {
+    if (!p?.id || adminVerifyingId) return;
+    setAdminVerifyingId(p.id);
+    try {
+      await bookingApi.verifyPaymentAdmin(bookingId, p.id, {});
+      toast.success('Admin verification recorded');
+      loadBooking();
+      loadActivities();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to record the Admin verification'));
+    } finally {
+      setAdminVerifyingId(null);
+    }
+  };
+
   // Only pending/unverified, non-refund, non-bounced payments can be edited.
   const canEditThisPayment = (p) => !!p && !p.is_refund && !p.is_bounced && !p.is_verified;
 
@@ -1808,10 +1830,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                             <button
                               className="view-link"
                               style={{ color: '#1a7a40' }}
+                              disabled={adminVerifyingId === p.id}
                               title="Give the Admin verification for this Other Registration Expenses payment"
                               onClick={(e) => { e.stopPropagation(); adminVerifyPayment(p); }}
                             >
-                              Admin Verify
+                              {adminVerifyingId === p.id ? 'Verifying…' : 'Admin Verify'}
                             </button>
                           )}
                           {/* Per-row refund — only for verified (non-refund, non-bounced) money,
