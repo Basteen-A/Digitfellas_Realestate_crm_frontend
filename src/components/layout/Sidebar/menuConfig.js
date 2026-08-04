@@ -7,17 +7,21 @@ import {
   FingerPrintIcon,
   ClipboardDocumentListIcon,
   ArrowPathIcon,
+  ArrowPathRoundedSquareIcon,
   BoltIcon,
   HandRaisedIcon,
   BriefcaseIcon,
   CreditCardIcon,
+  HomeIcon,
   HomeModernIcon,
   ArrowsRightLeftIcon,
   BuildingStorefrontIcon,
+  BuildingOffice2Icon,
   Cog6ToothIcon,
-  UserGroupIcon,
   Squares2X2Icon,
   BanknotesIcon,
+  WalletIcon,
+  CurrencyRupeeIcon,
   XCircleIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -28,8 +32,14 @@ import {
   PaperAirplaneIcon,
   MegaphoneIcon,
   KeyIcon,
-  ChatBubbleLeftRightIcon,
   FolderOpenIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  DocumentChartBarIcon,
+  ShieldCheckIcon,
+  AdjustmentsHorizontalIcon,
+  EllipsisHorizontalCircleIcon,
 } from '@heroicons/react/24/outline';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
 import { usesGenericPortal, BUILT_IN_PORTAL_CODES } from '../../../utils/modulePermissions';
@@ -41,8 +51,20 @@ import { buildGenericSidebar } from './genericMenu';
  * items in a flyout (see Sidebar.jsx). Keyed by section name so both the
  * hand-written admin menu and the matrix-driven generic menu are covered; add an
  * entry here whenever a new `{ section }` name is introduced.
+ *
+ * The first block is the admin / super-admin IA (plain-language groups); the
+ * second is the older engineering-worded set still used by the matrix-driven
+ * generic sidebar (genericMenu.js).
  */
 export const SECTION_ICONS = {
+  HOME: HomeIcon,
+  SALES: UsersIcon,
+  PROPERTIES: BuildingOffice2Icon,
+  PAYMENTS: CurrencyRupeeIcon,
+  REPORTS: ChartBarIcon,
+  'MARKETING & CALLS': MegaphoneIcon,
+  SETTINGS: Cog6ToothIcon,
+
   WORKSPACE: Squares2X2Icon,
   INSIGHTS: ChartBarIcon,
   INVENTORY: BuildingStorefrontIcon,
@@ -143,44 +165,47 @@ const buildOrganizationHeadSidebar = (user) => {
 };
 
 // ── Admin / Super Admin ──
-// Restructured IA: WORKSPACE / INSIGHTS / INVENTORY / FINANCE / AUTOMATION /
-// CONFIGURATION. `{ section }` items render as non-clickable uppercase group
-// labels (see Sidebar.jsx). The sidebar renders only two levels (group →
-// flat child links), so the "Data Masters" umbrella is expressed as grouped
-// master sets under the CONFIGURATION section.
+// IA: HOME / SALES / PROPERTIES / PAYMENTS / REPORTS / MARKETING & CALLS /
+// SETTINGS — 7 groups ordered by frequency of use, down from the 8 sections the
+// admin menu carried before. Labels are deliberately plain-language: a
+// salesperson or an accountant reads them the same way an engineer does, so no
+// "masters", "reallocation" or other backend vocabulary surfaces in the UI.
 //
-// Mapping notes (target IA → existing screens; net-new sub-views omitted):
-//   Leads / Tasks / Bookings sub-views (Pipeline, Segmentation, My/Team/Overdue,
-//     History) have no backing screen yet → single entry to the existing screen.
-//   INSIGHTS › Analytics    → org-wide analytics (Reports ORG tab)
-//   INSIGHTS › Performance  → per-role analytics tabs (Reports, TC default)
-//   Org & Access › Roles & Permissions → User Types ; Org Settings → Site Settings
-//   Workflows (no screen), Org Structure, Activity Logs → omitted (no screen yet)
+// `{ section }` items render as collapsible uppercase group headers (see
+// Sidebar.jsx); `collapsed: true` makes a section start closed — SETTINGS does,
+// because it is the one low-frequency group. The sidebar renders only two levels
+// (group → flat child links), so the master tables stay expressed as grouped
+// child sets under SETTINGS.
+//
+// Renames from the previous IA (screens are unchanged, only the wording is):
+//   Record Manager       → Records
+//   Analytics            → Reports          Performance    → Team Performance
+//   Revenue              → Payments Received
+//   Collections          → Dues & Collections
+//   Collection Report    → Payment Reports
+//   Marketing            → Campaigns        Telephony      → Calls
+//   Marketing Allocation → Lead Assignment  Allocation History → Assignment History
+//   Org & Access         → Team & Access    Lead Masters   → Lead Settings
+//   Booking & Finance Masters → Booking & Payment Settings
+//   Reallocation Rules   → Auto-Reassign Rules
+//   Reallocation History → Reassign History
+//   Workflow Actions     → Automated Actions
+//   Marketing API Keys   → Marketing Integrations
+//   Other Masters        → Other Settings
 const adminSidebar = [
-  { section: 'WORKSPACE' },
+  { section: 'HOME' },
   { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+
+  { section: 'SALES' },
   { label: 'Leads', path: '/super-admin/lead-management', icon: UsersIcon },
   { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
-  { label: 'Bookings', path: '/super-admin/booking-approvals', icon: CreditCardIcon },
-  { label: 'Record Manager', path: '/super-admin/record-manager', icon: ClipboardDocumentListIcon },
+  { label: 'Bookings', path: '/super-admin/booking-approvals', icon: CalendarDaysIcon },
+  { label: 'Records', path: '/super-admin/record-manager', icon: DocumentTextIcon },
 
-  { section: 'INSIGHTS' },
-  { label: 'Analytics', path: '/super-admin/reports/organization', icon: ChartBarIcon },
-  {
-    label: 'Performance',
-    icon: TrophyIcon,
-    children: [
-      { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
-      { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
-      { label: 'Sales Head', path: '/super-admin/reports/sales-head' },
-      { label: 'Organization', path: '/super-admin/reports/organization' },
-    ],
-  },
-
-  { section: 'INVENTORY' },
+  { section: 'PROPERTIES' },
   {
     label: 'Projects',
-    icon: BuildingStorefrontIcon,
+    icon: BuildingOffice2Icon,
     children: [
       { label: 'Inventory Overview', path: '/super-admin/inventory' },
       { label: 'Projects', path: '/super-admin/projects' },
@@ -192,24 +217,29 @@ const adminSidebar = [
   { label: 'Units & Plots', path: '/super-admin/units', icon: HomeModernIcon },
   { label: 'Locations', path: '/super-admin/locations', icon: MapPinIcon },
 
-  { section: 'FINANCE' },
-  { label: 'Revenue', path: '/super-admin/finance/revenue', icon: BanknotesIcon },
-  { label: 'Collections', path: '/super-admin/finance/collections', icon: CreditCardIcon },
+  { section: 'PAYMENTS' },
+  { label: 'Payments Received', path: '/super-admin/finance/revenue', icon: WalletIcon },
+  { label: 'Dues & Collections', path: '/super-admin/finance/collections', icon: CreditCardIcon },
   // Org-wide twin of the Collection Manager portal's own "Collection Report" screen.
-  { label: 'Collection Report', path: '/super-admin/collection-reports', icon: ChartBarIcon },
+  { label: 'Payment Reports', path: '/super-admin/collection-reports', icon: DocumentChartBarIcon },
 
-  { section: 'AUTOMATION' },
-  { label: 'Workflow Actions', path: '/super-admin/workflow-actions', icon: BoltIcon },
-  { label: 'Reallocation Rules', path: '/super-admin/reallotment-rules', icon: ArrowsRightLeftIcon },
-  { label: 'Reallocation History', path: '/super-admin/reallotment-logs', icon: ArrowPathIcon },
-  { label: 'Marketing Allocation', path: '/super-admin/marketing-allocation', icon: MegaphoneIcon },
-  { label: 'Allocation History', path: '/super-admin/marketing-allocation-history', icon: PhoneArrowDownLeftIcon },
-  { label: 'Marketing API Keys', path: '/super-admin/marketing-api-keys', icon: KeyIcon },
-
-  { section: 'MARKETING' },
+  { section: 'REPORTS' },
+  { label: 'Reports', path: '/super-admin/reports/organization', icon: ChartBarIcon },
   {
-    label: 'Marketing',
-    icon: ChatBubbleLeftRightIcon,
+    label: 'Team Performance',
+    icon: TrophyIcon,
+    // No "Organization" child — that is the same page as "Reports" above.
+    children: [
+      { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
+      { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
+      { label: 'Sales Head', path: '/super-admin/reports/sales-head' },
+    ],
+  },
+
+  { section: 'MARKETING & CALLS' },
+  {
+    label: 'Campaigns',
+    icon: MegaphoneIcon,
     children: [
       { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
       { label: 'Marketing Metrix', path: '/super-admin/marketing-metrix' },
@@ -218,10 +248,8 @@ const adminSidebar = [
       { label: 'WhatsApp Settings', path: '/super-admin/whatsapp-settings' },
     ],
   },
-
-  { section: 'TELEPHONY' },
   {
-    label: 'Telephony',
+    label: 'Calls',
     icon: PhoneIcon,
     children: [
       { label: 'Call Logs', path: '/super-admin/telephony/call-logs' },
@@ -229,11 +257,15 @@ const adminSidebar = [
       { label: 'Call Settings', path: '/super-admin/telephony/settings' },
     ],
   },
+  { label: 'Lead Assignment', path: '/super-admin/marketing-allocation', icon: ArrowsRightLeftIcon },
+  { label: 'Assignment History', path: '/super-admin/marketing-allocation-history', icon: ArrowPathIcon },
 
-  { section: 'CONFIGURATION' },
+  // Low-frequency group — starts collapsed, and auto-opens when the route is
+  // inside it (see Sidebar.jsx).
+  { section: 'SETTINGS', collapsed: true },
   {
-    label: 'Org & Access',
-    icon: UserGroupIcon,
+    label: 'Team & Access',
+    icon: ShieldCheckIcon,
     children: [
       { label: 'Users', path: '/super-admin/users' },
       { label: 'Roles & Permissions', path: '/super-admin/user-types' },
@@ -242,8 +274,8 @@ const adminSidebar = [
   },
   { label: 'Attendance', path: '/super-admin/attendance', icon: FingerPrintIcon },
   {
-    label: 'Lead Masters',
-    icon: Cog6ToothIcon,
+    label: 'Lead Settings',
+    icon: AdjustmentsHorizontalIcon,
     children: [
       { label: 'Lead Types', path: '/super-admin/lead-types' },
       { label: 'Lead Sources', path: '/super-admin/lead-sources' },
@@ -257,7 +289,7 @@ const adminSidebar = [
     ],
   },
   {
-    label: 'Booking & Finance Masters',
+    label: 'Booking & Payment Settings',
     icon: BanknotesIcon,
     children: [
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
@@ -269,9 +301,13 @@ const adminSidebar = [
       { label: 'Banks', path: '/super-admin/banks' },
     ],
   },
+  { label: 'Auto-Reassign Rules', path: '/super-admin/reallotment-rules', icon: ArrowPathRoundedSquareIcon },
+  { label: 'Reassign History', path: '/super-admin/reallotment-logs', icon: ClockIcon },
+  { label: 'Automated Actions', path: '/super-admin/workflow-actions', icon: BoltIcon },
+  { label: 'Marketing Integrations', path: '/super-admin/marketing-api-keys', icon: KeyIcon },
   {
-    label: 'Other Masters',
-    icon: Cog6ToothIcon,
+    label: 'Other Settings',
+    icon: EllipsisHorizontalCircleIcon,
     children: [
       { label: 'Customer Types', path: '/super-admin/customer-types' },
       { label: 'Terms & Conditions', path: '/super-admin/terms-and-conditions' },

@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { getSidebarMenuForRole, getTaskMenuItem, SECTION_ICONS } from './menuConfig';
 import { getRoleCode } from '../../../utils/permissions';
-import { XMarkIcon, ChevronRightIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronRightIcon, ChevronDownIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './Sidebar.css';
 
@@ -21,22 +21,28 @@ const MenuIcon = ({ icon, className = 'sidebar-icon' }) => {
 
 /**
  * Splits a flat menu into its `{ section }` buckets:
- *   [{ label, icon, items: [...] }, ...]
+ *   [{ label, icon, collapsedByDefault, items: [...] }, ...]
  * Items that appear before the first section divider land in an unnamed bucket.
- * This is what the collapsed rail renders — one icon per section instead of one
- * icon per link, which on the admin menu means 8 icons rather than 25+.
+ * This drives both renderings: the collapsed rail shows one icon per section
+ * instead of one per link (7 icons rather than 25+ on the admin menu), and the
+ * expanded sidebar renders each bucket under a collapsible header.
  */
 const buildSections = (menu) => {
   const out = [];
   let current = null;
   menu.forEach((item) => {
     if (item.section) {
-      current = { label: item.section, icon: item.icon || SECTION_ICONS[item.section], items: [] };
+      current = {
+        label: item.section,
+        icon: item.icon || SECTION_ICONS[item.section],
+        collapsedByDefault: !!item.collapsed,
+        items: [],
+      };
       out.push(current);
       return;
     }
     if (!current) {
-      current = { label: 'Menu', icon: null, items: [] };
+      current = { label: 'Menu', icon: null, unnamed: true, items: [] };
       out.push(current);
     }
     current.items.push(item);
@@ -64,6 +70,20 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   }, [roleCode, user]);
 
   const sections = React.useMemo(() => buildSections(menu), [menu]);
+  // A flat portal menu (telecaller, sales manager, …) declares no `{ section }`
+  // markers, so it keeps rendering as one plain list with no group headers.
+  const isSectioned = React.useMemo(() => menu.some((item) => item.section), [menu]);
+
+  const isPathActive = useCallback(
+    (path) => !!path && (location.pathname === path || location.pathname.startsWith(path + '/')),
+    [location.pathname],
+  );
+  const isItemActive = useCallback(
+    (item) => (item.children?.length
+      ? item.children.some((child) => isPathActive(child.path))
+      : isPathActive(item.path)),
+    [isPathActive],
+  );
 
   const getInitialOpenGroups = useCallback(() => {
     const initial = {};
@@ -77,6 +97,17 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   }, [menu, location.pathname]);
 
   const [openGroups, setOpenGroups] = useState(() => getInitialOpenGroups());
+  // Section headers are collapsible too. This map holds only the sections the
+  // user (or the auto-open effect) has actually touched — an absent key falls
+  // back to the section's own default, so the menu arriving late (the role menu
+  // is rebuilt once `user` loads) can never leave every group folded shut.
+  const [openSections, setOpenSections] = useState({});
+  const isSectionOpen = useCallback(
+    (section) => (section.label in openSections
+      ? openSections[section.label]
+      : !section.collapsedByDefault),
+    [openSections],
+  );
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   // Which section's flyout panel is open on the collapsed rail (null = none)
   const [flyout, setFlyout] = useState(null);
@@ -105,8 +136,26 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     });
   }, [location.pathname, menu]);
 
+  // Same for the section that owns the active route — navigating into a
+  // collapsed section (SETTINGS) opens it so the current page is never hidden.
+  // Only writes when the section is actually shut, so an already-open section
+  // costs no render.
+  React.useEffect(() => {
+    sections.forEach((section) => {
+      if (!section.items.some(isItemActive)) return;
+      setOpenSections((prev) => {
+        const open = section.label in prev ? prev[section.label] : !section.collapsedByDefault;
+        return open ? prev : { ...prev, [section.label]: true };
+      });
+    });
+  }, [sections, isItemActive]);
+
   const toggleGroup = (label) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const toggleSection = (section) => {
+    setOpenSections((prev) => ({ ...prev, [section.label]: !isSectionOpen(section) }));
   };
 
   const handleLinkClick = () => {
@@ -121,11 +170,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   // and the matrix-driven roles). A flat 3-item portal menu keeps the plain
   // icon rail it already had.
   const isRail = isCollapsed && sections.length >= 2;
-
-  const isPathActive = (path) => !!path && (location.pathname === path || location.pathname.startsWith(path + '/'));
-  const isItemActive = (item) => (item.children?.length
-    ? item.children.some((child) => isPathActive(child.path))
-    : isPathActive(item.path));
 
   // Leaving rail mode (expanded, or dropped to mobile) discards the flyout.
   useEffect(() => {
@@ -173,10 +217,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   /** One menu entry. `inFlyout` drops the icon column — the panel is already
       scoped to a section, so labels alone read cleaner (and match the mockup). */
   const renderMenuItem = (item, inFlyout = false) => {
-    // Section divider label (WORKSPACE / INVENTORY / ADMINISTRATION)
-    if (item.section) {
-      return <div key={`sec-${item.section}`} className="app-sidebar__section-label">{item.section}</div>;
-    }
     if (item.children?.length) {
       const isOpen = !!openGroups[item.label];
       const hasActiveChild = item.children.some((child) => isPathActive(child.path));
@@ -222,6 +262,44 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     );
   };
 
+  /** One `{ section }` bucket: a clickable uppercase header that folds its links
+      away, plus the links themselves. Items that came before any section marker
+      render bare, with no header. */
+  const renderSection = (section) => {
+    if (section.unnamed) {
+      return (
+        <React.Fragment key="__unnamed__">
+          {section.items.map((item) => renderMenuItem(item))}
+        </React.Fragment>
+      );
+    }
+    const isOpen = isSectionOpen(section);
+    const hasActive = section.items.some(isItemActive);
+
+    return (
+      <div
+        key={section.label}
+        className={`app-sidebar__section ${isOpen ? 'is-open' : 'is-collapsed'} ${hasActive ? 'has-active' : ''}`}
+      >
+        <button
+          type="button"
+          className="app-sidebar__section-toggle"
+          onClick={() => toggleSection(section)}
+          aria-expanded={isOpen}
+          title={section.label}
+        >
+          <span className="app-sidebar__section-label">{section.label}</span>
+          <ChevronDownIcon className="sidebar-icon sidebar-icon--xs app-sidebar__section-chevron" />
+        </button>
+        {isOpen && (
+          <div className="app-sidebar__section-items">
+            {section.items.map((item) => renderMenuItem(item))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       {isMobile && isMobileOpen && (
@@ -250,9 +328,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         </div>
       </div>
 
-      {/* Navigation. Collapsed + sectioned → an icon rail of section categories,
-          each opening a flyout panel. Otherwise the full list; labels/chevrons
-          always render and CSS hides them on the plain collapsed rail. */}
+      {/* Navigation. Three renderings:
+            • collapsed + sectioned → an icon rail of section categories, each
+              opening a flyout panel;
+            • expanded + sectioned  → collapsible section headers (admin/SA);
+            • flat portal menu      → one plain list, no headers.
+          Labels/chevrons always render; CSS hides them on the collapsed rail. */}
       <nav className={`app-sidebar__nav ${isRail ? 'app-sidebar__nav--rail' : ''}`} ref={railRef}>
         {isRail
           ? sections.map((section) => {
@@ -275,7 +356,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
               </button>
             );
           })
-          : menu.map((item) => renderMenuItem(item))}
+          : isSectioned
+            ? sections.map((section) => renderSection(section))
+            : menu.map((item) => renderMenuItem(item))}
       </nav>
 
       {/* No profile/logout footer here — the header user menu is the single place

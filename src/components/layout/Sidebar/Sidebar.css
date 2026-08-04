@@ -258,9 +258,39 @@
 
 .app-sidebar__role-text { white-space: nowrap; }
 
-/* Section dividers (WORKSPACE / INVENTORY / ADMINISTRATION) */
+/* ── Collapsible sections (HOME / SALES / PROPERTIES / … / SETTINGS) ──
+   The header is a button: click it to fold the group away. A section that owns
+   the active route is force-opened by Sidebar.jsx, so the current page can never
+   hide inside a closed group. */
+.app-sidebar__section + .app-sidebar__section {
+  border-top: 1px solid var(--sidebar-separator, var(--border-secondary));
+}
+
+.app-sidebar__section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px 6px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: color var(--transition-fast, 0.15s);
+}
+
+.app-sidebar__section-toggle:hover .app-sidebar__section-label,
+.app-sidebar__section-toggle:hover .app-sidebar__section-chevron {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+/* Tighten the very first header — it sits right under the brand rule. */
+.app-sidebar__section:first-child .app-sidebar__section-toggle { padding-top: 8px; }
+
 .app-sidebar__section-label {
-  padding: 16px 20px 6px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.8px;
@@ -268,6 +298,22 @@
   color: var(--text-muted);
   white-space: nowrap;
 }
+
+.app-sidebar__section-chevron {
+  color: var(--text-muted);
+  opacity: 0.5;
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-sidebar__section.is-collapsed .app-sidebar__section-chevron { transform: rotate(-90deg); }
+
+/* A closed section that contains the active route keeps a hint of the accent. */
+.app-sidebar__section.is-collapsed.has-active .app-sidebar__section-label {
+  color: var(--sidebar-active-text, var(--accent-blue));
+}
+
+.app-sidebar__section-items { padding-bottom: 4px; animation: sidebar-subnav-in 0.2s ease-out; }
 
 .app-sidebar__link-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -284,7 +330,9 @@
 .app-sidebar--collapsed .app-sidebar__role-text,
 .app-sidebar--collapsed .app-sidebar__link-label,
 .app-sidebar--collapsed .app-sidebar__chevron,
+.app-sidebar--collapsed .app-sidebar__section-toggle,
 .app-sidebar--collapsed .app-sidebar__section-label { display: none; }
+.app-sidebar--collapsed .app-sidebar__section + .app-sidebar__section { border-top: none; }
 .app-sidebar--collapsed .app-sidebar__role-badge { justify-content: center; padding: 8px 0; }
 /* Use a definite width (not auto) so both <a> links and <button> groups fill the
    rail and center their icons identically. A <button> with width:auto shrink-wraps
@@ -307,6 +355,8 @@
 .app-sidebar--collapsed:hover .app-sidebar__link-label,
 .app-sidebar--collapsed:hover .app-sidebar__chevron,
 .app-sidebar--collapsed:hover .app-sidebar__section-label { display: block; }
+.app-sidebar--collapsed:hover .app-sidebar__section-toggle { display: flex; }
+.app-sidebar--collapsed:hover .app-sidebar__section + .app-sidebar__section { border-top: 1px solid var(--sidebar-separator, var(--border-secondary)); }
 .app-sidebar--collapsed:hover .app-sidebar__role-badge { justify-content: flex-start; padding: 7px 16px; }
 .app-sidebar--collapsed:hover .app-sidebar__link { justify-content: flex-start; padding: 8px 16px; margin: 1px 8px; }
 .app-sidebar--collapsed:hover .app-sidebar__group-button { justify-content: flex-start; padding: 8px 16px; margin: 1px 8px; width: calc(100% - 16px); }
