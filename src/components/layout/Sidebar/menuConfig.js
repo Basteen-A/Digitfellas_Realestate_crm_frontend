@@ -4,24 +4,17 @@
 import {
   ChartBarIcon,
   UsersIcon,
-  FingerPrintIcon,
   ClipboardDocumentListIcon,
   ArrowPathIcon,
-  ArrowPathRoundedSquareIcon,
   BoltIcon,
   HandRaisedIcon,
   BriefcaseIcon,
   CreditCardIcon,
-  HomeIcon,
   HomeModernIcon,
-  ArrowsRightLeftIcon,
   BuildingStorefrontIcon,
-  BuildingOffice2Icon,
   Cog6ToothIcon,
   Squares2X2Icon,
   BanknotesIcon,
-  WalletIcon,
-  CurrencyRupeeIcon,
   XCircleIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -31,16 +24,16 @@ import {
   PhoneIcon,
   PaperAirplaneIcon,
   MegaphoneIcon,
-  KeyIcon,
   FolderOpenIcon,
-  CalendarDaysIcon,
-  ClockIcon,
-  DocumentTextIcon,
-  DocumentChartBarIcon,
-  ShieldCheckIcon,
-  AdjustmentsHorizontalIcon,
-  EllipsisHorizontalCircleIcon,
 } from '@heroicons/react/24/outline';
+// Admin / super-admin nav glyphs — the mockup's own outline set, not Heroicons.
+import {
+  NavHome, NavUsers, NavSettings, NavLayoutGrid, NavClipboardList, NavCalendar,
+  NavFileText, NavBuildingWarehouse, NavBuilding, NavMapPin, NavWallet,
+  NavCreditCard, NavChartBar, NavTrophy, NavSpeakerphone, NavPhone,
+  NavArrowsExchange, NavRefresh, NavShield, NavAdjustments, NavRoute,
+  NavHistory, NavBolt, NavPlug, NavDots,
+} from './navIcons';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
 import { usesGenericPortal, BUILT_IN_PORTAL_CODES } from '../../../utils/modulePermissions';
 import { buildGenericSidebar } from './genericMenu';
@@ -52,18 +45,19 @@ import { buildGenericSidebar } from './genericMenu';
  * hand-written admin menu and the matrix-driven generic menu are covered; add an
  * entry here whenever a new `{ section }` name is introduced.
  *
- * The first block is the admin / super-admin IA (plain-language groups); the
- * second is the older engineering-worded set still used by the matrix-driven
- * generic sidebar (genericMenu.js).
+ * The first block is the admin / super-admin IA (plain-language groups) and uses
+ * the mockup's own icon set; the second is the older engineering-worded set
+ * still used by the matrix-driven generic sidebar (genericMenu.js), which stays
+ * on Heroicons because its links do too.
  */
 export const SECTION_ICONS = {
-  HOME: HomeIcon,
-  SALES: UsersIcon,
-  PROPERTIES: BuildingOffice2Icon,
-  PAYMENTS: CurrencyRupeeIcon,
-  REPORTS: ChartBarIcon,
-  'MARKETING & CALLS': MegaphoneIcon,
-  SETTINGS: Cog6ToothIcon,
+  HOME: NavHome,
+  SALES: NavUsers,
+  PROPERTIES: NavBuilding,
+  PAYMENTS: NavWallet,
+  REPORTS: NavChartBar,
+  'MARKETING & CALLS': NavSpeakerphone,
+  SETTINGS: NavSettings,
 
   WORKSPACE: Squares2X2Icon,
   INSIGHTS: ChartBarIcon,
@@ -192,42 +186,48 @@ const buildOrganizationHeadSidebar = (user) => {
 //   Workflow Actions     → Automated Actions
 //   Marketing API Keys   → Marketing Integrations
 //   Other Masters        → Other Settings
+//
+// Icons are the mockup's own set (see navIcons.jsx), one per label exactly as
+// its `iconMap` assigns them — including the three places that set resolves two
+// labels to the same glyph (Bookings/Attendance → calendar, Records/Payment
+// Reports → file-text, Lead Settings/Booking & Payment Settings → adjustments).
 const adminSidebar = [
   { section: 'HOME' },
-  { label: 'Dashboard', path: '/dashboard', icon: Squares2X2Icon },
+  { label: 'Dashboard', path: '/dashboard', icon: NavLayoutGrid },
 
   { section: 'SALES' },
-  { label: 'Leads', path: '/super-admin/lead-management', icon: UsersIcon },
-  { label: 'Tasks', path: '/super-admin/tasks', icon: ClipboardDocumentListIcon },
-  { label: 'Bookings', path: '/super-admin/booking-approvals', icon: CalendarDaysIcon },
-  { label: 'Records', path: '/super-admin/record-manager', icon: DocumentTextIcon },
+  { label: 'Leads', path: '/super-admin/lead-management', icon: NavUsers },
+  { label: 'Tasks', path: '/super-admin/tasks', icon: NavClipboardList },
+  { label: 'Bookings', path: '/super-admin/booking-approvals', icon: NavCalendar },
+  { label: 'Records', path: '/super-admin/record-manager', icon: NavFileText },
 
   { section: 'PROPERTIES' },
   {
     label: 'Projects',
-    icon: BuildingOffice2Icon,
+    icon: NavBuildingWarehouse,
     children: [
       { label: 'Inventory Overview', path: '/super-admin/inventory' },
       { label: 'Projects', path: '/super-admin/projects' },
-      { label: 'Project Types', path: '/super-admin/project-types' },
+      // Project Types is a master table, not day-to-day work — it lives under
+      // SETTINGS › Other Settings alongside the other type/lookup lists.
       { label: 'Document Management', path: '/super-admin/document-management' },
       { label: 'Document Archive', path: '/super-admin/document-archive' },
     ],
   },
-  { label: 'Units & Plots', path: '/super-admin/units', icon: HomeModernIcon },
-  { label: 'Locations', path: '/super-admin/locations', icon: MapPinIcon },
+  { label: 'Units & Plots', path: '/super-admin/units', icon: NavBuilding },
+  { label: 'Locations', path: '/super-admin/locations', icon: NavMapPin },
 
   { section: 'PAYMENTS' },
-  { label: 'Payments Received', path: '/super-admin/finance/revenue', icon: WalletIcon },
-  { label: 'Dues & Collections', path: '/super-admin/finance/collections', icon: CreditCardIcon },
+  { label: 'Payments Received', path: '/super-admin/finance/revenue', icon: NavWallet },
+  { label: 'Dues & Collections', path: '/super-admin/finance/collections', icon: NavCreditCard },
   // Org-wide twin of the Collection Manager portal's own "Collection Report" screen.
-  { label: 'Payment Reports', path: '/super-admin/collection-reports', icon: DocumentChartBarIcon },
+  { label: 'Payment Reports', path: '/super-admin/collection-reports', icon: NavFileText },
 
   { section: 'REPORTS' },
-  { label: 'Reports', path: '/super-admin/reports/organization', icon: ChartBarIcon },
+  { label: 'Reports', path: '/super-admin/reports/organization', icon: NavChartBar },
   {
     label: 'Team Performance',
-    icon: TrophyIcon,
+    icon: NavTrophy,
     // No "Organization" child — that is the same page as "Reports" above.
     children: [
       { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
@@ -239,7 +239,7 @@ const adminSidebar = [
   { section: 'MARKETING & CALLS' },
   {
     label: 'Campaigns',
-    icon: MegaphoneIcon,
+    icon: NavSpeakerphone,
     children: [
       { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
       { label: 'Marketing Metrix', path: '/super-admin/marketing-metrix' },
@@ -250,32 +250,32 @@ const adminSidebar = [
   },
   {
     label: 'Calls',
-    icon: PhoneIcon,
+    icon: NavPhone,
     children: [
       { label: 'Call Logs', path: '/super-admin/telephony/call-logs' },
       { label: 'Allocation History', path: '/super-admin/telephony/allocation-history' },
       { label: 'Call Settings', path: '/super-admin/telephony/settings' },
     ],
   },
-  { label: 'Lead Assignment', path: '/super-admin/marketing-allocation', icon: ArrowsRightLeftIcon },
-  { label: 'Assignment History', path: '/super-admin/marketing-allocation-history', icon: ArrowPathIcon },
+  { label: 'Lead Assignment', path: '/super-admin/marketing-allocation', icon: NavArrowsExchange },
+  { label: 'Assignment History', path: '/super-admin/marketing-allocation-history', icon: NavRefresh },
 
   // Low-frequency group — starts collapsed, and auto-opens when the route is
   // inside it (see Sidebar.jsx).
   { section: 'SETTINGS', collapsed: true },
   {
     label: 'Team & Access',
-    icon: ShieldCheckIcon,
+    icon: NavShield,
     children: [
       { label: 'Users', path: '/super-admin/users' },
       { label: 'Roles & Permissions', path: '/super-admin/user-types' },
       { label: 'Org Settings', path: '/super-admin/site-settings' },
     ],
   },
-  { label: 'Attendance', path: '/super-admin/attendance', icon: FingerPrintIcon },
+  { label: 'Attendance', path: '/super-admin/attendance', icon: NavCalendar },
   {
     label: 'Lead Settings',
-    icon: AdjustmentsHorizontalIcon,
+    icon: NavAdjustments,
     children: [
       { label: 'Lead Types', path: '/super-admin/lead-types' },
       { label: 'Lead Sources', path: '/super-admin/lead-sources' },
@@ -290,7 +290,7 @@ const adminSidebar = [
   },
   {
     label: 'Booking & Payment Settings',
-    icon: BanknotesIcon,
+    icon: NavAdjustments,
     children: [
       { label: 'Booking Statuses', path: '/super-admin/booking-statuses' },
       { label: 'Booking Cancel Reasons', path: '/super-admin/booking-cancel-reasons' },
@@ -301,14 +301,15 @@ const adminSidebar = [
       { label: 'Banks', path: '/super-admin/banks' },
     ],
   },
-  { label: 'Auto-Reassign Rules', path: '/super-admin/reallotment-rules', icon: ArrowPathRoundedSquareIcon },
-  { label: 'Reassign History', path: '/super-admin/reallotment-logs', icon: ClockIcon },
-  { label: 'Automated Actions', path: '/super-admin/workflow-actions', icon: BoltIcon },
-  { label: 'Marketing Integrations', path: '/super-admin/marketing-api-keys', icon: KeyIcon },
+  { label: 'Auto-Reassign Rules', path: '/super-admin/reallotment-rules', icon: NavRoute },
+  { label: 'Reassign History', path: '/super-admin/reallotment-logs', icon: NavHistory },
+  { label: 'Automated Actions', path: '/super-admin/workflow-actions', icon: NavBolt },
+  { label: 'Marketing Integrations', path: '/super-admin/marketing-api-keys', icon: NavPlug },
   {
     label: 'Other Settings',
-    icon: EllipsisHorizontalCircleIcon,
+    icon: NavDots,
     children: [
+      { label: 'Project Types', path: '/super-admin/project-types' },
       { label: 'Customer Types', path: '/super-admin/customer-types' },
       { label: 'Terms & Conditions', path: '/super-admin/terms-and-conditions' },
       { label: 'Departments', path: '/super-admin/departments' },

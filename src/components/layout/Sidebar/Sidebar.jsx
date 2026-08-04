@@ -205,18 +205,24 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     setFlyoutTop(Math.max(12, Math.min(flyout.anchor, window.innerHeight - 12 - height)));
   }, [flyout, openGroups]);
 
+  /** Icon for a section header/rail button, with the same fallback chain in both
+      the rail and the flyout title so they never disagree. */
+  const sectionIcon = (section) => section.icon || section.items[0]?.icon || EllipsisHorizontalIcon;
+
   const toggleFlyout = (section, button) => {
     const { top } = button.getBoundingClientRect();
     const anchor = top - 8;
     setFlyoutTop(anchor);
     setFlyout((prev) => (prev?.label === section.label
       ? null
-      : { label: section.label, items: section.items, anchor }));
+      : { label: section.label, icon: sectionIcon(section), items: section.items, anchor }));
   };
 
-  /** One menu entry. `inFlyout` drops the icon column — the panel is already
-      scoped to a section, so labels alone read cleaner (and match the mockup). */
-  const renderMenuItem = (item, inFlyout = false) => {
+  /** One menu entry — icon + label, and a chevron when it has children. Used by
+      both the expanded sidebar and the collapsed rail's flyout panel, so the two
+      read identically; the flyout used to drop the icon column, which left the
+      whole collapsed state icon-less once you opened a group. */
+  const renderMenuItem = (item) => {
     if (item.children?.length) {
       const isOpen = !!openGroups[item.label];
       const hasActiveChild = item.children.some((child) => isPathActive(child.path));
@@ -224,7 +230,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       return (
         <div key={item.label} className={`app-sidebar__group ${hasActiveChild ? 'has-active-child' : ''}`}>
           <button type="button" className={`app-sidebar__group-button ${isOpen ? 'is-open' : ''}`} onClick={() => toggleGroup(item.label)} title={item.label}>
-            {!inFlyout && <MenuIcon icon={item.icon} />}
+            <MenuIcon icon={item.icon} />
             <span className="app-sidebar__link-label">{item.label}</span>
             <span className={`app-sidebar__chevron ${isOpen ? 'open' : ''}`}><ChevronRightIcon className="sidebar-icon sidebar-icon--xs" /></span>
           </button>
@@ -256,7 +262,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         className={({ isActive }) => `app-sidebar__link ${isActive ? 'is-active' : ''}`}
         title={item.label}
       >
-        {!inFlyout && <MenuIcon icon={item.icon} />}
+        <MenuIcon icon={item.icon} />
         <span className="app-sidebar__link-label">{item.label}</span>
       </NavLink>
     );
@@ -349,10 +355,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                 aria-label={section.label}
                 aria-expanded={isOpen}
               >
-                <MenuIcon
-                  icon={section.icon || section.items[0]?.icon || EllipsisHorizontalIcon}
-                  className="sidebar-icon sidebar-icon--rail"
-                />
+                <MenuIcon icon={sectionIcon(section)} className="sidebar-icon sidebar-icon--rail" />
               </button>
             );
           })
@@ -375,8 +378,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         style={{ top: flyoutTop }}
         aria-label={flyout.label}
       >
-        <div className="app-sidebar__flyout-title">{flyout.label}</div>
-        {flyout.items.map((item) => renderMenuItem(item, true))}
+        <div className="app-sidebar__flyout-title">
+          <MenuIcon icon={flyout.icon} className="sidebar-icon sidebar-icon--xs" />
+          <span>{flyout.label}</span>
+        </div>
+        {flyout.items.map((item) => renderMenuItem(item))}
       </nav>
     )}
     </>

@@ -451,6 +451,9 @@
 .app-sidebar__flyout::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 4px; }
 
 .app-sidebar__flyout-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 16px 6px;
   font-size: 11px;
   font-weight: 600;
@@ -460,8 +463,10 @@
   white-space: nowrap;
 }
 
-/* Panel rows carry no icon column, so children indent from the label edge. */
-.app-sidebar__flyout .app-sidebar__link--child { padding: 8px 16px 8px 28px; }
+/* Panel rows carry the same icon column as the expanded sidebar, so children
+   indent to the same 46px label edge — collapsing the sidebar must not cost you
+   the icons. */
+.app-sidebar__flyout .app-sidebar__link--child { padding: 8px 16px 8px 46px; }
 
 /* ── Mobile drawer close button — mirrors the telecaller portal sidebar
    (.portal-sidebar__close) for a consistent look across roles. ── */

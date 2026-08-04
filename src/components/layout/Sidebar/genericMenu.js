@@ -40,7 +40,7 @@ const MODULE_LINKS = {
     { label: 'Booking Approvals', path: '/super-admin/booking-approvals', icon: CreditCardIcon },
   ] },
   record_manager: { section: 'WORKSPACE', items: [
-    { label: 'Record Manager', path: '/super-admin/record-manager', icon: ClipboardDocumentListIcon },
+    { label: 'Records', path: '/super-admin/record-manager', icon: ClipboardDocumentListIcon },
   ] },
 
   reports: { section: 'INSIGHTS', items: [
