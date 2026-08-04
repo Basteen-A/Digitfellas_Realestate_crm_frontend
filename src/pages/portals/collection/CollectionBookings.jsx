@@ -104,10 +104,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [emiSaving, setEmiSaving] = useState(false);
   const [reqCancelSaving, setReqCancelSaving] = useState(false);
   const [confirmCancelSaving, setConfirmCancelSaving] = useState(false);
-  // Refund forms (used by confirmCancel + standalone refund modes)
+  // Refund form — cancellation only. A standalone refund is a booking-detail
+  // action, not a list action.
   const [cancelRefundForm, setCancelRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
-  const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
-  const [refundSaving, setRefundSaving] = useState(false);
 
   const QUICK_STATUS_CODES = ['BOOKED', 'REGISTERED', 'EMI', 'REQUEST_TO_CANCEL'];
   const PAYMENT_CATEGORIES = ['Plot Value', 'Stamp Duty', 'Development', 'Registration', 'Registration Expenses', 'Other Registration Expenses', 'MODT', 'Other'];
@@ -344,9 +343,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     if (s === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by) {
       actions.push({ key: 'confirmCancel', label: 'Confirm Cancel', Icon: XCircleIcon, color: '#DC2626', onClick: stop(() => openWorkflow(booking, 'confirmCancel')) });
     }
-    if (parseFloat(booking.refundable_amount ?? 0) > 0.01) {
-      actions.push({ key: 'refund', label: `Process Refund (${formatCurrency(booking.refundable_amount || 0)} verified)`, Icon: BanknotesIcon, color: '#F59E0B', onClick: stop(() => openWorkflow(booking, 'refund')) });
-    }
+    // No "Process Refund" here — refunds are raised from the booking detail
+    // screen only, where the payment history that justifies the amount is on
+    // screen. Refunding blind from a list row is what this removes.
     const awaitingSH = s === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by;
 
     return (
@@ -397,7 +396,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setRegisterForm({ registration_date: '' });
     setEmiRemarks(''); setCancelReasonId(''); setCancelRemarks('');
     setCancelRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
-    setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
   };
   const closeWorkflow = () => { setWorkflowBooking(null); setWorkflowMode(null); };
 
@@ -453,22 +451,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       loadBookings();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
     finally { setConfirmCancelSaving(false); }
-  };
-
-  const handleProcessRefund = async () => {
-    const refundable = parseFloat(workflowBooking?.refundable_amount ?? workflowBooking?.total_paid ?? 0);
-    const amt = parseFloat(refundForm.refund_amount || 0);
-    if (!amt || amt <= 0) { toast.error('Enter a refund amount greater than 0'); return; }
-    if (amt > refundable + 0.01) { toast.error(`Refund cannot exceed the verified collected balance (${formatCurrency(refundable)})`); return; }
-    setRefundSaving(true);
-    try {
-      await bookingApi.processRefund(workflowBooking.id, refundForm);
-      toast.success('Refund recorded');
-      setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
-      closeWorkflow();
-      loadBookings();
-    } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
-    finally { setRefundSaving(false); }
   };
 
   const handleStatusUpdate = async () => {
@@ -1436,11 +1418,11 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   color: workflowMode === 'register' ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
                   border: `2px solid ${workflowMode === 'register' ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
                 }}>
-                  {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : workflowMode === 'refund' ? '↩' : '⚠'}
+                  {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : '⚠'}
                 </div>
                 <div>
                   <div className="qa-drawer-name">
-                    {workflowMode === 'register' ? 'Register Booking' : workflowMode === 'emi' ? 'Move to EMI' : workflowMode === 'confirmCancel' ? 'Confirm Cancellation' : workflowMode === 'refund' ? 'Record Refund' : 'Request to Cancel'}
+                    {workflowMode === 'register' ? 'Register Booking' : workflowMode === 'emi' ? 'Move to EMI' : workflowMode === 'confirmCancel' ? 'Confirm Cancellation' : 'Request to Cancel'}
                   </div>
                   <div className="qa-drawer-meta">{workflowBooking.booking_number} · {workflowBooking.customer_name || workflowBooking.buyer_name}</div>
                 </div>
@@ -1573,70 +1555,6 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               );
             })()}
 
-            {workflowMode === 'refund' && (() => {
-              const refundable = parseFloat(workflowBooking?.refundable_amount ?? workflowBooking?.total_paid ?? 0);
-              return (
-                <div style={{ padding: '16px 20px' }}>
-                  <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
-                    <strong>Record Refund Payment</strong>
-                    <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Verified collected (refundable)</span>
-                      <strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(refundable)}</strong>
-                    </div>
-                  </div>
-
-                  <div className="bkd-form-row">
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Refund Amount (₹) *</label>
-                      <input type="number" min="0" max={refundable} className="bkd-form-control"
-                        placeholder={`Up to ${formatCurrency(refundable)}`}
-                        value={refundForm.refund_amount}
-                        onChange={(e) => setRefundForm(p => ({ ...p, refund_amount: e.target.value }))} />
-                    </div>
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Refund Date</label>
-                      <input type="date" className="bkd-form-control"
-                        value={refundForm.refund_date}
-                        onChange={(e) => setRefundForm(p => ({ ...p, refund_date: e.target.value }))} />
-                    </div>
-                  </div>
-                  <div className="bkd-form-row">
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Refund Mode *</label>
-                      <select className="bkd-form-control" value={refundForm.refund_mode_id}
-                        onChange={(e) => setRefundForm(p => ({ ...p, refund_mode_id: e.target.value }))}>
-                        <option value="">Select mode</option>
-                        {paymentModeOptions.map((m) => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
-                      </select>
-                    </div>
-                    <div className="bkd-form-group">
-                      <label className="bkd-form-label">Reference / UTR</label>
-                      <input className="bkd-form-control" placeholder="e.g. UTR123456"
-                        value={refundForm.refund_reference}
-                        onChange={(e) => setRefundForm(p => ({ ...p, refund_reference: e.target.value }))} />
-                    </div>
-                  </div>
-                  <div className="bkd-form-group">
-                    <label className="bkd-form-label">Remarks</label>
-                    <textarea rows={2} className="bkd-form-control"
-                      value={refundForm.refund_remarks}
-                      onChange={(e) => setRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
-                  </div>
-
-                  <div className="qa-drawer-save-row">
-                    <button className="qa-drawer-save-btn" style={{ background: '#F59E0B' }}
-                      disabled={refundSaving || !refundForm.refund_amount || parseFloat(refundForm.refund_amount) <= 0}
-                      onClick={handleProcessRefund}>
-                      {refundSaving ? 'Recording...' : 'Record Refund'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
           </div>
         </div>
       )}

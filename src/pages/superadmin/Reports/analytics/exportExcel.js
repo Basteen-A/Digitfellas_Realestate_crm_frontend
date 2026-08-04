@@ -65,7 +65,8 @@ const BLOCKS = (role) => {
     teamLeaderboard: { title: role === 'TC' ? 'Tele Sales Leaderboard' : 'Sales Team Leaderboard', columns: leaderCols, name: true },
     salesHeadLeaderboard: { title: 'Sales Head Leaderboard', columns: leaderCols, name: true },
     callsPerDay: { title: 'Calls Per Day', columns: [{ header: 'Day', key: 'day' }, { header: 'Answered', key: 'answered' }, { header: 'Unanswered', key: 'unanswered' }, { header: 'Total', key: 'total' }] },
-    hourlyCalls: { title: 'Hourly Calls', columns: [{ header: 'Hour', key: 'hour' }, { header: 'Total Calls', key: 'total' }, { header: 'Answered', key: 'answered' }, { header: 'Unanswered', key: 'unanswered' }] },
+    // `answer_rate` is derived in rowsFor — the API never sends it.
+    hourlyCalls: { title: 'Hourly Calls', columns: [{ header: 'Hour', key: 'hour' }, { header: 'Total Calls', key: 'total' }, { header: 'Answered', key: 'answered' }, { header: 'Unanswered', key: 'unanswered' }, { header: 'Answer Rate', key: 'answer_rate' }] },
     projectWiseSiteVisit: { title: 'Project-wise Site Visits', columns: [{ header: 'Project', key: 'project_name' }, { header: 'Site Visits', key: 'site_visits' }] },
     projectWiseInventory: { title: 'Project-wise Inventory', columns: [{ header: 'Project', key: 'project_name' }, { header: 'Total', key: 'total_units' }, { header: 'Available', key: 'available' }, { header: 'Booked', key: 'booked' }, { header: 'Blocked', key: 'blocked' }] },
     smWiseSiteVisit: { title: 'SM-wise Site Visits', columns: [{ header: 'Sales Manager', key: 'name' }, { header: 'Total SV', key: 'total_visits' }, { header: 'Bookings', key: 'bookings' }, { header: 'Under Nego', key: 'negotiation' }], name: true },
@@ -82,6 +83,12 @@ const rowsFor = (block, raw) => (raw || []).map((r) => {
   // Derive a Total column (answered + unanswered) when the source doesn't supply one.
   if (out.total == null && (r.answered != null || r.unanswered != null)) {
     out.total = Number(r.answered || 0) + Number(r.unanswered || 0);
+  }
+  // Same for Answer Rate — computed here so the sheet matches the on-screen
+  // column. A row with no calls gets a dash rather than a misleading 0%.
+  if (block.columns.some((c) => c.key === 'answer_rate')) {
+    const total = Number(out.total || 0);
+    out.answer_rate = total > 0 ? `${Math.round((Number(r.answered || 0) / total) * 100)}%` : '—';
   }
   return out;
 });

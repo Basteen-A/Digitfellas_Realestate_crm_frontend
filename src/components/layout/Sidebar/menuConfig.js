@@ -25,6 +25,8 @@ import {
   PaperAirplaneIcon,
   MegaphoneIcon,
   FolderOpenIcon,
+  DocumentChartBarIcon,
+  PresentationChartLineIcon,
 } from '@heroicons/react/24/outline';
 // Admin / super-admin nav glyphs — the mockup's own outline set, not Heroicons.
 import {
@@ -445,8 +447,10 @@ export const collectionMenu = [
   // Collection Manager monitors telecaller performance and inbound-call
   // allocation, so they render inside the collection portal too.
   { group: 'Reports' },
-  { label: 'Collection Report', key: 'reports', icon: ChartBarIcon, badge: null },
-  { label: 'Telecaller Reports', key: 'tc-reports', icon: ChartBarIcon, badge: null },
+  // Four report links in a row — each needs its own glyph or the group reads as
+  // one repeated icon. Money report vs telecalling report vs the two audits.
+  { label: 'Collection Report', key: 'reports', icon: DocumentChartBarIcon, badge: null },
+  { label: 'Telecaller Reports', key: 'tc-reports', icon: PresentationChartLineIcon, badge: null },
   // Two different allocation audits, both about which telecaller got which lead:
   //   • Call Allocation History  — leads created from INBOUND CALLS (Tata Smartflo)
   //   • API Allocation History   — leads pushed in by the MARKETING API webhook

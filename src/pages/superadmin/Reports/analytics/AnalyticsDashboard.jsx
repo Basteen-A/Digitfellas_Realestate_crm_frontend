@@ -636,13 +636,17 @@ const Panel = ({ rkey, role, d, accent, orgCalls, orgHourly, registerRef, selfVi
           </KpiRow>
           <Card title="Hourly Call Heatmap" sub="Darker = more calls"><Heatmap hourly={hourly} base={accent} /></Card>
           <Card title="Answered vs Not Answered by Hour" sub="9 AM – 8 PM" registerRef={registerRef} chartKey="hourly">
-            <Table head={['Time', 'Total Calls', 'Answered', 'Unanswered']} colSpan={4} empty={false}>
-              {HOURS.map((h) => { const row = hourly[h] || {}; const a = num(row.answered); const u = num(row.unanswered); return (
+            {/* Answer Rate closes every call table — same Pill + ratioTone as the
+                member-wise board above, so the two read the same way. An hour with
+                no calls shows a dash, not a misleading 0%. */}
+            <Table head={['Time', 'Total Calls', 'Answered', 'Unanswered', 'Answer Rate']} colSpan={5} empty={false}>
+              {HOURS.map((h) => { const row = hourly[h] || {}; const a = num(row.answered); const u = num(row.unanswered); const tot = a + u; return (
                 <Tr key={h}>
                   <Td bold>{hourLabel(h)}</Td>
-                  <Td bold>{a + u}</Td>
+                  <Td bold>{tot}</Td>
                   <Td bold color={COLORS.answered}>{a}</Td>
                   <Td bold color={COLORS.unanswered}>{u}</Td>
+                  <Td>{tot > 0 ? <Pill tone={ratioTone(pct(a, tot))}>{pct(a, tot)}%</Pill> : '—'}</Td>
                 </Tr>
               ); })}
             </Table>
