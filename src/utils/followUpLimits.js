@@ -6,13 +6,13 @@
 // date picker greys out the disallowed range and the user sees the rule before
 // submitting instead of as an error afterwards.
 //
-//   RNR         → 5 days.  A lead that was never actually reached has to come
+//   RNR         → 12 days.  A lead that was never actually reached has to come
 //                 back around quickly, not be parked months out.
 //   every other → 2 calendar months.
 //
 // Future side only - back-dating is not restricted here.
 
-export const RNR_MAX_DAYS = 5;
+export const RNR_MAX_DAYS = 12;
 export const DEFAULT_MAX_MONTHS = 2;
 
 const startOfDay = (value) => {
