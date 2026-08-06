@@ -5,7 +5,8 @@
 //   1. Cost Metrix - By Source      (spend & volume + cost per lead/qualified/SV/booking)
 //   2. Cost Metrix - By Sub Source  (same, one level down, with a source drill-down)
 //   3. Cost Efficiency              (ranking, funnel and spend/volume trends)
-//   4. Budget Entry                 (the spend ledger: Budget + Source + Sub Source + Date)
+//   4. Budget Entry                 (the spend ledger: Campaign + Source + Sub Source(s)
+//                                    + Period + Budget, with a per-line detail drawer)
 // One fetch (GET /reports/marketing-metrix) feeds reports 1-3; switching is instant.
 //
 // ── Attribution ─────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ const MM = {
   budgets: {
     icon: BanknotesIcon,
     title: 'Budget Entry',
-    sub: 'Record spend: Budget + Source + Sub Source + Date',
+    sub: 'Record spend: Campaign + Source + Sub Source + Period + Budget',
     rs: 'Spend ledger',
   },
 };
