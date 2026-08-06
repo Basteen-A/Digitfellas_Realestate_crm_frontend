@@ -32,8 +32,8 @@ const MODULE_TO_ROLE = { telecaller: 'TC', 'sales-manager': 'SM', 'sales-head': 
 // Performance views, selected from the sidebar Performance dropdown.
 const ROLE_LABEL = { TC: 'Telecaller', SM: 'Sales Manager', SH: 'Sales Head', ORG: 'Organization' };
 
-const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
-const fullName = (f, l) => `${f || ''} ${l || ''}`.trim() || '—';
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
+const fullName = (f, l) => `${f || ''} ${l || ''}`.trim() || '-';
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap', background: 'var(--bg-table-header, #f1f5f9)' };
 const td = { padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)' };
 
@@ -49,7 +49,7 @@ const ReportsPage = () => {
   useEffect(() => { if (module && MODULE_TO_ROLE[module]) { setActiveRole(MODULE_TO_ROLE[module]); setTab('analytics'); } }, [module]);
 
   const isOrg = activeRole === 'ORG';
-  const heading = isOrg ? 'Analytics' : `Performance — ${ROLE_LABEL[activeRole] || ''}`;
+  const heading = isOrg ? 'Analytics' : `Performance - ${ROLE_LABEL[activeRole] || ''}`;
 
   return (
     <div className="reports-page">
@@ -60,7 +60,7 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Shared period filter — Analytics has its own filter bar */}
+      {/* Shared period filter - Analytics has its own filter bar */}
       {tab !== 'analytics' && (
         <div className="reports-filter-bar">
           <div className="reports-filter" style={{ flex: '0 1 200px' }}>
@@ -278,7 +278,7 @@ const UserDetail = ({ detail, isCol, role, period, loading, onBack }) => {
                   {detail.recentPayments.map((p, i) => (
                     <tr key={i}>
                       <td style={td}>{p.booking_number}<div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.buyer_name}</div></td>
-                      <td style={td}>{p.payment_category || '—'}</td>
+                      <td style={td}>{p.payment_category || '-'}</td>
                       <td style={{ ...td, fontWeight: 600, color: p.is_refund ? 'var(--accent-red)' : 'var(--accent-green)' }}>{p.is_refund ? '-' : ''}{formatCurrency(p.amount)}</td>
                     </tr>
                   ))}
@@ -390,8 +390,8 @@ const InventoryReport = ({ period }) => {
   const [locationId, setLocationId] = useState('');
 
   useEffect(() => {
-    projectApi.getDropdown().then((r) => setProjects(r.data || [])).catch(() => {});
-    locationApi.getDropdown().then((r) => setLocations(r.data || [])).catch(() => {});
+    projectApi.getDropdown().then((r) => setProjects(r.data || [])).catch(() => { });
+    locationApi.getDropdown().then((r) => setLocations(r.data || [])).catch(() => { });
   }, []);
 
   const load = useCallback(async () => {
@@ -476,16 +476,16 @@ const InventoryReport = ({ period }) => {
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.unit_number}{u.location_name ? ` · ${u.location_name}` : ''}</div>
                     </td>
                     <td style={td}>{u.unit_status}</td>
-                    <td style={td}>{u.buyer_name || (u.booking_number ? '—' : 'Unbooked')}</td>
-                    <td style={td}>{u.plot_value != null ? formatCurrency(u.plot_value) : '—'}</td>
-                    <td style={td}>{u.stamp_value != null ? formatCurrency(u.stamp_value) : '—'}</td>
-                    <td style={td}>{u.registration_exp != null ? formatCurrency(u.registration_exp) : '—'}</td>
-                    <td style={td}>{u.development_charges != null ? formatCurrency(u.development_charges) : '—'}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{u.net_amount != null ? formatCurrency(u.net_amount) : '—'}</td>
-                    <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{u.total_paid != null ? formatCurrency(u.total_paid) : '—'}</td>
-                    <td style={{ ...td, color: 'var(--accent-red)' }}>{u.due != null && u.booking_number ? formatCurrency(u.due) : '—'}</td>
-                    <td style={td}>{u.refund_amount ? formatCurrency(u.refund_amount) : '—'}</td>
-                    <td style={td}>{u.collection_manager || u.created_by_name || '—'}</td>
+                    <td style={td}>{u.buyer_name || (u.booking_number ? '-' : 'Unbooked')}</td>
+                    <td style={td}>{u.plot_value != null ? formatCurrency(u.plot_value) : '-'}</td>
+                    <td style={td}>{u.stamp_value != null ? formatCurrency(u.stamp_value) : '-'}</td>
+                    <td style={td}>{u.registration_exp != null ? formatCurrency(u.registration_exp) : '-'}</td>
+                    <td style={td}>{u.development_charges != null ? formatCurrency(u.development_charges) : '-'}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{u.net_amount != null ? formatCurrency(u.net_amount) : '-'}</td>
+                    <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{u.total_paid != null ? formatCurrency(u.total_paid) : '-'}</td>
+                    <td style={{ ...td, color: 'var(--accent-red)' }}>{u.due != null && u.booking_number ? formatCurrency(u.due) : '-'}</td>
+                    <td style={td}>{u.refund_amount ? formatCurrency(u.refund_amount) : '-'}</td>
+                    <td style={td}>{u.collection_manager || u.created_by_name || '-'}</td>
                   </tr>
                 ))}
                 {(!data?.units || data.units.length === 0) && (
@@ -524,12 +524,12 @@ const RollupTable = ({ title, rows, nameKey, userMode }) => (
       <tbody>
         {(rows || []).map((r, i) => (
           <tr key={i}>
-            <td style={{ ...td, fontWeight: 600 }}>{r[nameKey] || '—'}</td>
+            <td style={{ ...td, fontWeight: 600 }}>{r[nameKey] || '-'}</td>
             {!userMode && <td style={td}>{r.booked_units || 0}/{r.total_units || 0}</td>}
             {userMode && <td style={td}>{r.bookings || 0}</td>}
             <td style={td}>{formatCurrency(r.total_value || 0)}</td>
             <td style={{ ...td, color: 'var(--accent-green)', fontWeight: 600 }}>{formatCurrency(r.total_received || 0)}</td>
-            <td style={td}>{r.total_refund ? formatCurrency(r.total_refund) : '—'}</td>
+            <td style={td}>{r.total_refund ? formatCurrency(r.total_refund) : '-'}</td>
           </tr>
         ))}
         {(!rows || rows.length === 0) && (

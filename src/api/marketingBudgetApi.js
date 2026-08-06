@@ -1,6 +1,6 @@
 import api from './axiosInstance';
 
-// Marketing Metrix › Budget Entry — the spend ledger behind every cost-per metric.
+// Marketing Metrix › Budget Entry - the spend ledger behind every cost-per metric.
 // One line = Budget + Source + Sub Source + Date; the server enforces one live line
 // per source / sub-source / day so a double entry can't halve the cost figures.
 const marketingBudgetApi = {

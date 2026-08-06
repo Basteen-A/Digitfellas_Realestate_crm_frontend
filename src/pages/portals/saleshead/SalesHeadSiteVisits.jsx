@@ -119,7 +119,7 @@ const SalesHeadSiteVisits = () => {
     );
   };
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
   const selectedVisitDetails = getVisitDetails(selectedVisit);
   const rawSelectedVisitDetails = getRawVisitDetails(selectedVisit);
@@ -132,9 +132,9 @@ const SalesHeadSiteVisits = () => {
           <p className="hidden sm:block">Monitor site visits across your Sales Manager team</p>
         </div>
         <div className="page-header-actions flex-wrap" style={{ display: 'flex', gap: 12 }}>
-          <select 
-            className="crm-form-select" 
-            value={selectedSM} 
+          <select
+            className="crm-form-select"
+            value={selectedSM}
             onChange={(e) => setSelectedSM(e.target.value)}
             style={{ width: 200 }}
           >
@@ -200,10 +200,10 @@ const SalesHeadSiteVisits = () => {
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{v.lead?.first_name} {v.lead?.last_name || ''}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{v.lead?.phone}</div>
                       </td>
-                      <td style={{ fontSize: 13 }}>{v.project?.project_name || '—'}</td>
+                      <td style={{ fontSize: 13 }}>{v.project?.project_name || '-'}</td>
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{formatDate(v.scheduled_date)}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Slot: {v.scheduled_time_slot || formatTime(v.scheduled_date) || '—'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Slot: {v.scheduled_time_slot || formatTime(v.scheduled_date) || '-'}</div>
                       </td>
                       <td>{getStatusBadge(v.status)}</td>
                       <td>
@@ -211,7 +211,7 @@ const SalesHeadSiteVisits = () => {
                           <span style={{ fontWeight: 700, fontSize: 13, color: v.rating >= 4 ? '#16a34a' : v.rating >= 3 ? '#d97706' : '#dc2626' }}>
                             {v.rating}/5
                           </span>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td>
                         <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setSelectedVisit(v)}>
@@ -244,14 +244,14 @@ const SalesHeadSiteVisits = () => {
             </div>
             <div className="col-modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Number</div><div style={{ fontWeight: 700 }}>{selectedVisit.visit_number || '—'}</div></div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Number</div><div style={{ fontWeight: 700 }}>{selectedVisit.visit_number || '-'}</div></div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '—'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '-'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '-'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || formatTime(selectedVisit.scheduled_date) || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{getUserDisplayName(selectedVisit.attendedBy) || getUserDisplayName(selectedVisit.scheduledBy) || '—'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || formatTime(selectedVisit.scheduled_date) || '-'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{getUserDisplayName(selectedVisit.attendedBy) || getUserDisplayName(selectedVisit.scheduledBy) || '-'}</div>
                 {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{selectedVisit.rating}/5</span></div>}
                 {getVisitTimeSpent(selectedVisit) != null && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{getVisitTimeSpent(selectedVisit)} mins</div>}
                 {selectedVisit.interested_after_visit !== null && selectedVisit.interested_after_visit !== undefined && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Interested After Visit</div>{selectedVisit.interested_after_visit ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircleIcon style={{ width: 13, height: 13 }} />Yes</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><XCircleIcon style={{ width: 13, height: 13 }} />No</span>}</div>}

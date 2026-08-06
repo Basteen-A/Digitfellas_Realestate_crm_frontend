@@ -46,7 +46,7 @@ const DATE_FILTERS = [
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const endOfDay = (d) => { const e = new Date(d); e.setHours(23, 59, 59, 999); return e; };
 
-// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+// Follow-ups are date-only - shortcuts resolve to the chosen calendar day.
 const toDateOnlyValue = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -108,12 +108,12 @@ const cleanSystemRemarks = (text) => {
   const seen = new Set();
   const cleanParts = parts.filter((p) => {
     const low = p.toLowerCase().replace(/\s+/g, ' ').trim();
-    
+
     // Filter out system prefixes
     if (SYSTEM_PREFIXES.some((prefix) => low.startsWith(prefix.toLowerCase()))) {
       return false;
     }
-    
+
     // Deduplicate by normalized content
     if (seen.has(low)) {
       return false;
@@ -148,7 +148,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
   // Per-handoff site-visit form state
   const [acceptForms, setAcceptForms] = useState({});
 
-  // QA state (shared — only one expanded at a time)
+  // QA state (shared - only one expanded at a time)
   const [quickWorkflowAction, setQuickWorkflowAction] = useState(null);
   const [quickWorkflowForm, setQuickWorkflowForm] = useState({
     note: '', statusRemarkText: '', nextFollowUpAt: '', assignToUserId: '',
@@ -380,13 +380,13 @@ const SalesManagerIncoming = ({ onNavigate }) => {
       {/* Header */}
       <div className="page-header" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-         
+
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Incoming Leads</h1>
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>Accept and manage site visits handed over by Telecallers</p>
           </div>
         </div>
-        
+
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', paddingTop: 4 }}>
           <input
             className="crm-form-input"
@@ -397,19 +397,19 @@ const SalesManagerIncoming = ({ onNavigate }) => {
           />
           <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-primary)' }}>
             {DATE_FILTERS.map((f) => (
-              <button 
-                key={f.value} 
-                className={`crm-btn crm-btn-sm ${dateFilter === f.value ? 'crm-btn-primary' : 'crm-btn-ghost'}`} 
-                style={{ 
-                  height: 30, 
-                  padding: '0 16px', 
-                  fontSize: 12, 
-                  fontWeight: 600, 
+              <button
+                key={f.value}
+                className={`crm-btn crm-btn-sm ${dateFilter === f.value ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
+                style={{
+                  height: 30,
+                  padding: '0 16px',
+                  fontSize: 12,
+                  fontWeight: 600,
                   borderRadius: 8,
                   border: 'none',
                   backgroundColor: dateFilter === f.value ? '#4F46E5' : 'transparent',
                   color: dateFilter === f.value ? '#fff' : 'var(--text-secondary)'
-                }} 
+                }}
                 onClick={() => setDateFilter(f.value)}
               >
                 {f.label}
@@ -495,228 +495,228 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                     {quickWorkflowAction && (
                       <>
                         <div style={{ animation: 'qa-fade-in 0.3s ease' }}>
-                        {quickWorkflowAction.needsFollowUp && (
-                          <div className="qa-drawer-ctx-block">
-                            <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0) }))}>Today</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1) }))}>Tmrw</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6) }))}>This Sat</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0) }))}>This Sun</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2) }))}>In 2 days</button>
-                              <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7) }))}>Next week</button>
-                            </div>
-                            <CalendarPicker
-                              type="date"
-                              value={quickWorkflowForm.nextFollowUpAt}
-                              onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
-                              placeholder="Select follow-up date..."
-                              minDate={new Date().toISOString()}
-                            />
-                          </div>
-                        )}
-
-                        {quickWorkflowAction.needsReason && (
-                          <div className="qa-drawer-ctx-block">
-                            <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Reason *</div>
-                            <select className="qa-drawer-field-select" value={quickWorkflowForm.closureReasonId} onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, closureReasonId: e.target.value }))} style={{ width: '100%', marginBottom: 8 }}>
-                              <option value="">Select a reason...</option>
-                              {closureReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name || r.reason_text || r.reason}</option>)}
-                            </select>
-                          </div>
-                        )}
-
-                        {(quickWorkflowAction.needsAssignee || quickWorkflowAction.needsSvDetails) && (
-                          <div className="qa-drawer-ctx-block">
-                            <label className="qa-drawer-field-label">
-                              {getAssigneeRoleForAction(quickWorkflowAction) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
-                            </label>
-                            <select className="qa-drawer-field-select" value={quickWorkflowForm.assignToUserId} onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, assignToUserId: e.target.value }))} style={{ width: '100%' }}>
-                              <option value="">{getAssigneeRoleForAction(quickWorkflowAction) === 'SH' ? 'Select Sales Head...' : 'Select user...'}</option>
-                              {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction)] || []).map((u) => (
-                                <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {quickStatusRemarks.length > 0 && (
-                          <>
-                            <div className="qa-drawer-section">Quick remarks — tap to fill</div>
-                            <div className="qa-drawer-rchip-row">
-                              {quickStatusRemarks.map(remark => (
-                                <button key={remark.id} type="button"
-                                  className={`qa-drawer-rchip ${quickWorkflowForm.statusRemarkText === remark.remark_text ? 'sel' : ''}`}
-                                  onClick={() => {
-                                    setQuickWorkflowForm(p => ({ ...p, statusRemarkText: remark.remark_text, note: remark.remark_text }));
-                                    if (remark.has_ans_non_ans) {
-                                      setQuickRemarkAnsNonAns(remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered');
-                                    } else { setQuickRemarkAnsNonAns(null); }
-                                  }}>
-                                  {remark.remark_text}
-                                </button>
-                              ))}
-                            </div>
-
-                            {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
-                              <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: 12, fontWeight: 600 }}>Response Type:</span>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                  <button type="button" style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, border: quickRemarkAnsNonAns === 'Answered' ? '2px solid #0F7B5C' : '1px solid var(--border-primary)', background: quickRemarkAnsNonAns === 'Answered' ? '#E0F4EE' : 'transparent', color: quickRemarkAnsNonAns === 'Answered' ? '#0F7B5C' : 'var(--text-primary)', borderRadius: 4, cursor: 'pointer' }} onClick={() => setQuickRemarkAnsNonAns('Answered')}>
-                                    <CheckIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Answered
-                                  </button>
-                                  <button type="button" style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, border: quickRemarkAnsNonAns === 'Not-Answered' ? '2px solid #B45309' : '1px solid var(--border-primary)', background: quickRemarkAnsNonAns === 'Not-Answered' ? '#FEF3C7' : 'transparent', color: quickRemarkAnsNonAns === 'Not-Answered' ? '#B45309' : 'var(--text-primary)', borderRadius: 4, cursor: 'pointer' }} onClick={() => setQuickRemarkAnsNonAns('Not-Answered')}>
-                                    <XMarkIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Not Answered
-                                  </button>
-                                </div>
+                          {quickWorkflowAction.needsFollowUp && (
+                            <div className="qa-drawer-ctx-block">
+                              <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Next follow-up date</div>
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                                <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(0) }))}>Today</button>
+                                <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(1) }))}>Tmrw</button>
+                                <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(6) }))}>This Sat</button>
+                                <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpForWeekday(0) }))}>This Sun</button>
+                                <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(2) }))}>In 2 days</button>
+                                <button type="button" className="qa-drawer-rchip" onClick={() => setQuickWorkflowForm(p => ({ ...p, nextFollowUpAt: getQuickFollowUpDate(7) }))}>Next week</button>
                               </div>
-                            )}
-                          </>
-                        )}
+                              <CalendarPicker
+                                type="date"
+                                value={quickWorkflowForm.nextFollowUpAt}
+                                onChange={(val) => setQuickWorkflowForm((p) => ({ ...p, nextFollowUpAt: val }))}
+                                placeholder="Select follow-up date..."
+                                minDate={new Date().toISOString()}
+                              />
+                            </div>
+                          )}
 
-                        <div className="qa-drawer-remark-wrap">
-                          <textarea className="qa-drawer-remark-ta" rows={2} value={quickWorkflowForm.note} onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))} placeholder="What was discussed? What's the next step?" />
-                        </div>
-                      </div>
+                          {quickWorkflowAction.needsReason && (
+                            <div className="qa-drawer-ctx-block">
+                              <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>Reason *</div>
+                              <select className="qa-drawer-field-select" value={quickWorkflowForm.closureReasonId} onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, closureReasonId: e.target.value }))} style={{ width: '100%', marginBottom: 8 }}>
+                                <option value="">Select a reason...</option>
+                                {closureReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name || r.reason_text || r.reason}</option>)}
+                              </select>
+                            </div>
+                          )}
 
-                      <div className="qa-drawer-divider" />
+                          {(quickWorkflowAction.needsAssignee || quickWorkflowAction.needsSvDetails) && (
+                            <div className="qa-drawer-ctx-block">
+                              <label className="qa-drawer-field-label">
+                                {getAssigneeRoleForAction(quickWorkflowAction) === 'SH' ? 'Select Sales Head (Negotiator) *' : 'Assign To *'}
+                              </label>
+                              <select className="qa-drawer-field-select" value={quickWorkflowForm.assignToUserId} onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, assignToUserId: e.target.value }))} style={{ width: '100%' }}>
+                                <option value="">{getAssigneeRoleForAction(quickWorkflowAction) === 'SH' ? 'Select Sales Head...' : 'Select user...'}</option>
+                                {(assignableUsers[getAssigneeRoleForAction(quickWorkflowAction)] || []).map((u) => (
+                                  <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
 
-                      <div className="qa-drawer-section">Site Visit Details (All * fields are mandatory)</div>
-                      <div style={{ padding: '0 20px 10px' }}>
-                        {/* Visit Details */}
-                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDaysIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Visit Details</span></div>
-                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-                          <div>
-                            <label className="qa-drawer-field-label">Visit Date *</label>
-                            <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.svDate || ''} onChange={(e) => updateAcceptForm(handoff.id, { svDate: e.target.value })} />
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Project *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.svProjectId || handoff.leadProjectId || ''} onChange={(e) => updateAcceptForm(handoff.id, { svProjectId: e.target.value })}>
-                              <option value="">Select...</option>
-                              {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Sales Head *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.salesHeadUserId || ''} onChange={(e) => updateAcceptForm(handoff.id, { salesHeadUserId: e.target.value })}>
-                              <option value="">Select Sales Head...</option>
-                              {salesHeadOptions.map((sh) => (
-                                <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Time Slot</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={form.scheduledTimeSlot || ''} onChange={(e) => updateAcceptForm(handoff.id, { scheduledTimeSlot: e.target.value })} placeholder="e.g. 10 AM - 12 PM" />
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Time Spent (mins) *</label>
-                            <input type="number" min="0" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.timeSpent || ''} onChange={(e) => updateAcceptForm(handoff.id, { timeSpent: e.target.value })} placeholder="e.g. 30" />
-                          </div>
-                        </div>
+                          {quickStatusRemarks.length > 0 && (
+                            <>
+                              <div className="qa-drawer-section">Quick remarks - tap to fill</div>
+                              <div className="qa-drawer-rchip-row">
+                                {quickStatusRemarks.map(remark => (
+                                  <button key={remark.id} type="button"
+                                    className={`qa-drawer-rchip ${quickWorkflowForm.statusRemarkText === remark.remark_text ? 'sel' : ''}`}
+                                    onClick={() => {
+                                      setQuickWorkflowForm(p => ({ ...p, statusRemarkText: remark.remark_text, note: remark.remark_text }));
+                                      if (remark.has_ans_non_ans) {
+                                        setQuickRemarkAnsNonAns(remark.ans_non_ans_default || quickRemarkAnsNonAns || 'Answered');
+                                      } else { setQuickRemarkAnsNonAns(null); }
+                                    }}>
+                                    {remark.remark_text}
+                                  </button>
+                                ))}
+                              </div>
 
-                        {/* Customer Profile */}
-                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Customer Profile</span></div>
-                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-                          <div>
-                            <label className="qa-drawer-field-label">Buyer Profile *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.customerTypeId || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerTypeId: e.target.value })}>
-                              <option value="">Select...</option>
-                              {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Age Bracket *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.ageBracket || ''} onChange={(e) => updateAcceptForm(handoff.id, { ageBracket: e.target.value })}>
-                              <option value="">Select...</option>
-                              {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Decision Maker Present *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.decisionMaker || ''} onChange={(e) => updateAcceptForm(handoff.id, { decisionMaker: e.target.value })}>
-                              <option value="">Select...</option>
-                              {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Secondary Contact</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone (optional)" />
+                              {quickStatusRemarks.some(r => r.has_ans_non_ans) && (
+                                <div style={{ margin: '10px 0', padding: '10px', background: 'var(--bg-secondary)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600 }}>Response Type:</span>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button type="button" style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, border: quickRemarkAnsNonAns === 'Answered' ? '2px solid #0F7B5C' : '1px solid var(--border-primary)', background: quickRemarkAnsNonAns === 'Answered' ? '#E0F4EE' : 'transparent', color: quickRemarkAnsNonAns === 'Answered' ? '#0F7B5C' : 'var(--text-primary)', borderRadius: 4, cursor: 'pointer' }} onClick={() => setQuickRemarkAnsNonAns('Answered')}>
+                                      <CheckIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Answered
+                                    </button>
+                                    <button type="button" style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, border: quickRemarkAnsNonAns === 'Not-Answered' ? '2px solid #B45309' : '1px solid var(--border-primary)', background: quickRemarkAnsNonAns === 'Not-Answered' ? '#FEF3C7' : 'transparent', color: quickRemarkAnsNonAns === 'Not-Answered' ? '#B45309' : 'var(--text-primary)', borderRadius: 4, cursor: 'pointer' }} onClick={() => setQuickRemarkAnsNonAns('Not-Answered')}>
+                                      <XMarkIcon style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Not Answered
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          <div className="qa-drawer-remark-wrap">
+                            <textarea className="qa-drawer-remark-ta" rows={2} value={quickWorkflowForm.note} onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, note: e.target.value }))} placeholder="What was discussed? What's the next step?" />
                           </div>
                         </div>
 
-                        {/* Property Requirement */}
-                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Property Requirement</span></div>
-                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-                          <div>
-                            <label className="qa-drawer-field-label">Customer Requirement *</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.customerRequirement || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerRequirement: e.target.value })} placeholder="e.g. 2BHK near school" />
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Budget *</label>
-                            <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.budget || ''} onChange={(e) => updateAcceptForm(handoff.id, { budget: e.target.value })} placeholder="e.g. 60L" />
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Timeline to Buy *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.timelineToBuy || ''} onChange={(e) => updateAcceptForm(handoff.id, { timelineToBuy: e.target.value })}>
-                              <option value="">Select...</option>
-                              {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Preferred Facing *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.preferredFacing || ''} onChange={(e) => updateAcceptForm(handoff.id, { preferredFacing: e.target.value })}>
-                              <option value="">Select...</option>
-                              {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                          </div>
-                          <div style={{ gridColumn: '1 / -1' }}>
-                            <label className="qa-drawer-field-label">Address *</label>
-                            <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.address || ''} onChange={(e) => updateAcceptForm(handoff.id, { address: e.target.value })} placeholder="Customer address" />
-                          </div>
-                          <div style={{ gridColumn: '1 / -1' }}>
-                            <label className="qa-drawer-field-label">Specific Concerns *</label>
-                            <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.specificConcerns || ''} onChange={(e) => updateAcceptForm(handoff.id, { specificConcerns: e.target.value })} placeholder="Customer concerns" />
-                          </div>
-                        </div>
+                        <div className="qa-drawer-divider" />
 
-                        {/* Purchase Intent */}
-                        <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><BanknotesIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Purchase Intent</span></div>
-                        <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                          <div>
-                            <label className="qa-drawer-field-label">Purpose Of Purchase *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.motivationType || ''} onChange={(e) => updateAcceptForm(handoff.id, { motivationType: e.target.value })}>
-                              <option value="">Select...</option>
-                              {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
-                            </select>
+                        <div className="qa-drawer-section">Site Visit Details (All * fields are mandatory)</div>
+                        <div style={{ padding: '0 20px 10px' }}>
+                          {/* Visit Details */}
+                          <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDaysIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Visit Details</span></div>
+                          <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                            <div>
+                              <label className="qa-drawer-field-label">Visit Date *</label>
+                              <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.svDate || ''} onChange={(e) => updateAcceptForm(handoff.id, { svDate: e.target.value })} />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Project *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.svProjectId || handoff.leadProjectId || ''} onChange={(e) => updateAcceptForm(handoff.id, { svProjectId: e.target.value })}>
+                                <option value="">Select...</option>
+                                {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Sales Head *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.salesHeadUserId || ''} onChange={(e) => updateAcceptForm(handoff.id, { salesHeadUserId: e.target.value })}>
+                                <option value="">Select Sales Head...</option>
+                                {salesHeadOptions.map((sh) => (
+                                  <option key={sh.id} value={sh.id}>{sh.fullName || `${sh.firstName || ''} ${sh.lastName || ''}`.trim()}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Time Slot</label>
+                              <input className="qa-drawer-field-input" style={{ width: '100%' }} type="text" value={form.scheduledTimeSlot || ''} onChange={(e) => updateAcceptForm(handoff.id, { scheduledTimeSlot: e.target.value })} placeholder="e.g. 10 AM - 12 PM" />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Time Spent (mins) *</label>
+                              <input type="number" min="0" className="qa-drawer-field-input" style={{ width: '100%' }} value={form.timeSpent || ''} onChange={(e) => updateAcceptForm(handoff.id, { timeSpent: e.target.value })} placeholder="e.g. 30" />
+                            </div>
                           </div>
-                          <div>
-                            <label className="qa-drawer-field-label">Payment Type *</label>
-                            <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.paymentType || ''} onChange={(e) => updateAcceptForm(handoff.id, { paymentType: e.target.value })}>
-                              <option value="">Select...</option>
-                              {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                            </select>
+
+                          {/* Customer Profile */}
+                          <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Customer Profile</span></div>
+                          <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                            <div>
+                              <label className="qa-drawer-field-label">Buyer Profile *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.customerTypeId || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerTypeId: e.target.value })}>
+                                <option value="">Select...</option>
+                                {customerTypeOptions.map((ct) => <option key={ct.id} value={ct.id}>{ct.type_name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Age Bracket *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.ageBracket || ''} onChange={(e) => updateAcceptForm(handoff.id, { ageBracket: e.target.value })}>
+                                <option value="">Select...</option>
+                                {AGE_BRACKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Decision Maker Present *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.decisionMaker || ''} onChange={(e) => updateAcceptForm(handoff.id, { decisionMaker: e.target.value })}>
+                                <option value="">Select...</option>
+                                {DECISION_MAKER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Secondary Contact</label>
+                              <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone (optional)" />
+                            </div>
+                          </div>
+
+                          {/* Property Requirement */}
+                          <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Property Requirement</span></div>
+                          <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                            <div>
+                              <label className="qa-drawer-field-label">Customer Requirement *</label>
+                              <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.customerRequirement || ''} onChange={(e) => updateAcceptForm(handoff.id, { customerRequirement: e.target.value })} placeholder="e.g. 2BHK near school" />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Budget *</label>
+                              <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.budget || ''} onChange={(e) => updateAcceptForm(handoff.id, { budget: e.target.value })} placeholder="e.g. 60L" />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Timeline to Buy *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.timelineToBuy || ''} onChange={(e) => updateAcceptForm(handoff.id, { timelineToBuy: e.target.value })}>
+                                <option value="">Select...</option>
+                                {TIMELINE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Preferred Facing *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.preferredFacing || ''} onChange={(e) => updateAcceptForm(handoff.id, { preferredFacing: e.target.value })}>
+                                <option value="">Select...</option>
+                                {FACING_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <label className="qa-drawer-field-label">Address *</label>
+                              <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.address || ''} onChange={(e) => updateAcceptForm(handoff.id, { address: e.target.value })} placeholder="Customer address" />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <label className="qa-drawer-field-label">Specific Concerns *</label>
+                              <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.specificConcerns || ''} onChange={(e) => updateAcceptForm(handoff.id, { specificConcerns: e.target.value })} placeholder="Customer concerns" />
+                            </div>
+                          </div>
+
+                          {/* Purchase Intent */}
+                          <div className="qa-drawer-field-label" style={{ fontWeight: 700, margin: '4px 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><BanknotesIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Purchase Intent</span></div>
+                          <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                            <div>
+                              <label className="qa-drawer-field-label">Purpose Of Purchase *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.motivationType || ''} onChange={(e) => updateAcceptForm(handoff.id, { motivationType: e.target.value })}>
+                                <option value="">Select...</option>
+                                {motivationOptions.map((m) => <option key={m.id} value={m.motivation_name}>{m.motivation_name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Payment Type *</label>
+                              <select className="qa-drawer-field-select" style={{ width: '100%' }} value={form.paymentType || ''} onChange={(e) => updateAcceptForm(handoff.id, { paymentType: e.target.value })}>
+                                <option value="">Select...</option>
+                                {PAYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
                         <div className="qa-drawer-save-row">
                           <button className="qa-drawer-skip-btn" onClick={() => handleReject(handoff)} disabled={isProcessing}>
                             <XMarkIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
                             {isProcessing ? 'Wait...' : 'Reject'}
-                        </button>
-                        <button className="qa-drawer-save-btn"
-                          disabled={isProcessing || !quickWorkflowAction
-                            || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)
-                            || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
-                          }
-                          onClick={() => handleAccept(handoff)}
-                          style={{ backgroundColor: '#625afa' }}>
-                          <CheckCircleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
-                          {isProcessing ? 'Processing...' : 'Accept Lead'}
-                        </button>
-                      </div>
+                          </button>
+                          <button className="qa-drawer-save-btn"
+                            disabled={isProcessing || !quickWorkflowAction
+                              || (quickWorkflowAction?.needsFollowUp && !quickWorkflowForm.nextFollowUpAt)
+                              || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
+                            }
+                            onClick={() => handleAccept(handoff)}
+                            style={{ backgroundColor: '#625afa' }}>
+                            <CheckCircleIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                            {isProcessing ? 'Processing...' : 'Accept Lead'}
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>
@@ -729,12 +729,12 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                 <div className="sm-incoming-grid" onClick={() => toggleExpand(handoff.id)} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1.2fr 0.8fr 40px', padding: '12px 16px', cursor: 'pointer', background: isExpanded ? 'var(--bg-card)' : 'transparent', transition: 'background 0.15s', alignItems: 'center', fontSize: 13 }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{handoff.leadName || 'Unnamed'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{handoff.leadPhone || '—'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{handoff.leadPhone || '-'}</div>
                   </div>
-                  <span style={{ color: 'var(--text-secondary)' }}>{handoff.leadNumber || '—'}</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>{handoff.leadProjectName || '—'}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{handoff.leadNumber || '-'}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{handoff.leadProjectName || '-'}</span>
                   <span style={{ color: 'var(--text-secondary)' }} title={handoff.toUserName ? `Incoming to: ${handoff.toUserName}` : undefined}>
-                    {handoff.fromUserName || '—'}
+                    {handoff.fromUserName || '-'}
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDateTime(handoff.handedOffAt)}</span>
                   <span className="crm-badge badge-interested" style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12 }}>{handoff.stageName || 'SV Done'}</span>

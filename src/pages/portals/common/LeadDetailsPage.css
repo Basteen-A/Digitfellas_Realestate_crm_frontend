@@ -986,7 +986,7 @@
 
 /* The Quick Actions modal reuses .qa-modal-panel / .qa-drawer-body, which are
    defined in LeadWorkspacePage.css. This page doesn't import that file, so pin
-   them to the white card surface here — otherwise the body is transparent and
+   them to the white card surface here - otherwise the body is transparent and
    the dark blurred backdrop shows through as a gray gap. */
 .lead-quick-modal .qa-modal-panel,
 .lead-quick-modal .qa-drawer-body {
@@ -1015,7 +1015,7 @@
 
 /* Style CalendarPicker input to match standard drawer inputs (border, padding, border-radius, background) */
 .qa-drawer-ctx-block .cp-input {
-  /* Opaque card surface — a transparent fill lets the modal's dark blurred
+  /* Opaque card surface - a transparent fill lets the modal's dark blurred
      backdrop show through as a grey block (see the .qa-modal-panel pin above). */
   background: var(--bg-card, #fff);
   border: 1.5px solid var(--border-primary, #e2e8f0);

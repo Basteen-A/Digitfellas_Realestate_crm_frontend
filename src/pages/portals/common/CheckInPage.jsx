@@ -16,7 +16,7 @@ const CheckInPage = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuthContext();
 
-  // Who is checking in — same identity pattern as the app sidebar.
+  // Who is checking in - same identity pattern as the app sidebar.
   const fullName = user?.fullName || user?.full_name
     || `${user?.firstName || user?.first_name || ''} ${user?.lastName || user?.last_name || ''}`.trim()
     || 'User';
@@ -61,7 +61,7 @@ const CheckInPage = () => {
         const resp = await attendanceApi.checkIn(coords);
         const d = resp.data || {};
         toast.success(d.geofenceValidated
-          ? `Checked in — ${Math.round(d.distanceM || 0)}m from office`
+          ? `Checked in - ${Math.round(d.distanceM || 0)}m from office`
           : 'Checked in successfully');
         navigate('/', { replace: true });
       } catch (err) {
@@ -81,7 +81,7 @@ const CheckInPage = () => {
         (err) => {
           setChecking(false);
           toast.error(err.code === 1
-            ? 'Location permission denied — allow location access to check in.'
+            ? 'Location permission denied - allow location access to check in.'
             : 'Could not get your location. Move to an open area and try again.');
         },
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
@@ -96,7 +96,7 @@ const CheckInPage = () => {
     navigate('/login', { replace: true });
   };
 
-  // Enter the portal WITHOUT checking in — work existing leads, but stay
+  // Enter the portal WITHOUT checking in - work existing leads, but stay
   // "not checked in" so no new leads are allocated (they go to present
   // teammates instead, as today). Session-scoped; the banner inside the app
   // lets them check in later.
@@ -105,7 +105,7 @@ const CheckInPage = () => {
     navigate('/', { replace: true });
   };
 
-  // Three states: on-time, LATE (after deadline — still allowed, but overnight
+  // Three states: on-time, LATE (after deadline - still allowed, but overnight
   // leads were re-allotted at the deadline), and day-over (past checkout time).
   const dayOver = status && !status.canCheckInNow;
   const isLate = Boolean(status?.isLateNow) && !dayOver;
@@ -175,7 +175,7 @@ const CheckInPage = () => {
                   <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: 10, marginBottom: 10 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Late check-in</p>
                     <p style={{ fontSize: 12, color: '#92400e' }}>
-                      On-time check-in was until {status.checkinDeadline}. Leads received overnight may have been re-allotted to your teammates — you will receive new leads from the moment you check in.
+                      On-time check-in was until {status.checkinDeadline}. Leads received overnight may have been re-allotted to your teammates - you will receive new leads from the moment you check in.
                     </p>
                   </div>
                 ) : (
@@ -190,11 +190,11 @@ const CheckInPage = () => {
                   </p>
                 ) : status.requireGeofence === false ? (
                   <p style={{ fontSize: 13, color: 'var(--text-muted, #6b7280)' }}>
-                    Location check is turned off — you can check in from anywhere.
+                    Location check is turned off - you can check in from anywhere.
                   </p>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--text-muted, #6b7280)' }}>
-                    No office geofence is configured for you yet — your check-in is recorded without location verification.
+                    No office geofence is configured for you yet - your check-in is recorded without location verification.
                   </p>
                 )}
               </div>
@@ -217,7 +217,7 @@ const CheckInPage = () => {
               </button>
             </div>
 
-            {/* Skip — enter without checking in (existing leads only, no new leads). */}
+            {/* Skip - enter without checking in (existing leads only, no new leads). */}
             <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-primary, #e5e7eb)' }}>
               <button
                 type="button"
@@ -225,11 +225,11 @@ const CheckInPage = () => {
                 style={{ width: '100%', justifyContent: 'center' }}
                 onClick={handleSkip}
               >
-                <ArrowRightCircleIcon style={{ width: 16, height: 16 }} /> Skip for now — work my existing leads
+                <ArrowRightCircleIcon style={{ width: 16, height: 16 }} /> Skip for now - work my existing leads
               </button>
               <p style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)', marginTop: 8 }}>
                 You can still open and work your existing leads, but you won't receive
-                <strong> new leads</strong> until you check in — they go to checked-in teammates.
+                <strong> new leads</strong> until you check in - they go to checked-in teammates.
               </p>
             </div>
           </>

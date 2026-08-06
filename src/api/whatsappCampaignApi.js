@@ -1,6 +1,6 @@
 import api from './axiosInstance';
 
-// WhatsApp Marketing Campaigns — provider config, approved templates and
+// WhatsApp Marketing Campaigns - provider config, approved templates and
 // outbound campaigns with live delivery stats. Admin-only on the server.
 const BASE = '/marketing-campaigns';
 

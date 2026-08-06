@@ -41,7 +41,7 @@ const getComputedTotalValue = (booking) => {
 
 const customerName = (b) => (b.customer?.buyer_name
   || `${b.customer?.first_name || ''} ${b.customer?.last_name || ''}`.trim()
-  || b.buyer_name || b.customer_name || '—');
+  || b.buyer_name || b.customer_name || '-');
 
 const unitOf = (b) => b.unit_number || b.inventoryUnit?.unit_number || (b.unit_display && b.unit_display !== 'N/A' ? b.unit_display : null);
 
@@ -50,7 +50,7 @@ const statusOf = (b) => {
   const cancelApproved = code === 'REQUEST_TO_CANCEL' && !!b.custom_fields?.cancel_approved_by;
   if (cancelApproved) return { label: 'Cancel Pending', color: '#C2410C' };
   return {
-    label: b.status_label || b.bookingStatus?.status_name || '—',
+    label: b.status_label || b.bookingStatus?.status_name || '-',
     color: b.status_color || b.bookingStatus?.color_code || '#6B7280',
   };
 };
@@ -63,7 +63,7 @@ const BookingApprovals = () => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusList, setStatusList] = useState([]);
-  
+
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [showProjectFilter, setShowProjectFilter] = useState(false);
@@ -88,7 +88,7 @@ const BookingApprovals = () => {
   useEffect(() => {
     bookingStatusApi.getDropdown()
       .then((r) => setStatusList(r.data?.data || r.data || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -118,21 +118,21 @@ const BookingApprovals = () => {
 
   const filteredRows = useMemo(() => {
     let list = rows;
-    
+
     if (selectedProjects.length > 0) {
       list = list.filter((b) => {
         const projectId = b.project_id || b.project?.id;
         return selectedProjects.includes(projectId);
       });
     }
-    
+
     if (selectedStatuses.length > 0) {
       list = list.filter((b) => {
         const statusCode = b.bookingStatus?.status_code || b.status_code;
         return selectedStatuses.includes(statusCode);
       });
     }
-    
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((b) =>
@@ -142,7 +142,7 @@ const BookingApprovals = () => {
         (unitOf(b) || '').toLowerCase().includes(q)
       );
     }
-    
+
     return list;
   }, [rows, searchQuery, selectedProjects, selectedStatuses]);
 
@@ -210,7 +210,7 @@ const BookingApprovals = () => {
       <header className="lead-workspace__header">
         <div>
           <h1><CreditCardIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Bookings</h1>
-          <p className="hide-mobile">All bookings across every status — approve or reject those pending, open any booking to view or edit payments</p>
+          <p className="hide-mobile">All bookings across every status - approve or reject those pending, open any booking to view or edit payments</p>
         </div>
         <div className="lead-workspace__header-actions">
           <button type="button" className="workspace-btn workspace-btn--ghost" onClick={load} disabled={loading}>
@@ -229,7 +229,7 @@ const BookingApprovals = () => {
             placeholder="Search by booking number, customer, project or unit"
           />
         </div>
-        
+
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, order: 2 }}>
           <div style={{ position: 'relative' }} ref={projectFilterRef}>
             <button
@@ -368,11 +368,12 @@ const BookingApprovals = () => {
                     const balance = totalValue - collected;
                     const st = statusOf(booking);
                     const paymentBadge = booking.payment_status ? (
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
                         background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
                         color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
                       }}>{booking.payment_status}</span>
-                    ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>;
+                    ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>-</span>;
 
                     return (
                       <React.Fragment key={booking.id}>
@@ -400,10 +401,10 @@ const BookingApprovals = () => {
                             </small>
                           </td>
                           <td className="hide-mobile">
-                            <p style={{ fontSize: 13 }}>{booking.customer?.phone || booking.phone || '—'}</p>
+                            <p style={{ fontSize: 13 }}>{booking.customer?.phone || booking.phone || '-'}</p>
                           </td>
                           <td className="hide-mobile">
-                            <p className="lead-title">{booking.project?.project_name || booking.project_name || '—'}</p>
+                            <p className="lead-title">{booking.project?.project_name || booking.project_name || '-'}</p>
                             <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Unit: {unitOf(booking) || 'TBD'}</small>
                           </td>
                           <td className="hide-mobile">{formatCurrency(totalValue)}</td>
@@ -424,7 +425,7 @@ const BookingApprovals = () => {
                             {(() => {
                               // The booking is owned by the Collection Manager the Sales Head
                               // selected at booking time. Collection Executives are only assigned
-                              // later (by the manager), so at approval time there usually are none —
+                              // later (by the manager), so at approval time there usually are none -
                               // show the manager as the primary assignee, then any executives.
                               const manager = booking.collectionManager || null;
                               const execs = booking.collectionExecutives || [];
@@ -433,7 +434,7 @@ const BookingApprovals = () => {
                                 ...(manager ? [{ ...manager, _owner: true }] : []),
                                 ...execs,
                               ].filter((p) => (p && !seen.has(p.id) && seen.add(p.id)));
-                              if (people.length === 0) return <small style={{ color: 'var(--text-muted)' }}>—</small>;
+                              if (people.length === 0) return <small style={{ color: 'var(--text-muted)' }}>-</small>;
                               return (
                                 <div className="bkd-cell-avatars">
                                   {people.slice(0, 3).map((a, i) => (
@@ -482,7 +483,7 @@ const BookingApprovals = () => {
                                   </div>
                                   <div className="expanded-info-item">
                                     <label>Payment Status</label>
-                                    <p>{booking.payment_status || '—'}</p>
+                                    <p>{booking.payment_status || '-'}</p>
                                   </div>
                                   <div className="expanded-info-item">
                                     <label>Status</label>

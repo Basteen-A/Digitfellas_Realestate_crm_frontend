@@ -1,10 +1,10 @@
 // ============================================================
-// SIDEBAR NAV ICONS — admin / super-admin
+// SIDEBAR NAV ICONS - admin / super-admin
 //
 // Inline SVGs lifted verbatim from the approved IA mockup
 // (`sidebar-final-structure (2).html`). That mockup ships its own 24×24 outline
-// set at stroke-width 1.7 — a Tabler-flavoured look the Heroicons used elsewhere
-// in the app do not match — so the sidebar renders the exact glyphs that were
+// set at stroke-width 1.7 - a Tabler-flavoured look the Heroicons used elsewhere
+// in the app do not match - so the sidebar renders the exact glyphs that were
 // signed off rather than a near-miss substitute.
 //
 // Sizing comes from the `sidebar-icon*` CSS classes exactly as it does for a
@@ -14,7 +14,7 @@
 // ============================================================
 import React from 'react';
 
-/** Shared frame — every icon is the same box, stroke and join as the mockup. */
+/** Shared frame - every icon is the same box, stroke and join as the mockup. */
 const Svg = ({ className = 'sidebar-icon', children, ...props }) => (
   <svg
     className={className}

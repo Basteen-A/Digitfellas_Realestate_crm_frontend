@@ -12,7 +12,7 @@ import taskApi from '../../api/taskApi';
 import TaskModal from './TaskModal';
 import { badgeStyle, TASK_STATUS_TEXT, TASK_PRIORITY_TEXT } from '../../utils/badgeColors';
 import '../portals/collection/CollectionWorkspace.css';
-// .status-chip — the same chip the task list renders status/priority with.
+// .status-chip - the same chip the task list renders status/priority with.
 import '../portals/common/LeadWorkspacePage.css';
 import './TaskManagement.css';
 
@@ -106,7 +106,7 @@ const TaskDashboardWidget = ({ onOpenTasks }) => {
           </div>
         )}
 
-        {/* Recent activity — one full-width block, same table + chips as the
+        {/* Recent activity - one full-width block, same table + chips as the
             Task Dashboard. (The Status Breakdown block was removed: it
             duplicated the stat cards directly above it.) */}
         <div className="col-card-new" style={{ marginTop: 16, marginBottom: 0 }}>
@@ -133,7 +133,7 @@ const TaskDashboardWidget = ({ onOpenTasks }) => {
                   {/* Rows mirror the Task List screen exactly: title in .lead-title with
                       priority · creator · last remark inline underneath, and the status
                       chip carrying the Overdue flag. Priority is therefore NOT its own
-                      column here — same as the Task List. */}
+                      column here - same as the Task List. */}
                   <thead>
                     <tr><th>Task</th><th>Status</th><th>Updated</th></tr>
                   </thead>

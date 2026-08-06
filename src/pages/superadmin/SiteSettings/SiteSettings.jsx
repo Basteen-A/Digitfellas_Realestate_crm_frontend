@@ -75,7 +75,7 @@ const SiteSettings = () => {
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      toast.error('Image too large — keep it under 400 KB');
+      toast.error('Image too large - keep it under 400 KB');
       return;
     }
     try {
@@ -126,7 +126,7 @@ const SiteSettings = () => {
       <header className="site-settings__header">
         <div>
           <h1>Site Settings</h1>
-          <p>Brand the whole CRM — name and logos here update every sidebar, the page header and the login screen for all users.</p>
+          <p>Brand the whole CRM - name and logos here update every sidebar, the page header and the login screen for all users.</p>
         </div>
       </header>
 
@@ -151,7 +151,7 @@ const SiteSettings = () => {
           <div className="site-settings__label">Web login</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
             {[
-              { value: 'email', label: 'Email address only', hint: 'Users sign in with their email — the default.' },
+              { value: 'email', label: 'Email address only', hint: 'Users sign in with their email - the default.' },
               { value: 'username', label: 'Login ID only', hint: 'Users sign in with their Login ID (e.g. ramesh.TC), the same one the mobile app uses.' },
               { value: 'both', label: 'Either one', hint: 'A single field that accepts an email address or a Login ID.' },
             ].map((opt) => (
@@ -199,7 +199,7 @@ const SiteSettings = () => {
           </label>
           <div className="site-settings__hint">
             The app signs users in with a WhatsApp OTP sent to their registered phone (Login ID like
-            ramesh.TC). Turn this on only if OTPs cannot be delivered — it adds a "Login with password"
+            ramesh.TC). Turn this on only if OTPs cannot be delivered - it adds a "Login with password"
             option on the app's login screen.
           </div>
         </div>

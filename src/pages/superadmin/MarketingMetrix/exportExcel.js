@@ -1,4 +1,4 @@
-// Excel export for the Marketing Metrix page — one styled workbook holding every
+// Excel export for the Marketing Metrix page - one styled workbook holding every
 // report on screen (so a spend review needs one file, not three):
 //   Overview · Cost by Source · Cost by Sub Source · Spend & Volume Trend
 // Built client-side from the already-fetched payload, with the live charts of the
@@ -6,14 +6,14 @@
 //
 // Amounts are written as NUMBERS with an Indian-grouped rupee format so the sheet stays
 // sortable and summable. A cost-per cell that could not be computed is left EMPTY, not
-// zero — "we don't know what it cost" must not average in as free.
+// zero - "we don't know what it cost" must not average in as free.
 import ExcelJS from 'exceljs';
 import * as htmlToImage from 'html-to-image';
 import { argb, COLORS } from '../Reports/analytics/palette';
 
 const MONEY_FMT = '₹#,##,##0';
 const COST_FMT = '₹#,##,##0.00';
-const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '-');
 const n = (v) => Number(v) || 0;
 const pct = (a, b) => (n(b) > 0 ? Math.round((n(a) / n(b)) * 1000) / 10 : 0);
 // null / undefined survive as null so ExcelJS writes a blank cell.
@@ -76,7 +76,7 @@ const addSheet = (wb, title, columns, rows) => {
         rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: argb(COLORS.primary) } }],
       });
     } catch (e) {
-      // Conditional formatting is cosmetic — never let it break the export.
+      // Conditional formatting is cosmetic - never let it break the export.
     }
   }
   autoWidth(sheet);
@@ -133,10 +133,10 @@ export const exportMarketingMetrix = async (payload, meta = {}) => {
   title.alignment = { vertical: 'middle', horizontal: 'left' };
   ov.getRow(1).height = 28;
   ov.mergeCells('A2:F2');
-  ov.getCell('A2').value = `Period: ${meta.period || '—'}   |   From: ${fmtDate(meta.from || payload.meta?.from)}   |   To: ${fmtDate(meta.to || payload.meta?.to)}`;
+  ov.getCell('A2').value = `Period: ${meta.period || '-'}   |   From: ${fmtDate(meta.from || payload.meta?.from)}   |   To: ${fmtDate(meta.to || payload.meta?.to)}`;
   ov.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
   ov.mergeCells('A3:F3');
-  ov.getCell('A3').value = 'Each lead counts against the source & date of its latest marketing touch — its creation, or its newest re-enquiry, whichever is later.';
+  ov.getCell('A3').value = 'Each lead counts against the source & date of its latest marketing touch - its creation, or its newest re-enquiry, whichever is later.';
   ov.getCell('A3').font = { italic: true, size: 10, color: { argb: 'FF64748B' } };
 
   const kpis = [
@@ -198,7 +198,7 @@ export const exportMarketingMetrix = async (payload, meta = {}) => {
         ov.addImage(imageId, { tl: { col: 0, row: anchorRow }, ext: { width: 520, height: 280 } });
         anchorRow += 16;
       } catch (e) {
-        // chart not capturable (e.g. detached) — skip silently
+        // chart not capturable (e.g. detached) - skip silently
       }
     }
   }

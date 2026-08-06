@@ -53,7 +53,7 @@ const loadUserTypeOptions = async () => {
   return asOptions(response.data, (item) => `${item.type_name}${item.short_code ? ` (${item.short_code})` : ''}`);
 };
 
-// True when the user-form's selected User Type is the Organization Head (OH) — used to
+// True when the user-form's selected User Type is the Organization Head (OH) - used to
 // reveal the per-module access checkboxes only for that role.
 const isOrgHeadSelected = (formValues, optionsMap) => {
   const selectedType = (optionsMap?.user_type_id || []).find(
@@ -140,7 +140,7 @@ export const masterConfigs = {
       { name: 'threshold_days', label: 'Reallot After (Days)', type: 'number', required: true },
       {
         name: 'max_occurrences',
-        label: 'Max Reallotments (optional — leave empty for unlimited)',
+        label: 'Max Reallotments (optional - leave empty for unlimited)',
         type: 'number',
         placeholder: 'e.g. 3 for Junk/Spam',
       },
@@ -151,9 +151,9 @@ export const masterConfigs = {
         loadOptions: loadLeadStatusIdOptions,
         // Always visible so it is discoverable while CREATING a rule (it used to be
         // hidden until a Max Reallotments value was typed, so new rules never showed
-        // it). Still only REQUIRED once a Max is set — it does nothing when Max is
+        // it). Still only REQUIRED once a Max is set - it does nothing when Max is
         // empty (unlimited), which the placeholder makes clear.
-        placeholder: 'Select — used only when Max Reallotments is set',
+        placeholder: 'Select - used only when Max Reallotments is set',
         required: (formValues) => Number(formValues?.max_occurrences) > 0,
       },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
@@ -332,24 +332,24 @@ export const masterConfigs = {
         loadOptions: loadUserTypeOptions,
       },
       { name: 'employee_id', label: 'Employee ID' },
-      // Login ID — the credential people sign in with when the org allows it
+      // Login ID - the credential people sign in with when the org allows it
       // (Org Settings → Web login), and what the mobile app always uses.
       // Free-form and unique; the server rejects a duplicate with a plain
       // "already taken" message. Left blank on create, one is generated.
       {
         name: 'username',
         label: 'Login ID',
-        placeholder: 'e.g. ambika.TC — leave blank to generate one',
+        placeholder: 'e.g. ambika.TC - leave blank to generate one',
         helpText: 'Must be unique. Letters, numbers, dot, underscore and hyphen. This is what the user signs in with.',
       },
       { name: 'first_name', label: 'First Name', required: true },
       { name: 'last_name', label: 'Last Name', required: true },
       { name: 'email', label: 'Email', type: 'email', required: true },
       { name: 'phone', label: 'Phone', required: true },
-      { 
-        name: 'password', 
-        label: 'Password', 
-        type: 'password', 
+      {
+        name: 'password',
+        label: 'Password',
+        type: 'password',
         required: (formValues, optionsMap, modal) => modal.mode === 'create',
         placeholder: 'Enter new password to reset'
       },
@@ -426,7 +426,7 @@ export const masterConfigs = {
       // Read/Write (open + act) and All Access (every task / every booking).
       {
         name: 'reports_access',
-        label: 'Reports — View all reports (like Super Admin)',
+        label: 'Reports - View all reports (like Super Admin)',
         type: 'checkbox',
         defaultValue: false,
         showWhen: isOrgHeadSelected,
@@ -434,7 +434,7 @@ export const masterConfigs = {
       },
       {
         name: 'tasks_read_write',
-        label: 'Task Module — Read / Write (open module, create & edit)',
+        label: 'Task Module - Read / Write (open module, create & edit)',
         type: 'checkbox',
         defaultValue: false,
         showWhen: isOrgHeadSelected,
@@ -442,7 +442,7 @@ export const masterConfigs = {
       },
       {
         name: 'tasks_all_access',
-        label: 'Task Module — All Access (see, edit & delete ANY task)',
+        label: 'Task Module - All Access (see, edit & delete ANY task)',
         type: 'checkbox',
         defaultValue: false,
         showWhen: isOrgHeadSelected,
@@ -450,7 +450,7 @@ export const masterConfigs = {
       },
       {
         name: 'booking_approval_read_write',
-        label: 'Booking Approval — Read / Write (view + approve / reject)',
+        label: 'Booking Approval - Read / Write (view + approve / reject)',
         type: 'checkbox',
         defaultValue: false,
         showWhen: isOrgHeadSelected,
@@ -458,7 +458,7 @@ export const masterConfigs = {
       },
       {
         name: 'booking_approval_all_access',
-        label: 'Booking Approval — All Access (act on ANY booking)',
+        label: 'Booking Approval - All Access (act on ANY booking)',
         type: 'checkbox',
         defaultValue: false,
         showWhen: isOrgHeadSelected,

@@ -49,7 +49,7 @@ const CallSettings = () => {
       setForm({
         api_base_url: c.api_base_url || '',
         default_country: c.default_country || 'IN',
-        api_key: '', // never prefilled — leave blank to keep the stored key
+        api_key: '', // never prefilled - leave blank to keep the stored key
         default_caller_id: c.default_caller_id || '',
         is_active: c.is_active !== false,
         log_to_lead_activity: c.log_to_lead_activity !== false,
@@ -68,7 +68,7 @@ const CallSettings = () => {
 
   const webhookUrl = cfg?.webhook_token
     ? `${API_URL}/telephony/webhook/${cfg.webhook_token}`
-    : `${API_URL}/telephony/webhook/<token — save settings to generate>`;
+    : `${API_URL}/telephony/webhook/<token - save settings to generate>`;
 
   const save = async (extra = {}) => {
     setSaving(true);
@@ -102,7 +102,7 @@ const CallSettings = () => {
       <div className="page-header">
         <div className="page-header-left">
           <h1><PhoneIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Call Settings</h1>
-          <p className="hidden sm:block">Tata Smartflo call-webhook integration — answered &amp; missed calls with recordings</p>
+          <p className="hidden sm:block">Tata Smartflo call-webhook integration - answered &amp; missed calls with recordings</p>
         </div>
       </div>
 
@@ -111,7 +111,7 @@ const CallSettings = () => {
         <div style={{ fontWeight: 700, marginBottom: 4 }}>Webhook URL</div>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
           Paste this into the Smartflo panel (Settings → Webhook) for the <strong>Call Answered</strong>,
-          <strong> Call Missed</strong> and <strong>Hangup</strong> events. GET or POST, JSON or form —
+          <strong> Call Missed</strong> and <strong>Hangup</strong> events. GET or POST, JSON or form -
           all are accepted. The token in the URL is what secures the endpoint.
         </p>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -126,7 +126,7 @@ const CallSettings = () => {
           </button>
         </div>
         <div style={{ marginTop: 10, fontSize: 12, color: cfg?.is_active === false ? '#b45309' : '#16a34a', fontWeight: 600 }}>
-          {cfg?.is_active === false ? '● Integration is paused — incoming calls are acknowledged but not stored.' : '● Integration active.'}
+          {cfg?.is_active === false ? '● Integration is paused - incoming calls are acknowledged but not stored.' : '● Integration active.'}
         </div>
       </div>
 
@@ -141,14 +141,14 @@ const CallSettings = () => {
         <input style={{ ...inputStyle, maxWidth: 120 }} value={form.default_country} onChange={(e) => setForm((f) => ({ ...f, default_country: e.target.value.toUpperCase() }))} placeholder="IN" maxLength={4} />
 
         <label style={labelStyle}>
-          Click-to-Call API token <span style={{ fontWeight: 400 }}>(Authorization header — from your Smartflo panel; also used for protected recordings)</span>
+          Click-to-Call API token <span style={{ fontWeight: 400 }}>(Authorization header - from your Smartflo panel; also used for protected recordings)</span>
         </label>
         <input
           style={inputStyle}
           type="password"
           value={form.api_key}
           onChange={(e) => setForm((f) => ({ ...f, api_key: e.target.value }))}
-          placeholder={cfg?.key_set ? `Saved (${cfg.api_key_masked}). Leave blank to keep.` : 'Not set — required for outbound Click-to-Call'}
+          placeholder={cfg?.key_set ? `Saved (${cfg.api_key_masked}). Leave blank to keep.` : 'Not set - required for outbound Click-to-Call'}
           autoComplete="new-password"
         />
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -221,8 +221,8 @@ const CallSettings = () => {
               {agents.map((u) => (
                 <tr key={u.id}>
                   <td style={td}>{userName(u)}</td>
-                  <td style={td}>{u.userType?.short_code || '—'}</td>
-                  <td style={td}>{u.phone || '—'}</td>
+                  <td style={td}>{u.userType?.short_code || '-'}</td>
+                  <td style={td}>{u.phone || '-'}</td>
                   <td style={{ ...td, color: u.telephony_agent_number ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                     {u.telephony_agent_number || '(uses CRM phone)'}
                   </td>

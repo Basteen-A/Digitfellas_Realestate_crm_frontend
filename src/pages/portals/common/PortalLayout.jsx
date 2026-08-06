@@ -39,7 +39,7 @@ import './PortalSidebar.css';
 
 const ICON_STYLE = { width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 6 };
 
-// Phone helpers — mirror the new-lead creation form so the lookup input behaves identically.
+// Phone helpers - mirror the new-lead creation form so the lookup input behaves identically.
 const sanitizePhoneNumberInput = (value) => String(value || '').replace(/\D/g, '').slice(0, 12);
 
 const SCREEN_TITLES = {
@@ -152,7 +152,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     if (items.some((item) => item.key === 'tasks')) return items;
     return [...items, portalTaskMenuItem];
   }, [menuItems, user]);
-  
+
   const [activeScreen, setActiveScreen] = useState(() => queryScreen || location.state?.screen || storedScreen || defaultScreen || 'dashboard');
   const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -249,7 +249,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
     try {
       const resp = await notificationApi.getUnreadCount();
       setNotifUnread(resp.data?.data?.count || 0);
-    } catch { /* silent — badge just stays as-is */ }
+    } catch { /* silent - badge just stays as-is */ }
   }, []);
 
   const loadNotifications = useCallback(async () => {
@@ -347,7 +347,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   };
 
   const handleNotifClick = async (n) => {
-    // Reading one just marks it read — the rest stay on the list until you close.
+    // Reading one just marks it read - the rest stay on the list until you close.
     if (!n.is_read) {
       setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
       setNotifUnread((c) => Math.max(0, c - 1));
@@ -371,9 +371,9 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
   const normalizePhoneLookup = (value) => String(value || '').replace(/\D/g, '').slice(0, 15);
 
   const formatLookupDate = (value) => {
-    if (!value) return '—';
+    if (!value) return '-';
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '—';
+    if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
@@ -594,7 +594,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile'); }}>
                     <UserIcon style={ICON_STYLE} /> My Profile
                   </button>
-                   <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
+                  <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); navigate('/portal/profile/change-password'); }}>
                     <LockClosedIcon style={ICON_STYLE} /> Change Password
                   </button>
                   {hasAnyRole(user, ['SM', 'SH']) && (
@@ -768,11 +768,11 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                 ) : (
                   <div>
                     {/* Points Summary Header Card */}
-                    <div style={{ 
-                      background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)', 
-                      color: '#fff', 
-                      borderRadius: 12, 
-                      padding: '20px 24px', 
+                    <div style={{
+                      background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                      color: '#fff',
+                      borderRadius: 12,
+                      padding: '20px 24px',
                       textAlign: 'center',
                       marginBottom: 24,
                       boxShadow: '0 4px 12px rgba(234, 179, 8, 0.15)'
@@ -808,12 +808,12 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                               {Object.entries(pointsHistoryData.per_lead).map(([leadId, details]) => (
                                 <tr key={leadId} style={{ borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
                                   <td style={{ padding: '10px 12px', fontWeight: 500, color: 'var(--text-primary)' }}>{details.name}</td>
-                                  <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{details.booking_number || '—'}</td>
-                                  <td style={{ 
-                                    padding: '10px 12px', 
-                                    textAlign: 'right', 
-                                    fontWeight: 700, 
-                                    color: details.points >= 0 ? '#16a34a' : '#dc2626' 
+                                  <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 500 }}>{details.booking_number || '-'}</td>
+                                  <td style={{
+                                    padding: '10px 12px',
+                                    textAlign: 'right',
+                                    fontWeight: 700,
+                                    color: details.points >= 0 ? '#16a34a' : '#dc2626'
                                   }}>
                                     {details.points > 0 ? `+${details.points}` : details.points}
                                   </td>
@@ -835,20 +835,20 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                           No point transactions recorded yet
                         </div>
                       ) : (
-                        <div style={{ 
-                          maxHeight: 180, 
-                          overflowY: 'auto', 
-                          border: '1px solid var(--border-primary, #e2e8f0)', 
-                          borderRadius: 8 
+                        <div style={{
+                          maxHeight: 180,
+                          overflowY: 'auto',
+                          border: '1px solid var(--border-primary, #e2e8f0)',
+                          borderRadius: 8
                         }}>
                           {pointsHistoryData.history.map((entry, idx) => (
-                            <div 
-                              key={entry.id || idx} 
-                              style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center', 
-                                padding: '10px 12px', 
+                            <div
+                              key={entry.id || idx}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '10px 12px',
                                 borderBottom: idx < pointsHistoryData.history.length - 1 ? '1px solid var(--border-primary, #e2e8f0)' : 'none',
                                 fontSize: 12
                               }}
@@ -862,10 +862,10 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                                 </div>
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ 
-                                  fontWeight: 700, 
-                                  fontSize: 12.5, 
-                                  color: entry.points >= 0 ? '#16a34a' : '#dc2626' 
+                                <div style={{
+                                  fontWeight: 700,
+                                  fontSize: 12.5,
+                                  color: entry.points >= 0 ? '#16a34a' : '#dc2626'
                                 }}>
                                   {entry.points > 0 ? `+${entry.points}` : entry.points}
                                 </div>

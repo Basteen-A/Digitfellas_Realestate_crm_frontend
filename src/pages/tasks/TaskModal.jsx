@@ -49,7 +49,7 @@ const autoCloseLabel = (completedAt) => {
   return `Auto-closes in ${days} day${days === 1 ? '' : 's'}`;
 };
 
-// Files stream through the authenticated API (/files/stream) — opened via
+// Files stream through the authenticated API (/files/stream) - opened via
 // openAuthedFile / AuthedAudio / AuthedImage so the token rides along.
 const openAttachment = (att, e) => {
   if (e) e.preventDefault();
@@ -61,8 +61,8 @@ const initials = (u) =>
   `${(u?.first_name || u?.firstName || '?')[0] || ''}${(u?.last_name || u?.lastName || '')[0] || ''}`.toUpperCase();
 const fullName = (u) => `${u?.first_name || u?.firstName || ''} ${u?.last_name || u?.lastName || ''}`.trim();
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
-const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '-');
 const mmss = (s) => { const n = Math.max(0, Math.round(Number(s) || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };
 
 const emptyForm = {
@@ -365,7 +365,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
     }
     setSaving(true);
     try {
-      // Location is no longer a task field — derive it from the chosen project so
+      // Location is no longer a task field - derive it from the chosen project so
       // existing reporting that reads location_id still works.
       const selectedProject = projects.find((p) => String(p.id) === String(form.project_id));
       const payload = {
@@ -458,7 +458,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
         cancellation_reason: statusForm.cancellation_reason || null,
         voiceBlob: voiceBlob || undefined,
         voice_duration: voiceBlob ? voiceDuration : undefined,
-        // Optional documents — uploaded with the remark and linked to it.
+        // Optional documents - uploaded with the remark and linked to it.
         documents: statusFiles.length > 0 ? statusFiles : undefined,
       });
       toast.success('Task updated');
@@ -512,7 +512,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
     return u ? fullName(u) : '';
   };
 
-  // ── Task fields — same UI for everyone; `disabled` (non-creator) is read-only ──
+  // ── Task fields - same UI for everyone; `disabled` (non-creator) is read-only ──
   const renderFields = (disabled) => {
     const displayedAssignees = disabled
       ? (task?.assignees || []).filter((u) => !isCreatorId(u.id))
@@ -574,7 +574,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                   style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, color: '#6b7280', borderBottom: '1px solid #f1f5f9' }}
                   onClick={() => { setField('project_id', ''); setField('phase_id', ''); setProjectDropdownOpen(false); }}
                 >
-                  — None —
+                  - None -
                 </div>
                 {filteredProjects.map((p) => (
                   <div
@@ -594,7 +594,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
             )}
           </div>
 
-          {/* Phase select — shows each phase's approval status */}
+          {/* Phase select - shows each phase's approval status */}
           <div>
             <label className="tmq-field-label">Phase</label>
             <select
@@ -606,7 +606,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
               <option value="">{form.project_id ? 'Select phase' : 'Select project first'}</option>
               {phases.map((ph) => (
                 <option key={ph.id} value={ph.id}>
-                  {ph.phase_name} — {ph.is_approved === false ? 'Unapproved' : 'Approved'}
+                  {ph.phase_name} - {ph.is_approved === false ? 'Unapproved' : 'Approved'}
                 </option>
               ))}
             </select>
@@ -751,7 +751,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                   </div>
                   <div className="tmq-divider" />
 
-                  {/* ── Remark & Follow-up — above Task Details (update model) ── */}
+                  {/* ── Remark & Follow-up - above Task Details (update model) ── */}
                   <div className="tmq-section">Remark &amp; Follow-up</div>
                   {statusForm.new_status === 'cancelled' && (
                     <div className="tmq-block">
@@ -766,7 +766,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                     <textarea className="tmq-textarea" value={statusForm.content}
                       onChange={(e) => setStatusForm((p) => ({ ...p, content: e.target.value }))}
                       placeholder="Add a remark…" />
-                    {/* Voice note recorder — attaches an audio clip to this update. */}
+                    {/* Voice note recorder - attaches an audio clip to this update. */}
                     <div className="tmq-voice">
                       {recording ? (
                         <div className="tmq-voice-rec">
@@ -804,7 +804,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                             </div>
                           ) : (
                             <div className="tmq-voice-done">
-                              <CheckCircleIcon style={{ width: 15, height: 15 }} /> Transcribed — text added to the remark above
+                              <CheckCircleIcon style={{ width: 15, height: 15 }} /> Transcribed - text added to the remark above
                             </div>
                           )}
                         </div>
@@ -950,7 +950,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                                 <tr key={r.id}>
                                   <td><span style={{ color: meta?.hex || 'var(--text-primary)', fontWeight: 600 }}>{STATUS_LABELS[r.status_at_time] || 'Update'}</span></td>
                                   <td>
-                                    {r.content || '—'}
+                                    {r.content || '-'}
                                     {r.voice?.file_url && (
                                       <div className="tmq-voice-play">
                                         <MicrophoneIcon style={{ width: 13, height: 13 }} />
@@ -978,7 +978,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                                   </td>
                                   <td>{r.user ? fullName(r.user) : 'System'}</td>
                                   <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
-                                  <td style={{ whiteSpace: 'nowrap' }}>{r.follow_up_date ? fmtDate(r.follow_up_date) : '—'}</td>
+                                  <td style={{ whiteSpace: 'nowrap' }}>{r.follow_up_date ? fmtDate(r.follow_up_date) : '-'}</td>
                                 </tr>
                               );
                             })}

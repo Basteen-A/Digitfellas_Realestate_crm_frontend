@@ -6,7 +6,7 @@ import { getErrorMessage } from '../../../utils/helpers';
 import ProjectDocumentsPanel from '../Projects/ProjectDocumentsPanel';
 import './DocumentManagement.css';
 
-// Super Admin "Document Management" — pick a project on the left, then upload /
+// Super Admin "Document Management" - pick a project on the left, then upload /
 // view / delete its documents on the right (one document at a time). Reuses the
 // per-project ProjectDocumentsPanel + the /projects/:id/documents backend.
 const DocumentManagement = () => {
@@ -19,7 +19,7 @@ const DocumentManagement = () => {
     setLoading(true);
     try {
       // The list endpoint caps `limit` at 100; the dropdown returns every active
-      // project unbounded, which is what a selector needs — prefer it, fall back to getAll.
+      // project unbounded, which is what a selector needs - prefer it, fall back to getAll.
       let list = [];
       try {
         const dd = await projectApi.getDropdown();
@@ -55,7 +55,7 @@ const DocumentManagement = () => {
       <header className="doc-mgmt__header">
         <div>
           <h1>Document Management</h1>
-          <p>Upload and manage documents for each project — one document at a time.</p>
+          <p>Upload and manage documents for each project - one document at a time.</p>
         </div>
         <button type="button" className="doc-mgmt__refresh" onClick={loadProjects} disabled={loading}>
           <ArrowPathIcon className="doc-mgmt__icon" /> {loading ? 'Refreshing…' : 'Refresh'}

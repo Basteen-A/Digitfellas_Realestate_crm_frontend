@@ -7,7 +7,7 @@
 //
 // Leaving Sub Source blank books the spend against the WHOLE source: it counts in the
 // source totals and shows under "Not specified" on the sub-source view, which is the
-// same bucket leads carrying no sub-source fall into — so spend and volume line up.
+// same bucket leads carrying no sub-source fall into - so spend and volume line up.
 //
 // The server refuses a second live line whose period OVERLAPS an existing one for the
 // same source / sub-source, because overlapping spend is counted twice and skews every
@@ -30,9 +30,9 @@ const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', 
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 
 const money = (v) => formatCurrencyExact(Number(v) || 0);
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
 
-// A DATEONLY column comes back as 'YYYY-MM-DD' — exactly what <input type="date"> wants,
+// A DATEONLY column comes back as 'YYYY-MM-DD' - exactly what <input type="date"> wants,
 // so it is used verbatim rather than round-tripped through a Date (which would shift the
 // day for anyone east of UTC).
 const toInputDate = (v) => {
@@ -51,7 +51,7 @@ const EMPTY_FORM = {
   start_date: '', end_date: '', amount: '', remarks: '',
 };
 
-// Inclusive day count — the divisor the server pro-rates by, echoed in the form so the
+// Inclusive day count - the divisor the server pro-rates by, echoed in the form so the
 // per-day figure is visible before saving.
 const dayCount = (a, b) => {
   if (!a || !b) return 0;
@@ -61,7 +61,7 @@ const dayCount = (a, b) => {
 
 // "01 Sep 2026 – 30 Sep 2026", or just the one date when the period is a single day.
 const fmtPeriod = (a, b) => {
-  if (!a) return '—';
+  if (!a) return '-';
   if (!b || a === b) return fmtDate(a);
   return `${fmtDate(a)} – ${fmtDate(b)}`;
 };
@@ -108,7 +108,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
   }, [form.lead_source_id]);
 
   const openCreate = () => {
-    // Default to the report's own window when one is set — that is almost always the
+    // Default to the report's own window when one is set - that is almost always the
     // period the spend being entered belongs to.
     setForm({
       ...EMPTY_FORM,
@@ -160,7 +160,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
       setModalOpen(false);
       setForm(EMPTY_FORM);
       await load();
-      // The cost-per reports divide by this ledger — refresh them too.
+      // The cost-per reports divide by this ledger - refresh them too.
       onChanged?.();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to save budget'));
@@ -210,8 +210,8 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
           {rows.map((r) => (
             <Tr key={r.id}>
               <Td bold>{fmtPeriod(r.start_date, r.end_date)}</Td>
-              <Td className="opacity-70">{r.day_count || dayCount(r.start_date, r.end_date) || '—'}</Td>
-              <Td>{r.source_name || r.leadSource?.source_name || '—'}</Td>
+              <Td className="opacity-70">{r.day_count || dayCount(r.start_date, r.end_date) || '-'}</Td>
+              <Td>{r.source_name || r.leadSource?.source_name || '-'}</Td>
               <Td className={r.lead_sub_source_id ? '' : 'opacity-60'}>
                 {r.sub_source_name || r.leadSubSource?.sub_source_name || 'Whole source'}
               </Td>
@@ -219,10 +219,10 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
               <Td className="opacity-70">
                 {(() => {
                   const d = r.day_count || dayCount(r.start_date, r.end_date);
-                  return d > 0 ? money((Number(r.amount) || 0) / d) : '—';
+                  return d > 0 ? money((Number(r.amount) || 0) / d) : '-';
                 })()}
               </Td>
-              <Td className="opacity-70">{r.remarks || '—'}</Td>
+              <Td className="opacity-70">{r.remarks || '-'}</Td>
               <Td className="whitespace-nowrap text-right">
                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(r)} title="Edit">
                   <PencilSquareIcon style={{ width: 15, height: 15 }} />
@@ -341,7 +341,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
                     const amt = Number(form.amount) || 0;
                     if (!d) return 'Leads and conversions are counted over this period.';
                     const per = amt > 0 ? ` · ${money(amt / d)} per day` : '';
-                    return `${d} day${d === 1 ? '' : 's'}${per} — leads and conversions in this window are what the cost-per figures divide by.`;
+                    return `${d} day${d === 1 ? '' : 's'}${per} - leads and conversions in this window are what the cost-per figures divide by.`;
                   })()}
                 </div>
               </div>
@@ -354,7 +354,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
                   id="bg-remarks"
                   style={inputStyle}
                   maxLength={500}
-                  placeholder="e.g. Diwali campaign — creative A"
+                  placeholder="e.g. Diwali campaign - creative A"
                   value={form.remarks}
                   onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
                 />

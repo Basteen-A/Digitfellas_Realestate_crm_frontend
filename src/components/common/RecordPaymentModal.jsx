@@ -9,7 +9,7 @@ import '../../pages/portals/common/LeadWorkspacePage.css';
 import '../../pages/portals/collection/CollectionWorkspace.css';
 
 /**
- * The rich Record / Edit Payment modal — the same model used on the booking
+ * The rich Record / Edit Payment modal - the same model used on the booking
  * detail page (CollectionBookingDetail), extracted so other pages (e.g. the
  * Collection Payments transaction list) can open it. Give it a `bookingId`; it
  * fetches the full booking itself so the per-category budget buckets and bars
@@ -226,7 +226,7 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
           <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
               <fieldset disabled={readOnly} style={{ border: 'none', margin: 0, padding: 0, minWidth: 0 }}>
-                {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
+                {/* Net / Paid / Balance already sits in the drawer header - no repeat here. */}
                 <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{readOnly ? 'Payment Details' : isEditing ? 'Edit Payment' : 'Record New Payment'}</div>
                 <div className="bkd-form-row">
                   <div className="bkd-form-group" style={{ flex: 1 }}>
@@ -240,8 +240,8 @@ const RecordPaymentModal = ({ bookingId, paymentId = null, readOnly = false, onC
                         const paid = bucket?.paid || 0;
                         const balance = Math.max(target - paid, 0);
                         const suffix = target > 0
-                          ? ` — Balance ${formatCurrency(balance)}`
-                          : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
+                          ? ` - Balance ${formatCurrency(balance)}`
+                          : (paid > 0 ? ` - Paid ${formatCurrency(paid)}` : '');
                         return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                       })}
                     </select>

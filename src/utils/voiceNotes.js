@@ -1,10 +1,10 @@
 // ============================================================
-// Voice notes — which roles get the "Voice note + Transcribe" widget
+// Voice notes - which roles get the "Voice note + Transcribe" widget
 // ============================================================
 //
 // This is the SINGLE place that decides which roles can record a voice note
 // and transcribe it (in lead quick actions, etc.). To turn the feature on for
-// more roles, just add their short code to the list below — e.g. add 'TC',
+// more roles, just add their short code to the list below - e.g. add 'TC',
 // 'COL', 'ACCT'. Nothing else needs to change.
 //
 //   Role short codes: SA, ADM, SH, SM, TC, COL, ACCT, AM, CE, RM, ...

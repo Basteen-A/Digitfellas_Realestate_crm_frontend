@@ -1,4 +1,4 @@
-// Excel export for the Collection Report — one styled workbook holding every report
+// Excel export for the Collection Report - one styled workbook holding every report
 // on screen (so a collection review needs one file, not four):
 //   Overview · Collection by Item · Collection by Unit · Collection by Project
 //   · Project x Item (Collected) · Outstanding by Item · Outstanding by Project
@@ -13,7 +13,7 @@ import * as htmlToImage from 'html-to-image';
 import { argb, COLORS } from '../Reports/analytics/palette';
 
 const MONEY_FMT = '₹#,##,##0';
-const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '-');
 const n = (v) => Number(v) || 0;
 const pct = (a, b) => (n(b) > 0 ? Math.round((n(a) / n(b)) * 1000) / 10 : 0);
 
@@ -73,7 +73,7 @@ const addSheet = (wb, title, columns, rows) => {
         rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: argb(COLORS.primary) } }],
       });
     } catch (e) {
-      // Conditional formatting is cosmetic — never let it break the export.
+      // Conditional formatting is cosmetic - never let it break the export.
     }
   }
   autoWidth(sheet);
@@ -136,7 +136,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
   title.alignment = { vertical: 'middle', horizontal: 'left' };
   ov.getRow(1).height = 28;
   ov.mergeCells('A2:F2');
-  ov.getCell('A2').value = `Period: ${meta.period || '—'}   |   From: ${fmtDate(meta.from || payload.meta?.from)}   |   To: ${fmtDate(meta.to || payload.meta?.to)}   |   Scope: ${payload.meta?.scope === 'own' ? 'My bookings' : 'Organisation'}`;
+  ov.getCell('A2').value = `Period: ${meta.period || '-'}   |   From: ${fmtDate(meta.from || payload.meta?.from)}   |   To: ${fmtDate(meta.to || payload.meta?.to)}   |   Scope: ${payload.meta?.scope === 'own' ? 'My bookings' : 'Organisation'}`;
   ov.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
   ov.mergeCells('A3:F3');
   ov.getCell('A3').value = 'Collection figures are anchored on the payment date. Outstanding is a live balance across every open booking and is NOT limited by the period.';
@@ -152,7 +152,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
     ['Live Bookings', t.bookings, COLORS.primary, false],
     ['Bookings Pending', t.bookingsPending, COLORS.negotiation, false],
     ['Bookings Fully Paid', t.bookingsFullyPaid, COLORS.siteVisit, false],
-    // Billed nothing, so owe nothing — counted apart from "fully paid" rather than
+    // Billed nothing, so owe nothing - counted apart from "fully paid" rather than
     // inflating it. Pending + Fully Paid + Unbilled = Live Bookings.
     ['Bookings Unbilled', t.bookingsUnbilled, COLORS.muted, false],
   ];
@@ -203,7 +203,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
         ov.addImage(imageId, { tl: { col: 0, row: anchorRow }, ext: { width: 520, height: 280 } });
         anchorRow += 16;
       } catch (e) {
-        // chart not capturable (e.g. detached) — skip silently
+        // chart not capturable (e.g. detached) - skip silently
       }
     }
   }
@@ -427,7 +427,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
 
   // ── 5. Overdue 90+ days ──
   // Aged from the DUE DATE (the collection follow-up on the last payment-status
-  // update), not the booking date — a different axis from the Ageing sheet.
+  // update), not the booking date - a different axis from the Ageing sheet.
   addSheet(
     wb,
     'Overdue 90+ Days',
@@ -459,7 +459,7 @@ export const exportCollectionReports = async (payload, meta = {}) => {
     })),
   );
 
-  // The pipeline behind that list — every past-due bucket, plus the balances that
+  // The pipeline behind that list - every past-due bucket, plus the balances that
   // have no due date set at all and so cannot be aged.
   addSheet(
     wb,
@@ -470,8 +470,8 @@ export const exportCollectionReports = async (payload, meta = {}) => {
       { header: 'Outstanding', key: 'outstanding', money: true, numeric: true },
     ],
     [
-      ...[['1-30 days','d0_30'],['31-60 days','d31_60'],['61-90 days','d61_90'],['90+ days','d90p']]
-        .map(([label,key]) => ({
+      ...[['1-30 days', 'd0_30'], ['31-60 days', 'd31_60'], ['61-90 days', 'd61_90'], ['90+ days', 'd90p']]
+        .map(([label, key]) => ({
           bucket: label,
           bookings: n(overdue90.buckets?.[key]?.bookings),
           outstanding: n(overdue90.buckets?.[key]?.outstanding),

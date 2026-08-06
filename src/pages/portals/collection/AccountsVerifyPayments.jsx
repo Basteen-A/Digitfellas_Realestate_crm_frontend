@@ -12,7 +12,7 @@ import './CollectionWorkspace.css';
 
 const fmt = (v) => formatCurrency(v);
 const fmtDate = (d) => {
-  if (!d) return '—';
+  if (!d) return '-';
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
@@ -157,7 +157,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   };
 
   const getAge = (d) => {
-    if (!d) return '—';
+    if (!d) return '-';
     const days = Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return 'Today';
     if (days === 1) return '1 day';
@@ -187,8 +187,8 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
           {filter === 'unverified'
             ? 'Review payments submitted by Collection Managers and verify against bank records'
             : filter === 'verified'
-            ? 'History of all verified payments'
-            : 'Payments that were rejected during verification'}
+              ? 'History of all verified payments'
+              : 'Payments that were rejected during verification'}
         </p>
       </div>
 
@@ -216,7 +216,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
         ))}
       </div>
 
-      {/* Main Panel — queue + detail sidebar */}
+      {/* Main Panel - queue + detail sidebar */}
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 16, alignItems: 'start' }}>
         {/* LEFT: Payment Queue Table */}
         <div className="col-card-new" style={{ padding: 0, overflow: 'hidden' }}>
@@ -259,29 +259,29 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
                 </thead>
                 <tbody>
                   {visiblePayments.map((p) => (
-                      <tr
-                        key={p.id}
-                        onClick={() => {
-                          setSelected(p);
-                          setVerifyTxnId(p.transaction_ref || p.utr_number || '');
-                          setVerifyNote('');
-                        }}
-                        style={{
-                          cursor: 'pointer',
-                          background: selected?.id === p.id ? 'rgba(79, 70, 229, 0.06)' : undefined,
-                          borderLeft: selected?.id === p.id ? '3px solid var(--col-primary)' : '3px solid transparent',
-                        }}
-                      >
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.booking_number || p.payment_number}</td>
-                        <td><strong>{p.customer_name || '—'}</strong></td>
-                        <td style={{ fontWeight: 700 }}>{fmt(p.amount)}</td>
-                        <td>{p.payment_mode}</td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
-                        <td style={{ fontSize: '0.75rem' }}>{fmtDate(p.payment_date)}</td>
-                        <td style={{ fontSize: '0.75rem' }}>{getAge(p.payment_date)}</td>
-                        <td>{getStatusBadge(p)}</td>
-                      </tr>
-                    ))}
+                    <tr
+                      key={p.id}
+                      onClick={() => {
+                        setSelected(p);
+                        setVerifyTxnId(p.transaction_ref || p.utr_number || '');
+                        setVerifyNote('');
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        background: selected?.id === p.id ? 'rgba(79, 70, 229, 0.06)' : undefined,
+                        borderLeft: selected?.id === p.id ? '3px solid var(--col-primary)' : '3px solid transparent',
+                      }}
+                    >
+                      <td style={{ fontWeight: 500 }}>{p.booking_number || p.payment_number}</td>
+                      <td><strong>{p.customer_name || '-'}</strong></td>
+                      <td style={{ fontWeight: 700 }}>{fmt(p.amount)}</td>
+                      <td>{p.payment_mode}</td>
+                      <td style={{ fontWeight: 500 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '-'}</td>
+                      <td style={{ fontSize: '0.75rem' }}>{fmtDate(p.payment_date)}</td>
+                      <td style={{ fontSize: '0.75rem' }}>{getAge(p.payment_date)}</td>
+                      <td>{getStatusBadge(p)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -305,11 +305,11 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
             <div style={{ display: 'grid', gap: 10, fontSize: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Payment #</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{selected.payment_number}</span>
+                <span style={{ fontWeight: 500 }}>{selected.payment_number}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Booking #</span>
-                <span style={{ fontFamily: 'monospace' }}>{selected.booking_number}</span>
+                <span style={{ fontWeight: 500 }}>{selected.booking_number}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Customer</span>
@@ -317,15 +317,15 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Project</span>
-                <span>{selected.project_name || '—'}</span>
+                <span>{selected.project_name || '-'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Phase</span>
-                <span>{selected.phase_name || '—'}</span>
+                <span>{selected.phase_name || '-'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--col-text-secondary)' }}>Plot</span>
-                <span>{selected.unit_number || '—'}</span>
+                <span>{selected.unit_number || '-'}</span>
               </div>
               <hr style={{ border: 'none', borderTop: '1px solid var(--col-border)' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -343,7 +343,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               {selected.cheque_dd_number && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--col-text-secondary)' }}>Cheque/DD #</span>
-                  <span style={{ fontFamily: 'monospace' }}>{selected.cheque_dd_number}</span>
+                  <span style={{ fontWeight: 500 }}>{selected.cheque_dd_number}</span>
                 </div>
               )}
               {selected.bank_name && (
@@ -355,7 +355,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               {(selected.transaction_ref || selected.utr_number) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--col-text-secondary)' }}>UTR / Ref</span>
-                  <span style={{ fontFamily: 'monospace' }}>{selected.transaction_ref || selected.utr_number}</span>
+                  <span style={{ fontWeight: 500 }}>{selected.transaction_ref || selected.utr_number}</span>
                 </div>
               )}
               {selected.remarks && (
@@ -377,7 +377,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               )}
             </div>
 
-            {/* Action Buttons — only for unverified */}
+            {/* Action Buttons - only for unverified */}
             {normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && (
               <div style={{ marginTop: 20 }}>
                 <div style={{ marginBottom: 10 }}>
@@ -444,7 +444,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
           <div className="col-card-new" style={{ width: 420, maxWidth: '90vw' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8 }}>Reject Payment</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--col-text-secondary)', marginBottom: 16 }}>
-              Rejecting <strong>{selected?.payment_number}</strong> — {fmt(selected?.amount)} from {selected?.customer_name}
+              Rejecting <strong>{selected?.payment_number}</strong> - {fmt(selected?.amount)} from {selected?.customer_name}
             </p>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--col-text-secondary)', display: 'block', marginBottom: 4 }}>
               Rejection Reason *

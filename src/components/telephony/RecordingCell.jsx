@@ -6,12 +6,12 @@ import telephonyApi from '../../api/telephonyApi';
 // Lazy call-recording player for a call-logs table cell. Renders a small "Play"
 // button; only when clicked does it mount <AuthedAudio> (which fetches the
 // recording through the token-attaching axios instance and streams it from the
-// server proxy) — so a page of rows never eager-downloads every recording.
+// server proxy) - so a page of rows never eager-downloads every recording.
 export default function RecordingCell({ callId, hasRecording }) {
   const [open, setOpen] = useState(false);
 
   if (!hasRecording) {
-    return <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>;
+    return <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>-</span>;
   }
   if (!open) {
     return (

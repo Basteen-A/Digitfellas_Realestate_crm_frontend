@@ -345,7 +345,7 @@ const Dashboard = () => {
                             <span className="col-cell-primary">{item.action}</span>
                           </div>
                         </td>
-                        <td><span className="col-cell-secondary">{item.table_name || '—'}</span></td>
+                        <td><span className="col-cell-secondary">{item.table_name || '-'}</span></td>
                         <td>{item.user?.first_name || 'System'}</td>
                       </tr>
                     ))}

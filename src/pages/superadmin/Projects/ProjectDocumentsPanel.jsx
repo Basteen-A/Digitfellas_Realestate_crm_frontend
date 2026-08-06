@@ -13,11 +13,11 @@ import './ProjectDocumentsModal.css';
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', {
   day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-}) : '—');
+}) : '-');
 
 const DOC_TYPES = ['Brochure', 'Approval', 'Legal', 'Layout Plan', 'RERA', 'Agreement', 'Other'];
 
-// Server limits — mirror of middleware/upload.js (uploadDocumentsAuto). Checked
+// Server limits - mirror of middleware/upload.js (uploadDocumentsAuto). Checked
 // client-side only so the user hears "too big" immediately rather than after a
 // long upload ends in a 413.
 const MAX_FILES = 10;
@@ -27,7 +27,7 @@ const fmtBytes = (b) => humanFileSize(b);
 
 // Upload / list / delete for a single project's document archive, organised as a
 // folder tree. Navigation is one level at a time with a breadcrumb back to the
-// root — the same model as a file explorer — so nesting can go as deep as needed
+// root - the same model as a file explorer - so nesting can go as deep as needed
 // without the UI having to hold the whole tree in memory.
 // Shared by the per-project ProjectDocumentsModal, the Super Admin Document
 // Management screen and the Record Manager portal (which renders the same screen).
@@ -140,7 +140,7 @@ const ProjectDocumentsPanel = ({ project }) => {
       const formData = new FormData();
       files.forEach((f) => formData.append('documents', f));
       formData.append('document_type', documentType);
-      // A typed name only makes sense for a single file — with several, each
+      // A typed name only makes sense for a single file - with several, each
       // keeps its own file name (the server applies the same rule).
       if (files.length === 1 && documentName.trim()) formData.append('document_name', documentName.trim());
       // Land the files in the folder currently being browsed.
@@ -174,7 +174,7 @@ const ProjectDocumentsPanel = ({ project }) => {
 
   return (
     <div className="proj-docs__body">
-      {/* Breadcrumb — root is always reachable in one click */}
+      {/* Breadcrumb - root is always reachable in one click */}
       <nav className="proj-docs__crumbs" aria-label="Folder path">
         <button
           type="button"
@@ -223,7 +223,7 @@ const ProjectDocumentsPanel = ({ project }) => {
         </button>
       </div>
 
-      {/* Upload one document at a time — into the current folder */}
+      {/* Upload one document at a time - into the current folder */}
       <div className="proj-docs__upload">
         <div className="proj-docs__upload-row">
           <div className="proj-docs__field">
@@ -244,7 +244,7 @@ const ProjectDocumentsPanel = ({ project }) => {
           </div>
         </div>
         <div className="proj-docs__upload-row">
-          {/* No `accept` on purpose — every format is allowed. */}
+          {/* No `accept` on purpose - every format is allowed. */}
           <input
             ref={fileInputRef}
             type="file"
@@ -266,7 +266,7 @@ const ProjectDocumentsPanel = ({ project }) => {
         </div>
 
         <div className="proj-docs__upload-hint">
-          PDF, Word, Excel, images, ZIP — any file type. Up to {MAX_FILES} files, {MAX_FILE_MB} MB each.
+          PDF, Word, Excel, images, ZIP - any file type. Up to {MAX_FILES} files, {MAX_FILE_MB} MB each.
         </div>
 
         {/* Staged files, removable before upload */}
@@ -333,7 +333,7 @@ const ProjectDocumentsPanel = ({ project }) => {
       ) : documents.length === 0 ? (
         <div className="proj-docs__empty">
           {folders.length > 0
-            ? 'No documents directly in this folder — open a folder above.'
+            ? 'No documents directly in this folder - open a folder above.'
             : `No documents ${currentFolderName ? `in "${currentFolderName}"` : 'for this project'} yet.`}
         </div>
       ) : (

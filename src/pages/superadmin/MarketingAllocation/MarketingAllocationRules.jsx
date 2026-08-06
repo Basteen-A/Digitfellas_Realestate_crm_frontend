@@ -15,7 +15,7 @@ const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', border
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 
-const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '—' : '—');
+const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '-' : '-');
 
 const EMPTY_FORM = { id: null, rule_name: '', lead_source_id: '', lead_sub_source_id: '', assign_all_telecallers: false, telecaller_ids: [], is_active: true };
 
@@ -211,7 +211,7 @@ const MarketingAllocationRules = () => {
       return <span style={{ fontWeight: 600, color: '#16A34A' }}>All telecallers</span>;
     }
     const ids = Array.isArray(rule.telecaller_ids) ? rule.telecaller_ids : [];
-    if (ids.length === 0) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+    if (ids.length === 0) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
     const names = ids.map((id) => userName(tcById[id]) || 'Unknown');
     const shown = names.slice(0, 3).join(', ');
     return (
@@ -247,11 +247,11 @@ const MarketingAllocationRules = () => {
           <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>POST /api/v1/marketing/leads</code>{' '}
           with header{' '}
           <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>X-API-Key: &lt;website key&gt;</code>.
-          {' '}Each website/app gets its own key — manage them under{' '}
+          {' '}Each website/app gets its own key - manage them under{' '}
           <a href="/super-admin/marketing-api-keys" style={{ color: '#2563eb', fontWeight: 600 }}>Marketing API Keys</a>.
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
             Body: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ "source": "Facebook", "sub_source": "Lead Form", "name": "...", "phone": "...", "email": "...", "project": "...", "location": "...", "campaign_name": "..." }'}</code>
-            {' '}— the lead is created and auto-assigned to the next telecaller in the matching rule below (a sub-source rule wins over the whole-source rule).
+            {' '}- the lead is created and auto-assigned to the next telecaller in the matching rule below (a sub-source rule wins over the whole-source rule).
           </div>
         </div>
       </div>
@@ -284,7 +284,7 @@ const MarketingAllocationRules = () => {
                     </td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, ...badgeStyle(src?.color_code) }}>
-                        {src?.source_name || '—'}
+                        {src?.source_name || '-'}
                       </span>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                         {rule.leadSubSource ? `› ${rule.leadSubSource.sub_source_name}` : 'Whole source'}
@@ -372,13 +372,13 @@ const MarketingAllocationRules = () => {
                   onChange={(e) => setForm((f) => ({ ...f, lead_sub_source_id: e.target.value }))}
                 >
                   <option value="" disabled={takenForSource.sourceLevelTaken}>
-                    {loadingSubs ? 'Loading…' : `Whole source (any sub-source)${takenForSource.sourceLevelTaken ? ' — already configured' : ''}`}
+                    {loadingSubs ? 'Loading…' : `Whole source (any sub-source)${takenForSource.sourceLevelTaken ? ' - already configured' : ''}`}
                   </option>
                   {subSources.map((ss) => {
                     const taken = takenForSource.subs.has(String(ss.id));
                     return (
                       <option key={ss.id} value={ss.id} disabled={taken}>
-                        {ss.sub_source_name}{taken ? ' — already configured' : ''}
+                        {ss.sub_source_name}{taken ? ' - already configured' : ''}
                       </option>
                     );
                   })}

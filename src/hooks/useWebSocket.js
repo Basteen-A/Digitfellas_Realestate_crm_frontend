@@ -1,5 +1,5 @@
 // ============================================================
-// WebSocket Hook — Real-time notifications & lead updates
+// WebSocket Hook - Real-time notifications & lead updates
 // ============================================================
 
 import { useEffect, useRef, useCallback, useState } from 'react';
@@ -10,7 +10,7 @@ const WS_BASE = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
   (import.meta.env.VITE_WS_PORT || import.meta.env.VITE_API_PORT || '5000');
 
 /**
- * useWebSocket hook — connects to backend WebSocket with JWT auth
+ * useWebSocket hook - connects to backend WebSocket with JWT auth
  * 
  * Usage:
  *   const { isConnected, lastMessage, notifications, unreadCount } = useWebSocket({

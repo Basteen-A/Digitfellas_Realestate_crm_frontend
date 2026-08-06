@@ -12,10 +12,10 @@ import './DocumentArchive.css';
 
 const fmtDate = (d) => (d
   ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  : '—');
+  : '-');
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', {
   day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-}) : '—');
+}) : '-');
 
 const DOC_TYPES = [
   'Registration Document',
@@ -97,7 +97,7 @@ const DocumentArchive = () => {
       <header className="doc-archive__header">
         <div>
           <h1>Document Archive</h1>
-          <p>Search every registration record — open and completed. This is a read-only archive.</p>
+          <p>Search every registration record - open and completed. This is a read-only archive.</p>
         </div>
         <button type="button" className="doc-archive__refresh" onClick={load} disabled={loading}>
           <ArrowPathIcon className="doc-archive__icon" /> {loading ? 'Refreshing…' : 'Refresh'}
@@ -165,16 +165,16 @@ const DocumentArchive = () => {
                   const completed = row.record_status === 'COMPLETED';
                   return (
                     <tr key={row.document_id || `${row.booking_id}-${idx}`}>
-                      <td className="doc-archive__name">{row.document_name || <span className="doc-archive__muted">— no file uploaded —</span>}</td>
+                      <td className="doc-archive__name">{row.document_name || <span className="doc-archive__muted">- no file uploaded -</span>}</td>
                       <td className="doc-archive__mono">{row.booking_number}</td>
                       <td>{fmtDate(row.registration_document_date || row.registration_date)}</td>
                       <td>
                         {row.document_type && !String(row.document_type).includes('/')
                           ? <span className="doc-archive__tag">{row.document_type}</span>
-                          : <span className="doc-archive__muted">—</span>}
+                          : <span className="doc-archive__muted">-</span>}
                       </td>
-                      <td>{row.buyer_name || '—'}</td>
-                      <td>{row.seller_name || '—'}</td>
+                      <td>{row.buyer_name || '-'}</td>
+                      <td>{row.seller_name || '-'}</td>
                       <td>
                         <span className={`doc-archive__status ${completed ? 'is-completed' : 'is-open'}`}>
                           {completed ? 'Completed' : 'Open'}

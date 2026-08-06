@@ -1,14 +1,14 @@
 // Two Excel exports for the analytics dashboard, both built client-side with
 // ExcelJS from the already-fetched payload:
-//   exportPlainData    — one plain sheet per data block (raw tables)
-//   exportAnalytics    — colorful workbook: KPI overview + embedded chart PNGs
+//   exportPlainData    - one plain sheet per data block (raw tables)
+//   exportAnalytics    - colorful workbook: KPI overview + embedded chart PNGs
 //                        (captured from the live charts) + conditionally
 //                        formatted per-metric sheets
 import ExcelJS from 'exceljs';
 import * as htmlToImage from 'html-to-image';
 import { argb, COLORS } from './palette';
 
-const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '-');
 
 const triggerDownload = async (workbook, filename) => {
   const buffer = await workbook.xlsx.writeBuffer();
@@ -65,7 +65,7 @@ const BLOCKS = (role) => {
     teamLeaderboard: { title: role === 'TC' ? 'Tele Sales Leaderboard' : 'Sales Team Leaderboard', columns: leaderCols, name: true },
     salesHeadLeaderboard: { title: 'Sales Head Leaderboard', columns: leaderCols, name: true },
     callsPerDay: { title: 'Calls Per Day', columns: [{ header: 'Day', key: 'day' }, { header: 'Answered', key: 'answered' }, { header: 'Unanswered', key: 'unanswered' }, { header: 'Total', key: 'total' }] },
-    // `answer_rate` is derived in rowsFor — the API never sends it.
+    // `answer_rate` is derived in rowsFor - the API never sends it.
     hourlyCalls: { title: 'Hourly Calls', columns: [{ header: 'Hour', key: 'hour' }, { header: 'Total Calls', key: 'total' }, { header: 'Answered', key: 'answered' }, { header: 'Unanswered', key: 'unanswered' }, { header: 'Answer Rate', key: 'answer_rate' }] },
     projectWiseSiteVisit: { title: 'Project-wise Site Visits', columns: [{ header: 'Project', key: 'project_name' }, { header: 'Site Visits', key: 'site_visits' }] },
     projectWiseInventory: { title: 'Project-wise Inventory', columns: [{ header: 'Project', key: 'project_name' }, { header: 'Total', key: 'total_units' }, { header: 'Available', key: 'available' }, { header: 'Booked', key: 'booked' }, { header: 'Blocked', key: 'blocked' }] },
@@ -84,11 +84,11 @@ const rowsFor = (block, raw) => (raw || []).map((r) => {
   if (out.total == null && (r.answered != null || r.unanswered != null)) {
     out.total = Number(r.answered || 0) + Number(r.unanswered || 0);
   }
-  // Same for Answer Rate — computed here so the sheet matches the on-screen
+  // Same for Answer Rate - computed here so the sheet matches the on-screen
   // column. A row with no calls gets a dash rather than a misleading 0%.
   if (block.columns.some((c) => c.key === 'answer_rate')) {
     const total = Number(out.total || 0);
-    out.answer_rate = total > 0 ? `${Math.round((Number(r.answered || 0) / total) * 100)}%` : '—';
+    out.answer_rate = total > 0 ? `${Math.round((Number(r.answered || 0) / total) * 100)}%` : '-';
   }
   return out;
 });
@@ -121,12 +121,12 @@ const addTableSheet = (workbook, block, raw, { styled = false } = {}) => {
       try {
         sheet.addConditionalFormatting({
           ref: `${letter}2:${letter}${rows.length + 1}`,
-          // cfvo (min/max) is REQUIRED — without it ExcelJS writeBuffer() throws
+          // cfvo (min/max) is REQUIRED - without it ExcelJS writeBuffer() throws
           // "Cannot read properties of undefined (reading 'forEach')".
           rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: argb(COLORS.primary) } }],
         });
       } catch (e) {
-        // Conditional formatting is cosmetic — never let it break the export.
+        // Conditional formatting is cosmetic - never let it break the export.
       }
     }
   }
@@ -180,7 +180,7 @@ export const exportAnalytics = async (payload, meta, chartRefs) => {
   const ov = wb.addWorksheet('Overview', { properties: { defaultColWidth: 16 } });
   ov.mergeCells('A1:F1');
   const title = ov.getCell('A1');
-  title.value = `${meta.roleLabel || role} — Analytics`;
+  title.value = `${meta.roleLabel || role} - Analytics`;
   title.font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
   title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(COLORS.primary) } };
   title.alignment = { vertical: 'middle', horizontal: 'left' };
@@ -241,7 +241,7 @@ export const exportAnalytics = async (payload, meta, chartRefs) => {
         });
         anchorRow += 16; // leave vertical space for the next image
       } catch (e) {
-        // chart not capturable (e.g. detached) — skip silently
+        // chart not capturable (e.g. detached) - skip silently
       }
     }
   }

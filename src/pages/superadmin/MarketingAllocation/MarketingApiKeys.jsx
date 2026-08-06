@@ -59,7 +59,7 @@ const MarketingApiKeys = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { 
+  useEffect(() => {
     if (showCreate) {
       loadSources();
     }
@@ -177,13 +177,13 @@ const MarketingApiKeys = () => {
       setCopied(true);
       toast.success('Key copied to clipboard');
     } catch {
-      toast.error('Could not copy — select and copy manually');
+      toast.error('Could not copy - select and copy manually');
     }
   };
 
   const selectedSource = sources.find(s => s.id === selectedSourceId);
   const sourceLabel = selectedSource?.source_name || 'Any';
-  const subSourceLabel = selectedSubSourceId 
+  const subSourceLabel = selectedSubSourceId
     ? subSources.find(ss => ss.id === selectedSubSourceId)?.sub_source_name || 'Any'
     : (selectedSourceId ? 'All sub-sources' : 'Any');
 
@@ -192,7 +192,7 @@ const MarketingApiKeys = () => {
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1><KeyIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Marketing API Keys</h1>
-          <p className="hidden sm:block">One key per website / application — revoke any integration without affecting the others</p>
+          <p className="hidden sm:block">One key per website / application - revoke any integration without affecting the others</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={load} disabled={loading}>
@@ -213,7 +213,7 @@ const MarketingApiKeys = () => {
             Body fields: <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{'{ name, phone, email?, project?, location?, campaign_name? }'}</code>
           </div>
           <div style={{ fontSize: 12, color: '#2563eb', marginTop: 6, fontWeight: 600 }}>
-            Source/sub-source are automatically set based on the API key configuration — no need to include them in the body.
+            Source/sub-source are automatically set based on the API key configuration - no need to include them in the body.
           </div>
         </div>
       </div>
@@ -222,7 +222,7 @@ const MarketingApiKeys = () => {
       {revealed && (
         <div className="crm-card" style={{ padding: 16, marginBottom: 14, border: '1px solid #16A34A', background: '#f0fdf4' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 8 }}>
-            Key for "{revealed.name}" — copy it now. It will not be shown again.
+            Key for "{revealed.name}" - copy it now. It will not be shown again.
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <code style={{ flex: 1, minWidth: 280, background: '#fff', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 12px', fontSize: 13, wordBreak: 'break-all', color: '#111' }}>
@@ -343,7 +343,7 @@ const MarketingApiKeys = () => {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
               />
-              
+
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Lead Source *</label>
               <select
                 style={selectStyle}
@@ -358,7 +358,7 @@ const MarketingApiKeys = () => {
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                 Leads from this key must match this source
               </div>
-              
+
               {selectedSourceId && (
                 <>
                   <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Lead Sub-Source (Optional)</label>
@@ -378,7 +378,7 @@ const MarketingApiKeys = () => {
                   </div>
                 </>
               )}
-              
+
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' }}>Allowed IPs / Domains (Optional)</label>
               <textarea
                 style={{ ...inputStyle, minHeight: 70, resize: 'vertical', fontFamily: 'monospace', fontSize: 13 }}
@@ -406,7 +406,7 @@ const MarketingApiKeys = () => {
               <div style={{ marginTop: 20, padding: 12, background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>Key Configuration Summary</div>
                 <div style={{ fontSize: 12, color: '#0c4a6e' }}>
-                  Source: <strong>{sourceLabel}</strong><br/>
+                  Source: <strong>{sourceLabel}</strong><br />
                   Sub-Source: <strong>{subSourceLabel}</strong>
                 </div>
                 <div style={{ fontSize: 11, color: '#0369a1', marginTop: 6 }}>
@@ -422,7 +422,7 @@ const MarketingApiKeys = () => {
         </div>
       )}
 
-      {/* Edit key (name + IP whitelist — does NOT rotate the secret) */}
+      {/* Edit key (name + IP whitelist - does NOT rotate the secret) */}
       {editing && (
         <div
           onClick={() => !savingEdit && setEditing(null)}

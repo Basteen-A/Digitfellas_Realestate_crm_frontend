@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* INVENTORY UNIT LIST — Premium Design with Theme Support      */
+/* INVENTORY UNIT LIST - Premium Design with Theme Support      */
 /* ============================================================ */
 
 .inv-unit-page {
@@ -518,7 +518,7 @@
 }
 
 /* ============================================================ */
-/* Responsive — tablet & mobile                                  */
+/* Responsive - tablet & mobile                                  */
 /* ============================================================ */
 @media (max-width: 768px) {
   .inv-unit-page__header h1 { font-size: 19px; }

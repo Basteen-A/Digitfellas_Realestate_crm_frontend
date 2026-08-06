@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* Booking Approvals — Super Admin review screen                 */
+/* Booking Approvals - Super Admin review screen                 */
 /* ============================================================ */
 
 .ba-card { overflow-x: auto; }
@@ -16,7 +16,7 @@
 .ba-row:hover { background: var(--bg-table-row-hover); }
 .ba-row.is-open { background: var(--accent-blue-bg, rgba(37,99,235,0.06)); }
 
-/* Clickable booking number — toggles the detail panel (row is not clickable). */
+/* Clickable booking number - toggles the detail panel (row is not clickable). */
 .ba-booking-link {
   border: none; background: none; padding: 0; font: inherit; cursor: pointer;
   font-weight: 700; color: var(--accent-blue, #2563eb); text-decoration: none;

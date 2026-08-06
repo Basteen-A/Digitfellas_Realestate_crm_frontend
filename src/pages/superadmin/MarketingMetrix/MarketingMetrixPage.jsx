@@ -1,21 +1,21 @@
 // ============================================================
 // MARKETING METRIX (Super Admin › Marketing › Metrix)
 // Same shell, filter bar, sidebar catalogue and report atoms as the Reports,
-// Marketing Reports and Collection Report pages — only the report set differs:
-//   1. Cost Metrix — By Source      (spend & volume + cost per lead/qualified/SV/booking)
-//   2. Cost Metrix — By Sub Source  (same, one level down, with a source drill-down)
+// Marketing Reports and Collection Report pages - only the report set differs:
+//   1. Cost Metrix - By Source      (spend & volume + cost per lead/qualified/SV/booking)
+//   2. Cost Metrix - By Sub Source  (same, one level down, with a source drill-down)
 //   3. Cost Efficiency              (ranking, funnel and spend/volume trends)
 //   4. Budget Entry                 (the spend ledger: Budget + Source + Sub Source + Date)
 // One fetch (GET /reports/marketing-metrix) feeds reports 1-3; switching is instant.
 //
 // ── Attribution ─────────────────────────────────────────────────────────────
-// Every lead is credited to the source AND date of its LATEST marketing touch — its own
+// Every lead is credited to the source AND date of its LATEST marketing touch - its own
 // creation, or its newest re-enquiry, whichever is later. So when a dead lead comes back
 // through a new campaign, the new campaign gets the credit in the month it paid for it.
 // The rule is stated on screen (see ATTRIBUTION_NOTE) because it changes what the
 // numbers mean, and nobody should have to guess.
 //
-// A cost-per cell reads "—" when the metric is zero or no budget was recorded: "we
+// A cost-per cell reads "-" when the metric is zero or no budget was recorded: "we
 // don't know what it cost" is not the same as "it was free", so it is never shown as 0.
 // ============================================================
 
@@ -48,27 +48,27 @@ const PERIODS = [
   { key: 'all', label: 'All Time' },
 ];
 
-const ATTRIBUTION_NOTE = 'Each lead counts against the source & date of its latest marketing touch — its creation, or its newest re-enquiry, whichever is later.';
+const ATTRIBUTION_NOTE = 'Each lead counts against the source & date of its latest marketing touch - its creation, or its newest re-enquiry, whichever is later.';
 
 // ── What the outcome columns actually count ─────────────────────────────────
 // Every column on this page is an ACQUISITION COHORT: "of the leads this period's
-// spend bought, how many went on to X" — X can have happened at any time, before or
+// spend bought, how many went on to X" - X can have happened at any time, before or
 // after the period. That is the only shape that makes a cost-per figure valid, since
 // it divides this period's money by what this period's money bought.
 //
 // It is emphatically NOT "how many site visits happened this period". Marketing ›
 // Reports answers that question, anchored on the visit date, and the two numbers
-// routinely differ by a lot — on July 2026 this page read 74 site visits for Social
+// routinely differ by a lot - on July 2026 this page read 74 site visits for Social
 // Media where the visit-anchored report read 94, with only 42 leads common to both.
 // Users kept reading one number and quoting the other, so both the rule and the
 // pointer to the other report are stated on screen.
-const COHORT_NOTE = 'Leads, Qualified, Site Visits and Bookings are all counted for the leads ACQUIRED in this period — the visit or booking itself may have happened before or after it. That is what makes the cost-per figures valid.';
+const COHORT_NOTE = 'Leads, Qualified, Site Visits and Bookings are all counted for the leads ACQUIRED in this period - the visit or booking itself may have happened before or after it. That is what makes the cost-per figures valid.';
 
-const SV_TIP = 'Leads acquired in this period (new or re-enquiry) that have completed a site visit — whenever that visit happened. Counted once per lead, so a revisit never adds a second. This is NOT "visits that happened in this period": for that, use Marketing › Reports › Source-wise Site Visits, which is anchored on the visit date and will normally show a different, usually higher, number.';
+const SV_TIP = 'Leads acquired in this period (new or re-enquiry) that have completed a site visit - whenever that visit happened. Counted once per lead, so a revisit never adds a second. This is NOT "visits that happened in this period": for that, use Marketing › Reports › Source-wise Site Visits, which is anchored on the visit date and will normally show a different, usually higher, number.';
 
 const COST_SV_TIP = 'Budget for this period ÷ the site visits above. Because both sides belong to the same acquisition cohort, this is what a site visit from this period’s spend actually cost.';
 
-const QUALIFIED_TIP = 'Leads acquired in this period that ever reached a working stage (Follow Up / SV Scheduled / SV Done) — a lead that later went RNR or Lost still counts, because the spend did buy a qualified lead.';
+const QUALIFIED_TIP = 'Leads acquired in this period that ever reached a working stage (Follow Up / SV Scheduled / SV Done) - a lead that later went RNR or Lost still counts, because the spend did buy a qualified lead.';
 
 const BOOKINGS_TIP = 'BOOKINGS made by leads acquired in this period, whenever the booking was made. A lead can carry more than one booking, so this can exceed the number of leads that booked.';
 
@@ -81,8 +81,8 @@ const sumBy = (rows, key) => (rows || []).reduce((a, r) => a + num(r[key]), 0);
 
 // Exact rupees everywhere a figure is read, matching the Collection Report.
 const money = (v) => formatCurrencyExact(num(v));
-// A cost-per value is null when it could not be computed — show that honestly.
-const cost = (v) => (v == null ? '—' : formatCurrencyExact(num(v)));
+// A cost-per value is null when it could not be computed - show that honestly.
+const cost = (v) => (v == null ? '-' : formatCurrencyExact(num(v)));
 // Chart Y axes are a scale, not a figure: full rupees don't fit, so ticks shorten.
 // Tooltips keep the exact number.
 const axisMoney = (v) => {
@@ -108,14 +108,14 @@ const mixOf = (rows, nameKey, valueKey, top = 7) => {
   return rest > 0 ? [...head, { name: 'Others', value: rest, color: COLORS.muted }] : head;
 };
 
-// The volume and funnel tables rank on SITE VISITS, highest first — a site visit is the
+// The volume and funnel tables rank on SITE VISITS, highest first - a site visit is the
 // outcome this report is read for, so the rows that produced the most sit at the top.
 // (The cost tables stay ranked on spend; there, budget is the axis being compared.)
 const bySvDesc = (rows) => [...(rows || [])].sort(
   (a, b) => num(b.sv_leads) - num(a.sv_leads) || num(b.budget) - num(a.budget) || num(b.leads) - num(a.leads)
 );
 
-// Cheapest source on a given cost metric, among sources with real volume — a source
+// Cheapest source on a given cost metric, among sources with real volume - a source
 // that produced two leads for ₹100 is not the "best performer".
 const cheapest = (rows, costKey, volumeKey, minVolume = 5) => [...rows]
   .filter((r) => r[costKey] != null && num(r[volumeKey]) >= minVolume)
@@ -125,13 +125,13 @@ const cheapest = (rows, costKey, volumeKey, minVolume = 5) => [...rows]
 const MM = {
   source: {
     icon: MegaphoneIcon,
-    title: 'Cost Metrix — By Source',
+    title: 'Cost Metrix - By Source',
     sub: 'Budget against leads, qualified leads, site visits & bookings',
     rs: 'Cost by source',
   },
   subsource: {
     icon: ChartPieIcon,
-    title: 'Cost Metrix — By Sub Source',
+    title: 'Cost Metrix - By Sub Source',
     sub: 'The same cost metrics one level down, per sub-source',
     rs: 'Cost by sub-source',
   },
@@ -225,7 +225,7 @@ const CostRow = ({ r, nameCell, avgCpl }) => {
       {nameCell}
       <Td bold>{money(r.budget)}</Td>
       <Td bold>{cost(r.cost_per_lead)}</Td>
-      <Td>{idx == null ? '—' : <Pill tone={costTone(idx)}>{idx}×</Pill>}</Td>
+      <Td>{idx == null ? '-' : <Pill tone={costTone(idx)}>{idx}×</Pill>}</Td>
       <Td color={COLORS.qualified}>{cost(r.cost_per_qualified)}</Td>
       <Td color={COLORS.siteVisit}>{cost(r.cost_per_sv)}</Td>
       <Td color={COLORS.booking}>{cost(r.cost_per_booking)}</Td>
@@ -234,7 +234,7 @@ const CostRow = ({ r, nameCell, avgCpl }) => {
   );
 };
 
-// Column headers carry their own definition — see the COHORT_NOTE comment above for
+// Column headers carry their own definition - see the COHORT_NOTE comment above for
 // why "Site Visits" here is not the same number as "Site Visits" on Marketing Reports.
 const VOLUME_HEAD = [
   'Budget', 'Share', 'Leads',
@@ -256,10 +256,10 @@ const volumeTotals = (rows) => [
   cnt(sumBy(rows, 'booked_sqft')),
 ];
 
-// Blended cost on the totals row — the sum of the parts, never an average of averages.
+// Blended cost on the totals row - the sum of the parts, never an average of averages.
 const blendedTotals = (rows) => {
   const b = sumBy(rows, 'budget');
-  const per = (k) => (sumBy(rows, k) > 0 && b > 0 ? cost(b / sumBy(rows, k)) : '—');
+  const per = (k) => (sumBy(rows, k) > 0 && b > 0 ? cost(b / sumBy(rows, k)) : '-');
   return [money(b), per('leads'), '', per('qualified'), per('sv_leads'), per('bookings'), per('booked_sqft')];
 };
 
@@ -274,7 +274,7 @@ const Panel = ({ rkey, d, registerRef }) => {
   const avgCpl = t.costPerLead;
 
   switch (rkey) {
-    // ── 1. Cost Metrix — By Source ──
+    // ── 1. Cost Metrix - By Source ──
     case 'source': {
       const chart = [...bySource]
         .filter((r) => r.cost_per_lead != null)
@@ -295,7 +295,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           </KpiRow>
 
           <div className="reports-charts-grid">
-            <ChartCard title="Cost per Lead by Source" subtitle="Cheapest first — lower is better" chartKey="mm-cpl-bar" registerRef={registerRef}>
+            <ChartCard title="Cost per Lead by Source" subtitle="Cheapest first - lower is better" chartKey="mm-cpl-bar" registerRef={registerRef}>
               <SimpleBar data={chart} xKey="name" bars={[{ key: 'cost_per_lead', name: 'Cost / Lead', color: COLORS.leads }]} valueFormat={money} tickFormat={axisMoney} />
             </ChartCard>
             <ChartCard title="Budget Split" subtitle="Share of total spend" chartKey="mm-budget-mix" registerRef={registerRef}>
@@ -312,7 +312,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             </Table>
           </Card>
 
-          <Card title="Cost Efficiency by Source" sub="vs Avg compares a source's cost per lead to the blended average — under 1× is cheaper than average">
+          <Card title="Cost Efficiency by Source" sub="vs Avg compares a source's cost per lead to the blended average - under 1× is cheaper than average">
             <Table head={['Source', ...COST_HEAD]} colSpan={8} empty={bySource.length === 0}>
               {bySource.map((r) => (
                 <CostRow key={r.source_id} r={r} avgCpl={avgCpl} nameCell={<Td bold>{r.source_name}</Td>} />
@@ -324,7 +324,7 @@ const Panel = ({ rkey, d, registerRef }) => {
       );
     }
 
-    // ── 2. Cost Metrix — By Sub Source ──
+    // ── 2. Cost Metrix - By Sub Source ──
     case 'subsource': {
       const ranked = [...bySubSource].sort((a, b) => num(b.budget) - num(a.budget) || num(b.leads) - num(a.leads));
       const best = cheapest(ranked, 'cost_per_lead', 'leads');
@@ -359,10 +359,10 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="Cost per Qualified Lead" value={cost(t.costPerQualified)} sub={`${cnt(t.qualified)} qualified`} color={COLORS.qualified} icon={CheckBadgeIcon} valueSize={19} />
             <KpiCard label="Cost per Site Visit" value={cost(t.costPerSiteVisit)} sub={`${cnt(t.siteVisits)} leads bought here have visited`} color={COLORS.siteVisit} icon={MapPinIcon} valueSize={19} />
             <KpiCard label="Cost per Booking" value={cost(t.costPerBooking)} sub={`${cnt(t.bookings)} bookings`} color={COLORS.booking} icon={BuildingOffice2Icon} valueSize={19} />
-            <KpiCard label="Cheapest Sub Source" value={best?.sub_source_name || '—'} sub={best ? `${cost(best.cost_per_lead)} per lead · ${best.source_name}` : 'Needs 5+ leads'} color={COLORS.negotiation} icon={TrophyIcon} valueSize={16} />
+            <KpiCard label="Cheapest Sub Source" value={best?.sub_source_name || '-'} sub={best ? `${cost(best.cost_per_lead)} per lead · ${best.source_name}` : 'Needs 5+ leads'} color={COLORS.negotiation} icon={TrophyIcon} valueSize={16} />
           </KpiRow>
 
-          <ChartCard title="Cost per Lead by Sub Source" subtitle="Cheapest first — lower is better" chartKey="mm-sub-cpl" registerRef={registerRef}>
+          <ChartCard title="Cost per Lead by Sub Source" subtitle="Cheapest first - lower is better" chartKey="mm-sub-cpl" registerRef={registerRef}>
             <SimpleBar data={chart} xKey="name" bars={[{ key: 'cost_per_lead', name: 'Cost / Lead', color: COLORS.primary }]} valueFormat={money} tickFormat={axisMoney} />
           </ChartCard>
 
@@ -403,7 +403,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                 const b = sumBy(rows, 'budget');
                 const l = sumBy(rows, 'leads');
                 return [
-                  money(b), cnt(l), (l > 0 && b > 0 ? cost(b / l) : '—'),
+                  money(b), cnt(l), (l > 0 && b > 0 ? cost(b / l) : '-'),
                   cnt(sumBy(rows, 'sv_leads')), cnt(sumBy(rows, 'bookings')),
                 ];
               }}
@@ -434,9 +434,9 @@ const Panel = ({ rkey, d, registerRef }) => {
         <>
           <KpiRow>
             <KpiCard label="Blended Cost / Lead" value={cost(t.costPerLead)} sub={`${money(t.budget)} ÷ ${cnt(t.leads)} leads`} color={COLORS.leads} icon={UsersIcon} valueSize={19} />
-            <KpiCard label="Cheapest Source" value={bestLead?.source_name || '—'} sub={bestLead ? `${cost(bestLead.cost_per_lead)} per lead` : 'Needs 5+ leads'} color={COLORS.qualified} icon={TrophyIcon} valueSize={16} />
-            <KpiCard label="Most Expensive" value={worst?.source_name || '—'} sub={worst ? `${cost(worst.cost_per_lead)} per lead` : 'Needs 5+ leads'} color={COLORS.cancelled} icon={ArrowTrendingUpIcon} valueSize={16} />
-            <KpiCard label="Best Cost / Booking" value={bestBooking?.source_name || '—'} sub={bestBooking ? `${cost(bestBooking.cost_per_booking)} per booking` : 'No bookings yet'} color={COLORS.booking} icon={BuildingOffice2Icon} valueSize={16} />
+            <KpiCard label="Cheapest Source" value={bestLead?.source_name || '-'} sub={bestLead ? `${cost(bestLead.cost_per_lead)} per lead` : 'Needs 5+ leads'} color={COLORS.qualified} icon={TrophyIcon} valueSize={16} />
+            <KpiCard label="Most Expensive" value={worst?.source_name || '-'} sub={worst ? `${cost(worst.cost_per_lead)} per lead` : 'Needs 5+ leads'} color={COLORS.cancelled} icon={ArrowTrendingUpIcon} valueSize={16} />
+            <KpiCard label="Best Cost / Booking" value={bestBooking?.source_name || '-'} sub={bestBooking ? `${cost(bestBooking.cost_per_booking)} per booking` : 'No bookings yet'} color={COLORS.booking} icon={BuildingOffice2Icon} valueSize={16} />
             <KpiCard label="Lead → Booking" value={`${pct1(num(t.bookings), num(t.leads))}%`} sub={`${cnt(t.bookings)} of ${cnt(t.leads)} leads`} color={COLORS.negotiation} icon={ScaleIcon} />
             <KpiCard label="Re-attributed Leads" value={cnt(d?.meta?.reattributedLeads)} sub="Credited to a re-enquiry, not their creation" color={COLORS.muted} icon={ArrowPathIcon} />
           </KpiRow>
@@ -473,7 +473,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             />
           </ChartCard>
 
-          <Card title="Efficiency Ranking" sub="Sources ordered by cost per lead — cheapest first">
+          <Card title="Efficiency Ranking" sub="Sources ordered by cost per lead - cheapest first">
             <Table head={['#', 'Source', 'Budget', 'Cost / Lead', 'Cost / Qualified', 'Cost / Site Visit', 'Cost / Booking', 'vs Avg']} colSpan={8} empty={ranked.length === 0}>
               {ranked.map((r, i) => {
                 const idx = costIndex(r.cost_per_lead, avgCpl);
@@ -486,14 +486,14 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <Td color={COLORS.qualified}>{cost(r.cost_per_qualified)}</Td>
                     <Td color={COLORS.siteVisit}>{cost(r.cost_per_sv)}</Td>
                     <Td color={COLORS.booking}>{cost(r.cost_per_booking)}</Td>
-                    <Td>{idx == null ? '—' : <Pill tone={costTone(idx)}>{idx}×</Pill>}</Td>
+                    <Td>{idx == null ? '-' : <Pill tone={costTone(idx)}>{idx}×</Pill>}</Td>
                   </Tr>
                 );
               })}
             </Table>
           </Card>
 
-          <Card title="Conversion Funnel by Source" sub="How far the leads each source bought actually travelled — ranked by site visits">
+          <Card title="Conversion Funnel by Source" sub="How far the leads each source bought actually travelled - ranked by site visits">
             <Table
               head={[
                 'Source', 'Leads',
@@ -516,7 +516,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <Td><Pill tone={ratioTone(q)}>{q}%</Pill></Td>
                     <Td color={COLORS.siteVisit}>{cnt(r.sv_leads)}</Td>
                     {/* SV ratios sit far below 100% in practice, so the tone scale is
-                        stretched (×3) — the same treatment the other report pages use. */}
+                        stretched (×3) - the same treatment the other report pages use. */}
                     <Td><Pill tone={ratioTone(sv * 3)}>{sv}%</Pill></Td>
                     <Td color={COLORS.booking}>{cnt(r.bookings)}</Td>
                     <Td><Pill tone={ratioTone(bk * 10)}>{pct1(num(r.bookings), num(r.leads))}%</Pill></Td>
@@ -538,7 +538,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           </Card>
 
           {(noSpend.length > 0 || noReturn.length > 0) && (
-            <Card title="Data Gaps" sub="Rows where spend and volume do not line up — usually a missing budget line">
+            <Card title="Data Gaps" sub="Rows where spend and volume do not line up - usually a missing budget line">
               <Table head={['Source', 'Issue', 'Budget', 'Leads']} colSpan={4} empty={false}>
                 {noReturn.map((r) => (
                   <Tr key={`nr-${r.source_id}`}>
@@ -551,8 +551,8 @@ const Panel = ({ rkey, d, registerRef }) => {
                 {noSpend.map((r) => (
                   <Tr key={`ns-${r.source_id}`}>
                     <Td bold>{r.source_name}</Td>
-                    <Td color={COLORS.negotiation}>Leads attributed, no budget recorded — cost cannot be computed</Td>
-                    <Td>—</Td>
+                    <Td color={COLORS.negotiation}>Leads attributed, no budget recorded - cost cannot be computed</Td>
+                    <Td>-</Td>
                     <Td>{cnt(r.leads)}</Td>
                   </Tr>
                 ))}
@@ -641,9 +641,9 @@ const MarketingMetrixPage = () => {
         <div className="page-header-left">
           <h1>
             <CurrencyRupeeIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />
-            Marketing Metrix
+            Campaigns
           </h1>
-          <p className="hidden sm:block">Marketing spend against leads, qualified leads, site visits & bookings — and what each one costs</p>
+          <p className="hidden sm:block">Marketing spend against leads, qualified leads, site visits & bookings - and what each one costs</p>
         </div>
       </div>
 
@@ -660,11 +660,11 @@ const MarketingMetrixPage = () => {
         {COHORT_NOTE}
         {' '}
         So <em>Site Visits</em> here means “leads bought this period that have visited”, not “visits that
-        happened this period” — for that, open <strong>Marketing › Reports › Source-wise Site Visits</strong>,
+        happened this period” - for that, open <strong>Marketing › Reports › Source-wise Site Visits</strong>,
         which anchors on the visit date. The two are both correct and will normally differ.
       </NoteBar>
 
-      {/* Filter bar — identical structure to the Reports / Marketing Reports bar */}
+      {/* Filter bar - identical structure to the Reports / Marketing Reports bar */}
       <div className="reports-filter-bar reports-filter-bar--card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wide mr-1" style={{ color: 'var(--text-muted)' }}>Period</span>
@@ -775,7 +775,7 @@ const MarketingMetrixPage = () => {
           </div>
 
           <MonoContext.Provider value={true}>
-            {/* Budget Entry is a ledger, not a report — it loads its own data and is
+            {/* Budget Entry is a ledger, not a report - it loads its own data and is
                 never blocked by the metrix fetch. Saving here reloads the reports. */}
             {isBudgets ? (
               <BudgetEntry

@@ -52,7 +52,7 @@ import {
   HomeModernIcon,
   ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
-// Solid — this one is a filled timeline marker, not an outline glyph.
+// Solid - this one is a filled timeline marker, not an outline glyph.
 import { StarIcon } from '@heroicons/react/24/solid';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
@@ -61,7 +61,7 @@ import { followUpMaxDate, followUpLimitError } from '../../../utils/followUpLimi
 import './LeadDetailsPage.css';
 
 const QUICK_REMARKS = [
-  'Interested', 'Shared Details', 'Callback Later', 'Busy', 
+  'Interested', 'Shared Details', 'Callback Later', 'Busy',
   'Not Reachable', 'RNR', 'Wrong Number', 'Follow-up Scheduled'
 ];
 
@@ -132,7 +132,7 @@ const isFollowUpMissedByDate = (value, referenceDate = new Date()) => {
   return followUpDate.getTime() < referenceStart.getTime();
 };
 
-// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+// Follow-ups are date-only - shortcuts resolve to the chosen calendar day.
 const toDateOnlyValue = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -403,8 +403,8 @@ const LeadDetailsPage = () => {
   const [motivationOptions, setMotivationOptions] = useState([]);
   const [workflowConfig, setWorkflowConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('followups');
-  const [enquiries, setEnquiries] = useState(null); // { firstEnquiry, reEnquiries } — lazy-loaded on tab open
-  const [callLogs, setCallLogs] = useState(null); // Smartflo calls for this lead — lazy-loaded on tab open
+  const [enquiries, setEnquiries] = useState(null); // { firstEnquiry, reEnquiries } - lazy-loaded on tab open
+  const [callLogs, setCallLogs] = useState(null); // Smartflo calls for this lead - lazy-loaded on tab open
   const [siteVisits, setSiteVisits] = useState([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [assignedUser, setAssignedUser] = useState(null);
@@ -643,7 +643,7 @@ const LeadDetailsPage = () => {
   const isMissedFirstBlocked = useMemo(() => {
     if (viaSearch) return false;
     // New/Hot-flagged leads (fresh API/call lead or re-enquiry awaiting its first
-    // update) must be actionable immediately — the missed-follow-ups-first gate
+    // update) must be actionable immediately - the missed-follow-ups-first gate
     // never blocks them. The flag clears on the first update, restoring the gate.
     if (lead?.newHotSince) return false;
     if (!MISSED_FOLLOW_UP_BLOCK_ROLES.includes(roleCode)) return false;
@@ -948,7 +948,7 @@ const LeadDetailsPage = () => {
       payload.motivationType = actionForm.motivationType || undefined;
       payload.time_spent = actionForm.timeSpent ? Number(actionForm.timeSpent) : undefined;
 
-      // SM "Record Site Visit" — full capture matching the Add Site Visit modal.
+      // SM "Record Site Visit" - full capture matching the Add Site Visit modal.
       // Record the Sales Head as negotiator rather than reassigning the lead.
       if (selectedAction.code === 'SM_SITE_VISIT') {
         payload.salesHeadUserId = actionForm.assignToUserId || undefined;
@@ -1002,7 +1002,7 @@ const LeadDetailsPage = () => {
       ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
       // Only actions that actually ask for a follow-up date get the prefill. The
       // field is hidden for the rest, so a prefilled value would be invisible and
-      // unclearable — that is what blocked a second booking on an already-booked
+      // unclearable - that is what blocked a second booking on an already-booked
       // lead, whose stale follow-up date is in the past.
       ...(prefill?.nextFollowUpAt && action.needsFollowUp ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
       ...(prefill?.callResult ? { callResult: prefill.callResult } : {}),
@@ -1088,7 +1088,7 @@ const LeadDetailsPage = () => {
     if (!isTerminalAction && !isRnrAction && roleCode === 'TC') {
       const hasLocationForSubmit = leadHasLocation || Boolean(quickMissingLocationId);
       const hasProjectForSubmit = leadHasProject || quickMissingProjectIds.length > 0;
-      
+
       if (!hasLocationForSubmit) {
         toast.error('Please select a location for this lead before performing this action.');
         return;
@@ -1144,7 +1144,7 @@ const LeadDetailsPage = () => {
       time_spent: quickActionForm.timeSpent ? Number(quickActionForm.timeSpent) : undefined,
     };
 
-    // SM "Record Site Visit" — full capture matching the Add Site Visit modal.
+    // SM "Record Site Visit" - full capture matching the Add Site Visit modal.
     // Record the Sales Head as negotiator rather than reassigning the lead.
     if (quickSelectedAction.code === 'SM_SITE_VISIT') {
       payload.salesHeadUserId = quickActionForm.assignToUserId || undefined;
@@ -1465,16 +1465,16 @@ const LeadDetailsPage = () => {
                           autoFocus
                           onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
                         />
-                        <button 
-                          className="crm-btn crm-btn-sm crm-btn-success" 
+                        <button
+                          className="crm-btn crm-btn-sm crm-btn-success"
                           onClick={handleSaveName}
                           disabled={savingName}
                           style={{ padding: '4px 8px', fontSize: '11px' }}
                         >
                           Save
                         </button>
-                        <button 
-                          className="crm-btn crm-btn-sm crm-btn-secondary" 
+                        <button
+                          className="crm-btn crm-btn-sm crm-btn-secondary"
                           onClick={() => setEditingName(false)}
                           disabled={savingName}
                           style={{ padding: '4px 8px', fontSize: '11px' }}
@@ -1486,7 +1486,7 @@ const LeadDetailsPage = () => {
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span>{lead.fullName}</span>
                         {!isSmHandoffReadOnly && (
-                          <button 
+                          <button
                             onClick={() => { setEditNameValue(lead.fullName); setEditingName(true); }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '11px', padding: 0 }}
                           >
@@ -1528,99 +1528,99 @@ const LeadDetailsPage = () => {
           </section>
 
           {roleCode !== 'TC' && (
-          <>
-          <section className="lead-details-card">
-            <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'interest' ? '' : 'interest'))}>
-              <span className="lead-details-card-title">Requirements & Interest</span>
-              <span className="lead-accordion-icon">{accordionOpen === 'interest' ? '−' : '+'}</span>
-            </button>
-            {accordionOpen === 'interest' && (
-              <div className="lead-details-info-grid">
-                <div className="lead-details-info-item">
-                  <span className="lead-details-label">Project(s)</span>
-                  <div className="lead-details-tags">
-                    {getProjectNames.length > 0
-                      ? getProjectNames.map((name, index) => <span key={index} className="lead-details-tag lead-details-tag--project">{name}</span>)
-                      : <span className="lead-details-value">-</span>}
-                  </div>
-                </div>
-                <div className="lead-details-info-item">
-                  <span className="lead-details-label">Location(s)</span>
-                  <div className="lead-details-tags">
-                    {getLocationNames.length > 0
-                      ? getLocationNames.map((name, index) => <span key={index} className="lead-details-tag lead-details-tag--location">{name}</span>)
-                      : <span className="lead-details-value">-</span>}
-                  </div>
-                </div>
-                <div className="lead-details-info-item">
-                  <span className="lead-details-label">Budget</span>
-                  <span className="lead-details-value">
-                    {(lead.budgetMin != null || lead.budgetMax != null)
-                      ? `${lead.budgetMin != null ? formatCurrency(lead.budgetMin) : '0'} - ${lead.budgetMax != null ? formatCurrency(lead.budgetMax) : 'No limit'}`
-                      : 'Not specified'}
-                  </span>
-                </div>
-                <div className="lead-details-info-item"><span className="lead-details-label">Configuration</span><span className="lead-details-value">{lead.configuration || '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">Purpose</span><span className="lead-details-value">{lead.purpose || '-'}</span></div>
-                {lead.motivationType && (
-                  <div className="lead-details-info-item">
-                    <span className="lead-details-label">Buying Motivation</span>
-                    <span className="lead-details-value">
-                      <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
-                        {lead.motivationType}
-                      </span>
-                    </span>
-                  </div>
-                )}
-                {lead.customerType && (
-                  <div className="lead-details-info-item">
-                    <span className="lead-details-label">Customer Type</span>
-                    <span className="lead-details-value">
-                      <span className="crm-badge" style={{ background: 'var(--accent-green-bg)', color: '#15803d', fontSize: 11 }}>
-                        {lead.customerType}
-                      </span>
-                    </span>
-                  </div>
-                )}
-                {lead.primaryRequirement && (
-                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
-                    <span className="lead-details-label">Primary Requirement</span>
-                    <span className="lead-details-value">{lead.primaryRequirement}</span>
-                  </div>
-                )}
-                {lead.secondaryRequirement && (
-                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
-                    <span className="lead-details-label">Secondary / Site Remarks</span>
-                    <span className="lead-details-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{lead.secondaryRequirement}</span>
-                  </div>
-                )}
-                {lead.timeSpent != null && (
-                  <div className="lead-details-info-item">
-                    <span className="lead-details-label">Time Spent (mins)</span>
-                    <span className="lead-details-value">{lead.timeSpent}</span>
-                  </div>
-                )}
-                {latestLeadVisitDetails && (
-                  <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
-                    <span className="lead-details-label">Latest Site Visit Details</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 8 }}>
-                      {VISIT_DETAIL_KEYS.map((key) => (
-                        <div key={key}>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>
-                            {VISIT_DETAIL_LABELS[key]}
-                          </div>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>
-                            {displayVisitDetailValue(key, latestLeadVisitDetails[key])}
-                          </div>
-                        </div>
-                      ))}
+            <>
+              <section className="lead-details-card">
+                <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'interest' ? '' : 'interest'))}>
+                  <span className="lead-details-card-title">Requirements & Interest</span>
+                  <span className="lead-accordion-icon">{accordionOpen === 'interest' ? '−' : '+'}</span>
+                </button>
+                {accordionOpen === 'interest' && (
+                  <div className="lead-details-info-grid">
+                    <div className="lead-details-info-item">
+                      <span className="lead-details-label">Project(s)</span>
+                      <div className="lead-details-tags">
+                        {getProjectNames.length > 0
+                          ? getProjectNames.map((name, index) => <span key={index} className="lead-details-tag lead-details-tag--project">{name}</span>)
+                          : <span className="lead-details-value">-</span>}
+                      </div>
                     </div>
+                    <div className="lead-details-info-item">
+                      <span className="lead-details-label">Location(s)</span>
+                      <div className="lead-details-tags">
+                        {getLocationNames.length > 0
+                          ? getLocationNames.map((name, index) => <span key={index} className="lead-details-tag lead-details-tag--location">{name}</span>)
+                          : <span className="lead-details-value">-</span>}
+                      </div>
+                    </div>
+                    <div className="lead-details-info-item">
+                      <span className="lead-details-label">Budget</span>
+                      <span className="lead-details-value">
+                        {(lead.budgetMin != null || lead.budgetMax != null)
+                          ? `${lead.budgetMin != null ? formatCurrency(lead.budgetMin) : '0'} - ${lead.budgetMax != null ? formatCurrency(lead.budgetMax) : 'No limit'}`
+                          : 'Not specified'}
+                      </span>
+                    </div>
+                    <div className="lead-details-info-item"><span className="lead-details-label">Configuration</span><span className="lead-details-value">{lead.configuration || '-'}</span></div>
+                    <div className="lead-details-info-item"><span className="lead-details-label">Purpose</span><span className="lead-details-value">{lead.purpose || '-'}</span></div>
+                    {lead.motivationType && (
+                      <div className="lead-details-info-item">
+                        <span className="lead-details-label">Buying Motivation</span>
+                        <span className="lead-details-value">
+                          <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                            {lead.motivationType}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                    {lead.customerType && (
+                      <div className="lead-details-info-item">
+                        <span className="lead-details-label">Customer Type</span>
+                        <span className="lead-details-value">
+                          <span className="crm-badge" style={{ background: 'var(--accent-green-bg)', color: '#15803d', fontSize: 11 }}>
+                            {lead.customerType}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                    {lead.primaryRequirement && (
+                      <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                        <span className="lead-details-label">Primary Requirement</span>
+                        <span className="lead-details-value">{lead.primaryRequirement}</span>
+                      </div>
+                    )}
+                    {lead.secondaryRequirement && (
+                      <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                        <span className="lead-details-label">Secondary / Site Remarks</span>
+                        <span className="lead-details-value" style={{ fontSize: 13, lineHeight: 1.4 }}>{lead.secondaryRequirement}</span>
+                      </div>
+                    )}
+                    {lead.timeSpent != null && (
+                      <div className="lead-details-info-item">
+                        <span className="lead-details-label">Time Spent (mins)</span>
+                        <span className="lead-details-value">{lead.timeSpent}</span>
+                      </div>
+                    )}
+                    {latestLeadVisitDetails && (
+                      <div className="lead-details-info-item" style={{ gridColumn: 'span 2' }}>
+                        <span className="lead-details-label">Latest Site Visit Details</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 8 }}>
+                          {VISIT_DETAIL_KEYS.map((key) => (
+                            <div key={key}>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>
+                                {VISIT_DETAIL_LABELS[key]}
+                              </div>
+                              <div style={{ fontSize: 12, fontWeight: 600 }}>
+                                {displayVisitDetailValue(key, latestLeadVisitDetails[key])}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
-          </section>
-          </>
+              </section>
+            </>
           )}
 
           <section className="lead-details-card">
@@ -1646,31 +1646,31 @@ const LeadDetailsPage = () => {
           </section>
 
           {roleCode !== 'TC' && (
-          <section className="lead-details-card">
-            <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'campaign' ? '' : 'campaign'))}>
-              <span className="lead-details-card-title">Campaign & Audit</span>
-              <span className="lead-accordion-icon">{accordionOpen === 'campaign' ? '−' : '+'}</span>
-            </button>
-            {accordionOpen === 'campaign' && (
-              <div className="lead-details-info-grid">
-                <div className="lead-details-info-item"><span className="lead-details-label">Campaign</span><span className="lead-details-value">{lead.campaignName || '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">UTM Source</span><span className="lead-details-value">{lead.utmSource || '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">UTM Medium</span><span className="lead-details-value">{lead.utmMedium || '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">UTM Campaign</span><span className="lead-details-value">{lead.utmCampaign || '-'}</span></div>
-                {(lead.customFields?.telephony_did_number || lead.customFields?.telephony_dialled_number) && (
-                  <div className="lead-details-info-item"><span className="lead-details-label">Ad Number Dialled</span><span className="lead-details-value">{lead.customFields?.telephony_did_number || lead.customFields?.telephony_dialled_number}</span></div>
-                )}
-                {lead.customFields?.telephony_call_id && (
-                  <div className="lead-details-info-item"><span className="lead-details-label">First Call ID</span><span className="lead-details-value">{lead.customFields.telephony_call_id}</span></div>
-                )}
-                {lead.customFields?.marketing_external_ref && (
-                  <div className="lead-details-info-item"><span className="lead-details-label">External Ref</span><span className="lead-details-value">{lead.customFields.marketing_external_ref}</span></div>
-                )}
-                <div className="lead-details-info-item"><span className="lead-details-label">Created At</span><span className="lead-details-value">{lead.createdAt ? formatDateTime(lead.createdAt) : '-'}</span></div>
-                <div className="lead-details-info-item"><span className="lead-details-label">Updated At</span><span className="lead-details-value">{lead.updatedAt ? formatDateTime(lead.updatedAt) : '-'}</span></div>
-              </div>
-            )}
-          </section>
+            <section className="lead-details-card">
+              <button type="button" className="lead-accordion-head" onClick={() => setAccordionOpen((prev) => (prev === 'campaign' ? '' : 'campaign'))}>
+                <span className="lead-details-card-title">Campaign & Audit</span>
+                <span className="lead-accordion-icon">{accordionOpen === 'campaign' ? '−' : '+'}</span>
+              </button>
+              {accordionOpen === 'campaign' && (
+                <div className="lead-details-info-grid">
+                  <div className="lead-details-info-item"><span className="lead-details-label">Campaign</span><span className="lead-details-value">{lead.campaignName || '-'}</span></div>
+                  <div className="lead-details-info-item"><span className="lead-details-label">UTM Source</span><span className="lead-details-value">{lead.utmSource || '-'}</span></div>
+                  <div className="lead-details-info-item"><span className="lead-details-label">UTM Medium</span><span className="lead-details-value">{lead.utmMedium || '-'}</span></div>
+                  <div className="lead-details-info-item"><span className="lead-details-label">UTM Campaign</span><span className="lead-details-value">{lead.utmCampaign || '-'}</span></div>
+                  {(lead.customFields?.telephony_did_number || lead.customFields?.telephony_dialled_number) && (
+                    <div className="lead-details-info-item"><span className="lead-details-label">Ad Number Dialled</span><span className="lead-details-value">{lead.customFields?.telephony_did_number || lead.customFields?.telephony_dialled_number}</span></div>
+                  )}
+                  {lead.customFields?.telephony_call_id && (
+                    <div className="lead-details-info-item"><span className="lead-details-label">First Call ID</span><span className="lead-details-value">{lead.customFields.telephony_call_id}</span></div>
+                  )}
+                  {lead.customFields?.marketing_external_ref && (
+                    <div className="lead-details-info-item"><span className="lead-details-label">External Ref</span><span className="lead-details-value">{lead.customFields.marketing_external_ref}</span></div>
+                  )}
+                  <div className="lead-details-info-item"><span className="lead-details-label">Created At</span><span className="lead-details-value">{lead.createdAt ? formatDateTime(lead.createdAt) : '-'}</span></div>
+                  <div className="lead-details-info-item"><span className="lead-details-label">Updated At</span><span className="lead-details-value">{lead.updatedAt ? formatDateTime(lead.updatedAt) : '-'}</span></div>
+                </div>
+              )}
+            </section>
           )}
         </div>
 
@@ -1962,28 +1962,28 @@ const LeadDetailsPage = () => {
                           <div className="lead-actions-label" style={{ marginBottom: 8 }}>Status Remarks</div>
                           <div className="qa-remarks-wrap">
                             {(actionStatusRemarks.length > 0 ? actionStatusRemarks : QUICK_REMARKS.map((remarkText) => ({ remark_text: remarkText }))).map((remark) => {
-                                const remarkText = remark.remark_text || remark.text || remark.label || '';
-                                if (!remarkText) return null;
-                                return (
-                                  <button
-                                    key={remark.id || remarkText}
-                                    type="button"
-                                    className={`qa-remark-chip ${actionForm.statusRemarkText === remarkText ? 'active' : ''}`}
-                                    onClick={() => {
-                                      setActionForm((p) => ({
-                                        ...p,
-                                        statusRemarkText: remarkText,
-                                        note: remarkText,
-                                        callResult: remark.has_ans_non_ans ? (remark.ans_non_ans_default || actionRemarkAnsNonAns || 'Answered') : p.callResult,
-                                      }));
-                                      if (remark.has_ans_non_ans) {
-                                        setActionRemarkAnsNonAns(remark.ans_non_ans_default || actionRemarkAnsNonAns || 'Answered');
-                                      }
-                                    }}
-                                  >
-                                    + {remarkText}
-                                  </button>
-                                );
+                              const remarkText = remark.remark_text || remark.text || remark.label || '';
+                              if (!remarkText) return null;
+                              return (
+                                <button
+                                  key={remark.id || remarkText}
+                                  type="button"
+                                  className={`qa-remark-chip ${actionForm.statusRemarkText === remarkText ? 'active' : ''}`}
+                                  onClick={() => {
+                                    setActionForm((p) => ({
+                                      ...p,
+                                      statusRemarkText: remarkText,
+                                      note: remarkText,
+                                      callResult: remark.has_ans_non_ans ? (remark.ans_non_ans_default || actionRemarkAnsNonAns || 'Answered') : p.callResult,
+                                    }));
+                                    if (remark.has_ans_non_ans) {
+                                      setActionRemarkAnsNonAns(remark.ans_non_ans_default || actionRemarkAnsNonAns || 'Answered');
+                                    }
+                                  }}
+                                >
+                                  + {remarkText}
+                                </button>
+                              );
                             })}
                           </div>
                         </div>
@@ -2044,9 +2044,9 @@ const LeadDetailsPage = () => {
                             className="lead-details-action-btn lead-details-action-btn--primary"
                             onClick={handleRunAction}
                             disabled={
-                              actionSaving 
+                              actionSaving
                               || isMissedFirstBlocked
-                              || isSmHandoffReadOnly 
+                              || isSmHandoffReadOnly
                               || (selectedAction?.needsFollowUp && !actionForm.nextFollowUpAt)
                             }
                             title={isMissedFirstBlocked ? 'Complete missed follow-ups first to enable actions' : ''}
@@ -2176,7 +2176,7 @@ const LeadDetailsPage = () => {
                             <span className="lead-details-timeline-date">{formatDateTime(call.start_stamp || call.received_at)}</span>
                           </div>
                           <p className="lead-details-timeline-desc">
-                            {[durTxt && `Duration ${durTxt}`, call.customer_number].filter(Boolean).join(' · ') || '—'}
+                            {[durTxt && `Duration ${durTxt}`, call.customer_number].filter(Boolean).join(' · ') || '-'}
                           </p>
                           <span className="lead-details-timeline-by">By {agentName}</span>
                           <div style={{ marginTop: 6 }}>
@@ -2215,7 +2215,7 @@ const LeadDetailsPage = () => {
                             <span className="lead-details-timeline-date">{formatDateTime(enq.enquiredAt)}</span>
                           </div>
                           <p className="lead-details-timeline-desc">
-                            Source: {enq.source || '—'}
+                            Source: {enq.source || '-'}
                             {enq.subSource ? ` › ${enq.subSource}` : ''}
                             {enq.campaignName ? ` · Campaign: ${enq.campaignName}` : ''}
                           </p>
@@ -2234,7 +2234,7 @@ const LeadDetailsPage = () => {
                             <span className="lead-details-timeline-date">{formatDateTime(enquiries.firstEnquiry.enquiredAt)}</span>
                           </div>
                           <p className="lead-details-timeline-desc">
-                            Source: {enquiries.firstEnquiry.source || '—'}
+                            Source: {enquiries.firstEnquiry.source || '-'}
                             {enquiries.firstEnquiry.subSource ? ` › ${enquiries.firstEnquiry.subSource}` : ''}
                             {enquiries.firstEnquiry.campaignName ? ` · Campaign: ${enquiries.firstEnquiry.campaignName}` : ''}
                           </p>
@@ -2272,30 +2272,30 @@ const LeadDetailsPage = () => {
                             || '';
                           const closureReason = evt.metadata?.closureReasonName || evt.metadata?.closure_reason || '';
                           return (
-                          <tr key={evt.id}>
-                            <td>
-                              <div className="status-cell">
-                                {(() => {
-                                  const Icon = iconForTimeline(evt.type);
-                                  return Icon ? <Icon style={{ width: 14, height: 14, marginRight: 6, color: 'var(--accent-blue)' }} /> : null;
-                                })()}
-                                <strong>{statusLabel || '—'}</strong>
-                              </div>
-                            </td>
-                            <td>
-                              <div>{remarkText || '—'}</div>
-                              {closureReason && <div className="qa-remark-closure">Reason: {closureReason}</div>}
-                            </td>
-                            <td>{evt.by || 'System'}</td>
-                            <td>
-                              {callStatus ? (
-                                <span className={`call-status-badge ${callStatus.toLowerCase().replace(/\s+/g, '-')}`}>
-                                  {callStatus}
-                                </span>
-                              ) : '-'}
-                            </td>
-                            <td className="text-nowrap">{formatDateTime(evt.at)}</td>
-                          </tr>
+                            <tr key={evt.id}>
+                              <td>
+                                <div className="status-cell">
+                                  {(() => {
+                                    const Icon = iconForTimeline(evt.type);
+                                    return Icon ? <Icon style={{ width: 14, height: 14, marginRight: 6, color: 'var(--accent-blue)' }} /> : null;
+                                  })()}
+                                  <strong>{statusLabel || '-'}</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div>{remarkText || '-'}</div>
+                                {closureReason && <div className="qa-remark-closure">Reason: {closureReason}</div>}
+                              </td>
+                              <td>{evt.by || 'System'}</td>
+                              <td>
+                                {callStatus ? (
+                                  <span className={`call-status-badge ${callStatus.toLowerCase().replace(/\s+/g, '-')}`}>
+                                    {callStatus}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                              <td className="text-nowrap">{formatDateTime(evt.at)}</td>
+                            </tr>
                           );
                         })
                       )}
@@ -2427,7 +2427,7 @@ const LeadDetailsPage = () => {
                     <PhoneIcon style={{ width: 18, height: 18 }} />
                   </button>
                   <SmartfloCallButton leadId={lead.id} />
-                  <button 
+                  <button
                     className="qa-header-icon-btn"
                     title="WhatsApp"
                     onClick={() => window.open(`https://wa.me/${(lead.whatsappNumber || lead.phone || '').replace(/\D/g, '')}`, '_blank')}
@@ -2513,21 +2513,21 @@ const LeadDetailsPage = () => {
                   if (needsLocAndProj) {
                     const filteredLocations = !quickLocationSearch.trim() ? locationOptions :
                       locationOptions.filter(l => (l.location_name || '').toLowerCase().includes(quickLocationSearch.toLowerCase()) || (l.city || '').toLowerCase().includes(quickLocationSearch.toLowerCase()));
-                    
+
                     const filteredProjects = !quickProjectSearch.trim() ? (!quickMissingLocationId
                       ? projectOptions
                       : projectOptions.filter(p => {
-                          const pLocId = p.location_id || p.locationId || '';
-                          return String(pLocId) === String(quickMissingLocationId);
-                        }))
+                        const pLocId = p.location_id || p.locationId || '';
+                        return String(pLocId) === String(quickMissingLocationId);
+                      }))
                       : projectOptions.filter(p => {
-                          const matchesSearch = (p.project_name || '').toLowerCase().includes(quickProjectSearch.toLowerCase()) || (p.project_code || '').toLowerCase().includes(quickProjectSearch.toLowerCase());
-                          const matchesLocation = !quickMissingLocationId || String(p.location_id || p.locationId) === String(quickMissingLocationId);
-                          return matchesSearch && matchesLocation;
-                        });
+                        const matchesSearch = (p.project_name || '').toLowerCase().includes(quickProjectSearch.toLowerCase()) || (p.project_code || '').toLowerCase().includes(quickProjectSearch.toLowerCase());
+                        const matchesLocation = !quickMissingLocationId || String(p.location_id || p.locationId) === String(quickMissingLocationId);
+                        return matchesSearch && matchesLocation;
+                      });
 
                     const selectedLocName = locationOptions.find(l => String(l.id) === String(quickMissingLocationId))?.location_name || '';
-                      const selectedProjNames = quickMissingProjectIds.map(pid => projectOptions.find(p => String(p.id) === String(pid))?.project_name).filter(Boolean);
+                    const selectedProjNames = quickMissingProjectIds.map(pid => projectOptions.find(p => String(p.id) === String(pid))?.project_name).filter(Boolean);
 
                     return (
                       <div className="qa-drawer-ctx-block" style={{ border: '1px solid #fee2e2', background: '#fff1f1', margin: '0 20px 15px', padding: '15px', borderRadius: '12px' }}>
@@ -2679,7 +2679,7 @@ const LeadDetailsPage = () => {
                       >
                         <option value="">
                           {getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'SH' ? 'Select Sales Head...' :
-                           getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
+                            getAssigneeRoleForAction(quickSelectedAction, roleCode) === 'COL' ? 'Select Collection Manager...' : 'Select user...'}
                         </option>
                         {(Array.isArray(quickAssignableUsers) ? quickAssignableUsers : [])
                           .filter((u) => {
@@ -2688,9 +2688,9 @@ const LeadDetailsPage = () => {
                             return !currentAssigneeId || u.id !== currentAssigneeId;
                           })
                           .map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
-                          </option>
+                            <option key={u.id} value={u.id}>
+                              {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()}
+                            </option>
                           ))}
                       </select>
                     </div>
@@ -2973,7 +2973,7 @@ const LeadDetailsPage = () => {
                         <div>
                           <label className="qa-drawer-field-label">Location</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '', bookingPhaseId: '', inventoryUnitId: '' })); setBookingPhases([]); setAvailableUnits([]); }}>
-                            <option value="">— Select Location —</option>
+                            <option value="">- Select Location -</option>
                             {locationOptions.filter(l => l.is_active !== false).map(loc => (
                               <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                             ))}
@@ -2982,7 +2982,7 @@ const LeadDetailsPage = () => {
                         <div>
                           <label className="qa-drawer-field-label">Project</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingProjectId} onChange={(e) => { const projId = e.target.value; setCustomerProfileForm(p => ({ ...p, bookingProjectId: projId, bookingPhaseId: '', inventoryUnitId: '' })); setBookingPhases([]); setAvailableUnits([]); if (projId) { projectPhaseApi.dropdown(projId).then(resp => { const phases = resp.data?.data || resp.data || []; setBookingPhases(phases); if (phases.length === 0) { inventoryUnitApi.getDropdown({ project_id: projId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([])); } }).catch(() => { setBookingPhases([]); inventoryUnitApi.getDropdown({ project_id: projId }).then(r => setAvailableUnits(r.data || [])).catch(() => setAvailableUnits([])); }); } }}>
-                            <option value="">— Select Project —</option>
+                            <option value="">- Select Project -</option>
                             {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
                               <option key={proj.id} value={proj.id}>{proj.project_name}</option>
                             ))}
@@ -2997,7 +2997,7 @@ const LeadDetailsPage = () => {
                           <div>
                             <label className="qa-drawer-field-label">Phase</label>
                             <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingPhaseId} onChange={(e) => { const phaseId = e.target.value; setCustomerProfileForm(p => ({ ...p, bookingPhaseId: phaseId, inventoryUnitId: '' })); setAvailableUnits([]); if (phaseId) { inventoryUnitApi.getDropdown({ project_id: customerProfileForm.bookingProjectId, phase_id: phaseId }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([])); } }}>
-                              <option value="">— Select Phase —</option>
+                              <option value="">- Select Phase -</option>
                               {bookingPhases.map(phase => (
                                 <option key={phase.id} value={phase.id}>
                                   {phase.phase_name}{phase.phase_code ? ` (${phase.phase_code})` : ''}
@@ -3015,10 +3015,10 @@ const LeadDetailsPage = () => {
                           <div>
                             <label className="qa-drawer-field-label">Available Unit</label>
                             <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))}>
-                              <option value="">— Select Unit (Optional) —</option>
+                              <option value="">- Select Unit (Optional) -</option>
                               {availableUnits.filter(u => u.unit_status === 'Available').map(unit => (
                                 <option key={unit.id} value={unit.id}>
-                                  {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
+                                  {unit.unit_number}{unit.configuration ? ` - ${unit.configuration}` : ''}{unit.unit_area ? ` - ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` - ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
                                 </option>
                               ))}
                             </select>
@@ -3047,7 +3047,7 @@ const LeadDetailsPage = () => {
                       <div>
                         <label className="qa-drawer-field-label">Select Payment Plan</label>
                         <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.paymentPlanId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, paymentPlanId: e.target.value }))}>
-                          <option value="">— Select Payment Plan —</option>
+                          <option value="">- Select Payment Plan -</option>
                           {paymentPlans.map(plan => (
                             <option key={plan.id} value={plan.id}>
                               {plan.plan_name}
@@ -3123,7 +3123,7 @@ const LeadDetailsPage = () => {
                         <div>
                           <label className="qa-drawer-field-label">State</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))}>
-                            <option value="">— Select State —</option>
+                            <option value="">- Select State -</option>
                             {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
@@ -3152,7 +3152,7 @@ const LeadDetailsPage = () => {
                             <div>
                               <label className="qa-drawer-field-label">State</label>
                               <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))}>
-                                <option value="">— Select State —</option>
+                                <option value="">- Select State -</option>
                                 {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
                               </select>
                             </div>
@@ -3169,7 +3169,7 @@ const LeadDetailsPage = () => {
                   {/* ── Quick Remarks (secondary fields shown after action-required fields) ── */}
                   {quickStatusRemarks.length > 0 && (
                     <>
-                      <div className="qa-drawer-section">Quick remarks — tap to fill</div>
+                      <div className="qa-drawer-section">Quick remarks - tap to fill</div>
                       <div className="qa-drawer-rchip-row">
                         {quickStatusRemarks.map(remark => (
                           <button
@@ -3286,179 +3286,179 @@ const LeadDetailsPage = () => {
               {/* ── Lead Activity Timeline (tab) ── */}
               {qaActiveTab === 'activity' && (
                 <>
-              <div className="qa-drawer-history">
-                {quickActionActivities.filter((act) => !isWorkflowNoteActivity(act)).length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
-                ) : (
-                  quickActionActivities.filter((act) => !isWorkflowNoteActivity(act)).slice(0, 5).map((act, i) => {
-                    const isStage = act.type === 'STAGE_CHANGE';
-                    const isNote = act.type === 'NOTE_ADDED';
-                    const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
-                    const dotBg = isStage ? '#EEE9FC' : isNote ? '#FEF3C7' : '#E3EEFB';
-                    return (
-                      <div key={act.id} className="qa-drawer-hist-item">
-                        <div className="qa-drawer-hist-col">
-                          <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
-                          {i < Math.min(quickActionActivities.filter((item) => !isWorkflowNoteActivity(item)).length, 5) - 1 && <div className="qa-drawer-hist-line" />}
-                        </div>
-                        <div className="qa-drawer-hist-right">
-                          <div className="qa-drawer-hist-header">
-                            <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
-                            <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
-                          </div>
-                          {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
-                          {act.metadata?.voice?.file_url && (
-                            <AuthedAudio
-                              src={act.metadata.voice.file_url}
-                              controls
-                              preload="none"
-                              style={{ height: 34, width: '100%', maxWidth: 280, marginTop: 6 }}
-                            />
-                          )}
-                          {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
-                            <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                              Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
+                  <div className="qa-drawer-history">
+                    {quickActionActivities.filter((act) => !isWorkflowNoteActivity(act)).length === 0 ? (
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>No history yet.</p>
+                    ) : (
+                      quickActionActivities.filter((act) => !isWorkflowNoteActivity(act)).slice(0, 5).map((act, i) => {
+                        const isStage = act.type === 'STAGE_CHANGE';
+                        const isNote = act.type === 'NOTE_ADDED';
+                        const dotColor = isStage ? '#5B3FA6' : isNote ? '#B45309' : '#1A5FA8';
+                        const dotBg = isStage ? '#EEE9FC' : isNote ? '#FEF3C7' : '#E3EEFB';
+                        return (
+                          <div key={act.id} className="qa-drawer-hist-item">
+                            <div className="qa-drawer-hist-col">
+                              <div className="qa-drawer-hist-dot" style={{ background: dotBg, borderColor: dotColor }} />
+                              {i < Math.min(quickActionActivities.filter((item) => !isWorkflowNoteActivity(item)).length, 5) - 1 && <div className="qa-drawer-hist-line" />}
                             </div>
-                          )}
-                          <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>
+                            <div className="qa-drawer-hist-right">
+                              <div className="qa-drawer-hist-header">
+                                <span className="qa-drawer-hist-status" style={{ color: dotColor }}>{act.title}</span>
+                                <span className="qa-drawer-hist-date">{formatDateTime(act.at || act.created_at)}</span>
+                              </div>
+                              {act.description && <div className="qa-drawer-hist-remark">{formatActivityDescription(act.description, act)}</div>}
+                              {act.metadata?.voice?.file_url && (
+                                <AuthedAudio
+                                  src={act.metadata.voice.file_url}
+                                  controls
+                                  preload="none"
+                                  style={{ height: 34, width: '100%', maxWidth: 280, marginTop: 6 }}
+                                />
+                              )}
+                              {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result) && (
+                                <div className="qa-drawer-hist-remark" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                  Call Status: {(act.metadata?.statusRemarkResponseType || act.metadata?.callResult || act.metadata?.last_call_result || '').replace('-', ' ')}
+                                </div>
+                              )}
+                              <div className="qa-drawer-hist-by">By {act.by || 'System'}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* ── Site Visit History ── */}
+                  {siteVisits.length > 0 && (
+                    <>
+                      <div className="qa-drawer-divider" />
+                      <div className="qa-drawer-section" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 16, height: 16 }} /> Recent site visits</div>
+                      <div className="qa-remark-table-wrap" style={{ padding: '0 20px 10px' }}>
+                        <table className="qa-remark-table">
+                          <thead>
+                            <tr>
+                              <th>Project</th>
+                              <th>Status</th>
+                              <th>Scheduled / Visited</th>
+                              <th>Time Spent (mins)</th>
+                              <th>Attended By</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {siteVisits.slice(0, 6).map((sv) => (
+                              <tr key={sv.id}>
+                                <td>{sv.project?.project_name || 'Unknown'}</td>
+                                <td>
+                                  <span className="qa-remark-call-badge" style={{ background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7', color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', borderColor: sv.status === 'Completed' ? '#8FD3BA' : '#F6D37A' }}>
+                                    {sv.status || '-'}
+                                  </span>
+                                </td>
+                                <td>
+                                  {sv.actual_visit_date ? formatDateTime(sv.actual_visit_date) : formatDateTime(sv.scheduled_date)}
+                                </td>
+                                <td>{sv.time_spent ?? sv.timeSpent ?? '-'}</td>
+                                <td>{sv.attendedBy ? `${sv.attendedBy.first_name || ''} ${sv.attendedBy.last_name || ''}`.trim() : '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {siteVisits.length > 6 && (
+                        <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          +{siteVisits.length - 6} more
                         </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* ══ Remark History Tab ══ */}
+              {qaActiveTab === 'history' && (
+                <div className="qa-remark-history">
+                  {(() => {
+                    const remarkActivities = quickActionActivities.filter((act) => {
+                      const remarkText = getUserRemarkText(act);
+                      const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
+                      const callStatus = act.metadata?.statusRemarkResponseType
+                        || act.metadata?.callResult
+                        || act.metadata?.last_call_result
+                        || '';
+                      const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
+                      const hasMeaningfulRemark = Boolean(remarkText || closureReason);
+                      const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
+                      return hasMeaningfulRemark && hasWorkflowContext;
+                    });
+                    // Same-day updates collapse into a single entry; activities are newest-first
+                    // so the first per local day is that day's latest. Lead Activity keeps all.
+                    const seenDays = new Set();
+                    const dailyRemarkActivities = remarkActivities.filter((act) => {
+                      const d = new Date(act.at || act.created_at);
+                      if (Number.isNaN(d.getTime())) return true;
+                      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                      if (seenDays.has(dayKey)) return false;
+                      seenDays.add(dayKey);
+                      return true;
+                    });
+                    if (dailyRemarkActivities.length === 0) {
+                      return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
+                    }
+                    return (
+                      <div className="qa-remark-table-wrap">
+                        <table className="qa-remark-table">
+                          <thead>
+                            <tr>
+                              <th>Status</th>
+                              <th>Remarks</th>
+                              <th>Call / Response</th>
+                              <th>By</th>
+                              <th>Date & Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dailyRemarkActivities.map((act) => {
+                              const remarkText = getUserRemarkText(act);
+                              const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
+                              const callStatus = act.metadata?.statusRemarkResponseType
+                                || act.metadata?.callResult
+                                || act.metadata?.last_call_result
+                                || '';
+                              const byName = act.by || 'System';
+                              const byRole = act.metadata?.performedByRole || act.metadata?.role || '';
+                              const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
+                              return (
+                                <tr key={act.id}>
+                                  <td>
+                                    <span className="qa-remark-status-badge">{statusLabel || '-'}</span>
+                                  </td>
+                                  <td>
+                                    <div>{remarkText || '-'}</div>
+                                    {closureReason && (
+                                      <div className="qa-remark-closure">Reason: {closureReason}</div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {callStatus ? (
+                                      <span className={`qa-remark-call-badge ${callStatus.toLowerCase().includes('not') ? 'qa-remark-call-badge--missed' : 'qa-remark-call-badge--answered'}`}>
+                                        {callStatus.replace('-', ' ')}
+                                      </span>
+                                    ) : '-'}
+                                  </td>
+                                  <td>
+                                    <div className="qa-remark-by-name">{byName}</div>
+                                    {byRole && <div className="qa-remark-by-role">{byRole}</div>}
+                                  </td>
+                                  <td className="qa-remark-date">{formatDateTime(act.at || act.created_at)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     );
-                  })
-                )}
-              </div>
-
-              {/* ── Site Visit History ── */}
-              {siteVisits.length > 0 && (
-                <>
-                  <div className="qa-drawer-divider" />
-                  <div className="qa-drawer-section" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 16, height: 16 }} /> Recent site visits</div>
-                  <div className="qa-remark-table-wrap" style={{ padding: '0 20px 10px' }}>
-                    <table className="qa-remark-table">
-                      <thead>
-                        <tr>
-                          <th>Project</th>
-                          <th>Status</th>
-                          <th>Scheduled / Visited</th>
-                          <th>Time Spent (mins)</th>
-                          <th>Attended By</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {siteVisits.slice(0, 6).map((sv) => (
-                          <tr key={sv.id}>
-                            <td>{sv.project?.project_name || 'Unknown'}</td>
-                            <td>
-                              <span className="qa-remark-call-badge" style={{ background: sv.status === 'Completed' ? '#E0F4EE' : '#FEF3C7', color: sv.status === 'Completed' ? '#0F7B5C' : '#B45309', borderColor: sv.status === 'Completed' ? '#8FD3BA' : '#F6D37A' }}>
-                                {sv.status || '-'}
-                              </span>
-                            </td>
-                            <td>
-                              {sv.actual_visit_date ? formatDateTime(sv.actual_visit_date) : formatDateTime(sv.scheduled_date)}
-                            </td>
-                            <td>{sv.time_spent ?? sv.timeSpent ?? '-'}</td>
-                            <td>{sv.attendedBy ? `${sv.attendedBy.first_name || ''} ${sv.attendedBy.last_name || ''}`.trim() : '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {siteVisits.length > 6 && (
-                    <div style={{ textAlign: 'center', paddingBottom: 10, fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      +{siteVisits.length - 6} more
-                    </div>
-                  )}
-                  </>
+                  })()}
+                </div>
               )}
-              </>
-              )}
-
-             {/* ══ Remark History Tab ══ */}
-             {qaActiveTab === 'history' && (
-              <div className="qa-remark-history">
-                {(() => {
-                  const remarkActivities = quickActionActivities.filter((act) => {
-                    const remarkText = getUserRemarkText(act);
-                    const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
-                    const callStatus = act.metadata?.statusRemarkResponseType
-                      || act.metadata?.callResult
-                      || act.metadata?.last_call_result
-                      || '';
-                    const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
-                    const hasMeaningfulRemark = Boolean(remarkText || closureReason);
-                    const hasWorkflowContext = Boolean(statusLabel || callStatus || closureReason);
-                    return hasMeaningfulRemark && hasWorkflowContext;
-                  });
-                  // Same-day updates collapse into a single entry; activities are newest-first
-                  // so the first per local day is that day's latest. Lead Activity keeps all.
-                  const seenDays = new Set();
-                  const dailyRemarkActivities = remarkActivities.filter((act) => {
-                    const d = new Date(act.at || act.created_at);
-                    if (Number.isNaN(d.getTime())) return true;
-                    const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-                    if (seenDays.has(dayKey)) return false;
-                    seenDays.add(dayKey);
-                    return true;
-                  });
-                  if (dailyRemarkActivities.length === 0) {
-                    return <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }}>No remarks recorded yet.</p>;
-                  }
-                  return (
-                    <div className="qa-remark-table-wrap">
-                      <table className="qa-remark-table">
-                        <thead>
-                          <tr>
-                            <th>Status</th>
-                            <th>Remarks</th>
-                            <th>Call / Response</th>
-                            <th>By</th>
-                            <th>Date & Time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dailyRemarkActivities.map((act) => {
-                            const remarkText = getUserRemarkText(act);
-                              const statusLabel = getRemarkHistoryStatusLabel(act, workflowConfig);
-                            const callStatus = act.metadata?.statusRemarkResponseType
-                              || act.metadata?.callResult
-                              || act.metadata?.last_call_result
-                              || '';
-                            const byName = act.by || 'System';
-                            const byRole = act.metadata?.performedByRole || act.metadata?.role || '';
-                            const closureReason = act.metadata?.closureReasonName || act.metadata?.closure_reason || '';
-                            return (
-                              <tr key={act.id}>
-                                <td>
-                                  <span className="qa-remark-status-badge">{statusLabel || '—'}</span>
-                                </td>
-                                <td>
-                                  <div>{remarkText || '—'}</div>
-                                  {closureReason && (
-                                    <div className="qa-remark-closure">Reason: {closureReason}</div>
-                                  )}
-                                </td>
-                                <td>
-                                  {callStatus ? (
-                                    <span className={`qa-remark-call-badge ${callStatus.toLowerCase().includes('not') ? 'qa-remark-call-badge--missed' : 'qa-remark-call-badge--answered'}`}>
-                                      {callStatus.replace('-', ' ')}
-                                    </span>
-                                  ) : '—'}
-                                </td>
-                                <td>
-                                  <div className="qa-remark-by-name">{byName}</div>
-                                  {byRole && <div className="qa-remark-by-role">{byRole}</div>}
-                                </td>
-                                <td className="qa-remark-date">{formatDateTime(act.at || act.created_at)}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
-              </div>
-             )}
             </div>
 
             {/* ── Save Row (sticky bottom) ── */}
@@ -3467,7 +3467,7 @@ const LeadDetailsPage = () => {
                 className="qa-drawer-skip-btn"
                 onClick={closeQuickActionsModal}
               >
-               Close
+                Close
               </button>
               <button
                 className="qa-drawer-save-btn"

@@ -7,7 +7,7 @@ const userTypeApi = {
   /**
    * The module catalogue the permission matrix is drawn from. Fetched rather
    * than read from the bundle so the screen always reflects what the server
-   * actually enforces — config/modules.js is only the offline fallback.
+   * actually enforces - config/modules.js is only the offline fallback.
    */
   getModuleCatalogue: async () => {
     const { data } = await api.get('/user-types/modules');

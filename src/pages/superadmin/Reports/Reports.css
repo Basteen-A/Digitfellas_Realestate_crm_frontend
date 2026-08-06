@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* REPORTS — shared filter bar, dropdowns & responsive layout    */
+/* REPORTS - shared filter bar, dropdowns & responsive layout    */
 /* ============================================================ */
 
 .reports-page {
@@ -166,7 +166,7 @@
   }
 }
 
-/* ── Simple Loader (circular spinner — matches Dashboard) ── */
+/* ── Simple Loader (circular spinner - matches Dashboard) ── */
 .simple-loader {
   display: flex;
   flex-direction: column;

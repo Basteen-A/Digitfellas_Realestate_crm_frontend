@@ -80,7 +80,7 @@ const InventoryUnitList = () => {
   const [allProjects, setAllProjects] = useState([]);
   const [selectedLocationId, setSelectedLocationId] = useState('');
 
-  // Phase data — keyed by project_id
+  // Phase data - keyed by project_id
   const [phasesByProject, setPhasesByProject] = useState({});
   const [phaseModal, setPhaseModal] = useState({ open: false, mode: 'create', row: null, project_id: '' });
   const [phaseForm, setPhaseForm] = useState({ phase_name: '', phase_code: '', description: '', guideline_value_per_sqft: '', sort_order: 0 });
@@ -218,7 +218,7 @@ const InventoryUnitList = () => {
         if (value) ensurePhasesLoaded(value);
       }
       // Picking a phase only PRE-FILLS the guided value box with the phase's
-      // guideline rate as a convenient default — it stays a per-unit field the
+      // guideline rate as a convenient default - it stays a per-unit field the
       // user can edit, and the unit's own guided value is what drives amounts.
       if (name === 'phase_id') {
         const phase = (phasesByProject[prev.project_id] || []).find((p) => String(p.id) === String(value));
@@ -376,7 +376,7 @@ const InventoryUnitList = () => {
           <div className="inv-unit-page__back" onClick={() => navigate('/super-admin/inventory')}>
             ← Back to Inventory Dashboard
           </div>
-          <h1>{projectInfo ? `${projectInfo.project_name} — Units` : 'All Inventory Units'}</h1>
+          <h1>{projectInfo ? `${projectInfo.project_name} - Units` : 'All Inventory Units'}</h1>
         </div>
         <div className="inv-unit-page__actions">
           {projectId && (
@@ -507,16 +507,16 @@ const InventoryUnitList = () => {
                 {!projectId && (
                   <td>{unit.project?.project_name || '-'}</td>
                 )}
-                <td>{unit.phase?.phase_name || <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                <td>{unit.phase?.phase_name || <span style={{ color: '#94a3b8' }}>-</span>}</td>
                 <td>{unit.configuration || '-'}</td>
                 <td>{unit.unit_area ? `${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : '-'}</td>
                 <td>{unit.guided_value ? `₹${parseFloat(unit.guided_value).toLocaleString('en-IN')}` : '-'}</td>
                 <td>
                   {unitGuidelineAmount(unit) != null
                     ? <span title={`${parseFloat(unit.guided_value).toLocaleString('en-IN')} /sq.ft. × ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}`}>
-                        {formatCurrency(unitGuidelineAmount(unit))}
-                      </span>
-                    : <span style={{ color: '#94a3b8' }}>—</span>}
+                      {formatCurrency(unitGuidelineAmount(unit))}
+                    </span>
+                    : <span style={{ color: '#94a3b8' }}>-</span>}
                 </td>
                 <td>{unit.total_price ? formatCurrency(unit.total_price) : '-'}</td>
                 <td>{unit.tower_block || '-'}</td>
@@ -616,7 +616,7 @@ const InventoryUnitList = () => {
                     onChange={(e) => handleFieldChange('phase_id', e.target.value)}
                     disabled={!formValues.project_id}
                   >
-                    <option value="">{formValues.project_id ? '— Select phase —' : 'Select project first'}</option>
+                    <option value="">{formValues.project_id ? '- Select phase -' : 'Select project first'}</option>
                     {(phasesByProject[formValues.project_id] || []).map((p) => (
                       <option key={p.id} value={p.id}>{p.phase_name}</option>
                     ))}
@@ -798,7 +798,7 @@ const InventoryUnitList = () => {
             </header>
             <div style={{ padding: '16px 20px' }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>
-                Phases let you split a project (e.g. Phase 1, Phase 2). Unit numbers are unique <strong>within each phase</strong> — so Phase 1 / Plot 1 and Phase 2 / Plot 1 can both exist.
+                Phases let you split a project (e.g. Phase 1, Phase 2). Unit numbers are unique <strong>within each phase</strong> - so Phase 1 / Plot 1 and Phase 2 / Plot 1 can both exist.
               </div>
 
               {/* Existing phases */}
@@ -816,7 +816,7 @@ const InventoryUnitList = () => {
                         <tr key={p.id}>
                           <td><strong>{p.phase_name}</strong></td>
                           <td>{p.phase_code || '-'}</td>
-                          <td>{p.guideline_value_per_sqft != null && p.guideline_value_per_sqft !== '' ? `₹${Number(p.guideline_value_per_sqft).toLocaleString('en-IN')}` : '—'}</td>
+                          <td>{p.guideline_value_per_sqft != null && p.guideline_value_per_sqft !== '' ? `₹${Number(p.guideline_value_per_sqft).toLocaleString('en-IN')}` : '-'}</td>
                           <td>{p.unit_count ?? 0}</td>
                           <td>{p.available_count ?? 0}</td>
                           <td>
@@ -855,7 +855,7 @@ const InventoryUnitList = () => {
                     <label>Guideline Value / sq.ft. (₹) <span className="required">*</span></label>
                     <input type="number" min="0" step="0.01" value={phaseForm.guideline_value_per_sqft}
                       required={phaseModal.mode !== 'edit'}
-                      placeholder="e.g. 3500 — plot amount = this × area"
+                      placeholder="e.g. 3500 - plot amount = this × area"
                       onChange={(e) => setPhaseForm((p) => ({ ...p, guideline_value_per_sqft: e.target.value }))} />
                   </div>
                   <div className="inv-form__field">

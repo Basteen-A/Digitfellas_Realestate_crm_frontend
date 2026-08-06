@@ -6,14 +6,14 @@
 // can actually REACH /super-admin/lead-sources instead of being bounced to the
 // dashboard by a hardcoded SA/ADM guard.
 //
-// This mirrors the server guards on the matching API routes — the screen is
+// This mirrors the server guards on the matching API routes - the screen is
 // pointless without the data behind it, so the levels are kept the same:
 //   a master list needs masters:read to view, masters:write to manage.
 // Where a screen only exists to edit (the master CRUD pages), the level is the
 // one the page's primary action needs.
 //
 // Longest prefix wins, so '/super-admin/telephony/settings' can be stricter than
-// '/super-admin/telephony'. A path with no entry falls back to SA/ADM only —
+// '/super-admin/telephony'. A path with no entry falls back to SA/ADM only -
 // deliberately fail-closed, so a route added later is never silently public.
 // ============================================================
 

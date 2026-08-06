@@ -1,9 +1,9 @@
 // ============================================================
 // MARKETING REPORTS (Super Admin › Marketing › Reports)
 // Same shell, filter bar, sidebar catalogue and report atoms as the Reports
-// page (../Reports) — only the report set differs:
+// page (../Reports) - only the report set differs:
 //   1. Leads from Source / Sub Source
-//   2. Lead Quality — SV Done / Qualified / RNR / Unqualified
+//   2. Lead Quality - SV Done / Qualified / RNR / Unqualified
 //   3. Site Visit Ratio
 //   4. Project-wise Leads (by source)
 //   5. Source-wise Site Visits
@@ -43,13 +43,13 @@ const PERIODS = [
 // "SV Done" (reports 2 and 3) is LEAD-anchored: leads created in the window that have
 // ever completed a visit. "Source-wise Site Visits" (report 5) is VISIT-anchored:
 // visits that happened in the window, whoever's lead they belong to. Marketing Metrix
-// carries a THIRD number again — same lead-anchored shape, but its cohort is the
+// carries a THIRD number again - same lead-anchored shape, but its cohort is the
 // latest marketing touch (creation OR re-enquiry), so a re-enquiry moves a lead into a
 // later month there and not here. All three are correct; each is stated where it is
 // read so nobody quotes one while looking at another.
-const SV_DONE_TIP = 'Leads CREATED in this period that have completed a site visit, whenever that visit happened. Once per lead — a revisit never adds a second. Not the same as "visits done in this period": see the Source-wise Site Visits report for that.';
+const SV_DONE_TIP = 'Leads CREATED in this period that have completed a site visit, whenever that visit happened. Once per lead - a revisit never adds a second. Not the same as "visits done in this period": see the Source-wise Site Visits report for that.';
 
-const VISIT_ANCHORED_NOTE = 'This report is anchored on the VISIT DATE — it counts visits that actually happened in this period, no matter when the lead came in. Every other report on this page is anchored on the lead, so this number is normally the higher one. Both are correct; they answer different questions.';
+const VISIT_ANCHORED_NOTE = 'This report is anchored on the VISIT DATE - it counts visits that actually happened in this period, no matter when the lead came in. Every other report on this page is anchored on the lead, so this number is normally the higher one. Both are correct; they answer different questions.';
 
 const LEAD_ANCHORED_NOTE = 'Anchored on the LEAD: every figure below belongs to leads created in this period, credited to the source they came in on. The visit or booking itself may have happened later. Marketing › Metrix counts the same outcomes against the latest marketing touch (creation OR re-enquiry), so a re-enquiring lead lands in a different month there.';
 
@@ -207,8 +207,8 @@ const Panel = ({ rkey, d, registerRef }) => {
           <KpiRow>
             <KpiCard label="Total Leads" value={fmt(t.leads)} sub="Delivered in this period" color={COLORS.leads} icon={UsersIcon} />
             <KpiCard label="Active Sources" value={fmt(t.sources)} sub={`${fmt(t.subSources)} sub-sources`} color={COLORS.primary} icon={MegaphoneIcon} />
-            <KpiCard label="Top Source" value={top?.source_name || '—'} sub={top ? `${fmt(top.leads)} leads · ${pct(num(top.leads), num(t.leads))}% share` : ''} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
-            <KpiCard label="Top Sub-source" value={topSub?.sub_source_name || '—'} sub={topSub ? `${topSub.source_name} · ${fmt(topSub.leads)} leads` : ''} color={COLORS.siteVisit} icon={ChartPieIcon} valueSize={17} />
+            <KpiCard label="Top Source" value={top?.source_name || '-'} sub={top ? `${fmt(top.leads)} leads · ${pct(num(top.leads), num(t.leads))}% share` : ''} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
+            <KpiCard label="Top Sub-source" value={topSub?.sub_source_name || '-'} sub={topSub ? `${topSub.source_name} · ${fmt(topSub.leads)} leads` : ''} color={COLORS.siteVisit} icon={ChartPieIcon} valueSize={17} />
           </KpiRow>
 
           <div className="reports-charts-grid">
@@ -320,7 +320,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="RNR" value={fmt(t.rnr)} sub={`${pct1(num(t.rnr), num(t.leads))}% never connected`} color={COLORS.negotiation} icon={PhoneArrowUpRightIcon} />
             <KpiCard label="Unqualified" value={fmt(t.unqualified)} sub={`${pct1(num(t.unqualified), num(t.leads))}% junk / lost`} color={COLORS.cancelled} icon={XCircleIcon} />
             <KpiCard label="Unassigned" value={fmt(t.unassigned)} sub={`${pct1(num(t.unassigned), num(t.leads))}% never allocated`} color={COLORS.muted} icon={ClockIcon} />
-            <KpiCard label="Best Quality Source" value={best?.source_name || '—'} sub={best ? `${pct1(num(best.qualified), num(best.leads))}% qualified` : 'Needs 5+ leads'} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
+            <KpiCard label="Best Quality Source" value={best?.source_name || '-'} sub={best ? `${pct1(num(best.qualified), num(best.leads))}% qualified` : 'Needs 5+ leads'} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
 
           <div className="reports-charts-grid">
@@ -391,7 +391,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="SV Done" value={fmt(t.siteVisits)} sub="Leads created here that have visited" color={COLORS.siteVisit} icon={BuildingOffice2Icon} />
             <KpiCard label="SV Ratio" value={`${overall}%`} sub="Site visits ÷ leads" color={COLORS.qualified} icon={ScaleIcon} />
             <KpiCard label="Bookings" value={fmt(t.bookings)} sub={`${pct1(num(t.bookings), num(t.siteVisits))}% of visits booked`} color={COLORS.booking} icon={CheckBadgeIcon} />
-            <KpiCard label="Best Converting Source" value={best?.source_name || '—'} sub={best ? `${pct1(num(best.sv_leads), num(best.leads))}% SV ratio` : 'Needs 5+ leads'} color={COLORS.negotiation} icon={TrophyIcon} valueSize={17} />
+            <KpiCard label="Best Converting Source" value={best?.source_name || '-'} sub={best ? `${pct1(num(best.sv_leads), num(best.leads))}% SV ratio` : 'Needs 5+ leads'} color={COLORS.negotiation} icon={TrophyIcon} valueSize={17} />
           </KpiRow>
 
           <ChartCard title="Leads vs Site Visits by Source" subtitle="Top 12 sources" chartKey="mkt-svratio" registerRef={registerRef}>
@@ -416,7 +416,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <Td bold>{fmt(s.leads)}</Td>
                     <Td color={COLORS.siteVisit}>{fmt(s.sv_leads)}</Td>
                     {/* SV ratios sit far below 100% in practice, so the tone scale is
-                        stretched (×3) — the same treatment the Reports page uses. */}
+                        stretched (×3) - the same treatment the Reports page uses. */}
                     <Td><Pill tone={ratioTone(r * 3)}>{r}%</Pill></Td>
                     <Td><ProgressBar value={r * 3} color={r >= 20 ? COLORS.booking : COLORS.siteVisit} /></Td>
                     <Td color={COLORS.booking}>{fmt(s.bookings)}</Td>
@@ -469,7 +469,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           <KpiRow>
             <KpiCard label="Total Leads" value={fmt(t.leads)} sub="Across all projects" color={COLORS.leads} icon={UsersIcon} />
             <KpiCard label="Projects with Leads" value={fmt(projects.length)} sub="Active in this period" color={COLORS.negotiation} icon={Squares2X2Icon} />
-            <KpiCard label="Top Project" value={top?.project_name || '—'} sub={top ? `${fmt(top.leads)} leads · ${pct(top.leads, num(t.leads))}% share` : ''} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
+            <KpiCard label="Top Project" value={top?.project_name || '-'} sub={top ? `${fmt(top.leads)} leads · ${pct(top.leads, num(t.leads))}% share` : ''} color={COLORS.booking} icon={TrophyIcon} valueSize={17} />
             <KpiCard label="Sources in Play" value={fmt(sourceCols.length)} sub="Feeding these projects" color={COLORS.primary} icon={MegaphoneIcon} />
           </KpiRow>
 
@@ -484,7 +484,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <Td bold>{p.project_name}</Td>
                   <Td bold>{fmt(p.leads)}</Td>
                   {sourceCols.map((c) => (
-                    <Td key={c} className={p.bySource[c] ? '' : 'opacity-40'}>{p.bySource[c] ? fmt(p.bySource[c]) : '—'}</Td>
+                    <Td key={c} className={p.bySource[c] ? '' : 'opacity-40'}>{p.bySource[c] ? fmt(p.bySource[c]) : '-'}</Td>
                   ))}
                 </Tr>
               ))}
@@ -701,7 +701,7 @@ const MarketingReportsPage = () => {
         </div>
       </div>
 
-      {/* Filter bar — identical structure to the Reports page Analytics bar */}
+      {/* Filter bar - identical structure to the Reports page Analytics bar */}
       <div className="reports-filter-bar reports-filter-bar--card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wide mr-1" style={{ color: 'var(--text-muted)' }}>Period</span>

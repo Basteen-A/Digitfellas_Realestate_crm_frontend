@@ -107,7 +107,7 @@ const TelecallerPipeline = ({ onNavigate }) => {
     try {
       const leadParams = { roleCode: 'TC', assignedToMe: true, includeClosed: true, limit: 100, page };
 
-      // Apply date filter server-side — count leads worked (last_contacted_at) in the period
+      // Apply date filter server-side - count leads worked (last_contacted_at) in the period
       const dateRange = getDateRange(dateFilter, customFromDate, customToDate);
       if (dateRange.from) leadParams.contactedFrom = dateRange.from;
       if (dateRange.to) leadParams.contactedTo = dateRange.to;

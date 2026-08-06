@@ -146,189 +146,189 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Daily check-in gate page — private but OUTSIDE the AttendanceGate. */}
+      {/* Daily check-in gate page - private but OUTSIDE the AttendanceGate. */}
       <Route element={<PrivateRoute />}>
         <Route path="/check-in" element={<CheckInPage />} />
       </Route>
 
-      {/* Portal routes — no app sidebar, portals have their own sidebar */}
+      {/* Portal routes - no app sidebar, portals have their own sidebar */}
       <Route element={<PrivateRoute />}>
         <Route element={<AttendanceGate />}>
-        <Route element={<PortalLayoutRoute />}>
-          {/* PortalRoute ensures users can only access their own role's portal */}
-          <Route element={<PortalRoute />}>
-            {/* Standard Executive task portal — now uses the shared PortalLayout
+          <Route element={<PortalLayoutRoute />}>
+            {/* PortalRoute ensures users can only access their own role's portal */}
+            <Route element={<PortalRoute />}>
+              {/* Standard Executive task portal - now uses the shared PortalLayout
                 shell so it matches the look of every other role portal. */}
-            <Route element={<TaskAccessRoute />}>
-              <Route path="/task-portal" element={<Navigate to="/task-portal/dashboard" replace />} />
-              <Route path="/task-portal/dashboard" element={<TaskWorkspace defaultScreen="dashboard" />} />
-              <Route path="/task-portal/tasks" element={<TaskWorkspace defaultScreen="tasks" />} />
-              <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
-                <Route path="/task-portal/departments" element={<TaskWorkspace defaultScreen="departments" />} />
-                <Route path="/task-portal/sub-departments" element={<TaskWorkspace defaultScreen="sub-departments" />} />
+              <Route element={<TaskAccessRoute />}>
+                <Route path="/task-portal" element={<Navigate to="/task-portal/dashboard" replace />} />
+                <Route path="/task-portal/dashboard" element={<TaskWorkspace defaultScreen="dashboard" />} />
+                <Route path="/task-portal/tasks" element={<TaskWorkspace defaultScreen="tasks" />} />
+                <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
+                  <Route path="/task-portal/departments" element={<TaskWorkspace defaultScreen="departments" />} />
+                  <Route path="/task-portal/sub-departments" element={<TaskWorkspace defaultScreen="sub-departments" />} />
+                </Route>
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['TC', 'SA', 'ADM']} />}>
+                <Route path="/telecaller/leads" element={<TelecallerWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['SM', 'SH', 'SA', 'ADM']} />}>
+                <Route path="/sales-manager/leads" element={<SalesManagerWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['SH', 'SA', 'ADM']} />}>
+                <Route path="/sales-head/leads" element={<SalesHeadWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['COL', 'SA', 'ADM']} />}>
+                <Route path="/collection/leads" element={<CollectionWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['ACCT', 'SA', 'ADM']} />}>
+                <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['RM', 'SA', 'ADM']} />}>
+                <Route path="/record-manager/bookings" element={<RecordManagerWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['AM', 'SA', 'ADM']} />}>
+                <Route path="/accounts-manager/verify" element={<AccountsManagerWorkspace />} />
+              </Route>
+
+              <Route element={<RoleRoute allowedRoles={['CE', 'SA', 'ADM']} />}>
+                <Route path="/collection-exec/bookings" element={<CollectionExecWorkspace />} />
               </Route>
             </Route>
 
-            <Route element={<RoleRoute allowedRoles={['TC', 'SA', 'ADM']} />}>
-              <Route path="/telecaller/leads" element={<TelecallerWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['SM', 'SH', 'SA', 'ADM']} />}>
-              <Route path="/sales-manager/leads" element={<SalesManagerWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['SH', 'SA', 'ADM']} />}>
-              <Route path="/sales-head/leads" element={<SalesHeadWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['COL', 'SA', 'ADM']} />}>
-              <Route path="/collection/leads" element={<CollectionWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['ACCT', 'SA', 'ADM']} />}>
-              <Route path="/accounts/dashboard" element={<AccountsWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['RM', 'SA', 'ADM']} />}>
-              <Route path="/record-manager/bookings" element={<RecordManagerWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['AM', 'SA', 'ADM']} />}>
-              <Route path="/accounts-manager/verify" element={<AccountsManagerWorkspace />} />
-            </Route>
-
-            <Route element={<RoleRoute allowedRoles={['CE', 'SA', 'ADM']} />}>
-              <Route path="/collection-exec/bookings" element={<CollectionExecWorkspace />} />
+            <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'AM', 'CE', 'RM', 'SA', 'ADM', 'SE']} />}>
+              <Route
+                path="/portal/lead/:id"
+                element={(
+                  <PortalWorkspaceShell>
+                    <LeadDetailsPage />
+                  </PortalWorkspaceShell>
+                )}
+              />
+              <Route
+                path="/portal/profile"
+                element={(
+                  <PortalWorkspaceShell defaultScreen="dashboard">
+                    <Profile />
+                  </PortalWorkspaceShell>
+                )}
+              />
+              <Route
+                path="/portal/profile/change-password"
+                element={(
+                  <PortalWorkspaceShell defaultScreen="dashboard">
+                    <ChangePassword />
+                  </PortalWorkspaceShell>
+                )}
+              />
             </Route>
           </Route>
-
-          <Route element={<RoleRoute allowedRoles={['TC', 'SM', 'SH', 'COL', 'ACCT', 'AM', 'CE', 'RM', 'SA', 'ADM', 'SE']} />}>
-            <Route
-              path="/portal/lead/:id"
-              element={(
-                <PortalWorkspaceShell>
-                  <LeadDetailsPage />
-                </PortalWorkspaceShell>
-              )}
-            />
-            <Route
-              path="/portal/profile"
-              element={(
-                <PortalWorkspaceShell defaultScreen="dashboard">
-                  <Profile />
-                </PortalWorkspaceShell>
-              )}
-            />
-            <Route
-              path="/portal/profile/change-password"
-              element={(
-                <PortalWorkspaceShell defaultScreen="dashboard">
-                  <ChangePassword />
-                </PortalWorkspaceShell>
-              )}
-            />
-          </Route>
-        </Route>
         </Route>
       </Route>
 
-      {/* Admin & general routes — standard MainLayout with app sidebar */}
+      {/* Admin & general routes - standard MainLayout with app sidebar */}
       <Route element={<PrivateRoute />}>
         <Route element={<AttendanceGate />}>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<RoleHomeRedirect />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<RoleHomeRedirect />} />
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/change-password" element={<ChangePassword />} />
-          <Route path="/lead/:id" element={<LeadDetailsPage />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/lead/:id" element={<LeadDetailsPage />} />
 
-          {/* Legacy task paths now live in the standalone Standard Executive portal */}
-          <Route path="/tasks" element={<Navigate to="/task-portal/tasks" replace />} />
-          <Route path="/tasks/departments" element={<Navigate to="/task-portal/departments" replace />} />
-          <Route path="/tasks/sub-departments" element={<Navigate to="/task-portal/sub-departments" replace />} />
+            {/* Legacy task paths now live in the standalone Standard Executive portal */}
+            <Route path="/tasks" element={<Navigate to="/task-portal/tasks" replace />} />
+            <Route path="/tasks/departments" element={<Navigate to="/task-portal/departments" replace />} />
+            <Route path="/tasks/sub-departments" element={<Navigate to="/task-portal/sub-departments" replace />} />
 
-          {/* Admin screens. SA / ADM pass on role; any other role passes when its
+            {/* Admin screens. SA / ADM pass on role; any other role passes when its
               permission matrix grants the module that path maps to (routeModules.js),
               which is what makes a custom role's sidebar links actually work. */}
-          <Route element={<ModuleRoute allowedRoles={['SA', 'ADM']} />}>
-            <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />
-            {/* Task Management — Departments/Sub-Departments stay SA/ADM only; the Tasks
+            <Route element={<ModuleRoute allowedRoles={['SA', 'ADM']} />}>
+              <Route path="/super-admin" element={<Navigate to="/super-admin/locations" replace />} />
+              {/* Task Management - Departments/Sub-Departments stay SA/ADM only; the Tasks
                 list moves below so grant-holding Organization Heads can reach it too. */}
-            <Route path="/super-admin/departments" element={<TaskDepartments />} />
-            <Route path="/super-admin/sub-departments" element={<TaskSubDepartments />} />
-            <Route path="/super-admin/locations" element={<Locations />} />
-            <Route path="/super-admin/projects" element={<Projects />} />
-            <Route path="/super-admin/project-types" element={<ProjectTypes />} />
-            <Route path="/super-admin/document-archive" element={<DocumentArchive />} />
-            <Route path="/super-admin/document-management" element={<DocumentManagement />} />
-            <Route path="/super-admin/lead-types" element={<LeadTypes />} />
-            <Route path="/super-admin/lead-sources" element={<LeadSources />} />
-            <Route path="/super-admin/lead-sub-sources" element={<LeadSubSources />} />
-            <Route path="/super-admin/users" element={<Users />} />
-            <Route path="/super-admin/user-types" element={<UserTypes />} />
-            <Route path="/super-admin/customer-types" element={<CustomerTypes />} />
-            <Route path="/super-admin/score-master" element={<ScoreMaster />} />
-            <Route path="/super-admin/lead-statuses" element={<LeadStatuses />} />
-            <Route path="/super-admin/booking-statuses" element={<BookingStatuses />} />
-            <Route path="/super-admin/lead-stages" element={<LeadStages />} />
-            <Route path="/super-admin/closed-lost-reasons" element={<ClosedLostReasons />} />
-            <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />
-            <Route path="/super-admin/status-remarks" element={<StatusRemarks />} />
-            <Route path="/super-admin/workflow-actions" element={<WorkflowActions />} />
-            <Route path="/super-admin/motivations" element={<Motivations />} />
-            <Route path="/super-admin/inventory" element={<InventoryDashboard />} />
-            <Route path="/super-admin/units" element={<InventoryUnitList />} />
-            <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
-            <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
-            <Route path="/super-admin/finance/revenue" element={<FinanceRevenue />} />
-            <Route path="/super-admin/finance/collections" element={<FinanceCollections />} />
-            <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
-            <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
-            <Route path="/super-admin/payment-modes" element={<PaymentModes />} />
-            <Route path="/super-admin/banks" element={<Banks />} />
-            <Route path="/super-admin/payment-statuses" element={<PaymentStatuses />} />
-            <Route path="/super-admin/site-settings" element={<SiteSettings />} />
-            <Route path="/super-admin/terms-and-conditions" element={<TermsAndConditions />} />
-            <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
-            <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
-            <Route path="/super-admin/marketing-allocation" element={<MarketingAllocationRules />} />
-            <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
-            <Route path="/super-admin/marketing-api-keys" element={<MarketingApiKeys />} />
-            <Route path="/super-admin/marketing-campaigns" element={<MarketingCampaigns />} />
-            <Route path="/super-admin/marketing-templates" element={<WhatsappTemplates />} />
-            <Route path="/super-admin/whatsapp-settings" element={<WhatsappSettings />} />
-            <Route path="/super-admin/telephony/settings" element={<TelephonyCallSettings />} />
-            <Route path="/super-admin/telephony/call-logs" element={<TelephonyCallLogs />} />
-            <Route path="/super-admin/telephony/allocation-history" element={<TelephonyCallAllocationHistory />} />
-            <Route path="/super-admin/attendance" element={<AttendancePage />} />
-            <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
-          </Route>
+              <Route path="/super-admin/departments" element={<TaskDepartments />} />
+              <Route path="/super-admin/sub-departments" element={<TaskSubDepartments />} />
+              <Route path="/super-admin/locations" element={<Locations />} />
+              <Route path="/super-admin/projects" element={<Projects />} />
+              <Route path="/super-admin/project-types" element={<ProjectTypes />} />
+              <Route path="/super-admin/document-archive" element={<DocumentArchive />} />
+              <Route path="/super-admin/document-management" element={<DocumentManagement />} />
+              <Route path="/super-admin/lead-types" element={<LeadTypes />} />
+              <Route path="/super-admin/lead-sources" element={<LeadSources />} />
+              <Route path="/super-admin/lead-sub-sources" element={<LeadSubSources />} />
+              <Route path="/super-admin/users" element={<Users />} />
+              <Route path="/super-admin/user-types" element={<UserTypes />} />
+              <Route path="/super-admin/customer-types" element={<CustomerTypes />} />
+              <Route path="/super-admin/score-master" element={<ScoreMaster />} />
+              <Route path="/super-admin/lead-statuses" element={<LeadStatuses />} />
+              <Route path="/super-admin/booking-statuses" element={<BookingStatuses />} />
+              <Route path="/super-admin/lead-stages" element={<LeadStages />} />
+              <Route path="/super-admin/closed-lost-reasons" element={<ClosedLostReasons />} />
+              <Route path="/super-admin/booking-cancel-reasons" element={<BookingCancelReasons />} />
+              <Route path="/super-admin/status-remarks" element={<StatusRemarks />} />
+              <Route path="/super-admin/workflow-actions" element={<WorkflowActions />} />
+              <Route path="/super-admin/motivations" element={<Motivations />} />
+              <Route path="/super-admin/inventory" element={<InventoryDashboard />} />
+              <Route path="/super-admin/units" element={<InventoryUnitList />} />
+              <Route path="/super-admin/inventory/:projectId" element={<InventoryUnitList />} />
+              <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
+              <Route path="/super-admin/finance/revenue" element={<FinanceRevenue />} />
+              <Route path="/super-admin/finance/collections" element={<FinanceCollections />} />
+              <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
+              <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
+              <Route path="/super-admin/payment-modes" element={<PaymentModes />} />
+              <Route path="/super-admin/banks" element={<Banks />} />
+              <Route path="/super-admin/payment-statuses" element={<PaymentStatuses />} />
+              <Route path="/super-admin/site-settings" element={<SiteSettings />} />
+              <Route path="/super-admin/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
+              <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
+              <Route path="/super-admin/marketing-allocation" element={<MarketingAllocationRules />} />
+              <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
+              <Route path="/super-admin/marketing-api-keys" element={<MarketingApiKeys />} />
+              <Route path="/super-admin/marketing-campaigns" element={<MarketingCampaigns />} />
+              <Route path="/super-admin/marketing-templates" element={<WhatsappTemplates />} />
+              <Route path="/super-admin/whatsapp-settings" element={<WhatsappSettings />} />
+              <Route path="/super-admin/telephony/settings" element={<TelephonyCallSettings />} />
+              <Route path="/super-admin/telephony/call-logs" element={<TelephonyCallLogs />} />
+              <Route path="/super-admin/telephony/allocation-history" element={<TelephonyCallAllocationHistory />} />
+              <Route path="/super-admin/attendance" element={<AttendancePage />} />
+              <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
+            </Route>
 
-          {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization
+            {/* Cross-cutting modules reachable by SA/ADM AND grant-holding Organization
               Heads. The predicate already admits the base roles where applicable
               (Reports = SA/ADM; Booking Approvals = SA only, per the original gate). */}
-          <Route element={<GrantRoute check={canViewAllReports} />}>
-            <Route path="/super-admin/reports" element={<Reports />} />
-            <Route path="/super-admin/reports/:module" element={<Reports />} />
-            {/* Marketing › Reports — same reports gate as the main Reports page */}
-            <Route path="/super-admin/marketing-reports" element={<MarketingReports />} />
-            {/* Collection Report — org-wide twin of the Collection Manager portal screen */}
-            <Route path="/super-admin/collection-reports" element={<CollectionReports />} />
-            {/* Marketing Metrix — spend vs lead/SV/booking volume + the cost-per reports.
+            <Route element={<GrantRoute check={canViewAllReports} />}>
+              <Route path="/super-admin/reports" element={<Reports />} />
+              <Route path="/super-admin/reports/:module" element={<Reports />} />
+              {/* Marketing › Reports - same reports gate as the main Reports page */}
+              <Route path="/super-admin/marketing-reports" element={<MarketingReports />} />
+              {/* Collection Report - org-wide twin of the Collection Manager portal screen */}
+              <Route path="/super-admin/collection-reports" element={<CollectionReports />} />
+              {/* Marketing Metrix - spend vs lead/SV/booking volume + the cost-per reports.
                 Budget entry lives inside the page, so it shares the reports gate. */}
-            <Route path="/super-admin/marketing-metrix" element={<MarketingMetrix />} />
-          </Route>
-          <Route element={<GrantRoute check={canAccessBookingApprovals} />}>
-            <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />
-          </Route>
-          <Route element={<GrantRoute check={hasTaskPortalAccess} />}>
-            <Route path="/super-admin/tasks" element={<TaskListPage />} />
-            <Route path="/super-admin/tasks/dashboard" element={<SuperAdminTaskDashboard />} />
-          </Route>
+              <Route path="/super-admin/marketing-metrix" element={<MarketingMetrix />} />
+            </Route>
+            <Route element={<GrantRoute check={canAccessBookingApprovals} />}>
+              <Route path="/super-admin/booking-approvals" element={<BookingApprovals />} />
+            </Route>
+            <Route element={<GrantRoute check={hasTaskPortalAccess} />}>
+              <Route path="/super-admin/tasks" element={<TaskListPage />} />
+              <Route path="/super-admin/tasks/dashboard" element={<SuperAdminTaskDashboard />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Route>
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Route>
       </Route>
 

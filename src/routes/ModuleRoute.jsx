@@ -9,12 +9,12 @@ import { moduleForPath } from './routeModules';
  * Route guard for the admin screens.
  *
  * Passes when EITHER:
- *   • the user's role is in `allowedRoles` (the built-in SA / ADM path — unchanged), or
+ *   • the user's role is in `allowedRoles` (the built-in SA / ADM path - unchanged), or
  *   • the user's permission matrix grants the module this path maps to.
  *
  * That second branch is what lets a role created in Roles & Permissions actually
  * open the screens it was granted. Without it a custom role could be given, say,
- * Leads access and still be bounced to /dashboard by a hardcoded role list —
+ * Leads access and still be bounced to /dashboard by a hardcoded role list -
  * the sidebar would show the link and clicking it would do nothing useful.
  *
  * Fail-closed: a path with no entry in routeModules.js falls back to the role
@@ -30,7 +30,7 @@ const ModuleRoute = ({ allowedRoles = [], fallbackPath = '/dashboard', children 
 
   const required = moduleForPath(pathname);
   // `false` fallback: an unmapped path, or a session with no matrix, must not
-  // slip through here — this guard is the only thing standing in front of the
+  // slip through here - this guard is the only thing standing in front of the
   // admin screens for a non-admin role.
   if (required && hasModule(user, required.module, required.level, false)) {
     return children || <Outlet />;

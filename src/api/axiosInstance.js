@@ -1,5 +1,5 @@
 // ============================================================
-// AXIOS INSTANCE — Centralized HTTP client
+// AXIOS INSTANCE - Centralized HTTP client
 // Auto token attach, refresh on 401, request/response interceptors
 // ============================================================
 
@@ -54,7 +54,7 @@ api.interceptors.request.use(
 
     // File uploads are not 30-second requests. A multi-MB document on a normal
     // office connection routinely exceeds the default timeout, and an aborted
-    // upload surfaces with NO response — which used to be reported to the user
+    // upload surfaces with NO response - which used to be reported to the user
     // as "Network error", hiding the fact that it was simply still uploading.
     if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
       config.timeout = UPLOAD_TIMEOUT;
@@ -80,7 +80,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ── Handle 401 — Token expired → try refresh ──
+    // ── Handle 401 - Token expired → try refresh ──
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't retry refresh or login requests
       if (
@@ -137,12 +137,12 @@ api.interceptors.response.use(
       }
     }
 
-    // ── Handle 403 — Forbidden ──
+    // ── Handle 403 - Forbidden ──
     if (error.response?.status === 403) {
       // Could redirect to unauthorized page
     }
 
-    // ── Handle 429 — Rate limited ──
+    // ── Handle 429 - Rate limited ──
     if (error.response?.status === 429) {
       console.warn('Rate limited. Please slow down.');
     }
@@ -158,10 +158,10 @@ api.interceptors.response.use(
           ? 'Upload timed out. The file may be too large or the connection too slow.'
           : 'The server took too long to respond. Please try again.';
       } else if (isUpload) {
-        // The browser was still sending the body when the connection dropped —
+        // The browser was still sending the body when the connection dropped -
         // typically the server (or a proxy in front of it) rejected the request
         // early, e.g. on size or permissions, and closed the socket.
-        error.message = 'Upload failed — the connection was closed before the file finished sending. '
+        error.message = 'Upload failed - the connection was closed before the file finished sending. '
           + 'The file may exceed the maximum allowed size.';
       } else {
         error.message = 'Network error. Please check your connection.';

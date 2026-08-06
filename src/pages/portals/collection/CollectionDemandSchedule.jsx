@@ -7,7 +7,7 @@ import './CollectionWorkspace.css';
 
 const fmt = (v) => formatCurrency(v);
 const fmtDate = (d) => {
-  if (!d) return '—';
+  if (!d) return '-';
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
@@ -84,7 +84,7 @@ const CollectionDemandSchedule = ({ user }) => {
           <div className="col-stat-value-new" style={{ color: '#f59e0b' }}>
             {bookings.filter((b) => {
               if (!b.next_follow_up_at) return false;
-              const diff = Math.floor((new Date(b.next_follow_up_at) - new Date()) / (1000*60*60*24));
+              const diff = Math.floor((new Date(b.next_follow_up_at) - new Date()) / (1000 * 60 * 60 * 24));
               return diff >= 0 && diff <= 7;
             }).length}
           </div>
@@ -94,7 +94,7 @@ const CollectionDemandSchedule = ({ user }) => {
           <div className="col-stat-value-new" style={{ color: '#059669' }}>
             {bookings.filter((b) => {
               if (!b.next_follow_up_at) return false;
-              return Math.floor((new Date(b.next_follow_up_at) - new Date()) / (1000*60*60*24)) > 7;
+              return Math.floor((new Date(b.next_follow_up_at) - new Date()) / (1000 * 60 * 60 * 24)) > 7;
             }).length}
           </div>
         </div>
@@ -141,9 +141,9 @@ const CollectionDemandSchedule = ({ user }) => {
                   const status = getDemandStatus(b);
                   return (
                     <tr key={b.id}>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{b.booking_number}</td>
-                      <td><strong>{b.customer_name || b.lead_name || b.buyer_name || '—'}</strong></td>
-                      <td>{b.project_name || '—'}</td>
+                      <td style={{ fontWeight: 500 }}>{b.booking_number}</td>
+                      <td><strong>{b.customer_name || b.lead_name || b.buyer_name || '-'}</strong></td>
+                      <td>{b.project_name || '-'}</td>
                       <td>{fmt(b.net_amount)}</td>
                       <td style={{ color: '#059669', fontWeight: 600 }}>{fmt(b.total_paid)}</td>
                       <td style={{ color: '#dc2626', fontWeight: 700 }}>{fmt(pending)}</td>

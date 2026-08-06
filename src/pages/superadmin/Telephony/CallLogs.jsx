@@ -20,9 +20,9 @@ const STATUS_BADGE = {
 
 const fmtDateTime = (d) => (d
   ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })
-  : '—');
+  : '-');
 const fmtDuration = (secs) => {
-  if (!secs && secs !== 0) return '—';
+  if (!secs && secs !== 0) return '-';
   const m = Math.floor(secs / 60);
   return m ? `${m}m ${secs % 60}s` : `${secs % 60}s`;
 };
@@ -46,12 +46,12 @@ const CallLogs = () => {
   const [agents, setAgents] = useState([]);
   const [live, setLive] = useState(true);
 
-  // Name/role-only picker list — the Collection Manager renders this same screen
+  // Name/role-only picker list - the Collection Manager renders this same screen
   // and is not allowed the full admin user list.
   useEffect(() => {
     userApi.getDropdown()
       .then((resp) => setAgents((resp.data || []).filter((u) => AGENT_ROLES.includes(u.userType?.short_code))))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const load = useCallback(async (silent = false) => {
@@ -88,14 +88,14 @@ const CallLogs = () => {
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1><PhoneArrowUpRightIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Call Logs</h1>
-          <p className="hidden sm:block">Every Tata Smartflo call — answered &amp; missed — matched to a telecaller and lead</p>
+          <p className="hidden sm:block">Every Tata Smartflo call - answered &amp; missed - matched to a telecaller and lead</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <button
             type="button"
             className={`crm-btn crm-btn-sm ${live ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
             onClick={() => setLive((v) => !v)}
-            title={live ? `Live — auto-refreshing every ${LIVE_INTERVAL_MS / 1000}s.` : 'Click to enable live refresh'}
+            title={live ? `Live - auto-refreshing every ${LIVE_INTERVAL_MS / 1000}s.` : 'Click to enable live refresh'}
           >
             <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 6, background: live ? '#22c55e' : '#9ca3af' }} />
             {live ? 'Live' : 'Paused'}
@@ -183,7 +183,7 @@ const CallLogs = () => {
                         {fmtDateTime(r.start_stamp || r.received_at)}
                       </span>
                     </td>
-                    <td style={{ ...td, textTransform: 'capitalize' }}>{r.direction || '—'}</td>
+                    <td style={{ ...td, textTransform: 'capitalize' }}>{r.direction || '-'}</td>
                     <td style={td}>
                       {r.agent ? userName(r.agent) : <span style={{ color: 'var(--text-muted)' }}>Unmatched</span>}
                       {r.agent_number && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.agent_number}</div>}
@@ -194,9 +194,9 @@ const CallLogs = () => {
                           <div style={{ fontWeight: 600 }}>{leadName(r.lead)}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.lead.lead_number || ''}</div>
                         </>
-                      ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                     </td>
-                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.customer_number || '—'}</td>
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.customer_number || '-'}</td>
                     <td style={td}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg }}>
                         {answered ? <PhoneArrowUpRightIcon style={{ width: 12, height: 12 }} /> : <PhoneXMarkIcon style={{ width: 12, height: 12 }} />}

@@ -53,12 +53,12 @@ const InventoryDashboard = () => {
       ]);
 
       const dashboardData = dashboardResponse.data || { global: {}, projects: [] };
-      
+
       // Create a map of projects with inventory data
       const projectsWithInventory = new Map(
         (dashboardData.projects || []).map(p => [p.project_id, p])
       );
-      
+
       // Merge all projects with their inventory data (if available)
       const mergedProjects = allProjects.map(project => {
         const inventoryData = projectsWithInventory.get(project.id);
@@ -80,7 +80,7 @@ const InventoryDashboard = () => {
           sold_value: 0,
         };
       });
-      
+
       setDashboard({
         global: dashboardData.global || {},
         projects: mergedProjects,
@@ -278,63 +278,63 @@ const InventoryDashboard = () => {
       ) : (
         <>
           <div className="inv-project-grid">
-          {pagedProjects.map((proj) => {
-            const total = parseInt(proj.total_units) || 0;
-            const available = parseInt(proj.available_units) || 0;
-            const booked = parseInt(proj.booked_units) || 0;
-            const sold = parseInt(proj.sold_units) || 0;
-            const soldPct = total > 0 ? (sold / total) * 100 : 0;
-            const bookedPct = total > 0 ? (booked / total) * 100 : 0;
+            {pagedProjects.map((proj) => {
+              const total = parseInt(proj.total_units) || 0;
+              const available = parseInt(proj.available_units) || 0;
+              const booked = parseInt(proj.booked_units) || 0;
+              const sold = parseInt(proj.sold_units) || 0;
+              const soldPct = total > 0 ? (sold / total) * 100 : 0;
+              const bookedPct = total > 0 ? (booked / total) * 100 : 0;
 
-            return (
-              <div
-                key={proj.project_id}
-                className="inv-project-card"
-                onClick={() => navigate(`/super-admin/inventory/${proj.project_id}`)}
-              >
-                <div className="inv-project-card__name">
-                  {proj.project_name}
-                  {proj.project_type && (
-                    <span className="inv-project-card__type-badge">{proj.project_type}</span>
-                  )}
-                  <span style={{
-                    marginLeft: 8, fontSize: 11, fontWeight: 500, padding: '2px 8px',
-                    borderRadius: 10, background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE',
-                  }}>
-                    {phaseCountByProject[proj.project_id] || 0} phase{(phaseCountByProject[proj.project_id] || 0) === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <div className="inv-project-card__location">
-                  {formatLocation(proj.location_name, proj.city) || 'No location'}
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <button
-                    type="button"
-                    onClick={(e) => openPhaseModal(e, proj)}
-                    style={{
-                      fontSize: 11, fontWeight: 500, padding: '4px 10px',
-                      borderRadius: 6, border: '1px solid #C7D2FE', background: '#fff',
-                      color: '#4338CA', cursor: 'pointer',
-                    }}
-                  >
-                    Manage Phases
-                  </button>
-                </div>
+              return (
+                <div
+                  key={proj.project_id}
+                  className="inv-project-card"
+                  onClick={() => navigate(`/super-admin/inventory/${proj.project_id}`)}
+                >
+                  <div className="inv-project-card__name">
+                    {proj.project_name}
+                    {proj.project_type && (
+                      <span className="inv-project-card__type-badge">{proj.project_type}</span>
+                    )}
+                    <span style={{
+                      marginLeft: 8, fontSize: 11, fontWeight: 500, padding: '2px 8px',
+                      borderRadius: 10, background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE',
+                    }}>
+                      {phaseCountByProject[proj.project_id] || 0} phase{(phaseCountByProject[proj.project_id] || 0) === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="inv-project-card__location">
+                    {formatLocation(proj.location_name, proj.city) || 'No location'}
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => openPhaseModal(e, proj)}
+                      style={{
+                        fontSize: 11, fontWeight: 500, padding: '4px 10px',
+                        borderRadius: 6, border: '1px solid #C7D2FE', background: '#fff',
+                        color: '#4338CA', cursor: 'pointer',
+                      }}
+                    >
+                      Manage Phases
+                    </button>
+                  </div>
 
-                <div className="inv-project-card__stats">
-                  <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value">
-                      {total}
+                  <div className="inv-project-card__stats">
+                    <div className="inv-project-card__stat">
+                      <div className="inv-project-card__stat-value">
+                        {total}
+                      </div>
+                      <div className="inv-project-card__stat-label">Total</div>
                     </div>
-                    <div className="inv-project-card__stat-label">Total</div>
-                  </div>
-                  <div className="inv-project-card__stat">
-                    <div className="inv-project-card__stat-value">
-                      {available}
+                    <div className="inv-project-card__stat">
+                      <div className="inv-project-card__stat-value">
+                        {available}
+                      </div>
+                      <div className="inv-project-card__stat-label">Available</div>
                     </div>
-                    <div className="inv-project-card__stat-label">Available</div>
-                  </div>
-                  {/* <div className="inv-project-card__stat">
+                    {/* <div className="inv-project-card__stat">
                     <div className="inv-project-card__stat-value">
                       {booked}
                     </div>
@@ -346,26 +346,26 @@ const InventoryDashboard = () => {
                     </div>
                     <div className="inv-project-card__stat-label">Sold</div>
                   </div> */}
-                </div>
+                  </div>
 
-                <div className="inv-project-card__progress">
-                  <div
-                    className="inv-project-card__progress-sold"
-                    style={{ width: `${soldPct}%` }}
-                  />
-                  <div
-                    className="inv-project-card__progress-booked"
-                    style={{ width: `${bookedPct}%` }}
-                  />
-                </div>
+                  <div className="inv-project-card__progress">
+                    <div
+                      className="inv-project-card__progress-sold"
+                      style={{ width: `${soldPct}%` }}
+                    />
+                    <div
+                      className="inv-project-card__progress-booked"
+                      style={{ width: `${bookedPct}%` }}
+                    />
+                  </div>
 
-                {/* <div className="inv-project-card__revenue">
+                  {/* <div className="inv-project-card__revenue">
                   <span>Booked: <strong>{formatCurrency(proj.booked_value)}</strong></span>
                   <span>Sold: <strong>{formatCurrency(proj.sold_value)}</strong></span>
                 </div> */}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
           </div>
           <Pagination
             page={page}
@@ -413,7 +413,7 @@ const InventoryDashboard = () => {
                 <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>Existing phases</div>
                 {phaseList.length === 0 ? (
                   <div style={{ fontSize: 12, color: '#6b7280', padding: '12px', background: '#f9fafb', borderRadius: 8 }}>
-                    No phases yet — add your first below.
+                    No phases yet - add your first below.
                   </div>
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -432,11 +432,11 @@ const InventoryDashboard = () => {
                       {phaseList.map((p) => (
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '6px 8px' }}><strong>{p.phase_name}</strong></td>
-                          <td style={{ padding: '6px 8px' }}>{p.phase_code || '—'}</td>
+                          <td style={{ padding: '6px 8px' }}>{p.phase_code || '-'}</td>
                           <td style={{ padding: '6px 8px' }}>
                             {p.guideline_value_per_sqft != null && p.guideline_value_per_sqft !== ''
                               ? `₹${Number(p.guideline_value_per_sqft).toLocaleString('en-IN')}`
-                              : '—'}
+                              : '-'}
                           </td>
                           <td style={{ padding: '6px 8px' }}>{p.unit_count ?? 0}</td>
                           <td style={{ padding: '6px 8px' }}>{p.available_count ?? 0}</td>

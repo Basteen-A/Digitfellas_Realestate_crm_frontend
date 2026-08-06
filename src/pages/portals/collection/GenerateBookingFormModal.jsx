@@ -10,7 +10,7 @@ const last4 = (acc) => String(acc || '').replace(/\s/g, '').slice(-4);
 
 // Same rules the PDF renderer (BookingConfirmationPDF.js) uses: stored booking
 // values win (they are what was billed and collected), and the guideline × area
-// formula only fills values that were never stored — so the prefilled totals
+// formula only fills values that were never stored - so the prefilled totals
 // match what the generated document shows.
 export const computeBookingTotals = (booking) => {
   const empty = { plotTotal: 0, devTotal: 0, stamp: 0, reg: 0, commission: 0, regExpenses: 0, other: 0, documentation: 0, totalValue: 0 };
@@ -225,7 +225,7 @@ const GenerateBookingFormModal = ({ booking, banks, terms, onClose }) => {
             <SplitSection title="Development Charges" total={devTotal} banks={activeBanks} rows={devRows} setRows={setDevRows} />
           )}
 
-          {/* Remaining charges — optionally assign a bank account to each (prints in the
+          {/* Remaining charges - optionally assign a bank account to each (prints in the
               PDF's Account Details). Leave blank to just show the charge total. */}
           {stamp > 0 && (
             <SplitSection title="Stamp Duty (7%)" total={stamp} banks={activeBanks} rows={stampRows} setRows={setStampRows} optional />

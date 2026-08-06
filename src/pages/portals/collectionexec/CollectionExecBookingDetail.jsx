@@ -15,8 +15,8 @@ import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
 import '../collection/CollectionWorkspace.css';
 
-const fmtD = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
-const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtD = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-');
 const humanFileSize = (bytes) => {
   if (!bytes) return '';
   const b = Number(bytes);
@@ -28,7 +28,7 @@ const humanFileSize = (bytes) => {
 const InfoRow = ({ label, value, mono, color }) => (
   <div className="bkd-info-item">
     <div className="bkd-info-label">{label}</div>
-    <div className={`bkd-info-value${mono ? ' mono' : ''}`} style={color ? { color } : undefined}>{value || '—'}</div>
+    <div className={`bkd-info-value${mono ? ' mono' : ''}`} style={color ? { color } : undefined}>{value || '-'}</div>
   </div>
 );
 
@@ -275,10 +275,10 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
   );
 
   const statusBadge = badgeColors(booking.status_color);
-  const buyerName = booking.buyer_name || booking.customer_name || '—';
+  const buyerName = booking.buyer_name || booking.customer_name || '-';
   const customer = booking.customer || {};
   const phoneRaw = customer.phone || customer.phone_number || '';
-  const phone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(phoneRaw || '')) ? '—' : (phoneRaw || '—');
+  const phone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(phoneRaw || '')) ? '-' : (phoneRaw || '-');
 
   return (
     <div className="bkd-page">
@@ -290,7 +290,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
               Booking {booking.booking_number}{' '}
               <span className="bkd-status-badge" style={{ background: statusBadge.bg, color: statusBadge.text, border: `1px solid ${statusBadge.border}` }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusBadge.text, display: 'inline-block' }} />
-                {booking.status_label || '—'}
+                {booking.status_label || '-'}
               </span>
             </h1>
             <p className="bkd-subtitle">{booking.project_name} · {booking.unit_display || booking.unit_number || 'N/A'}</p>
@@ -304,7 +304,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
         </div>
       </div>
 
-      {/* Single column — booking data + uploads + activity. No financial summary. */}
+      {/* Single column - booking data + uploads + activity. No financial summary. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 820 }}>
         <div className="bkd-card">
           <div className="bkd-card-header"><div className="bkd-card-title"><UserIcon style={{ width: 15, height: 15 }} /> Booking Details</div></div>
@@ -315,17 +315,17 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
               <InfoRow label="Booking Number" value={booking.booking_number} mono />
               <InfoRow label="Booking Date" value={fmtD(booking.booking_date)} />
               <InfoRow label="Project" value={booking.project_name} />
-              <InfoRow label="Phase" value={booking.phase_name || '—'} />
-              <InfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
+              <InfoRow label="Phase" value={booking.phase_name || '-'} />
+              <InfoRow label="Unit" value={booking.unit_display || booking.unit_number || '-'} />
               <InfoRow label="Booking Status" value={booking.status_label} color={statusBadge.text} />
-              <InfoRow label="Payment Status" value={booking.payment_status || '—'} />
+              <InfoRow label="Payment Status" value={booking.payment_status || '-'} />
               <InfoRow label="Next Follow-up" value={fmtD(booking.next_follow_up_at)} />
               {booking.lead?.lead_number && <InfoRow label="Lead" value={booking.lead.lead_number} mono />}
             </div>
           </div>
         </div>
 
-        {/* Assigned team — the collection executives sharing this booking */}
+        {/* Assigned team - the collection executives sharing this booking */}
         {(booking.collectionExecutives || []).length > 0 && (
           <div className="bkd-card">
             <div className="bkd-card-header"><div className="bkd-card-title"><UserIcon style={{ width: 15, height: 15 }} /> Assigned Team</div></div>
@@ -484,7 +484,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
                           <label className="qa-drawer-field-label">Cancel Reason *</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
                             onChange={e => setCancelReasonId(e.target.value)}>
-                            <option value="">— Select reason —</option>
+                            <option value="">- Select reason -</option>
                             {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name || r.name}</option>)}
                           </select>
                           <div style={{ marginTop: 8 }}>
@@ -596,7 +596,7 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
             {actionMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
+                  {/* Net / Paid / Balance already sits in the drawer header - no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
                   {(() => {
                     const buckets = getDrawerCategoryBuckets(booking);
@@ -622,8 +622,8 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
                                 const paid = bucket?.paid || 0;
                                 const balance = Math.max(target - paid, 0);
                                 const suffix = target > 0
-                                  ? ` — Balance ${formatCurrency(balance)}`
-                                  : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
+                                  ? ` - Balance ${formatCurrency(balance)}`
+                                  : (paid > 0 ? ` - Paid ${formatCurrency(paid)}` : '');
                                 return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                               })}
                             </select>

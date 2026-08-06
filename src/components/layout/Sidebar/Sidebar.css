@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* SIDEBAR — Premium Clean Design with Dark/Light Theme         */
+/* SIDEBAR - Premium Clean Design with Dark/Light Theme         */
 /* ============================================================ */
 
 .app-sidebar {
@@ -25,7 +25,7 @@
 
 /* ── Brand ──
    Height locked to the top bar (--header-height) so the brand's bottom border
-   lines up exactly with the topbar's — the sidebar and header merge into one
+   lines up exactly with the topbar's - the sidebar and header merge into one
    seamless header line, like the telecaller portal. */
 .app-sidebar__brand {
   height: var(--header-height, 64px);
@@ -146,7 +146,7 @@
   font-weight: 600;
 }
 
-/* ── Child links (submenu items) — same link style, indented under the icon ── */
+/* ── Child links (submenu items) - same link style, indented under the icon ── */
 .app-sidebar__link--child {
   padding: 8px 16px 8px 46px;
   font-size: 13px;
@@ -236,7 +236,7 @@
   }
 }
 
-/* The sidebar has no profile/logout footer — profile and logout live in the
+/* The sidebar has no profile/logout footer - profile and logout live in the
    header user menu only. */
 
 /* ── Heroicon SVG sizing ── */
@@ -287,7 +287,7 @@
   opacity: 1;
 }
 
-/* Tighten the very first header — it sits right under the brand rule. */
+/* Tighten the very first header - it sits right under the brand rule. */
 .app-sidebar__section:first-child .app-sidebar__section-toggle { padding-top: 8px; }
 
 .app-sidebar__section-label {
@@ -342,8 +342,8 @@
 .app-sidebar--collapsed .app-sidebar__subnav { display: none; }
 
 /* ── Hover-to-expand the collapsed rail (portal behaviour) ── */
-/* z-index must beat the sticky header (--z-header: 400) so the expanded rail —
-   including its logo/brand — overlays cleanly instead of being clipped under
+/* z-index must beat the sticky header (--z-header: 400) so the expanded rail -
+   including its logo/brand - overlays cleanly instead of being clipped under
    the top bar. */
 .app-sidebar--collapsed:hover { width: 250px; box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08); z-index: 500; }
 .app-sidebar--collapsed:hover .app-sidebar__brand { justify-content: center; padding: 0 16px; }
@@ -364,16 +364,16 @@
 .app-sidebar--collapsed:hover .app-sidebar__subnav { display: block; }
 
 /* ============================================================ */
-/* Category rail — collapsed state for sectioned menus (admin,    */
+/* Category rail - collapsed state for sectioned menus (admin,    */
 /* super admin, matrix-driven roles). One icon per SECTION, and   */
 /* clicking it opens that section's links in a flyout panel, so   */
 /* the rail carries 8 icons instead of 25+ stacked ones.          */
 /* ============================================================ */
 
-/* 70px matches the collapsed grid track in MainLayout.css — keep them in step. */
+/* 70px matches the collapsed grid track in MainLayout.css - keep them in step. */
 .app-sidebar--rail { width: 70px; }
 
-/* The rail replaces hover-to-expand — the flyout is the way in, so the whole
+/* The rail replaces hover-to-expand - the flyout is the way in, so the whole
    sidebar must not widen underneath it. These rules follow the
    `.app-sidebar--collapsed:hover` block above and win on source order. */
 .app-sidebar--rail:hover {
@@ -464,11 +464,11 @@
 }
 
 /* Panel rows carry the same icon column as the expanded sidebar, so children
-   indent to the same 46px label edge — collapsing the sidebar must not cost you
+   indent to the same 46px label edge - collapsing the sidebar must not cost you
    the icons. */
 .app-sidebar__flyout .app-sidebar__link--child { padding: 8px 16px 8px 46px; }
 
-/* ── Mobile drawer close button — mirrors the telecaller portal sidebar
+/* ── Mobile drawer close button - mirrors the telecaller portal sidebar
    (.portal-sidebar__close) for a consistent look across roles. ── */
 .app-sidebar__close {
   position: absolute;
@@ -488,7 +488,7 @@
 }
 .app-sidebar__close:hover { background: var(--bg-card-hover); }
 
-/* ── Mobile drawer brand: centered, full-width logo — matches the portal
+/* ── Mobile drawer brand: centered, full-width logo - matches the portal
    sidebar's mobile brand (56px bar, 48px logo area, centered). ── */
 @media (max-width: 767px) {
   .app-sidebar__brand {

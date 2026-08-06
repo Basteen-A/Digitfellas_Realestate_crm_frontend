@@ -1,7 +1,7 @@
 // ============================================================
 // CLIENT-SIDE PERMISSION HELPERS
 //
-// These decide what to DRAW — the sidebar, buttons, tabs. They are a UX layer,
+// These decide what to DRAW - the sidebar, buttons, tabs. They are a UX layer,
 // never a security boundary: the server re-checks every request through
 // middleware/requirePermission.js. Hiding a button here does not protect the
 // endpoint behind it, and it is not supposed to.
@@ -10,7 +10,7 @@
 // ({ moduleKey: 'none'|'read'|'write'|'full' }) from both /auth/login and
 // /auth/me. Users authenticated before this shipped have no matrix on their
 // cached payload, so every helper falls back to "no opinion" rather than
-// locking the UI down — see hasModule().
+// locking the UI down - see hasModule().
 // ============================================================
 
 import { MODULE_KEYS, MODULES, levelSatisfies, normalizeLevel } from '../config/modules';
@@ -30,7 +30,7 @@ export const moduleLevel = (user, moduleKey) =>
  * Does this user meet `required` on `moduleKey`?
  *
  * Super Admin always passes. When the payload carries no matrix at all (an old
- * cached session), returns `fallback` — default true — so a stale token degrades
+ * cached session), returns `fallback` - default true - so a stale token degrades
  * to the previous role-based behaviour instead of an empty screen. The server
  * still enforces, so a wrong `true` here costs a 403, not a leak.
  */
@@ -53,7 +53,7 @@ export const canManageModule = (user, moduleKey) => hasModule(user, moduleKey, '
 export const modulesAtLeast = (user, required = 'read') =>
   MODULE_KEYS.filter((key) => hasModule(user, key, required, false));
 
-/** The catalogue entries the user can see, in catalogue order — drives the sidebar. */
+/** The catalogue entries the user can see, in catalogue order - drives the sidebar. */
 export const visibleModules = (user) =>
   MODULES.filter((m) => hasModule(user, m.key, 'read', false));
 

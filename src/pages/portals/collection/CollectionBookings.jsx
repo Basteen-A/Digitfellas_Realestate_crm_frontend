@@ -104,7 +104,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const [emiSaving, setEmiSaving] = useState(false);
   const [reqCancelSaving, setReqCancelSaving] = useState(false);
   const [confirmCancelSaving, setConfirmCancelSaving] = useState(false);
-  // Refund form — cancellation only. A standalone refund is a booking-detail
+  // Refund form - cancellation only. A standalone refund is a booking-detail
   // action, not a list action.
   const [cancelRefundForm, setCancelRefundForm] = useState({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' });
 
@@ -310,7 +310,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
   const isCancelStatusCode = (code) => ['CANCEL', 'CANCELLED'].includes(code);
   // "Cancelled" is offered in the status grid ONLY once SH has approved (or the
   // 7-day window auto-approved) the open booking's cancellation request. No direct
-  // cancel — it always goes through the approval gate, and the full collected
+  // cancel - it always goes through the approval gate, and the full collected
   // amount must be refunded first (enforced below + server-side via confirmCancel).
   const drawerTotalPaid = parseFloat(drawerBooking?.total_paid || 0);
   const cancelApprovedForGrid = (drawerBooking?.status_code || drawerBooking?.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL'
@@ -343,7 +343,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     if (s === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_approved_by) {
       actions.push({ key: 'confirmCancel', label: 'Confirm Cancel', Icon: XCircleIcon, color: '#DC2626', onClick: stop(() => openWorkflow(booking, 'confirmCancel')) });
     }
-    // No "Process Refund" here — refunds are raised from the booking detail
+    // No "Process Refund" here - refunds are raised from the booking detail
     // screen only, where the payment history that justifies the amount is on
     // screen. Refunding blind from a list row is what this removes.
     const awaitingSH = s === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by;
@@ -428,7 +428,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
     setReqCancelSaving(true);
     try {
       await bookingApi.requestToCancel(workflowBooking.id, { cancel_reason_id: cancelReasonId, cancel_remarks: cancelRemarks });
-      toast.success('Cancellation requested — SH will review'); closeWorkflow(); loadBookings();
+      toast.success('Cancellation requested - SH will review'); closeWorkflow(); loadBookings();
     } catch (err) { toast.error(getErrorMessage(err, 'Failed')); }
     finally { setReqCancelSaving(false); }
   };
@@ -509,7 +509,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
           cancel_reason_id: cancelReasonId,
           cancel_remarks: cancelRemarks,
         });
-        toast.success('Cancellation requested — SH will review');
+        toast.success('Cancellation requested - SH will review');
       } else if (selectedStatus.status_code === 'REGISTERED') {
         const formData = new FormData();
         formData.append('registration_date', registerForm.registration_date);
@@ -769,7 +769,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
       {/* Bookings Table */}
       <div className="crm-card">
         <div className="crm-card-body-flush">
-          {/* Tabs + record count — same pill row as My Leads */}
+          {/* Tabs + record count - same pill row as My Leads */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
             <div className="filter-tabs mobile-compact-tabs">
               {BOOKING_TABS.map((t) => (
@@ -833,14 +833,14 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                     const arrowColor = isMissed ? '#e80d0dff' : '#000000';
                     const fuDateStr = booking.next_follow_up_at
                       ? new Date(booking.next_follow_up_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : '—';
+                      : '-';
                     const paymentBadge = booking.payment_status ? (
                       <span style={{
                         fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
                         background: booking.payment_status === 'Full Payment Received' ? '#DCFCE7' : booking.payment_status === 'Follow Up' ? '#FEF3C7' : '#DBEAFE',
                         color: booking.payment_status === 'Full Payment Received' ? '#166534' : booking.payment_status === 'Follow Up' ? '#92400E' : '#1E40AF',
                       }}>{booking.payment_status}</span>
-                    ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>;
+                    ) : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>-</span>;
 
                     const isCancelApproved = (booking.status_code || booking.bookingStatus?.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
                     const displayStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
@@ -871,7 +871,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                             </small>
                           </td>
                           <td className="hide-mobile">
-                            <p style={{ fontSize: 13 }}>{booking.customer?.phone || booking.phone || '—'}</p>
+                            <p style={{ fontSize: 13 }}>{booking.customer?.phone || booking.phone || '-'}</p>
                           </td>
                           <td className="hide-mobile">
                             <p className="lead-title">{booking.project_name || '-'}</p>
@@ -903,7 +903,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                                 ...(manager ? [{ ...manager, _owner: true }] : []),
                                 ...execs,
                               ].filter((p) => (p && !seen.has(p.id) && seen.add(p.id)));
-                              if (people.length === 0) return <small style={{ color: 'var(--text-muted)' }}>—</small>;
+                              if (people.length === 0) return <small style={{ color: 'var(--text-muted)' }}>-</small>;
                               return (
                                 <div className="bkd-cell-avatars">
                                   {people.slice(0, 3).map((a, i) => (
@@ -958,7 +958,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                                   </div>
                                   <div className="expanded-info-item">
                                     <label>Payment Status</label>
-                                    <p>{booking.payment_status || '—'}</p>
+                                    <p>{booking.payment_status || '-'}</p>
                                   </div>
                                   {booking.next_follow_up_at && (
                                     <div className="expanded-info-item">
@@ -1076,7 +1076,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           </div>
                           {drawerTotalPaid > 0.01 && (
                             <>
-                              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Refund (required — must equal total collected)</div>
+                              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Refund (required - must equal total collected)</div>
                               <div className="bkd-form-row">
                                 <div className="bkd-form-group">
                                   <label className="bkd-form-label">Refund Amount (₹) *</label>
@@ -1148,7 +1148,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                           <label className="qa-drawer-field-label">Cancel Reason *</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
                             onChange={e => setCancelReasonId(e.target.value)}>
-                            <option value="">— Select reason —</option>
+                            <option value="">- Select reason -</option>
                             {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name}</option>)}
                           </select>
                           <div style={{ marginTop: 8 }}>
@@ -1296,7 +1296,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             {drawerMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
+                  {/* Net / Paid / Balance already sits in the drawer header - no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
                   {(() => {
                     const buckets = getDrawerCategoryBuckets(drawerBooking);
@@ -1320,8 +1320,8 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                                 const paid = bucket?.paid || 0;
                                 const balance = Math.max(target - paid, 0);
                                 const suffix = target > 0
-                                  ? ` — Balance ${formatCurrency(balance)}`
-                                  : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
+                                  ? ` - Balance ${formatCurrency(balance)}`
+                                  : (paid > 0 ? ` - Paid ${formatCurrency(paid)}` : '');
                                 return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                               })}
                             </select>
@@ -1511,7 +1511,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   </div>
 
                   <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
-                    Refund (required — must equal total collected amount)
+                    Refund (required - must equal total collected amount)
                   </div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group">
@@ -1552,7 +1552,7 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                       onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>
-                    Refund is operator-entered. It is subtracted from collected balance — never auto-derived from plot value.
+                    Refund is operator-entered. It is subtracted from collected balance - never auto-derived from plot value.
                   </div>
 
                   <div className="qa-drawer-save-row">

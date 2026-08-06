@@ -8,7 +8,7 @@ import {
   HomeModernIcon,
   ChartBarIcon,
   ArrowPathIcon,
- 
+
   PhoneIcon,
   XCircleIcon,
   InboxArrowDownIcon,
@@ -146,7 +146,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
   };
 
   const kpiCards = [
-    { label: 'Total Active Site Visits', value: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} `,sub:`completed`, icon: HomeModernIcon, variant: 'info' },
+    { label: 'Total Active Site Visits', value: `${stats?.visitsDone ?? stats?.svCompleted ?? 0} `, sub: `completed`, icon: HomeModernIcon, variant: 'info' },
     { label: 'Booked Leads', value: stats?.bookedLeads ?? 0, sub: 'booked customers', icon: UserGroupIcon, variant: 'success' },
     { label: 'Under Negotiations', value: stats?.negotiations ?? 0, sub: 'in negotiation', icon: ChartBarIcon, variant: '' },
     { label: 'Awaiting Revisits', value: stats?.revisits ?? 0, sub: 'pending revisit', icon: ArrowPathIcon, variant: 'warning' },
@@ -173,16 +173,16 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
                 <div className="col-cell-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {leadName(lead)} <StatusChip name={lead.statusName} color={lead.statusColor} />
                 </div>
-                <div className="col-cell-secondary">{lead.phone || '—'}</div>
+                <div className="col-cell-secondary">{lead.phone || '-'}</div>
               </td>
-              <td>{lead.projectName || lead.project || '—'}</td>
+              <td>{lead.projectName || lead.project || '-'}</td>
               <td>
                 {due ? (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#000000', fontWeight: 500 }}>
                     <span>{new Date(due).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     <ArrowDownLeftIcon style={{ width: 12, height: 12, color: overdue ? '#e80d0dff' : '#000000' }} />
                   </div>
-                ) : '—'}
+                ) : '-'}
               </td>
               <td>
                 <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/portal/lead/${lead.id}`); }}>
@@ -202,7 +202,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
       <div className="col-page-header">
         <div className="col-page-header-left">
           <h1>{greeting}{firstName ? `, ${firstName}` : ''}</h1>
-          <p>Here's your sales overview for today — {today}</p>
+          <p>Here's your sales overview for today - {today}</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={() => load()}>
@@ -282,7 +282,7 @@ const SalesManagerDashboard = ({ user, onNavigate }) => {
               <XCircleIcon style={{ width: 20, height: 20, color: 'var(--accent-red)' }} />
               <div>
                 <div className="col-card-title-new">Missed Follow Up</div>
-                <div className="col-card-subtitle-new">Overdue — needs attention</div>
+                <div className="col-card-subtitle-new">Overdue - needs attention</div>
               </div>
             </div>
             <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads')}>

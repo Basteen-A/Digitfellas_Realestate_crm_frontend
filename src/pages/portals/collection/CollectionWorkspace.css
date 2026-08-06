@@ -121,7 +121,7 @@
 
   /* The bookings list uses the shared lead-workspace responsive table. The
      shared CSS collapses the data (hide-mobile) columns at ≤768 but only
-     reveals the expand toggle + styled expanded card at ≤640 — so reveal and
+     reveals the expand toggle + styled expanded card at ≤640 - so reveal and
      style them across the whole trimmed-table band, keeping every booking
      expandable (and its quick actions reachable) on tablets too. */
   .col-bookings-page .lead-workspace__table th.lead-col-toggle,
@@ -966,7 +966,7 @@
   align-items: center;
 }
 
-/* Inside the mobile expanded card the action set can be long — let it wrap
+/* Inside the mobile expanded card the action set can be long - let it wrap
    onto multiple rows, left-aligned, instead of overflowing. */
 .col-qa-actions--mobile {
   flex-wrap: wrap;
@@ -2097,12 +2097,13 @@
 .bkd-info-item {}
 .bkd-info-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--col-text-secondary,#9ca3af); margin-bottom:4px; }
 .bkd-info-value { font-size:14px; font-weight:600; color:var(--col-text,#111827); }
-.bkd-info-value.mono { font-family:monospace; font-size:13px; }
+/* Reference numbers stay in the app font — same call as .col-cell-mono. */
+.bkd-info-value.mono { font-family:inherit; font-size:inherit; font-weight:500; }
 .bkd-divider { border:none; border-top:1px solid var(--col-border,#e5e7eb); margin:16px 0; }
 
 /* ── Customer Information card (redesigned) ── */
 .ci-card { padding:0; }
-/* Canonical card header — shared by every card on the booking-detail page so the
+/* Canonical card header - shared by every card on the booking-detail page so the
    icon tile, title/subtitle font sizes, padding and alignment stay consistent. */
 .ci-header { display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--col-border,#e5e7eb); }
 .ci-header-icon { width:40px; height:40px; border-radius:10px; background:var(--col-bg,#f1f5f9); display:flex; align-items:center; justify-content:center; color:var(--col-text-secondary,#64748b); flex-shrink:0; }
@@ -2119,7 +2120,7 @@
 .ci-grid-4 { grid-template-columns:repeat(4,1fr); }
 .ci-field-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; color:var(--col-text-secondary,#64748b); margin-bottom:4px; }
 .ci-field-value { font-size:14px; font-weight:500; color:var(--col-text,#0f172a); word-break:break-word; }
-.ci-field-value.mono { font-family:monospace; font-size:13px; }
+.ci-field-value.mono { font-family:inherit; font-size:inherit; }
 .ci-field-big { margin-bottom:12px; }
 .ci-value-big { font-size:18px; font-weight:500; }
 .ci-collapsible-head { width:100%; display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--col-border,#e5e7eb); background:none; border-left:none; border-right:none; border-top:none; cursor:pointer; text-align:left; color:var(--col-text-secondary,#64748b); }
@@ -2404,7 +2405,7 @@
 .bkd-table td { padding:12px 14px; font-size:13px; color:var(--col-text,#111827); border-bottom:1px solid #f3f4f6; vertical-align:middle; }
 .bkd-table tbody tr:hover { background:#fafbff; }
 .bkd-table tbody tr:last-child td { border-bottom:none; }
-.bkd-mono { font-family:monospace; font-size:12px; }
+.bkd-mono { font-family:inherit; font-size:inherit; font-weight:500; }
 .bkd-row-verified { background:#f0fdf4; }
 .bkd-row-bounced { background:#fef2f2; }
 

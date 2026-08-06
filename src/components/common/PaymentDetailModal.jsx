@@ -73,7 +73,7 @@ const PaymentDetailModal = ({ payment, onClose, onSaved }) => {
         <div className="col-modal-header">
           <h2>
             <CreditCardIcon style={{ width: 18, height: 18, marginRight: 6, verticalAlign: 'text-bottom' }} />
-            Payment {payment.payment_number} — {payment.booking_number}
+            Payment {payment.payment_number} - {payment.booking_number}
           </h2>
           <button className="col-modal-close" onClick={onClose}>×</button>
         </div>
@@ -82,12 +82,12 @@ const PaymentDetailModal = ({ payment, onClose, onSaved }) => {
           <>
             <div className="col-modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label="Customer">{payment.customer_name || '—'}</Field>
-                <Field label="Booking">{payment.booking_number || '—'}</Field>
-                <Field label="Mode">{payment.payment_mode || '—'}</Field>
+                <Field label="Customer">{payment.customer_name || '-'}</Field>
+                <Field label="Booking">{payment.booking_number || '-'}</Field>
+                <Field label="Mode">{payment.payment_mode || '-'}</Field>
                 <Field label="Amount"><span style={{ color: 'var(--accent-green)' }}>{formatCurrency(payment.amount)}</span></Field>
                 <Field label="Date">{formatDate(payment.payment_date)}</Field>
-                <Field label="Account Name">{payment.account_name || '—'}</Field>
+                <Field label="Account Name">{payment.account_name || '-'}</Field>
                 <Field label="Status">{statusOf(payment)}</Field>
                 {payment.remarks ? <div style={{ gridColumn: '1 / -1' }}><Field label="Remarks">{payment.remarks}</Field></div> : null}
               </div>

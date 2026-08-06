@@ -94,7 +94,7 @@ const getDrawerCategoryBuckets = (booking) => {
   ];
 };
 
-// Collection Executive list — only bookings assigned to this executive (scoped
+// Collection Executive list - only bookings assigned to this executive (scoped
 // server-side via getMyBookings → collection_executive_id).
 const BOOKING_TABS = [
   { value: 'All', label: 'All', short: 'All' },
@@ -343,7 +343,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
       <header className="lead-workspace__header">
         <div>
           <h1>My Collections</h1>
-          <p className="hide-mobile">Bookings assigned to you — update status, follow-ups and record payments</p>
+          <p className="hide-mobile">Bookings assigned to you - update status, follow-ups and record payments</p>
         </div>
         <div className="lead-workspace__header-actions">
           <button type="button" className="workspace-btn workspace-btn--ghost" onClick={loadBookings} disabled={loading}>
@@ -510,7 +510,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                     const arrowColor = isMissed ? '#e80d0dff' : '#000000';
                     const fuDateStr = booking.next_follow_up_at
                       ? new Date(booking.next_follow_up_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : '—';
+                      : '-';
                     const isExpanded = expandedMobileBookingId === booking.id;
 
                     return (
@@ -527,7 +527,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                             </button>
                           </td>
                           <td className="lead-col-lead">
-                            <p className="lead-title">{booking.customer_name || booking.buyer_name || '—'}</p>
+                            <p className="lead-title">{booking.customer_name || booking.buyer_name || '-'}</p>
                             <small>
                               <button type="button" className="col-booking-link" onClick={(e) => { e.stopPropagation(); onSelectBooking(booking.id); }}>
                                 {booking.booking_number}
@@ -535,17 +535,17 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                             </small>
                           </td>
                           <td className="hide-mobile">
-                            <p className="lead-title">{booking.project_name || '—'}</p>
+                            <p className="lead-title">{booking.project_name || '-'}</p>
                             <small style={{ display: 'block', color: '#64748b', fontSize: 11 }}>Unit: {booking.unit_display || booking.unit_number || 'TBD'}</small>
                           </td>
                           <td className="lead-col-status">
                             <span className="col-badge" style={badgeStyle(booking.status_color)}>
                               <span className="col-badge-dot" style={{ background: badgeColors(booking.status_color).text }} />
-                              {booking.status_label || '—'}
+                              {booking.status_label || '-'}
                             </span>
                           </td>
                           <td className="hide-mobile">
-                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{booking.payment_status || '—'}</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{booking.payment_status || '-'}</span>
                           </td>
                           <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 400, color: fuColor }}>
@@ -571,7 +571,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                                   </div>
                                   <div className="expanded-info-item">
                                     <label>Payment Status</label>
-                                    <p>{booking.payment_status || '—'}</p>
+                                    <p>{booking.payment_status || '-'}</p>
                                   </div>
                                   {booking.next_follow_up_at && (
                                     <div className="expanded-info-item">
@@ -684,7 +684,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                           <label className="qa-drawer-field-label">Cancel Reason *</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
                             onChange={e => setCancelReasonId(e.target.value)}>
-                            <option value="">— Select reason —</option>
+                            <option value="">- Select reason -</option>
                             {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name || r.name}</option>)}
                           </select>
                           <div style={{ marginTop: 8 }}>
@@ -796,7 +796,7 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
             {actionMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', height: 'min(580px, calc(100vh - 170px))' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
+                  {/* Net / Paid / Balance already sits in the drawer header - no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>Record New Payment</div>
                   {(() => {
                     const buckets = getDrawerCategoryBuckets(activeBooking);
@@ -822,8 +822,8 @@ const CollectionExecBookings = ({ onSelectBooking }) => {
                                 const paid = bucket?.paid || 0;
                                 const balance = Math.max(target - paid, 0);
                                 const suffix = target > 0
-                                  ? ` — Balance ${formatCurrency(balance)}`
-                                  : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
+                                  ? ` - Balance ${formatCurrency(balance)}`
+                                  : (paid > 0 ? ` - Paid ${formatCurrency(paid)}` : '');
                                 return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                               })}
                             </select>

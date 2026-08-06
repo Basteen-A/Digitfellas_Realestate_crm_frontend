@@ -3,7 +3,8 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
   ArrowPathIcon, PlusCircleIcon, PlusIcon, MagnifyingGlassIcon, ChevronRightIcon,
-  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, FunnelIcon, ArrowDownLeftIcon} from '@heroicons/react/24/outline';
+  PencilSquareIcon, BoltIcon, CalendarDaysIcon, PaperClipIcon, FunnelIcon, ArrowDownLeftIcon
+} from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import TaskModal from './TaskModal';
@@ -46,7 +47,7 @@ const OPTION_TOGGLES = [
   { value: 'updated_today', label: 'Updated Today' },
 ];
 
-// Files stream through the authenticated API (/files/stream) — opened via
+// Files stream through the authenticated API (/files/stream) - opened via
 // openAuthedFile / AuthedAudio so the token rides along; bare hrefs would 401.
 
 // Deterministic avatar colour from a user id so each person keeps one colour.
@@ -61,7 +62,7 @@ const colorFor = (id) => {
 const initials = (u) =>
   `${(u?.first_name || '?')[0] || ''}${(u?.last_name || '')[0] || ''}`.toUpperCase();
 const fullName = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim();
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -93,7 +94,7 @@ const Chip = ({ hex, children }) => (
   </span>
 );
 
-// ── Toolbar filter pill — same markup/classes as the My Leads workspace so the
+// ── Toolbar filter pill - same markup/classes as the My Leads workspace so the
 // look is identical. Supports single-select (radio) and multi-select (checkbox).
 const FilterDropdown = ({
   label, mobileLabel, options, single = false, selectedValues,
@@ -138,7 +139,7 @@ const FilterDropdown = ({
   );
 };
 
-// ── Mobile filter drawer — the "Filters" pill that opens a sectioned sheet,
+// ── Mobile filter drawer - the "Filters" pill that opens a sectioned sheet,
 // identical to the My Leads mobile experience.
 const MobileFilters = ({ sections, totalSelected, isOpen, onToggleOpen, onClearAll }) => (
   <details className="lead-mobile-filters show-mobile" open={isOpen}>
@@ -190,7 +191,7 @@ const TaskListPage = () => {
   const [projectFilter, setProjectFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [assignFilter, setAssignFilter] = useState(''); // '' | 'by_me' | 'to_me'
-  const [assigneeFilter, setAssigneeFilter] = useState(''); // '' | <user id> — a specific assignee
+  const [assigneeFilter, setAssigneeFilter] = useState(''); // '' | <user id> - a specific assignee
   const [updatedToday, setUpdatedToday] = useState(false);
   const [groupBy, setGroupBy] = useState('none');
   const [openFilterKey, setOpenFilterKey] = useState(null); // which toolbar/mobile filter pill is open
@@ -325,7 +326,7 @@ const TaskListPage = () => {
       // "Assigned by me" = I created it; "Assigned to me" = I'm an assignee.
       if (assignFilter === 'by_me' && String(t.creator_id) !== String(myId)) return false;
       if (assignFilter === 'to_me' && !(t.assignees || []).some((a) => String(a.id) === String(myId))) return false;
-      // Specific assignee filter — task must include the chosen user as an assignee.
+      // Specific assignee filter - task must include the chosen user as an assignee.
       if (assigneeFilter && !(t.assignees || []).some((a) => String(a.id) === assigneeFilter)) return false;
 
       if (updatedToday) {
@@ -333,7 +334,7 @@ const TaskListPage = () => {
         const updateVal = t.updated_at || t.updatedAt || t.created_at || t.createdAt;
         if (!updateVal || new Date(updateVal).toDateString() !== todayStr) return false;
       }
-      
+
       return true;
     }),
     [rows, projectFilter, deptFilter, assignFilter, assigneeFilter, myId, updatedToday]
@@ -445,7 +446,7 @@ const TaskListPage = () => {
                       {r.status_at_time && <Chip hex={STATUS_HEX[r.status_at_time] || '#64748b'}>{STATUS_LABELS[r.status_at_time] || 'Update'}</Chip>}
                       <span style={{ minWidth: 0 }}>
                         {r.content || 'Status update'}
-                        {r.user && <span> — {fullName(r.user)}</span>}
+                        {r.user && <span> - {fullName(r.user)}</span>}
                         {r.created_at && <span style={{ opacity: 0.7 }}> · {fmtDateTime(r.created_at)}</span>}
                         {r.voice?.file_url && (
                           <AuthedAudio
@@ -521,7 +522,7 @@ const TaskListPage = () => {
                   +{assignees.length - 4}
                 </span>
               )}
-              {assignees.length === 0 && <small>—</small>}
+              {assignees.length === 0 && <small>-</small>}
             </div>
           </td>
 
@@ -539,7 +540,7 @@ const TaskListPage = () => {
                   </small>
                 )}
               </>
-            ) : <small>—</small>}
+            ) : <small>-</small>}
             {task.department?.name && (
               <small style={{ display: 'block', marginTop: 2 }}>{task.department.name}{task.subDepartment?.name ? ` · ${task.subDepartment.name}` : ''}</small>
             )}
@@ -549,13 +550,13 @@ const TaskListPage = () => {
           <td className="task-col-followup">
             {task.follow_up_date ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 400, color: fu === 'missed' ? '#000000ff' : fu === 'today' ? '#000000ff' : 'var(--text-secondary)' }}>
-               
+
                 <span>{fmtDate(task.follow_up_date)}</span>
-                 <ArrowDownLeftIcon style={{ width: 12, height: 12, color: fu === 'missed' ? '#e80d0dff' : '#000000' }} />
+                <ArrowDownLeftIcon style={{ width: 12, height: 12, color: fu === 'missed' ? '#e80d0dff' : '#000000' }} />
                 {/* {fu === 'missed' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}></span>}
                 {fu === 'today' && <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}></span>} */}
               </div>
-            ) : <small>—</small>}
+            ) : <small>-</small>}
           </td>
 
           {/* Action */}
@@ -643,7 +644,7 @@ const TaskListPage = () => {
       <header className="lead-workspace__header">
         <div>
           <h1>Task Management</h1>
-          <p>Your tasks — created by you or assigned to you.</p>
+          <p>Your tasks - created by you or assigned to you.</p>
         </div>
         <div className="lead-workspace__header-actions">
           <button type="button" className="workspace-btn workspace-btn--ghost" onClick={load} disabled={loading}>
@@ -655,7 +656,7 @@ const TaskListPage = () => {
         </div>
       </header>
 
-      {/* ── Toolbar (filters + search) — same pill layout as My Leads ── */}
+      {/* ── Toolbar (filters + search) - same pill layout as My Leads ── */}
       <div className="lead-workspace__toolbar">
         <div className="lead-workspace__toolbar-filters">
           <FilterDropdown
@@ -826,18 +827,18 @@ const TaskListPage = () => {
                             >
                               <PlusIcon style={{ width: 14, height: 14, transform: isExpanded ? 'rotate(45deg)' : 'none', transition: 'transform .15s' }} />
                             </button>
-                            
+
                             {/* Group Name - clickable to toggle */}
-                            <span 
+                            <span
                               onClick={() => toggleGroup(groupKey)}
                               style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', userSelect: 'none' }}
                             >
                               {key}
                             </span>
-                            
+
                             {/* Task Count */}
                             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-blue, #2563eb)', background: 'rgba(37,99,235,0.1)', borderRadius: 999, padding: '1px 8px' }}>{tasks.length}</span>
-                            
+
                             {/* Stats */}
                             <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                               {done}/{tasks.length} done{over > 0 && <span style={{ color: '#dc2626' }}> · {over} overdue</span>}
@@ -847,9 +848,9 @@ const TaskListPage = () => {
                       </tr>
                       {/* Task rows - shown when expanded */}
                       {isExpanded && tasks.map((t) => {
-                        const groupedClass = groupBy === 'department' ? 'task-row--grouped-department' : 
-                                           groupBy === 'project' ? 'task-row--grouped-project' :
-                                           groupBy === 'status' ? 'task-row--grouped-status' : 'task-row--grouped';
+                        const groupedClass = groupBy === 'department' ? 'task-row--grouped-department' :
+                          groupBy === 'project' ? 'task-row--grouped-project' :
+                            groupBy === 'status' ? 'task-row--grouped-status' : 'task-row--grouped';
                         return renderRow(t, true, groupedClass);
                       })}
                     </React.Fragment>
@@ -882,19 +883,19 @@ const TaskListPage = () => {
                     >
                       <PlusIcon style={{ width: 14, height: 14, transform: isExpanded ? 'rotate(45deg)' : 'none', transition: 'transform .15s' }} />
                     </button>
-                    
+
                     {/* Group Name */}
-                    <span 
+                    <span
                       className="task-cards-group__name"
                       onClick={() => toggleGroup(groupKey)}
                       style={{ cursor: 'pointer' }}
                     >
                       {key}
                     </span>
-                    
+
                     {/* Task Count */}
                     <span className="task-cards-group__count">{tasks.length}</span>
-                    
+
                     {/* Stats */}
                     <span className="task-cards-group__stat">{done}/{tasks.length} done{over > 0 && <span style={{ color: '#dc2626' }}> · {over} overdue</span>}</span>
                   </div>
@@ -905,7 +906,7 @@ const TaskListPage = () => {
             })}
           </div>
 
-          {/* Pagination — only for the flat (ungrouped) list */}
+          {/* Pagination - only for the flat (ungrouped) list */}
           {!loading && groupBy === 'none' && (
             <Pagination
               page={safePage}

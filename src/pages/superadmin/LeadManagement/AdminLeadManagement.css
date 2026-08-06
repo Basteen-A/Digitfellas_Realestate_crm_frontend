@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* ADMIN LEAD MANAGEMENT — Super Admin lead overview page       */
+/* ADMIN LEAD MANAGEMENT - Super Admin lead overview page       */
 /* Full dark/light theme support via CSS variables               */
 /* ============================================================ */
 
@@ -332,7 +332,7 @@
   transition: background 0.1s;
 }
 
-/* Plain (un-striped) rows with a hover highlight — matches the Lead Workspace. */
+/* Plain (un-striped) rows with a hover highlight - matches the Lead Workspace. */
 .alm-table__row:hover {
   background: var(--bg-table-row-hover, #f8fafc);
 }
@@ -511,7 +511,7 @@
 }
 
 /* ============================================================ */
-/* Shared admin modal (Transfer / Move) — theme-safe & responsive */
+/* Shared admin modal (Transfer / Move) - theme-safe & responsive */
 /* ============================================================ */
 .alm-modal {
   position: fixed;
@@ -530,7 +530,7 @@
   to { opacity: 1; }
 }
 
-/* One consistent size for every form modal — matches the app-wide standard
+/* One consistent size for every form modal - matches the app-wide standard
    set by MasterCrudPage.css (width min(100%, 740px), max-height min(90vh, 760px),
    full-screen on mobile). */
 .alm-modal__panel {
@@ -546,7 +546,7 @@
   animation: almPanelIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Kept for backwards compatibility — all panels share the same width now. */
+/* Kept for backwards compatibility - all panels share the same width now. */
 .alm-modal__panel--wide { width: min(100%, 740px); }
 
 @keyframes almPanelIn {

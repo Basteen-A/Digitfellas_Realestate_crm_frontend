@@ -7,7 +7,7 @@ import { TaskListPage } from '../../tasks';
 import { accountsManagerMenu } from '../../../components/layout/Sidebar/menuConfig';
 import '../collection/CollectionWorkspace.css';
 
-// Accounts Manager portal — mirrors the Accountant (ACCT) portal (same menu,
+// Accounts Manager portal - mirrors the Accountant (ACCT) portal (same menu,
 // dashboard + verify + report screens). The verification queue defaults to CASH
 // (server-scoped by role), with a "Show all payments" toggle on the verify
 // screen for a full overview.

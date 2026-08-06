@@ -5,7 +5,7 @@ import telephonyApi from '../../api/telephonyApi';
 import { getErrorMessage } from '../../utils/helpers';
 
 // Outbound Click-to-Call button. Asks Smartflo to ring the logged-in agent's
-// phone first, then bridge the customer — so the agent talks on their own
+// phone first, then bridge the customer - so the agent talks on their own
 // handset and the call is logged + recorded via the outbound webhook.
 export default function SmartfloCallButton({ leadId, destinationNumber, className = 'qa-header-icon-btn', iconOnly = true, size = 18 }) {
   const [busy, setBusy] = useState(false);
@@ -17,7 +17,7 @@ export default function SmartfloCallButton({ leadId, destinationNumber, classNam
     try {
       const payload = leadId ? { lead_id: leadId } : { destination_number: destinationNumber };
       const res = await telephonyApi.clickToCall(payload);
-      toast.success(res?.data?.message || res?.message || 'Call initiated — your phone will ring shortly.');
+      toast.success(res?.data?.message || res?.message || 'Call initiated - your phone will ring shortly.');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not start the call. Check Telephony → Call Settings.'));
     } finally {
@@ -29,7 +29,7 @@ export default function SmartfloCallButton({ leadId, destinationNumber, classNam
     <button
       type="button"
       className={className}
-      title="Call via Smartflo — rings your phone, then the customer"
+      title="Call via Smartflo - rings your phone, then the customer"
       onClick={call}
       disabled={busy}
     >

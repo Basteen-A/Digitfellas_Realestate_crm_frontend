@@ -1,6 +1,6 @@
 // ============================================================
 // SHARED REPORT UI ATOMS
-// The KPI cards, cards, tables and pills every report screen is built from —
+// The KPI cards, cards, tables and pills every report screen is built from -
 // the Super Admin Analytics / Performance pages, the self-service "My Reports"
 // portal view and the Marketing Reports page. Extracted so a change to the
 // report look lands on all of them at once.
@@ -131,7 +131,7 @@ export const Tr = ({ children, onClick }) => (
 );
 
 // In the mono style, table cells drop both their accent colour and their bold
-// weight — flat, black-on-white numbers — per the reports polish.
+// weight - flat, black-on-white numbers - per the reports polish.
 export const Td = ({ children, bold, color, className = '' }) => {
   const mono = useContext(MonoContext);
   const c = mono ? undefined : color;

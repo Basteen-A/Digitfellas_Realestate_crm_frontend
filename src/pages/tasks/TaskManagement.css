@@ -1,5 +1,5 @@
 /* ============================================================
-   Task Management module — uses the CRM design tokens
+   Task Management module - uses the CRM design tokens
    (variables.css) so it matches the rest of the CRM and
    supports light/dark themes.
    ============================================================ */
@@ -96,7 +96,7 @@
 .tm-avatar:first-child { margin-left: 0; }
 
 /* ============================================================
-   Modal — matches the CRM master modal
+   Modal - matches the CRM master modal
    ============================================================ */
 .tm-modal-overlay {
   position: fixed; inset: 0; background: var(--bg-modal-overlay);
@@ -193,7 +193,7 @@
 .tm-icon-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
 
 /* ============================================================
-   Task update modal — Quick-Action style (mirrors the lead
+   Task update modal - Quick-Action style (mirrors the lead
    Quick Action drawer: icon status grid, rounded fields,
    dot/line history timeline, green save row).
    ============================================================ */
@@ -262,7 +262,7 @@
 .tmq-hist-by { font-size: 10px; color: var(--text-muted); font-style: italic; }
 .tmq-hist-fu { font-size: 11px; font-weight: 600; color: var(--accent-blue); background: var(--accent-blue-bg); padding: 2px 8px; border-radius: var(--border-radius-full); white-space: nowrap; }
 
-/* Save row — compact buttons matching the new-lead "Create Lead" footer */
+/* Save row - compact buttons matching the new-lead "Create Lead" footer */
 .tmq-save-row { padding: 14px 20px 16px; display: flex; gap: 10px; align-items: center; justify-content: flex-end; background: var(--bg-card); border-top: 1px solid var(--border-secondary); }
 .tmq-save-btn { height: 40px; padding: 0 24px; border-radius: 10px; border: none; background: var(--gradient-primary, linear-gradient(135deg, #625afa 0%, #4f46e5 100%)); color: #fff; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(98, 90, 250, 0.3); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .tmq-save-btn:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(98, 90, 250, 0.35); transform: translateY(-1px); }
@@ -275,12 +275,12 @@
 .tmq-del-btn:hover { background: var(--accent-red-bg); }
 
 /* ============================================================
-   MOBILE RESPONSIVENESS — complete coverage
+   MOBILE RESPONSIVENESS - complete coverage
    Breakpoints:
-     ≤ 1024px  — tablet / narrow desktop (sidebar shrinks)
-     ≤ 768px   — phone-landscape / large phone
-     ≤ 560px   — typical phone
-     ≤ 420px   — small phone
+     ≤ 1024px  - tablet / narrow desktop (sidebar shrinks)
+     ≤ 768px   - phone-landscape / large phone
+     ≤ 560px   - typical phone
+     ≤ 420px   - small phone
    ============================================================ */
 
 /* ─────────── ≤ 1024px : tablet ─────────── */
@@ -498,7 +498,7 @@
 .tm-error { color: var(--accent-red); font-size: 13px; margin-top: 8px; }
 
 /* ============================================================
-   Standard Executive portal shell — matches CRM sidebar/header
+   Standard Executive portal shell - matches CRM sidebar/header
    ============================================================ */
 .tmp-shell { display: flex; min-height: 100vh; background: var(--bg-primary); }
 
@@ -613,11 +613,11 @@
 .tm-activity__badges { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 /* ============================================================
-   Task List page (lead-workspace based) — mobile responsiveness
+   Task List page (lead-workspace based) - mobile responsiveness
    Desktop: full table. 641–768px: trimmed table + inline filter
    pills. ≤640px: the table is replaced by a clean card list
    (.task-cards-mobile) and the filter pills collapse into the
-   shared "Filters" drawer — identical to the My Leads workspace.
+   shared "Filters" drawer - identical to the My Leads workspace.
    All scoped under .task-workspace so the shared lead pages are
    never affected.
    ============================================================ */
@@ -641,7 +641,7 @@
 .task-workspace .lead-workspace__table tbody tr:not(.task-row--grouped) td.task-col-task { padding-left: 22px; }
 .task-workspace .lead-workspace__table th.task-col-task { padding-left: 44px; }
 
-/* Inline drawer body — two columns on desktop, one on mobile. */
+/* Inline drawer body - two columns on desktop, one on mobile. */
 .task-drawer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 16px 20px 18px 44px; }
 
 /* The mobile card list is hidden until ≤640px. */
@@ -671,10 +671,10 @@
   .task-drawer-grid { grid-template-columns: 1fr; gap: 16px; padding: 14px 16px 16px; }
 }
 
-/* ─────────── ≤ 640px : phones — card list replaces the table ─────────── */
+/* ─────────── ≤ 640px : phones - card list replaces the table ─────────── */
 @media (max-width: 640px) {
   /* The desktop filter pills stay hidden (shared lead CSS) and the
-     "Filters" drawer takes over — no per-filter pills on phones. */
+     "Filters" drawer takes over - no per-filter pills on phones. */
 
   /* Swap table → cards. */
   .task-workspace .lead-workspace__table-wrap { display: none; }
@@ -716,7 +716,7 @@
 .task-cards-group__stat { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .task-cards-msg { padding: 28px 12px; text-align: center; color: var(--text-muted); font-size: 13px; }
 
-/* ── Task dashboard (standalone /task-portal) — mobile polish ── */
+/* ── Task dashboard (standalone /task-portal) - mobile polish ── */
 @media (max-width: 640px) {
   .col-dashboard .col-page-header-actions { display: flex; gap: 8px; }
   .col-dashboard .col-page-header-actions > button { flex: 1; justify-content: center; }

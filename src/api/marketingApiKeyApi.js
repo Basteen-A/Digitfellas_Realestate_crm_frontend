@@ -1,7 +1,7 @@
 import api from './axiosInstance';
 
 // Per-integration ingestion API keys. The plaintext key is only returned by
-// create() and regenerate() — shown once, never retrievable again.
+// create() and regenerate() - shown once, never retrievable again.
 const marketingApiKeyApi = {
   getAll: async (params = {}) => {
     const { data } = await api.get('/marketing-api-keys', { params: { ...params, _t: Date.now() } });

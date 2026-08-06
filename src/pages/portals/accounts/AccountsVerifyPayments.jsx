@@ -12,7 +12,7 @@ import '../collection/CollectionWorkspace.css';
 
 const fmt = (v) => formatCurrency(v);
 const fmtDate = (d) => {
-  if (!d) return '—';
+  if (!d) return '-';
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
@@ -169,7 +169,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
   };
 
   const getAge = (d) => {
-    if (!d) return '—';
+    if (!d) return '-';
     const days = Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return 'Today';
     if (days === 1) return '1 day';
@@ -197,14 +197,14 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>
             {normalizedFilter === 'unverified' ? 'Payment Verification'
               : normalizedFilter === 'verified' ? 'Verified Payments'
-              : normalizedFilter === 'rejected' ? 'Rejected Payments'
-              : 'All Payments'}
+                : normalizedFilter === 'rejected' ? 'Rejected Payments'
+                  : 'All Payments'}
           </h1>
           <p style={{ color: 'var(--col-text-secondary)', marginTop: 4, fontSize: '0.875rem' }}>
             {normalizedFilter === 'unverified' ? 'Review payments submitted by Collection Managers and verify against bank records'
               : normalizedFilter === 'verified' ? 'History of all verified payments'
-              : normalizedFilter === 'rejected' ? 'Payments that were rejected during verification'
-              : 'All payments across every verification status'}
+                : normalizedFilter === 'rejected' ? 'Payments that were rejected during verification'
+                  : 'All payments across every verification status'}
           </p>
         </div>
         {/* Accounts Manager: cash by default, tick to show every payment mode */}
@@ -241,7 +241,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
         ))}
       </div>
 
-      {/* Main Panel — queue + detail sidebar */}
+      {/* Main Panel - queue + detail sidebar */}
       <div className="acct-verify-layout">
         {/* LEFT: Payment Queue Table */}
         <div className="col-card-new acct-verify-queue">
@@ -281,25 +281,25 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
                 </thead>
                 <tbody>
                   {visiblePayments.map((p) => (
-                      <tr
-                        key={p.id}
-                        onClick={() => {
-                          setSelected(p);
-                          setVerifyTxnId(p.transaction_ref || p.utr_number || '');
-                          setVerifyNote('');
-                        }}
-                        className={`acct-verify-row ${selected?.id === p.id ? 'selected' : ''}`}
-                      >
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.booking_number || p.payment_number}</td>
-                        <td><strong>{p.customer_name || '—'}</strong></td>
-                        <td style={{ fontWeight: 700 }}>{fmt(p.amount)}</td>
-                        <td>{p.payment_mode}</td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
-                        <td style={{ fontSize: '0.75rem' }}>{fmtDate(p.payment_date)}</td>
-                        <td style={{ fontSize: '0.75rem' }}>{getAge(p.payment_date)}</td>
-                        <td>{getStatusBadge(p)}</td>
-                      </tr>
-                    ))}
+                    <tr
+                      key={p.id}
+                      onClick={() => {
+                        setSelected(p);
+                        setVerifyTxnId(p.transaction_ref || p.utr_number || '');
+                        setVerifyNote('');
+                      }}
+                      className={`acct-verify-row ${selected?.id === p.id ? 'selected' : ''}`}
+                    >
+                      <td style={{ fontWeight: 500 }}>{p.booking_number || p.payment_number}</td>
+                      <td><strong>{p.customer_name || '-'}</strong></td>
+                      <td style={{ fontWeight: 700 }}>{fmt(p.amount)}</td>
+                      <td>{p.payment_mode}</td>
+                      <td style={{ fontWeight: 500 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '-'}</td>
+                      <td style={{ fontSize: '0.75rem' }}>{fmtDate(p.payment_date)}</td>
+                      <td style={{ fontSize: '0.75rem' }}>{getAge(p.payment_date)}</td>
+                      <td>{getStatusBadge(p)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -331,11 +331,11 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
             <div className="acct-detail-list">
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Payment #</span>
-                <span className="acct-detail-value" style={{ fontFamily: 'monospace' }}>{selected.payment_number}</span>
+                <span className="acct-detail-value" style={{ fontWeight: 500 }}>{selected.payment_number}</span>
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Booking #</span>
-                <span className="acct-detail-value" style={{ fontFamily: 'monospace' }}>{selected.booking_number}</span>
+                <span className="acct-detail-value" style={{ fontWeight: 500 }}>{selected.booking_number}</span>
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Customer</span>
@@ -343,15 +343,15 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Project</span>
-                <span className="acct-detail-value">{selected.project_name || '—'}</span>
+                <span className="acct-detail-value">{selected.project_name || '-'}</span>
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Phase</span>
-                <span className="acct-detail-value">{selected.phase_name || '—'}</span>
+                <span className="acct-detail-value">{selected.phase_name || '-'}</span>
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Plot</span>
-                <span className="acct-detail-value">{selected.unit_number || '—'}</span>
+                <span className="acct-detail-value">{selected.unit_number || '-'}</span>
               </div>
               <div className="acct-detail-item">
                 <span className="acct-detail-label">Payment Mode</span>
@@ -364,7 +364,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               {selected.cheque_dd_number && (
                 <div className="acct-detail-item">
                   <span className="acct-detail-label">Cheque/DD #</span>
-                  <span className="acct-detail-value" style={{ fontFamily: 'monospace' }}>{selected.cheque_dd_number}</span>
+                  <span className="acct-detail-value" style={{ fontWeight: 500 }}>{selected.cheque_dd_number}</span>
                 </div>
               )}
               {selected.bank_name && (
@@ -376,7 +376,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               {(selected.transaction_ref || selected.utr_number) && (
                 <div className="acct-detail-item">
                   <span className="acct-detail-label">UTR / Ref</span>
-                  <span className="acct-detail-value" style={{ fontFamily: 'monospace' }}>{selected.transaction_ref || selected.utr_number}</span>
+                  <span className="acct-detail-value" style={{ fontWeight: 500 }}>{selected.transaction_ref || selected.utr_number}</span>
                 </div>
               )}
               {selected.remarks && (
@@ -397,7 +397,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               )}
             </div>
 
-            {/* Action Buttons — only for unverified (AM acts on cash only) */}
+            {/* Action Buttons - only for unverified (AM acts on cash only) */}
             {normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && (!isAccountsManager || isCashPayment(selected)) && (
               <div className="acct-verify-action-panel">
                 <div style={{ marginBottom: 10 }}>
@@ -447,7 +447,7 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
             {/* AM sees non-cash rows under "Show all" but can't verify them */}
             {isAccountsManager && normalizedFilter === 'unverified' && !isVerifiedPayment(selected) && !selected.is_bounced && !isCashPayment(selected) && (
               <div className="acct-verify-action-panel" style={{ fontSize: '0.75rem', color: 'var(--col-text-secondary)', lineHeight: 1.5 }}>
-                Non-cash payments are verified by the Accountant. This record is view-only here — only cash payments can be verified by the Accounts Manager.
+                Non-cash payments are verified by the Accountant. This record is view-only here - only cash payments can be verified by the Accounts Manager.
               </div>
             )}
           </div>
@@ -469,19 +469,19 @@ const AccountsVerifyPayments = ({ user, initialFilter = 'unverified' }) => {
               <button className="col-modal-close" onClick={() => { setShowRejectModal(false); setRejectReason(''); }}>×</button>
             </div>
             <div className="col-modal-body">
-            <p style={{ fontSize: '0.8rem', color: 'var(--col-text-secondary)', marginBottom: 12 }}>
-              Rejecting <strong>{selected?.payment_number}</strong> — {fmt(selected?.amount)} from {selected?.customer_name}
-            </p>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--col-text-secondary)', display: 'block', marginBottom: 4 }}>
-              Rejection Reason *
-            </label>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Enter reason for rejection..."
-              rows={3}
-              className="acct-verify-note"
-            />
+              <p style={{ fontSize: '0.8rem', color: 'var(--col-text-secondary)', marginBottom: 12 }}>
+                Rejecting <strong>{selected?.payment_number}</strong> - {fmt(selected?.amount)} from {selected?.customer_name}
+              </p>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--col-text-secondary)', display: 'block', marginBottom: 4 }}>
+                Rejection Reason *
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                rows={3}
+                className="acct-verify-note"
+              />
             </div>
             <div className="col-modal-footer">
               <button className="col-btn col-btn-ghost" onClick={() => { setShowRejectModal(false); setRejectReason(''); }}>

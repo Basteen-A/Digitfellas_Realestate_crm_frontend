@@ -17,10 +17,10 @@ import '../collection/CollectionWorkspace.css';
 
 const fmtDate = (d) => (d
   ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  : '—');
+  : '-');
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', {
   day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-}) : '—');
+}) : '-');
 
 const DOC_TYPES = [
   'Registration Document',
@@ -47,7 +47,7 @@ const DOC_TYPES = [
 const InfoRow = ({ label, value, mono }) => (
   <div className="bkd-info-item">
     <div className="bkd-info-label">{label}</div>
-    <div className={`bkd-info-value${mono ? ' mono' : ''}`}>{value || '—'}</div>
+    <div className={`bkd-info-value${mono ? ' mono' : ''}`}>{value || '-'}</div>
   </div>
 );
 
@@ -72,7 +72,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Document folders. Registration paperwork is filed into a folder tree — the
+  // Document folders. Registration paperwork is filed into a folder tree - the
   // same model as the project Document Archive. `folderId` is the folder the
   // upload lands in; null = the root.
   const [folderId, setFolderId] = useState(null);
@@ -107,13 +107,13 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
       const resp = await bookingApi.getDocuments(bookingId);
       setDocuments(resp.data?.data || resp.data || []);
     } catch (err) {
-      // Non-fatal — booking still renders.
+      // Non-fatal - booking still renders.
     } finally {
       setDocumentsLoading(false);
     }
   }, [bookingId]);
 
-  // One level of the folder tree — the folders the upload can be filed into and
+  // One level of the folder tree - the folders the upload can be filed into and
   // the breadcrumb back to the root. The document LIST stays flat (loadDocuments
   // above) so the Uploaded panel keeps showing everything on this booking.
   const loadFolders = useCallback(async () => {
@@ -124,7 +124,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
       setFolders(payload.folders || []);
       setBreadcrumb(payload.breadcrumb || []);
     } catch (err) {
-      // Non-fatal — the flat document list and upload still work at the root.
+      // Non-fatal - the flat document list and upload still work at the root.
       setFolders([]);
       setBreadcrumb([]);
     }
@@ -258,10 +258,10 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
   );
 
   const statusBadge = badgeColors(booking.status_color, '#065F46');
-  const buyerName = booking.buyer_name || booking.customer_name || '—';
+  const buyerName = booking.buyer_name || booking.customer_name || '-';
   const customer = booking.customer || {};
   const phoneRaw = customer.phone || customer.phone_number || '';
-  const phone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(phoneRaw || '')) ? '—' : (phoneRaw || '—');
+  const phone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(phoneRaw || '')) ? '-' : (phoneRaw || '-');
   const isCompleted = booking.record_status === 'COMPLETED';
   const recordBadge = isCompleted
     ? { bg: '#F0FDF4', text: '#166534', border: '#BBF7D0' }
@@ -316,8 +316,8 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
               <InfoRow label="Booking Number" value={booking.booking_number} mono />
               <InfoRow label="Registration Date" value={fmtDate(booking.registration_date)} />
               <InfoRow label="Project" value={booking.project_name} />
-              <InfoRow label="Phase" value={booking.phase_name || '—'} />
-              <InfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
+              <InfoRow label="Phase" value={booking.phase_name || '-'} />
+              <InfoRow label="Unit" value={booking.unit_display || booking.unit_number || '-'} />
               <InfoRow label="Booking Date" value={fmtDate(booking.booking_date)} />
               {booking.lead?.lead_number && <InfoRow label="Lead" value={booking.lead.lead_number} mono />}
             </div>
@@ -490,7 +490,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                 >
                   <CloudArrowUpIcon style={{ width: 28, height: 28, color: 'var(--col-primary, #4f46e5)' }} />
                   <div style={{ fontWeight: 700 }}>{dragActive ? 'Drop files here' : 'Click to choose files or drag & drop'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)' }}>PDF, images, Word, Excel, ZIP — any file type.</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)' }}>PDF, images, Word, Excel, ZIP - any file type.</div>
                 </div>
 
                 {selectedFiles.length > 0 && (

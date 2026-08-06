@@ -6,7 +6,7 @@
 //
 // The matrix is stored on the ROLE (user_types.module_permissions) and enforced
 // server-side by middleware/requirePermission.js. Everything drawn here is a
-// convenience — hiding a control never protects the endpoint behind it.
+// convenience - hiding a control never protects the endpoint behind it.
 //
 // Built-in roles (is_system) can have their permissions tuned but not their
 // short code changed or the role deleted, because every bespoke portal and a
@@ -89,7 +89,7 @@ const RolePermissionsPage = () => {
   const setLevel = (moduleKey, level) =>
     setDraft((d) => ({ ...d, module_permissions: { ...d.module_permissions, [moduleKey]: level } }));
 
-  // Bulk helpers — "give this role read on everything it can read", etc.
+  // Bulk helpers - "give this role read on everything it can read", etc.
   const setAll = (level) =>
     setDraft((d) => {
       const next = {};
@@ -101,7 +101,7 @@ const RolePermissionsPage = () => {
       return { ...d, module_permissions: next };
     });
 
-  // Switch a whole sidebar group at once — the fast way to hand over (or take away)
+  // Switch a whole sidebar group at once - the fast way to hand over (or take away)
   // CONFIGURATION / TELEPHONY / MARKETING without touching each row.
   const setGroup = (group, level) =>
     setDraft((d) => {
@@ -113,7 +113,7 @@ const RolePermissionsPage = () => {
       return { ...d, module_permissions: next };
     });
 
-  // How much of a group is granted — drives the "3 / 7" hint on the group header.
+  // How much of a group is granted - drives the "3 / 7" hint on the group header.
   const groupSummary = (group) => {
     const mods = catalogue.modules.filter((m) => m.group === group);
     const on = mods.filter((m) => (draft?.module_permissions?.[m.key] || 'none') !== 'none').length;
@@ -139,7 +139,7 @@ const RolePermissionsPage = () => {
         hierarchy_level: Number(draft.hierarchy_level) || 0,
         is_active: draft.is_active !== false,
       };
-      // Super Admin's matrix is rejected server-side — never send it.
+      // Super Admin's matrix is rejected server-side - never send it.
       if (!isSuperAdmin) payload.module_permissions = sanitizeMatrix(draft.module_permissions || {});
       // A built-in role's short code is load-bearing; the server rejects a change.
       if (draft.is_system) delete payload.short_code;
@@ -192,7 +192,7 @@ const RolePermissionsPage = () => {
             <ShieldCheckIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />
             Roles &amp; Permissions
           </h1>
-          <p>Create a role, then choose what each module it can reach — none, read, write or full access.</p>
+          <p>Create a role, then choose what each module it can reach - none, read, write or full access.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="crm-btn crm-btn-ghost" onClick={() => load(selectedId)} disabled={loading}>
@@ -254,7 +254,7 @@ const RolePermissionsPage = () => {
                   </div>
                   <div className="rp-editor__sub">
                     {isSuperAdmin
-                      ? 'Super Admin always has full access — its permissions cannot be edited.'
+                      ? 'Super Admin always has full access - its permissions cannot be edited.'
                       : `${grantedCount} of ${catalogue.modules.length} modules granted`}
                   </div>
                 </div>
@@ -273,8 +273,8 @@ const RolePermissionsPage = () => {
                   <div className="rp-banner">
                     <span>
                       This is a built-in role. Its permissions are editable, but the short code
-                      (<strong>{draft.short_code}</strong>) is fixed — the app&rsquo;s portals and screens are
-                      wired to it — and the role cannot be deleted.
+                      (<strong>{draft.short_code}</strong>) is fixed - the app&rsquo;s portals and screens are
+                      wired to it - and the role cannot be deleted.
                     </span>
                   </div>
                 )}
@@ -337,58 +337,58 @@ const RolePermissionsPage = () => {
                 {catalogue.groups.map((group) => {
                   const { on, total } = groupSummary(group);
                   return (
-                  <div className="rp-group" key={group}>
-                    <div className="rp-group__head">
-                      <span className="rp-group__name">
-                        {group}
-                        <span className="rp-group__count">{on} of {total}</span>
-                      </span>
-                      {!isSuperAdmin && (
-                        <span className="rp-group__actions">
-                          {ORDER.map((lvl) => (
-                            <button
-                              key={lvl}
-                              type="button"
-                              className="rp-group__btn"
-                              title={`Set every ${group} module to ${LEVEL_LABELS[lvl]}`}
-                              onClick={() => setGroup(group, lvl)}
-                            >
-                              {LEVEL_LABELS[lvl]}
-                            </button>
-                          ))}
+                    <div className="rp-group" key={group}>
+                      <div className="rp-group__head">
+                        <span className="rp-group__name">
+                          {group}
+                          <span className="rp-group__count">{on} of {total}</span>
                         </span>
-                      )}
+                        {!isSuperAdmin && (
+                          <span className="rp-group__actions">
+                            {ORDER.map((lvl) => (
+                              <button
+                                key={lvl}
+                                type="button"
+                                className="rp-group__btn"
+                                title={`Set every ${group} module to ${LEVEL_LABELS[lvl]}`}
+                                onClick={() => setGroup(group, lvl)}
+                              >
+                                {LEVEL_LABELS[lvl]}
+                              </button>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                      {(modulesByGroup[group] || []).map((mod) => {
+                        const current = isSuperAdmin ? 'full' : (draft.module_permissions?.[mod.key] || 'none');
+                        return (
+                          <div className="rp-row" key={mod.key}>
+                            <div>
+                              <div className="rp-row__label">{mod.label}</div>
+                              {mod.description && <div className="rp-row__desc">{mod.description}</div>}
+                            </div>
+                            <div className="rp-seg" role="group" aria-label={`${mod.label} access level`}>
+                              {ORDER.map((lvl) => {
+                                const supported = mod.levels.includes(lvl);
+                                return (
+                                  <button
+                                    key={lvl}
+                                    type="button"
+                                    data-level={lvl}
+                                    className={`rp-seg__btn ${current === lvl ? 'is-on' : ''}`}
+                                    disabled={!supported || isSuperAdmin}
+                                    title={supported ? undefined : `${mod.label} has no ${LEVEL_LABELS[lvl]} level`}
+                                    onClick={() => setLevel(mod.key, lvl)}
+                                  >
+                                    {LEVEL_LABELS[lvl]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    {(modulesByGroup[group] || []).map((mod) => {
-                      const current = isSuperAdmin ? 'full' : (draft.module_permissions?.[mod.key] || 'none');
-                      return (
-                        <div className="rp-row" key={mod.key}>
-                          <div>
-                            <div className="rp-row__label">{mod.label}</div>
-                            {mod.description && <div className="rp-row__desc">{mod.description}</div>}
-                          </div>
-                          <div className="rp-seg" role="group" aria-label={`${mod.label} access level`}>
-                            {ORDER.map((lvl) => {
-                              const supported = mod.levels.includes(lvl);
-                              return (
-                                <button
-                                  key={lvl}
-                                  type="button"
-                                  data-level={lvl}
-                                  className={`rp-seg__btn ${current === lvl ? 'is-on' : ''}`}
-                                  disabled={!supported || isSuperAdmin}
-                                  title={supported ? undefined : `${mod.label} has no ${LEVEL_LABELS[lvl]} level`}
-                                  onClick={() => setLevel(mod.key, lvl)}
-                                >
-                                  {LEVEL_LABELS[lvl]}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
                   );
                 })}
               </div>

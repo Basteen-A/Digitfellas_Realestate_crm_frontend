@@ -1,7 +1,7 @@
 // ============================================================
 // NEXT-FOLLOW-UP DATE LIMITS (client mirror)
 // ============================================================
-// Mirrors server/src/utils/followUpLimits.js — keep the two in step. The server
+// Mirrors server/src/utils/followUpLimits.js - keep the two in step. The server
 // is the authority and rejects anything past the cap; this copy exists so the
 // date picker greys out the disallowed range and the user sees the rule before
 // submitting instead of as an error afterwards.
@@ -10,7 +10,7 @@
 //                 back around quickly, not be parked months out.
 //   every other → 2 calendar months.
 //
-// Future side only — back-dating is not restricted here.
+// Future side only - back-dating is not restricted here.
 
 export const RNR_MAX_DAYS = 5;
 export const DEFAULT_MAX_MONTHS = 2;
@@ -56,6 +56,6 @@ export const followUpLimitError = (value, statusCode, today = new Date()) => {
 
   const asDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   return isRnr(statusCode)
-    ? `An RNR lead must be followed up within ${RNR_MAX_DAYS} days — pick a date on or before ${asDate(max)}.`
-    : `A follow-up cannot be scheduled more than ${DEFAULT_MAX_MONTHS} months ahead — pick a date on or before ${asDate(max)}.`;
+    ? `An RNR lead must be followed up within ${RNR_MAX_DAYS} days - pick a date on or before ${asDate(max)}.`
+    : `A follow-up cannot be scheduled more than ${DEFAULT_MAX_MONTHS} months ahead - pick a date on or before ${asDate(max)}.`;
 };

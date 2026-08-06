@@ -80,14 +80,14 @@ const EMPTY = {
 };
 const EMPTY_FILTERS = { search: '', category: '', header_type: '', language_code: '', status: '' };
 
-const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-');
 
 const statusBadge = (status) => {
   const s = String(status || '').toUpperCase();
   if (s === 'APPROVED') return { bg: '#dcfce7', fg: '#166534', label: 'Approved' };
   if (s === 'PENDING') return { bg: '#fef9c3', fg: '#a16207', label: 'Pending' };
   if (s === 'REJECTED') return { bg: '#fee2e2', fg: '#991b1b', label: 'Rejected' };
-  return { bg: 'var(--bg-secondary)', fg: 'var(--text-muted)', label: s || '—' };
+  return { bg: 'var(--bg-secondary)', fg: 'var(--text-muted)', label: s || '-' };
 };
 const qualityColor = (q) => {
   const s = String(q || '').toUpperCase();
@@ -128,7 +128,7 @@ const Templates = () => {
     const replacement = before + selected + after;
     const newValue = text.slice(0, start) + replacement + text.slice(end);
     setForm((f) => ({ ...f, body_text: newValue }));
-    
+
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
@@ -245,12 +245,12 @@ const Templates = () => {
     if (!f.name.trim()) return 'Template name is required';
     if (!TEMPLATE_NAME_RE.test(f.name.trim())) return TEMPLATE_NAME_MSG;
     if (f.name.trim().length > 512) return 'Template name cannot exceed 512 characters';
-    
+
     if (!f.language_code.trim()) return 'Language code is required';
     if (!/^[a-zA-Z_]{2,10}$/.test(f.language_code.trim())) return 'Language code must contain only letters and underscores (e.g. en, en_US)';
-    
+
     if (!f.category) return 'Template category is required';
-    
+
     if (!f.body_text.trim()) return 'Template body text is required';
     if (f.body_text.length > 1024) return 'Template body text cannot exceed 1024 characters';
 
@@ -295,7 +295,7 @@ const Templates = () => {
       if (headerVars.length === 1 && headerVars[0] !== '1') return 'The header placeholder must be {{1}}';
       if (headerVars.length === 1) {
         const hp = (f.header_params || [])[0];
-        if (!hp) return 'Header has a {{1}} placeholder — configure its mapping';
+        if (!hp) return 'Header has a {{1}} placeholder - configure its mapping';
         if (hp.source === 'lead_field' && !hp.field) return 'Header placeholder is mapped to lead field, but no field is selected';
         if (hp.source === 'static' && !String(hp.value || '').trim()) return 'Header placeholder is mapped to static text, but the value is empty';
       }
@@ -537,7 +537,7 @@ const Templates = () => {
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Header optional</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Add a title or choose which type of media you'll use for this header.</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Your title can't include more than one variable.</div>
-              
+
               <label style={labelStyle}>Template type:</label>
               <select
                 style={selectStyle}
@@ -622,7 +622,7 @@ const Templates = () => {
             {/* Body */}
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>Body</div>
-              
+
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Placeholders :</span>
                 <button
@@ -698,7 +698,7 @@ const Templates = () => {
             {/* Buttons */}
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Buttons <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>(optional, up to {maxButtons} — max 2 URL, 1 phone, 1 coupon)</span></label>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Buttons <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>(optional, up to {maxButtons} - max 2 URL, 1 phone, 1 coupon)</span></label>
                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={addButton} disabled={form.buttons.length >= maxButtons}><PlusIcon style={{ width: 14, height: 14 }} /> Add button</button>
               </div>
               {form.buttons.map((b, i) => (
@@ -715,7 +715,7 @@ const Templates = () => {
                       <input style={{ ...inputStyle, marginTop: 8 }} value={b.url} onChange={(e) => updateButton(i, 'url', e.target.value)} placeholder={'https://example.com/offer or https://example.com/{{1}}'} />
                       {PLACEHOLDER_RE.test(b.url || '') && (
                         <div style={{ marginTop: 8 }}>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Dynamic URL — map the {'{{1}}'} suffix appended at send time:</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Dynamic URL - map the {'{{1}}'} suffix appended at send time:</div>
                           <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 8, alignItems: 'center' }}>
                             <select style={selectStyle} value={b.url_param?.source || 'lead_field'} onChange={(e) => updateButtonUrlParam(i, 'source', e.target.value)}>
                               <option value="lead_field">Lead field</option>
@@ -858,7 +858,7 @@ const Templates = () => {
                 return (
                   <tr key={t.id}>
                     <td style={td}>{i + 1}</td>
-                    <td style={td}><code style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t.provider_template_id || '—'}</code></td>
+                    <td style={td}><code style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t.provider_template_id || '-'}</code></td>
                     <td style={td}>
                       <div style={{ fontWeight: 600 }}>{t.name}</div>
                       {ph && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Placeholders: {ph}</div>}
@@ -867,7 +867,7 @@ const Templates = () => {
                     <td style={td}>
                       <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setPreviewTemplate(t)} style={{ color: 'var(--primary, #2563eb)' }}>Preview</button>
                     </td>
-                    <td style={td}>{t.category ? (t.category.charAt(0) + t.category.slice(1).toLowerCase()) : '—'}</td>
+                    <td style={td}>{t.category ? (t.category.charAt(0) + t.category.slice(1).toLowerCase()) : '-'}</td>
                     <td style={td}>{t.language_code}</td>
                     <td style={td}>{fmtDateTime(t.created_at)}</td>
                     <td style={td}><span style={{ fontSize: 11, fontWeight: 700, color: sb.fg, background: sb.bg, borderRadius: 999, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{sb.label}</span></td>

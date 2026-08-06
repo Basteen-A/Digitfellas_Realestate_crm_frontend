@@ -19,17 +19,17 @@ const SalesHeadApprovals = ({ user }) => {
       <div className="approval-card" style={{ borderLeft: '4px solid var(--accent-yellow)' }}>
         <div className="approval-header">
           <div>
-            <div className="approval-title">Discount Request — Sample Lead</div>
+            <div className="approval-title">Discount Request - Sample Lead</div>
             <div className="approval-sub">Submitted by Sales Manager · Pending for review</div>
           </div>
           <span className="crm-badge badge-hot"><FireIcon style={{ width: 12, height: 12, marginRight: 4 }} />Urgent</span>
         </div>
         <div className="approval-grid">
-          <div><div className="approval-field-label">Project</div><div className="approval-field-value">—</div></div>
-          <div><div className="approval-field-label">Unit</div><div className="approval-field-value">—</div></div>
-          <div><div className="approval-field-label">Base Price</div><div className="approval-field-value">—</div></div>
-          <div><div className="approval-field-label">Requested Discount</div><div className="approval-field-value text-danger">—</div></div>
-          <div><div className="approval-field-label">Buyer</div><div className="approval-field-value">—</div></div>
+          <div><div className="approval-field-label">Project</div><div className="approval-field-value">-</div></div>
+          <div><div className="approval-field-label">Unit</div><div className="approval-field-value">-</div></div>
+          <div><div className="approval-field-label">Base Price</div><div className="approval-field-value">-</div></div>
+          <div><div className="approval-field-label">Requested Discount</div><div className="approval-field-value text-danger">-</div></div>
+          <div><div className="approval-field-label">Buyer</div><div className="approval-field-value">-</div></div>
           <div><div className="approval-field-label">Submitted</div><div className="approval-field-value">Today</div></div>
         </div>
         <div className="approval-actions">

@@ -14,8 +14,8 @@ import statusRemarkApi from '../../../api/statusRemarkApi';
 import inventoryUnitApi from '../../../api/inventoryUnitApi';
 import projectPhaseApi from '../../../api/projectPhaseApi';
 import paymentPlanApi from '../../../api/paymentPlanApi';
-// userApi import removed — TC locations now fetched via leadWorkflowApi.getMyMappedLocations
-// customerTypeApi removed — Customer Type field removed from TC lead creation
+// userApi import removed - TC locations now fetched via leadWorkflowApi.getMyMappedLocations
+// customerTypeApi removed - Customer Type field removed from TC lead creation
 import { formatCurrency, formatDate, formatDateTime, formatDateTimeInTimeZone, formatLocation, cleanRepeatingLocation } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import { badgeStyle } from '../../../utils/badgeColors';
@@ -362,7 +362,7 @@ const phoneMatchesAcrossCountryCode = (candidatePhone, inputPhone, countryCode =
 
 // Build an E.164 string from a dial code ('+91') and the national part. If the
 // user typed the full international number (incl. the country code) into the
-// national field, the code is not prepended twice — but only when re-prepending
+// national field, the code is not prepended twice - but only when re-prepending
 // would be invalid, so normal national numbers are never altered.
 const buildE164Phone = (dialCode, localNumber) => {
   const digits = sanitizePhoneNumberInput(localNumber);
@@ -422,7 +422,7 @@ const buildDuplicateLeadInfo = (lead) => {
   const ownerName = getLeadOwnerName(lead);
 
   if (isBookedLead(lead)) {
-    return `This contact already has a booking.\nStatus: ${statusName} · Owner: ${ownerName}. The booking stays with collection — use this lead to re-engage as a new enquiry.`;
+    return `This contact already has a booking.\nStatus: ${statusName} · Owner: ${ownerName}. The booking stays with collection - use this lead to re-engage as a new enquiry.`;
   }
 
   if (isClosedLostLead(lead)) {
@@ -480,7 +480,7 @@ const initialNewLead = {
 
 const SM_CREATE_STATUS_CODE = 'SV_DONE';
 
-// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+// Follow-ups are date-only - shortcuts resolve to the chosen calendar day.
 const toDateOnlyValue = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -1238,7 +1238,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     const useFollowUpTabs = FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole);
 
     return leads.filter((lead) => {
-      // Cross-role read-only tab filtering (client-side only — these tabs don't use server-side followUpFilter)
+      // Cross-role read-only tab filtering (client-side only - these tabs don't use server-side followUpFilter)
       if (useFollowUpTabs) {
         const isSmReadOnlyLead = workspaceRole === 'SM' && isSmHandoffReadOnlyLead(lead);
         const isShReadOnlyLead = workspaceRole === 'SH' && isShTaggedReadOnlyLead(lead);
@@ -1280,7 +1280,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
   // ── Group leads by selected field (status/stage/source/project) ──
   const groupedLeads = useMemo(() => {
     if (groupBy === 'none') return null;
-    
+
     const groups = {};
     filteredLeads.forEach((lead) => {
       let key;
@@ -1308,7 +1308,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       if (!groups[key]) groups[key] = [];
       groups[key].push(lead);
     });
-    
+
     // Sort groups alphabetically
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredLeads, groupBy, projectOptions]);
@@ -1705,9 +1705,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           queryParams.assignedToMe = true;
           queryParams.booked = true;
         } else {
-          // Assigned lead tabs (today / missed) — only show leads assigned to this user
+          // Assigned lead tabs (today / missed) - only show leads assigned to this user
           queryParams.assignedToMe = true;
-          // Date-only server-side follow-up filter — no time component, no off-by-one
+          // Date-only server-side follow-up filter - no time component, no off-by-one
           if (!filters.search) {
             if (activeTab === 'today') {
               queryParams.followUpFilter = 'today';
@@ -1914,7 +1914,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         phoneDigits = parsed.nationalNumber;
       } else if (rawStr.startsWith('+')) {
         // Explicitly international but not fully valid (e.g. a malformed stored
-        // number) — still keep its country code by longest-prefix match.
+        // number) - still keep its country code by longest-prefix match.
         const found = [...COUNTRY_CODES]
           .sort((a, b) => b.value.length - a.value.length)
           .find((c) => rawStr.startsWith(c.value));
@@ -2015,7 +2015,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     try {
       // Each dropdown is fetched independently. A plain Promise.all here meant a
       // single 403 (e.g. no access to Customer Types) rejected the whole batch and
-      // left EVERY dropdown empty — the Location picker looked broken because an
+      // left EVERY dropdown empty - the Location picker looked broken because an
       // unrelated master call had failed. One missing list must not blank the form.
       const settle = (p) => p.then((r) => r).catch(() => ({ data: [] }));
       const [pResp, ctResp, motResp, lResp, sResp] = await Promise.all([
@@ -2404,7 +2404,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         budgetMax: svDoneForm.budgetMax !== '' ? Number(svDoneForm.budgetMax) : undefined,
         note: svDoneForm.note?.trim() || undefined,
       });
-      toast.success('SV Done — Lead handed off to Sales Manager');
+      toast.success('SV Done - Lead handed off to Sales Manager');
       setSvDoneModalOpen(false);
       setSelectedLeadId(null);
       loadLeads({ silent: true });
@@ -2917,7 +2917,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       ...(prefill?.statusRemarkText ? { statusRemarkText: prefill.statusRemarkText, note: prefill.statusRemarkText } : {}),
       // Only actions that actually ask for a follow-up date get the prefill. The
       // field is hidden for the rest, so a prefilled value would be invisible and
-      // unclearable — that is what blocked a second booking on an already-booked
+      // unclearable - that is what blocked a second booking on an already-booked
       // lead, whose stale follow-up date is in the past.
       ...(prefill?.nextFollowUpAt && action.needsFollowUp ? { nextFollowUpAt: prefill.nextFollowUpAt } : {}),
       ...(prefill?.callResult ? { callResult: prefill.callResult } : {}),
@@ -2927,7 +2927,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       loadAssignableUsers(targetAssigneeRole);
     }
     if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
-      // Start every new booking from a clean slate — only the current lead's
+      // Start every new booking from a clean slate - only the current lead's
       // own details carry over, never the previous booking's buyer data.
       setCustomerProfileForm({
         buyer_name: `${quickActionLead?.first_name || ''} ${quickActionLead?.last_name || ''}`.trim(),
@@ -3203,7 +3203,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           time_spent: f.timeSpent ? Number(f.timeSpent) : undefined,
         };
 
-        // SM "Record Site Visit" — full capture matching the Add Site Visit modal.
+        // SM "Record Site Visit" - full capture matching the Add Site Visit modal.
         // The Sales Head is recorded as negotiator (read-only visibility) rather than
         // reassigning the lead, so send salesHeadUserId and clear assignToUserId.
         if (quickWorkflowAction.code === 'SM_SITE_VISIT') {
@@ -3391,7 +3391,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
               {lead.fullName}
               {lead.newHotSince && (
                 <span
-                  title={`New/Hot since ${formatDateTime(lead.newHotSince)} — fresh API lead or re-enquiry, pending first update`}
+                  title={`New/Hot since ${formatDateTime(lead.newHotSince)} - fresh API lead or re-enquiry, pending first update`}
                   style={{
                     marginLeft: 6, padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 700,
                     background: '#FFF7ED', border: '1px solid #FDBA74', color: '#C2410C', verticalAlign: 'middle',
@@ -3429,7 +3429,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <span>{new Date(lead.nextFollowUpAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                   <ArrowDownLeftIcon style={{ width: 12, height: 12, color: lead.nextFollowUpAt && isFollowUpMissedByDate(lead.nextFollowUpAt) && !lead.isClosed ? '#e80d0dff' : '#000000' }} />
                 </>
-              ) : <span>—</span>}
+              ) : <span>-</span>}
             </div>
           </td>
           {workspaceRole !== 'SH' && (
@@ -3465,7 +3465,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           </td>
           <td className="lead-col-followup" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
             <div className="lead-workspace__actions-cell">
-              {/* View lead — always available, like the Lead Management table. */}
+              {/* View lead - always available, like the Lead Management table. */}
               <button
                 type="button"
                 className="view-link lead-action-view-btn"
@@ -3500,7 +3500,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   disabled={
                     isLeadReadOnly(lead)
                     // A searched-up lead is deliberately looked up (e.g. a customer
-                    // calling in) — the missed-first gate must not block acting on it.
+                    // calling in) - the missed-first gate must not block acting on it.
                     || (FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && activeTab === 'today' && hasPendingMissedFollowupsForMe && !filters.search.trim())
                   }
                   title={
@@ -3902,7 +3902,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <span className="show-mobile">Missed</span>
                 </button>
               )}
-              
+
               {FOLLOW_UP_WORKSPACE_ROLES.includes(workspaceRole) && (
                 <button
                   onClick={() => setActiveTab('reallot')}
@@ -3934,7 +3934,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 <button
                   onClick={() => setActiveTab('booked')}
                   className={`filter-tab ${activeTab === 'booked' ? 'active' : ''}`}
-                  title="Your booked leads — view bookings or book the same lead again"
+                  title="Your booked leads - view bookings or book the same lead again"
                 >
                   <span className="hide-mobile">Booked</span>
                   <span className="show-mobile">Booked</span>
@@ -3970,7 +3970,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 )}
                 {/* Render leads - either grouped or ungrouped */}
                 {!loading && groupBy === 'none' && filteredLeads.map((lead) => renderLeadRow(lead))}
-                
+
                 {/* Grouped view */}
                 {!loading && groupBy !== 'none' && groupedLeads?.map(([groupKey, groupLeads]) => {
                   const isCollapsed = collapsedGroups.has(groupKey);
@@ -3978,7 +3978,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   return (
                     <React.Fragment key={groupId}>
                       {/* Group Header Row */}
-                      <tr 
+                      <tr
                         className="lead-group-header"
                         onClick={() => toggleGroup(groupKey)}
                         style={{ cursor: 'pointer', background: 'var(--bg-secondary, #f8fafc)' }}
@@ -3995,13 +3995,13 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
                               {groupKey}
                             </span>
-                            <span style={{ 
-                              fontSize: 12, 
-                              fontWeight: 600, 
-                              color: 'var(--accent-blue, #2563eb)', 
-                              background: 'rgba(37,99,235,0.1)', 
-                              borderRadius: 999, 
-                              padding: '2px 10px' 
+                            <span style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: 'var(--accent-blue, #2563eb)',
+                              background: 'rgba(37,99,235,0.1)',
+                              borderRadius: 999,
+                              padding: '2px 10px'
                             }}>
                               {groupLeads.length}
                             </span>
@@ -4077,7 +4077,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           )}
         </div>
 
-        {/* ── Detail Panel — Corporate Standard Modal ── */}
+        {/* ── Detail Panel - Corporate Standard Modal ── */}
         {selectedLead && (
           <div className="lead-workspace__modal" onClick={(e) => { if (e.target === e.currentTarget) setSelectedLeadId(null); }}>
             <div className="lead-workspace__modal-panel lead-workspace__modal-panel--lg">
@@ -4328,7 +4328,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       </div>
                     )}
 
-                    {/* Update Lead — Stage triggers popup, Status + Follow-up inline */}
+                    {/* Update Lead - Stage triggers popup, Status + Follow-up inline */}
                     <h3 className="lead-detail__section-title">Update Lead</h3>
                     <div className="lead-detail__update-grid">
                       <div>
@@ -4394,7 +4394,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                     </div>
                   </div>
 
-                  {/* Right Column — Activity Timeline */}
+                  {/* Right Column - Activity Timeline */}
                   <div className="lead-detail__right">
                     <h3 className="lead-detail__section-title">Activity Timeline</h3>
                     <div className="crm-timeline">
@@ -5582,7 +5582,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           <div className="lead-workspace__modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '18px 24px', borderRadius: '12px 12px 0 0', color: '#fff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircleIcon style={{ width: 16, height: 16 }} />Close Won — Customer Profile</h3>
+                <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircleIcon style={{ width: 16, height: 16 }} />Close Won - Customer Profile</h3>
                 <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.85 }}>Fill customer details before creating booking</p>
               </div>
               <button
@@ -5624,7 +5624,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   Location
                   <select value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }} style={{ width: '100%', marginTop: 4 }}>
-                    <option value="">— Select Location —</option>
+                    <option value="">- Select Location -</option>
                     {locationOptions.filter(l => l.is_active !== false).map(loc => (
                       <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                     ))}
@@ -5640,7 +5640,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       inventoryUnitApi.getDropdown({ project_id: pid }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([]));
                     } else { setAvailablePhases([]); setAvailableUnits([]); }
                   }} style={{ width: '100%', marginTop: 4 }}>
-                    <option value="">— Select Project —</option>
+                    <option value="">- Select Project -</option>
                     {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
                       <option key={proj.id} value={proj.id}>{proj.project_name}</option>
                     ))}
@@ -5659,7 +5659,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         .then(resp => setAvailableUnits(resp.data || []))
                         .catch(() => setAvailableUnits([]));
                     }} style={{ width: '100%', marginTop: 4 }}>
-                      <option value="">— All phases —</option>
+                      <option value="">- All phases -</option>
                       {availablePhases.map(ph => (
                         <option key={ph.id} value={ph.id}>{ph.phase_name}{ph.phase_code ? ` (${ph.phase_code})` : ''}</option>
                       ))}
@@ -5673,10 +5673,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                     Available Unit / Plot
                     <select value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
-                      <option value="">— Select Unit / Plot —</option>
+                      <option value="">- Select Unit / Plot -</option>
                       {availableUnits.filter(u => u.unit_status === 'Available' && (!customerProfileForm.bookingPhaseId || u.phase_id === customerProfileForm.bookingPhaseId)).map(unit => (
                         <option key={unit.id} value={unit.id}>
-                          {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
+                          {unit.unit_number}{unit.configuration ? ` - ${unit.configuration}` : ''}{unit.unit_area ? ` - ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` - ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
                         </option>
                       ))}
                     </select>
@@ -5687,7 +5687,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Payment Plan *
                 <select value={customerProfileForm.paymentPlanId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, paymentPlanId: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
-                  <option value="">— Select Payment Plan —</option>
+                  <option value="">- Select Payment Plan -</option>
                   {paymentPlans.map(plan => (
                     <option key={plan.id} value={plan.id}>
                       {plan.plan_name}
@@ -5767,7 +5767,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   State
                   <select value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
-                    <option value="">— Select State —</option>
+                    <option value="">- Select State -</option>
                     {INDIAN_STATES_UTS.map(st => (
                       <option key={st} value={st}>{st}</option>
                     ))}
@@ -5796,7 +5796,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                   State
                   <select value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))} style={{ width: '100%', marginTop: 4 }}>
-                    <option value="">— Select State —</option>
+                    <option value="">- Select State -</option>
                     {INDIAN_STATES_UTS.map(st => (
                       <option key={st} value={st}>{st}</option>
                     ))}
@@ -6462,7 +6462,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         <div>
                           <label className="qa-drawer-field-label">Location</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.bookingLocationId} onChange={(e) => { setCustomerProfileForm(p => ({ ...p, bookingLocationId: e.target.value, bookingProjectId: '' })); setAvailableUnits([]); }}>
-                            <option value="">— Select Location —</option>
+                            <option value="">- Select Location -</option>
                             {locationOptions.filter(l => l.is_active !== false).map(loc => (
                               <option key={loc.id} value={loc.id}>{loc.location_name}</option>
                             ))}
@@ -6478,7 +6478,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                               inventoryUnitApi.getDropdown({ project_id: pid }).then(resp => setAvailableUnits(resp.data || [])).catch(() => setAvailableUnits([]));
                             } else { setAvailablePhases([]); setAvailableUnits([]); }
                           }}>
-                            <option value="">— Select Project —</option>
+                            <option value="">- Select Project -</option>
                             {projectOptions.filter(p => p.is_active !== false && (!customerProfileForm.bookingLocationId || p.location_id === customerProfileForm.bookingLocationId)).map(proj => (
                               <option key={proj.id} value={proj.id}>{proj.project_name}</option>
                             ))}
@@ -6497,7 +6497,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                               .then(resp => setAvailableUnits(resp.data || []))
                               .catch(() => setAvailableUnits([]));
                           }}>
-                            <option value="">— All phases —</option>
+                            <option value="">- All phases -</option>
                             {availablePhases.map(ph => (
                               <option key={ph.id} value={ph.id}>{ph.phase_name}{ph.phase_code ? ` (${ph.phase_code})` : ''}</option>
                             ))}
@@ -6512,10 +6512,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           <div>
                             <label className="qa-drawer-field-label">Available Unit</label>
                             <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.inventoryUnitId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, inventoryUnitId: e.target.value }))}>
-                              <option value="">— Select Unit / Plot —</option>
+                              <option value="">- Select Unit / Plot -</option>
                               {availableUnits.filter(u => u.unit_status === 'Available' && (!customerProfileForm.bookingPhaseId || u.phase_id === customerProfileForm.bookingPhaseId)).map(unit => (
                                 <option key={unit.id} value={unit.id}>
-                                  {unit.unit_number}{unit.configuration ? ` — ${unit.configuration}` : ''}{unit.unit_area ? ` — ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` — ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
+                                  {unit.unit_number}{unit.configuration ? ` - ${unit.configuration}` : ''}{unit.unit_area ? ` - ${unit.unit_area} ${unit.area_unit || 'sq.ft.'}` : ''}{unit.total_price ? ` - ₹${Number(unit.total_price).toLocaleString('en-IN')}` : ''}
                                 </option>
                               ))}
                             </select>
@@ -6544,7 +6544,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                       <div>
                         <label className="qa-drawer-field-label">Select Payment Plan</label>
                         <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.paymentPlanId} onChange={(e) => setCustomerProfileForm(p => ({ ...p, paymentPlanId: e.target.value }))}>
-                          <option value="">— Select Payment Plan —</option>
+                          <option value="">- Select Payment Plan -</option>
                           {paymentPlans.map(plan => (
                             <option key={plan.id} value={plan.id}>
                               {plan.plan_name}
@@ -6620,7 +6620,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         <div>
                           <label className="qa-drawer-field-label">State</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.current_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, current_state: e.target.value }))}>
-                            <option value="">— Select State —</option>
+                            <option value="">- Select State -</option>
                             {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
@@ -6649,7 +6649,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                             <div>
                               <label className="qa-drawer-field-label">State</label>
                               <select className="qa-drawer-field-select" style={{ width: '100%' }} value={customerProfileForm.permanent_state} onChange={(e) => setCustomerProfileForm(p => ({ ...p, permanent_state: e.target.value }))}>
-                                <option value="">— Select State —</option>
+                                <option value="">- Select State -</option>
                                 {INDIAN_STATES_UTS.map(s => <option key={s} value={s}>{s}</option>)}
                               </select>
                             </div>
@@ -6667,7 +6667,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   {/* ── Quick Remarks (secondary fields shown after action-required fields) ── */}
                   {quickStatusRemarks.length > 0 && (
                     <>
-                      <div className="qa-drawer-section">Quick remarks — tap to fill</div>
+                      <div className="qa-drawer-section">Quick remarks - tap to fill</div>
                       <div className="qa-drawer-rchip-row">
                         {quickStatusRemarks.map(remark => (
                           <button
@@ -6918,10 +6918,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                               return (
                                 <tr key={act.id}>
                                   <td data-label="Status">
-                                    <span className="qa-remark-status-badge">{statusLabel || '—'}</span>
+                                    <span className="qa-remark-status-badge">{statusLabel || '-'}</span>
                                   </td>
                                   <td data-label="Remarks">
-                                    <div>{remarkText || '—'}</div>
+                                    <div>{remarkText || '-'}</div>
                                     {closureReason && (
                                       <div className="qa-remark-closure">Reason: {closureReason}</div>
                                     )}
@@ -6931,7 +6931,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                                       <span className={`qa-remark-call-badge ${callStatus.toLowerCase().includes('not') ? 'qa-remark-call-badge--missed' : 'qa-remark-call-badge--answered'}`}>
                                         {callStatus.replace('-', ' ')}
                                       </span>
-                                    ) : '—'}
+                                    ) : '-'}
                                   </td>
                                   <td data-label="By">
                                     <div className="qa-remark-by-name">{byName}</div>

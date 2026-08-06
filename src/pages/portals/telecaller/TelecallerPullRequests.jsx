@@ -33,7 +33,7 @@ const TelecallerPullRequests = ({ user }) => {
     setResponding((p) => ({ ...p, [prId]: true }));
     try {
       await leadWorkflowApi.respondToPullRequest(prId, status, '');
-      toast.success(status === 'ACCEPTED' ? 'Pull request accepted — lead transferred' : 'Pull request rejected');
+      toast.success(status === 'ACCEPTED' ? 'Pull request accepted - lead transferred' : 'Pull request rejected');
       loadPullRequests();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to respond'));

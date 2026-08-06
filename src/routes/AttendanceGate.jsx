@@ -9,7 +9,7 @@ import attendanceApi from '../api/attendanceApi';
 // in" is never cached, so the state flips immediately after check-in.
 let passCache = { userId: null, date: null };
 
-// "Skip check-in" — the user chose to enter WITHOUT checking in. They can work
+// "Skip check-in" - the user chose to enter WITHOUT checking in. They can work
 // their existing leads but stay "not checked in" server-side, so lead allocation
 // keeps excluding them from NEW leads (and the absent-reallocation job still
 // moves their fresh overnight leads to present teammates). Session-scoped (in
@@ -36,7 +36,7 @@ const SkipBanner = () => {
       boxShadow: '0 6px 20px rgba(0,0,0,0.14)',
     }}>
       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        Not checked in — you won't receive new leads today.
+        Not checked in - you won't receive new leads today.
       </span>
       <button
         type="button"
@@ -63,16 +63,16 @@ const AttendanceGate = () => {
         const s = resp.data || {};
         if (!alive) return;
         if (s.enforced && !s.checkedIn) {
-          // Blocked — unless the user explicitly skipped check-in this session.
+          // Blocked - unless the user explicitly skipped check-in this session.
           setState(isSkipped(user?.id) ? 'skipped' : 'blocked');
         } else {
-          // Properly in (checked in, or attendance not enforced) — drop any skip.
+          // Properly in (checked in, or attendance not enforced) - drop any skip.
           if (isSkipped(user?.id)) clearAttendanceSkip();
           passCache = { userId: user?.id || null, date: todayKey() };
           setState('pass');
         }
       } catch {
-        // Fail open — attendance must never lock the whole app out on an API error.
+        // Fail open - attendance must never lock the whole app out on an API error.
         if (alive) setState('pass');
       }
     })();

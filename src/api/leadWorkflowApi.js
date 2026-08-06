@@ -1,6 +1,6 @@
 import api from './axiosInstance';
 
-// ── Pure API calls — no hardcoded maps, no localStorage ──
+// ── Pure API calls - no hardcoded maps, no localStorage ──
 
 const leadWorkflowApi = {
   /**
@@ -46,7 +46,7 @@ const leadWorkflowApi = {
   },
 
   /**
-   * GET /leads/:id/enquiries — first enquiry + marketing re-enquiries
+   * GET /leads/:id/enquiries - first enquiry + marketing re-enquiries
    */
   getLeadEnquiries: async (leadId) => {
     const { data } = await api.get(`/leads/${leadId}/enquiries`);
@@ -113,7 +113,7 @@ const leadWorkflowApi = {
   },
 
   /**
-   * POST /leads/transcribe — transcribe + translate a recorded clip (Gemini).
+   * POST /leads/transcribe - transcribe + translate a recorded clip (Gemini).
    * `language` is the output language: 'tamil' | 'english'.
    */
   transcribeVoice: async (blob, language = 'english') => {
@@ -127,7 +127,7 @@ const leadWorkflowApi = {
   },
 
   /**
-   * POST /leads/:id/voice-note — store a voice note as a timeline activity.
+   * POST /leads/:id/voice-note - store a voice note as a timeline activity.
    * `content` is the (optional) transcribed text saved alongside the clip.
    */
   addVoiceNote: async (leadId, blob, { duration, content } = {}) => {
@@ -233,7 +233,7 @@ const leadWorkflowApi = {
 
   /**
    * DELETE /leads/:id (Super Admin only)
-   * Soft delete — the server sets is_deleted, the row is never removed.
+   * Soft delete - the server sets is_deleted, the row is never removed.
    */
   deleteLead: async (leadId) => {
     const { data } = await api.delete(`/leads/${leadId}`);

@@ -10,7 +10,7 @@ const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
  * Renders: Rows: [select]   {start}–{end} of {total}   ‹  ›
  *
  * Works for both client-side (slice an in-memory array) and server-side
- * (drive an API `page`/`limit`) pagination — it is purely presentational.
+ * (drive an API `page`/`limit`) pagination - it is purely presentational.
  *
  * @param {number} page           Current 1-based page.
  * @param {number} pageSize       Rows per page.

@@ -14,7 +14,7 @@ const chip = (bg, fg, label) => (
   <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: bg, color: fg }}>{label}</span>
 );
 
-const fmtTime = (d) => (d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtTime = (d) => (d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-');
 
 const todayStr = () => {
   const d = new Date();
@@ -100,7 +100,7 @@ const AttendancePage = () => {
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1><FingerPrintIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Attendance</h1>
-          <p className="hidden sm:block">Daily telecaller check-in / check-out — geofenced self check-in with admin override</p>
+          <p className="hidden sm:block">Daily telecaller check-in / check-out - geofenced self check-in with admin override</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className={`crm-btn crm-btn-sm ${tab === 'daily' ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => setTab('daily')}>
@@ -114,7 +114,7 @@ const AttendancePage = () => {
 
       {settings && !settings.is_enforced && (
         <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e', borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 14 }}>
-          Attendance enforcement is <strong>OFF</strong> — telecallers are not asked to check in. Turn it on under Settings.
+          Attendance enforcement is <strong>OFF</strong> - telecallers are not asked to check in. Turn it on under Settings.
         </div>
       )}
 
@@ -179,7 +179,7 @@ const AttendancePage = () => {
                             {r.checkinLocation}
                             {r.checkinDistanceM != null && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{Math.round(r.checkinDistanceM)}m from pin</div>}
                           </>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td style={td}>
                         {fmtTime(r.checkoutAt)}
@@ -208,7 +208,7 @@ const AttendancePage = () => {
                             {acting === `out:${r.userId}` ? '…' : 'Check Out'}
                           </button>
                         )}
-                        {(!isToday || (r.checkinAt && r.checkoutAt)) && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
+                        {(!isToday || (r.checkinAt && r.checkoutAt)) && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>-</span>}
                       </td>
                     </tr>
                   ))}
@@ -257,7 +257,7 @@ const AttendancePage = () => {
                 onChange={(e) => setSettings((s) => ({ ...s, checkin_deadline: e.target.value }))}
                 required
               />
-              <small style={{ fontSize: 11, color: 'var(--text-muted)' }}>Later check-ins are allowed but marked LATE — by then their overnight leads have been re-allotted, and they receive only new leads from check-in onward.</small>
+              <small style={{ fontSize: 11, color: 'var(--text-muted)' }}>Later check-ins are allowed but marked LATE - by then their overnight leads have been re-allotted, and they receive only new leads from check-in onward.</small>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Auto check-out at</span>

@@ -152,8 +152,7 @@
 }
 
 .doc-archive__mono {
-  font-family: monospace;
-  font-size: 12px;
+  font-weight: 500;
 }
 
 .doc-archive__muted {

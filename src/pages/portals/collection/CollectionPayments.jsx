@@ -353,14 +353,14 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                     >
                       <td style={{ fontWeight: 600, color: '#2563eb' }}>{p.payment_number}</td>
                       <td>
-                        <p className="lead-title">{p.customer_name || '—'}</p>
+                        <p className="lead-title">{p.customer_name || '-'}</p>
                         <small>
                           <button type="button" className="col-booking-link" onClick={(e) => { e.stopPropagation(); onSelectBooking && onSelectBooking(p.booking_id); }}>
                             {p.booking_number}
                           </button>
                         </small>
                       </td>
-                      <td className="hide-mobile">{p.payment_category || '—'}</td>
+                      <td className="hide-mobile">{p.payment_category || '-'}</td>
                       <td className="hide-mobile">{p.payment_type}</td>
                       <td className="hide-mobile">{p.payment_mode}</td>
                       <td className="hide-mobile">{formatCurrency(p.amount)}</td>
@@ -368,7 +368,7 @@ const CollectionPayments = ({ user, onSelectBooking }) => {
                       <td>
                         {p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
                           : p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
-                          : <span className="bkd-badge bkd-badge-warning">Unverified</span>}
+                            : <span className="bkd-badge bkd-badge-warning">Unverified</span>}
                       </td>
                     </tr>
                   ))}

@@ -20,8 +20,8 @@ const TRIGGER_LABEL = {
 
 const fmtDateTime = (d) => (d
   ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  : '—');
-const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || '—' : '—');
+  : '-');
+const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || '-' : '-');
 
 const OUTCOME_BADGE = {
   REALLOTTED: { bg: '#dbeafe', fg: '#1e40af', label: 'Reallotted' },
@@ -63,7 +63,7 @@ const ReallotmentLogList = () => {
     })();
   }, []);
 
-  // `silent` skips the loading spinner — used by the live poll so the table
+  // `silent` skips the loading spinner - used by the live poll so the table
   // doesn't flicker on every background refresh.
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -104,7 +104,7 @@ const ReallotmentLogList = () => {
     try {
       const resp = await reallotmentLogApi.runNow();
       const r = resp.data || {};
-      toast.success(`Run complete — ${r.reallotted || 0} reallotted, ${r.inactivated || 0} marked inactive`);
+      toast.success(`Run complete - ${r.reallotted || 0} reallotted, ${r.inactivated || 0} marked inactive`);
       await load();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to run reallotment'));
@@ -132,7 +132,7 @@ const ReallotmentLogList = () => {
             type="button"
             className={`crm-btn crm-btn-sm ${live ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
             onClick={() => setLive((v) => !v)}
-            title={live ? `Live — auto-refreshing every ${LIVE_INTERVAL_MS / 1000}s. Click to stop.` : 'Click to start live auto-refresh'}
+            title={live ? `Live - auto-refreshing every ${LIVE_INTERVAL_MS / 1000}s. Click to stop.` : 'Click to start live auto-refresh'}
           >
             <span style={{
               display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 6,
@@ -230,23 +230,23 @@ const ReallotmentLogList = () => {
                   <tr key={r.id}>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
                     <td style={td}>
-                      {r.lead ? (`${r.lead.first_name || ''} ${r.lead.last_name || ''}`.trim() || r.lead.lead_number) : '—'}
+                      {r.lead ? (`${r.lead.first_name || ''} ${r.lead.last_name || ''}`.trim() || r.lead.lead_number) : '-'}
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.lead?.lead_number || ''}</div>
                     </td>
-                    <td style={td}>{r.userType?.type_name || '—'}</td>
+                    <td style={td}>{r.userType?.type_name || '-'}</td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, ...badgeStyle(r.leadStatus?.color_code) }}>
-                        {r.leadStatus?.status_name || '—'}
+                        {r.leadStatus?.status_name || '-'}
                       </span>
                     </td>
                     <td style={td}>
                       <span style={{ fontWeight: 600 }}>{userName(r.fromUser)}</span>
                       <span style={{ color: 'var(--text-muted)' }}> → </span>
-                      <span style={{ fontWeight: 600 }}>{r.toUser ? userName(r.toUser) : '—'}</span>
+                      <span style={{ fontWeight: 600 }}>{r.toUser ? userName(r.toUser) : '-'}</span>
                     </td>
-                    <td style={td}>{TRIGGER_LABEL[r.trigger_basis] || r.trigger_basis || '—'}</td>
-                    <td style={td}>{r.threshold_days ?? '—'}</td>
-                    <td style={td}>{r.occurrence_no ?? '—'}</td>
+                    <td style={td}>{TRIGGER_LABEL[r.trigger_basis] || r.trigger_basis || '-'}</td>
+                    <td style={td}>{r.threshold_days ?? '-'}</td>
+                    <td style={td}>{r.occurrence_no ?? '-'}</td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg }}>
                         {badge.label}

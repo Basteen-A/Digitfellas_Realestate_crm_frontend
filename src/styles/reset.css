@@ -1,5 +1,5 @@
 /* ============================================================
-   CSS RESET — Normalize browser defaults
+   CSS RESET - Normalize browser defaults
    ============================================================ */
 
 *, *::before, *::after {
@@ -16,7 +16,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Reserve the scrollbar gutter at all times so pages that differ in height
-     don't shift horizontally as the vertical scrollbar appears/disappears —
+     don't shift horizontally as the vertical scrollbar appears/disappears -
      this is the "slight shaking" between page navigations. */
   scrollbar-gutter: stable;
   overflow-y: scroll;
@@ -74,7 +74,7 @@ p {
 }
 
 /* Visible scroll indicator across every page and inner scroll container
-   (Chrome/Edge/Safari + Android Chrome — explicit sizing forces the
+   (Chrome/Edge/Safari + Android Chrome - explicit sizing forces the
    indicator to render instead of staying as a hidden overlay). */
 ::-webkit-scrollbar {
   width: 10px;

@@ -42,7 +42,7 @@
   flex: 1;
 }
 
-/* Handoff-date presets — segmented control sitting beside the search box. */
+/* Handoff-date presets - segmented control sitting beside the search box. */
 .handoff-leads__periods {
   display: inline-flex;
   flex-shrink: 0;
@@ -157,7 +157,7 @@
   font-weight: 600;
 }
 
-/* Lead acceptance — badge-system triples (badge-system.html) */
+/* Lead acceptance - badge-system triples (badge-system.html) */
 .handoff-accept--pending {
   background: #FFFBEB;
   color: #92400E;

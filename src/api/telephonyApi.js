@@ -1,6 +1,6 @@
 import api from './axiosInstance';
 
-// Telephony (Tata Smartflo) — provider webhook config + role-scoped call logs
+// Telephony (Tata Smartflo) - provider webhook config + role-scoped call logs
 // with recording playback. Config endpoints are admin-only on the server; the
 // call-logs endpoints are role-scoped (a telecaller sees only their own calls).
 const BASE = '/telephony';
@@ -34,7 +34,7 @@ const telephonyApi = {
     return data;
   },
 
-  // ── Allocation history (Super Admin) — inbound-call lead automation audit ──
+  // ── Allocation history (Super Admin) - inbound-call lead automation audit ──
   getAllocations: async (params = {}) => {
     const { data } = await api.get(`${BASE}/allocations`, { params: { ...params, _t: Date.now() } });
     return data;
@@ -58,7 +58,7 @@ const telephonyApi = {
   // base + the Bearer token; the raw provider URL never reaches the browser).
   recordingSrc: (id) => `${BASE}/call-logs/${id}/recording`,
 
-  // Outbound Click-to-Call — Smartflo rings the logged-in agent's phone, then
+  // Outbound Click-to-Call - Smartflo rings the logged-in agent's phone, then
   // the customer. Pass { lead_id } (customer = lead's phone) or { destination_number }.
   clickToCall: async (payload) => {
     const { data } = await api.post(`${BASE}/click-to-call`, payload);

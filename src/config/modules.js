@@ -5,7 +5,7 @@
 // A role (user_type) stores a { moduleKey: level } matrix in
 // user_types.module_permissions. A user may override individual modules via
 // users.module_permission_overrides. The auth middleware merges the two into
-// req.user.permissions on every request — no extra queries, because both
+// req.user.permissions on every request - no extra queries, because both
 // columns ride along on the rows it already loads.
 //
 // ── Levels ───────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@
 // Levels are ordered, so a check for `read` passes for write and full.
 //
 // IMPORTANT: client/src/config/modules.js mirrors this file. The two MUST stay
-// in lock-step — the server enforces, the client only draws the matrix and the
+// in lock-step - the server enforces, the client only draws the matrix and the
 // sidebar from it. Change one, change the other.
 // ============================================================
 
@@ -45,7 +45,7 @@ export const MODULES = [
   // ── INSIGHTS ──
   // read = self-service (your own / your team's numbers, the level TC, SM and SH
   // have always had). full = org-wide: every role tab, every user, marketing and
-  // collection reports. The gap between the two is deliberate — do not collapse it.
+  // collection reports. The gap between the two is deliberate - do not collapse it.
   { key: 'reports', label: 'Reports & Analytics', group: 'Insights', levels: READ_FULL, description: 'Read = own & team numbers · Full = org-wide, every role and user' },
 
   // ── INVENTORY ──
@@ -72,7 +72,7 @@ export const MODULES = [
 
   // ── CONFIGURATION ──
   { key: 'users', label: 'Users', group: 'Configuration', levels: ALL, description: 'Create and manage user accounts' },
-  { key: 'roles', label: 'Roles & Permissions', group: 'Configuration', levels: ALL, description: 'This screen — create roles and set their module access' },
+  { key: 'roles', label: 'Roles & Permissions', group: 'Configuration', levels: ALL, description: 'This screen - create roles and set their module access' },
   { key: 'org_settings', label: 'Org Settings', group: 'Configuration', levels: ALL, description: 'Branding, site settings and terms' },
   { key: 'attendance', label: 'Attendance', group: 'Configuration', levels: ALL, description: 'Check-in records and attendance settings' },
   // Master data is split by the sidebar's own grouping so a role can be given, say,
@@ -97,7 +97,7 @@ export const normalizeLevel = (level) => (LEVEL_RANK[level] === undefined ? 'non
 export const levelSatisfies = (level, required) =>
   LEVEL_RANK[normalizeLevel(level)] >= LEVEL_RANK[normalizeLevel(required)];
 
-/** A matrix with every module set to the same level — used for SA (full) and defaults (none). */
+/** A matrix with every module set to the same level - used for SA (full) and defaults (none). */
 export const uniformMatrix = (level) =>
   MODULE_KEYS.reduce((acc, key) => { acc[key] = normalizeLevel(level); return acc; }, {});
 

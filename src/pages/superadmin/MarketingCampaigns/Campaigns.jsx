@@ -27,7 +27,7 @@ const STATUS_COLORS = {
   COMPLETED: { bg: '#F0FDF4', fg: '#166534', border: '#BBF7D0' },
   FAILED: { bg: '#FFF1F2', fg: '#9F1239', border: '#FECDD3' },
 };
-const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
 
 // Compact scrollable checkbox multi-select.
 const MultiCheck = ({ label, options, selected, onToggle }) => (
@@ -64,7 +64,7 @@ const Campaigns = () => {
   const [name, setName] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [headerImageUrl, setHeaderImageUrl] = useState('');
-  // Per-campaign variable values — pre-filled from the selected template,
+  // Per-campaign variable values - pre-filled from the selected template,
   // editable here without touching the template itself.
   const [paramValues, setParamValues] = useState({ header_params: [], body_params: [] });
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -142,7 +142,7 @@ const Campaigns = () => {
             ? { campaign: cResp.data || d.campaign, recipients: rResp.data || d.recipients, statusFilter: d.statusFilter }
             : d
         ));
-      } catch { /* silent — next tick retries */ }
+      } catch { /* silent - next tick retries */ }
     }, 5000);
     return () => clearInterval(timer);
   }, [drillCampaignId, drillStatusFilter]);
@@ -198,11 +198,11 @@ const Campaigns = () => {
     }
   };
 
-  // Every variable must resolve — WhatsApp rejects messages with empty params.
+  // Every variable must resolve - WhatsApp rejects messages with empty params.
   const paramError = () => {
     const bad = (p, label) => {
-      if (p.source === 'lead_field' && !p.field) return `${label} is mapped to a lead field — select the field.`;
-      if (p.source !== 'lead_field' && !String(p.value || '').trim()) return `${label} is set to custom text — enter a value.`;
+      if (p.source === 'lead_field' && !p.field) return `${label} is mapped to a lead field - select the field.`;
+      if (p.source !== 'lead_field' && !String(p.value || '').trim()) return `${label} is set to custom text - enter a value.`;
       return null;
     };
     for (const p of paramValues.header_params) { const e = bad(p, 'Header variable {{1}}'); if (e) return e; }
@@ -306,7 +306,7 @@ const Campaigns = () => {
                   <option value="">Select a template…</option>
                   {templates.filter((t) => t.status === 'APPROVED').map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} ({t.language_code}){t.header_type !== 'NONE' ? ` — ${t.header_type} header` : ''}
+                      {t.name} ({t.language_code}){t.header_type !== 'NONE' ? ` - ${t.header_type} header` : ''}
                     </option>
                   ))}
                 </select>
@@ -320,14 +320,14 @@ const Campaigns = () => {
               <label style={labelStyle}>
                 Header {selectedTemplate?.header_type || 'Image'} {needsHeaderMedia
                   ? <span style={{ fontWeight: 800, color: '#dc2626' }}>* REQUIRED</span>
-                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span>}
+                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional - overrides template/default)</span>}
               </label>
               <HeaderMediaInput value={headerImageUrl} onChange={setHeaderImageUrl} />
               {needsHeaderMedia && (
                 <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
                   <span>
-                    This template has a <strong>{selectedTemplate.header_type}</strong> header — you <strong>must upload a file</strong> above
+                    This template has a <strong>{selectedTemplate.header_type}</strong> header - you <strong>must upload a file</strong> above
                     before sending, otherwise WhatsApp will reject every message.
                   </span>
                 </div>
@@ -335,7 +335,7 @@ const Campaigns = () => {
               {/x-amz-(signature|expires|credential)/i.test(headerImageUrl || '') && !String(headerImageUrl || '').includes('sujatha-crm-uploads') && (
                 <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                   <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }} />
-                  This is a temporary presigned link that expires within days — use the Upload button for a permanent URL.
+                  This is a temporary presigned link that expires within days - use the Upload button for a permanent URL.
                 </div>
               )}
             </div>
@@ -344,7 +344,7 @@ const Campaigns = () => {
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
                 <div style={{ fontSize: 13, fontWeight: 800 }}>Template Variables</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, marginBottom: 4 }}>
-                  Pre-filled from the template — change the values for this campaign only. The saved template is not modified.
+                  Pre-filled from the template - change the values for this campaign only. The saved template is not modified.
                 </div>
                 {paramValues.header_params.map((p, i) => renderParamRow('header_params', 'Header {{1}}', p, i))}
                 {paramValues.body_params.map((p, i) => renderParamRow('body_params', `{{${p.index || i + 1}}}`, p, i))}
@@ -378,7 +378,7 @@ const Campaigns = () => {
               <div style={{ fontSize: 13 }}>
                 {preview ? (
                   <span><strong style={{ fontSize: 18 }}>{preview.total}</strong> matching recipient(s)
-                    {preview.sample?.length > 0 && <span style={{ color: 'var(--text-muted)' }}> — e.g. {preview.sample.slice(0, 3).map((s) => s.name || s.phone).join(', ')}…</span>}
+                    {preview.sample?.length > 0 && <span style={{ color: 'var(--text-muted)' }}> - e.g. {preview.sample.slice(0, 3).map((s) => s.name || s.phone).join(', ')}…</span>}
                   </span>
                 ) : <span style={{ color: 'var(--text-muted)' }}>Preview the audience before sending.</span>}
               </div>
@@ -440,7 +440,7 @@ const Campaigns = () => {
                 return (
                   <tr key={c.id}>
                     <td style={td}><span style={{ fontWeight: 600 }}>{c.name}</span></td>
-                    <td style={td}>{c.template_name || c.template?.name || '—'}</td>
+                    <td style={td}>{c.template_name || c.template?.name || '-'}</td>
                     <td style={td}><UsersIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: 'var(--text-muted)' }} /> {c.total_recipients}</td>
                     <td style={{ ...td, color: '#166534', fontWeight: 700 }}>{c.sent_count}</td>
                     <td style={{ ...td, color: c.delivered_count ? '#166534' : 'var(--text-muted)', fontWeight: c.delivered_count ? 700 : 400 }}>
@@ -490,7 +490,7 @@ const Campaigns = () => {
               ))}
             </div>
             <div style={{ padding: '0 20px 10px', fontSize: 11, color: 'var(--text-muted)' }}>
-              SENT = accepted by WhatsApp. Delivered / Read / Failed arrive via the provider webhook — configure the
+              SENT = accepted by WhatsApp. Delivered / Read / Failed arrive via the provider webhook - configure the
               callback URL in the pinbot panel to keep these in sync.
             </div>
             <div style={{ padding: '0 20px 20px', maxHeight: '60vh', overflowY: 'auto' }}>
@@ -510,13 +510,13 @@ const Campaigns = () => {
                     const statusColor = {
                       SENT: '#2563eb', DELIVERED: '#166534', READ: '#7c3aed', FAILED: '#991b1b',
                     }[r.status] || '#a16207';
-                    let detail = r.error || '—';
-                    if (r.status === 'SENT') detail = 'Accepted by WhatsApp — awaiting delivery receipt';
+                    let detail = r.error || '-';
+                    if (r.status === 'SENT') detail = 'Accepted by WhatsApp - awaiting delivery receipt';
                     else if (r.status === 'DELIVERED') detail = `Delivered${r.delivered_at ? ` ${fmtDateTime(r.delivered_at)}` : ''}`;
                     else if (r.status === 'READ') detail = `Read${r.read_at ? ` ${fmtDateTime(r.read_at)}` : ''}`;
                     return (
                       <tr key={r.id}>
-                        <td style={td}>{r.lead_name || '—'}</td>
+                        <td style={td}>{r.lead_name || '-'}</td>
                         <td style={td}>{r.phone}</td>
                         <td style={td}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: statusColor }}>{r.status}</span>

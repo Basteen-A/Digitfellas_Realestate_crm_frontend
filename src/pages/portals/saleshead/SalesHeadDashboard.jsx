@@ -75,7 +75,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
       <div className="col-page-header">
         <div className="col-page-header-left">
           <h1>{greeting}{firstName ? `, ${firstName}` : ''}</h1>
-          <p>Sales overview for today — {today}</p>
+          <p>Sales overview for today - {today}</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={load}>
@@ -124,7 +124,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#991B1B' }}>{stats.pendingApprovals} Cancellation Request{stats.pendingApprovals !== 1 ? 's' : ''}</div>
-            <div style={{ fontSize: 12, color: '#B91C1C', marginTop: 2 }}>Bookings awaiting your review — click to manage</div>
+            <div style={{ fontSize: 12, color: '#B91C1C', marginTop: 2 }}>Bookings awaiting your review - click to manage</div>
           </div>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>Review →</span>
         </div>
@@ -169,7 +169,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                         <div className="col-cell-primary">{leadName(lead)}</div>
                         {lead.lead_number && <div className="col-cell-secondary col-cell-mono">{lead.lead_number}</div>}
                       </td>
-                      <td>{lead.projectName || '—'}</td>
+                      <td>{lead.projectName || '-'}</td>
                       <td><StatusChip name={lead.statusName} color={lead.statusColor} /></td>
                       <td>
                         <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); lead?.id && navigate(`/portal/lead/${lead.id}`); }}>
@@ -221,7 +221,7 @@ const SalesHeadDashboard = ({ user, onNavigate }) => {
                         <div className="col-cell-primary">{booking.customer_name}</div>
                         {booking.booking_number && <div className="col-cell-secondary col-cell-mono">{booking.booking_number}</div>}
                       </td>
-                      <td>{booking.project_name || '—'}</td>
+                      <td>{booking.project_name || '-'}</td>
                       <td style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatCurrency(booking.net_amount)}</td>
                       <td>
                         <button className="col-btn col-btn-ghost col-btn-sm" onClick={(e) => { e.stopPropagation(); onNavigate?.('bookings', { selectedId: booking.id }); }}>

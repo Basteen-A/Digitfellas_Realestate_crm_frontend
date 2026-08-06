@@ -1,5 +1,5 @@
 // ============================================================
-// SIDEBAR MENU CONFIGURATION — Role-specific menus
+// SIDEBAR MENU CONFIGURATION - Role-specific menus
 // ============================================================
 import {
   ChartBarIcon,
@@ -28,7 +28,7 @@ import {
   DocumentChartBarIcon,
   PresentationChartLineIcon,
 } from '@heroicons/react/24/outline';
-// Admin / super-admin nav glyphs — the mockup's own outline set, not Heroicons.
+// Admin / super-admin nav glyphs - the mockup's own outline set, not Heroicons.
 import {
   NavHome, NavUsers, NavSettings, NavLayoutGrid, NavClipboardList, NavCalendar,
   NavFileText, NavBuildingWarehouse, NavBuilding, NavMapPin, NavWallet,
@@ -41,8 +41,8 @@ import { usesGenericPortal, BUILT_IN_PORTAL_CODES } from '../../../utils/moduleP
 import { buildGenericSidebar } from './genericMenu';
 
 /**
- * Icon per section heading. The collapsed sidebar is a rail of these — one icon
- * per category instead of one per link — and clicking one opens that section's
+ * Icon per section heading. The collapsed sidebar is a rail of these - one icon
+ * per category instead of one per link - and clicking one opens that section's
  * items in a flyout (see Sidebar.jsx). Keyed by section name so both the
  * hand-written admin menu and the matrix-driven generic menu are covered; add an
  * entry here whenever a new `{ section }` name is introduced.
@@ -91,7 +91,7 @@ export const getSidebarMenuForRole = (roleCode, user = null) => {
     case 'SA':
       return adminSidebar;
     case 'ADM':
-      // Booking Approvals is Super Admin only — hide that child from plain Admins.
+      // Booking Approvals is Super Admin only - hide that child from plain Admins.
       return adminSidebar.map((item) => (item.children
         ? { ...item, children: item.children.filter((c) => c.path !== '/super-admin/booking-approvals') }
         : item));
@@ -114,14 +114,14 @@ export const getSidebarMenuForRole = (roleCode, user = null) => {
     case 'CE':
       return collectionExecSidebar;
     default:
-      // Unknown code with no matrix to work from — fall back to the generic
+      // Unknown code with no matrix to work from - fall back to the generic
       // build, which yields [] and lets the shell explain itself.
       return user ? buildGenericSidebar(user) : telecallerSidebar;
   }
 };
 
 // ── Organization Head ──
-// Grant-driven menu — only the modules the Super Admin ticked on the user form
+// Grant-driven menu - only the modules the Super Admin ticked on the user form
 // (Reports / Booking Approvals / Tasks) appear. Reuses the existing admin pages.
 const buildOrganizationHeadSidebar = (user) => {
   const menu = [{ section: 'WORKSPACE' }];
@@ -162,13 +162,13 @@ const buildOrganizationHeadSidebar = (user) => {
 
 // ── Admin / Super Admin ──
 // IA: HOME / SALES / PROPERTIES / PAYMENTS / REPORTS / MARKETING & CALLS /
-// SETTINGS — 7 groups ordered by frequency of use, down from the 8 sections the
+// SETTINGS - 7 groups ordered by frequency of use, down from the 8 sections the
 // admin menu carried before. Labels are deliberately plain-language: a
 // salesperson or an accountant reads them the same way an engineer does, so no
 // "masters", "reallocation" or other backend vocabulary surfaces in the UI.
 //
 // `{ section }` items render as collapsible uppercase group headers (see
-// Sidebar.jsx); `collapsed: true` makes a section start closed — SETTINGS does,
+// Sidebar.jsx); `collapsed: true` makes a section start closed - SETTINGS does,
 // because it is the one low-frequency group. The sidebar renders only two levels
 // (group → flat child links), so the master tables stay expressed as grouped
 // child sets under SETTINGS.
@@ -190,7 +190,7 @@ const buildOrganizationHeadSidebar = (user) => {
 //   Other Masters        → Other Settings
 //
 // Icons are the mockup's own set (see navIcons.jsx), one per label exactly as
-// its `iconMap` assigns them — including the three places that set resolves two
+// its `iconMap` assigns them - including the three places that set resolves two
 // labels to the same glyph (Bookings/Attendance → calendar, Records/Payment
 // Reports → file-text, Lead Settings/Booking & Payment Settings → adjustments).
 const adminSidebar = [
@@ -210,7 +210,7 @@ const adminSidebar = [
     children: [
       { label: 'Inventory Overview', path: '/super-admin/inventory' },
       { label: 'Projects', path: '/super-admin/projects' },
-      // Project Types is a master table, not day-to-day work — it lives under
+      // Project Types is a master table, not day-to-day work - it lives under
       // SETTINGS › Other Settings alongside the other type/lookup lists.
       { label: 'Document Management', path: '/super-admin/document-management' },
       { label: 'Document Archive', path: '/super-admin/document-archive' },
@@ -230,7 +230,7 @@ const adminSidebar = [
   {
     label: 'Team Performance',
     icon: NavTrophy,
-    // No "Organization" child — that is the same page as "Reports" above.
+    // No "Organization" child - that is the same page as "Reports" above.
     children: [
       { label: 'Telecaller', path: '/super-admin/reports/telecaller' },
       { label: 'Sales Manager', path: '/super-admin/reports/sales-manager' },
@@ -243,11 +243,10 @@ const adminSidebar = [
     label: 'Campaigns',
     icon: NavSpeakerphone,
     children: [
-      { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
       { label: 'Campaigns', path: '/super-admin/marketing-metrix' },
       { label: 'WA Campaigns', path: '/super-admin/marketing-campaigns' },
       { label: 'Templates', path: '/super-admin/marketing-templates' },
-      
+      { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
     ],
   },
   {
@@ -262,7 +261,7 @@ const adminSidebar = [
   { label: 'Lead Assignment', path: '/super-admin/marketing-allocation', icon: NavArrowsExchange },
   { label: 'Assignment History', path: '/super-admin/marketing-allocation-history', icon: NavRefresh },
 
-  // Low-frequency group — starts collapsed, and auto-opens when the route is
+  // Low-frequency group - starts collapsed, and auto-opens when the route is
   // inside it (see Sidebar.jsx).
   { section: 'SETTINGS', collapsed: true },
   {
@@ -444,17 +443,17 @@ export const collectionMenu = [
   { label: 'Payments', key: 'payments', icon: BanknotesIcon, badge: null },
   TASK_MENU_SLOT,
   // Every report this portal can open, collection and telecalling alike. The
-  // telecalling ones are the same org-wide screens Super Admin sees — the
+  // telecalling ones are the same org-wide screens Super Admin sees - the
   // Collection Manager monitors telecaller performance and inbound-call
   // allocation, so they render inside the collection portal too.
   { group: 'Reports' },
-  // Four report links in a row — each needs its own glyph or the group reads as
+  // Four report links in a row - each needs its own glyph or the group reads as
   // one repeated icon. Money report vs telecalling report vs the two audits.
   { label: 'Collection Report', key: 'reports', icon: DocumentChartBarIcon, badge: null },
   { label: 'Telecaller Reports', key: 'tc-reports', icon: PresentationChartLineIcon, badge: null },
   // Two different allocation audits, both about which telecaller got which lead:
-  //   • Call Allocation History  — leads created from INBOUND CALLS (Tata Smartflo)
-  //   • API Allocation History   — leads pushed in by the MARKETING API webhook
+  //   • Call Allocation History  - leads created from INBOUND CALLS (Tata Smartflo)
+  //   • API Allocation History   - leads pushed in by the MARKETING API webhook
   { label: 'Call Allocation History', key: 'call-allocations', icon: PhoneArrowDownLeftIcon, badge: null },
   { label: 'API Allocation History', key: 'api-allocations', icon: MegaphoneIcon, badge: null },
 ];
@@ -472,7 +471,7 @@ export const recordManagerMenu = [
   { label: 'Project Documents', key: 'documents', icon: FolderOpenIcon },
 ];
 
-// Accounts Manager mirrors the Accountant (ACCT) menu exactly — same items,
+// Accounts Manager mirrors the Accountant (ACCT) menu exactly - same items,
 // no "Cash" labels. The verify queue still defaults to cash server-side, with a
 // "Show all payments" toggle on the screen itself.
 export const accountsManagerMenu = [

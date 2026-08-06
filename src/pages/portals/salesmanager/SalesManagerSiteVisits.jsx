@@ -34,7 +34,7 @@ const getActionVisual = (code = '') => {
   return { Icon: ClipboardDocumentListIcon, selClass: 'sel-default' };
 };
 
-// Follow-ups are date-only — shortcuts resolve to the chosen calendar day.
+// Follow-ups are date-only - shortcuts resolve to the chosen calendar day.
 const FOLLOW_UP_SHORTCUTS = [
   { label: 'Today', kind: 'dayOffset', dayOffset: 0 },
   { label: 'Tmrw', kind: 'dayOffset', dayOffset: 1 },
@@ -246,13 +246,13 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     // A site visit belongs to this SM by OWNERSHIP (who recorded/attended it), not by
     // the lead's current assignment. getMyLeadVisits already scopes to this SM's
     // recorded/attended visits, so we must NOT drop a visit once its lead moves on to
-    // a Sales Head or is marked Lost — the SM's SV count + details have to persist.
+    // a Sales Head or is marked Lost - the SM's SV count + details have to persist.
 
     // Status filter
     if (filter === 'upcoming') return ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.status);
     if (filter === 'completed') return v.status === 'Completed';
     if (filter === 'cancelled') return v.status === 'Cancelled';
-    
+
     // Date range filter
     const visitDate = v.scheduled_date || v.actual_visit_date || v.completed_at;
     if (dateFrom && visitDate) {
@@ -265,10 +265,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
       toDate.setHours(23, 59, 59, 999);
       if (new Date(visitDate) > toDate) return false;
     }
-    
+
     // Project filter
     if (projectFilter && v.project_id !== projectFilter) return false;
-    
+
     return true;
   });
 
@@ -313,7 +313,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
     );
   };
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
 
   const handleOpenVisitDetails = async (visit) => {
@@ -558,7 +558,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
   // SV Done = DISTINCT LEADS with at least one COMPLETED site visit.
   // One lead counts once regardless of revisits, and it stays counted even after the
   // lead is handed to a Sales Head or marked Lost (ownership-based, see filteredVisits).
-  // NOTE: this is only a FALLBACK — the card prefers the server's uncapped `svDoneCount`
+  // NOTE: this is only a FALLBACK - the card prefers the server's uncapped `svDoneCount`
   // (meta.svDoneCount) because this client version only sees the loaded page window and
   // would under-count an SM with more visits than the fetch limit.
   const svDoneCount = useMemo(() => {
@@ -604,7 +604,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
             style={fieldInputStyle}
           />
         </div>
-        
+
         {/* Date To */}
         <div style={{ minWidth: 160 }}>
           <label style={{ ...fieldLabelStyle, marginBottom: 6 }}>To Date</label>
@@ -615,7 +615,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
             style={fieldInputStyle}
           />
         </div>
-        
+
         {/* Project Filter */}
         <div style={{ minWidth: 200 }}>
           <label style={{ ...fieldLabelStyle, marginBottom: 6 }}>Project</label>
@@ -630,7 +630,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
             ))}
           </select>
         </div>
-        
+
         {/* Clear Filters */}
         <button
           className="crm-btn crm-btn-ghost"
@@ -644,26 +644,26 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
         >
           Clear Filters
         </button>
-        
+
         {/* SV Done Count Card */}
-        <div style={{ 
-          marginLeft: 'auto', 
-          background: 'var(--bg-card)', 
-          border: '1px solid var(--border-primary)', 
-          borderRadius: 12, 
+        <div style={{
+          marginLeft: 'auto',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-primary)',
+          borderRadius: 12,
           padding: '16px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: 12
         }}>
-          <div style={{ 
-            width: 48, 
-            height: 48, 
-            borderRadius: '50%', 
-            background: 'var(--accent-green-bg)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            background: 'var(--accent-green-bg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
             <CheckCircleIcon style={{ width: 24, height: 24, color: '#15803d' }} />
           </div>
@@ -741,7 +741,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                             return (
                               <React.Fragment key={v.id}>
                                 <tr>
-                                  <td style={{ fontWeight: 600 }}>{v.visit_number || '—'}</td>
+                                  <td style={{ fontWeight: 600 }}>{v.visit_number || '-'}</td>
                                   <td>{v.project?.project_name || projects.find((project) => project.id === v.project_id)?.project_name || 'N/A'}</td>
                                   <td>
                                     <div style={{ fontWeight: 600 }}>{formatDate(v.scheduled_date)}</div>
@@ -749,8 +749,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                                       <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Actual: {formatDate(v.actual_visit_date)}</div>
                                     )}
                                   </td>
-                                  <td>{v.scheduled_time_slot || formatTime(v.scheduled_date) || '—'}</td>
-                                  <td>{timeSpent != null ? `${timeSpent} mins` : '—'}</td>
+                                  <td>{v.scheduled_time_slot || formatTime(v.scheduled_date) || '-'}</td>
+                                  <td>{timeSpent != null ? `${timeSpent} mins` : '-'}</td>
                                   <td>{getStatusBadge(v.status)}</td>
                                   <td>
                                     <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => handleOpenVisitDetails(v)}>
@@ -831,60 +831,60 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                 const rawVisitDetails = getRawVisitDetails(selectedVisit) || getRawVisitDetails(selectedVisitSiblingWithDetails);
                 return (
                   <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Number</div><div style={{ fontWeight: 700 }}>{selectedVisit.visit_number || '—'}</div></div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || projects.find((project) => project.id === selectedVisit.project_id)?.project_name || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{getUserDisplayName(selectedVisit.attendedBy) || getUserDisplayName(selectedVisit.scheduledBy) || '—'}</div>
-                {getVisitTimeSpent(selectedVisit) != null && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{getVisitTimeSpent(selectedVisit)} mins</div>}
-              </div>
-              {selectedVisitLoading && (
-                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>Loading full visit details...</div>
-              )}
-              {(selectedVisit.remarks_long || selectedVisit.feedback || selectedVisit.remarks) && (
-                <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Remarks</div>
-                  <div style={{ fontSize: 13 }}>{selectedVisit.remarks_long || selectedVisit.feedback || selectedVisit.remarks}</div>
-                </div>
-              )}
-              {selectedVisit.requirement_details && (
-                <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Requirement Details</div>
-                  <div style={{ fontSize: 13 }}>{selectedVisit.requirement_details}</div>
-                </div>
-              )}
-              {selectedVisitDetails && (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
-                    {selectedVisitSiblingWithDetails && !getVisitDetails(selectedVisit)
-                      ? `Visit Details (from ${selectedVisitSiblingWithDetails.visit_number || 'latest visit'})`
-                      : 'Visit Details'}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    {VISIT_DETAIL_KEYS.map((k) => (
-                      <div key={k}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisitDetails[k])}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Number</div><div style={{ fontWeight: 700 }}>{selectedVisit.visit_number || '-'}</div></div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '-'}</div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || projects.find((project) => project.id === selectedVisit.project_id)?.project_name || '-'}</div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Scheduled Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Slot</div>{selectedVisit.scheduled_time_slot || '-'}</div>
+                      <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{getUserDisplayName(selectedVisit.attendedBy) || getUserDisplayName(selectedVisit.scheduledBy) || '-'}</div>
+                      {getVisitTimeSpent(selectedVisit) != null && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{getVisitTimeSpent(selectedVisit)} mins</div>}
+                    </div>
+                    {selectedVisitLoading && (
+                      <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>Loading full visit details...</div>
+                    )}
+                    {(selectedVisit.remarks_long || selectedVisit.feedback || selectedVisit.remarks) && (
+                      <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Remarks</div>
+                        <div style={{ fontSize: 13 }}>{selectedVisit.remarks_long || selectedVisit.feedback || selectedVisit.remarks}</div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {!selectedVisitDetails && rawVisitDetails && (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details (Raw)</div>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.5 }}>{typeof rawVisitDetails === 'string' ? rawVisitDetails : JSON.stringify(rawVisitDetails, null, 2)}</pre>
-                </div>
-              )}
-              {selectedVisit.geo_lat && (
-                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  <MapPinIcon style={{ width: 13, height: 13, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} /> Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
-                </div>
-              )}
+                    )}
+                    {selectedVisit.requirement_details && (
+                      <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Requirement Details</div>
+                        <div style={{ fontSize: 13 }}>{selectedVisit.requirement_details}</div>
+                      </div>
+                    )}
+                    {selectedVisitDetails && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+                          {selectedVisitSiblingWithDetails && !getVisitDetails(selectedVisit)
+                            ? `Visit Details (from ${selectedVisitSiblingWithDetails.visit_number || 'latest visit'})`
+                            : 'Visit Details'}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                          {VISIT_DETAIL_KEYS.map((k) => (
+                            <div key={k}>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{VISIT_DETAIL_LABELS[k]}</div>
+                              <div style={{ fontSize: 13, fontWeight: 600 }}>{displayVisitDetailValue(k, selectedVisitDetails[k])}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {!selectedVisitDetails && rawVisitDetails && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Visit Details (Raw)</div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.5 }}>{typeof rawVisitDetails === 'string' ? rawVisitDetails : JSON.stringify(rawVisitDetails, null, 2)}</pre>
+                      </div>
+                    )}
+                    {selectedVisit.geo_lat && (
+                      <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <MapPinIcon style={{ width: 13, height: 13, display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} /> Location: {selectedVisit.geo_lat}, {selectedVisit.geo_long}
+                      </div>
+                    )}
                   </>
                 );
               })()}

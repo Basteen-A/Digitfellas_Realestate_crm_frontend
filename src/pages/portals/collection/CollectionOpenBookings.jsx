@@ -24,9 +24,9 @@ const computedTotal = (b) => {
   return total > 0 ? total : toAmount(b.net_amount || b.total_amount);
 };
 
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
 
-// New Bookings — bookings still at "Booking Open" (created by Sales Head). The
+// New Bookings - bookings still at "Booking Open" (created by Sales Head). The
 // collection manager reviews them here and sends them for Super Admin approval;
 // once sent (Booking Pending) they move into the main Bookings list.
 export const CollectionOpenBookings = ({ onSelectBooking }) => {
@@ -83,7 +83,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
       <header className="lead-workspace__header">
         <div>
           <h1>Open Bookings</h1>
-          <p className="hide-mobile">Open bookings from Sales Head — review and send for Super Admin approval</p>
+          <p className="hide-mobile">Open bookings from Sales Head - review and send for Super Admin approval</p>
         </div>
         <div className="lead-workspace__header-actions">
           <button type="button" className="workspace-btn workspace-btn--ghost" onClick={load} disabled={loading}>
@@ -107,7 +107,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
 
       <div className="crm-card">
         <div className="crm-card-body-flush">
-          {/* Record count row — same header band as the other booking lists */}
+          {/* Record count row - same header band as the other booking lists */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid var(--border-primary, #e2e8f0)' }}>
             <small className="filter-tabs__records" style={{ marginLeft: 0 }}>{filtered.length} record{filtered.length === 1 ? '' : 's'} to send for approval</small>
           </div>
@@ -180,7 +180,7 @@ export const CollectionOpenBookings = ({ onSelectBooking }) => {
                           {b.booking_number}
                         </button>
                         <div className="col-bookings-mobile-card__customer">{b.customer_name || b.buyer_name || '-'}</div>
-                        <div className="col-bookings-mobile-card__meta">{b.project_name || '—'} · {b.unit_display || b.unit_number || 'TBD'}</div>
+                        <div className="col-bookings-mobile-card__meta">{b.project_name || '-'} · {b.unit_display || b.unit_number || 'TBD'}</div>
                       </div>
                       <div className="col-bookings-mobile-card__actions">
                         <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking?.(b.id)}>View</button>

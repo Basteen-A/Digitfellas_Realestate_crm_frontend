@@ -13,7 +13,7 @@ import { badgeStyle, TASK_STATUS_TEXT, TASK_PRIORITY_TEXT } from '../../utils/ba
 // Dashboard design system (stat cards, page header, cards, tables) shared with
 // the portal dashboards so this widget is visually consistent.
 import '../portals/collection/CollectionWorkspace.css';
-// .status-chip — the same chip the task list renders status/priority with.
+// .status-chip - the same chip the task list renders status/priority with.
 import '../portals/common/LeadWorkspacePage.css';
 import './TaskManagement.css';
 
@@ -35,7 +35,7 @@ const KPI_CARDS = [
 
 // Status renders exactly as it does on the task list screen: the canonical
 // badge-system text colour, with badgeStyle deriving bg + border. Priority is
-// deliberately NOT a chip — it sits as coloured text under the task title so a
+// deliberately NOT a chip - it sits as coloured text under the task title so a
 // row never shows two competing badge styles side by side.
 const Chip = ({ hex, children }) => (
   <span className="status-chip" style={{ ...badgeStyle(hex), textTransform: 'capitalize' }}>{children}</span>
@@ -88,7 +88,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
       <div className="col-page-header">
         <div className="col-page-header-left">
           <h1>Dashboard</h1>
-          <p>All tasks — {isAdmin ? 'Super Admin' : 'Standard Executive'} view</p>
+          <p>All tasks - {isAdmin ? 'Super Admin' : 'Standard Executive'} view</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={load} disabled={loading}>
@@ -114,7 +114,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
         </div>
       )}
 
-      {/* ── Status breakdown, then recent activity — each its own full-width
+      {/* ── Status breakdown, then recent activity - each its own full-width
              block (they used to share a 50/50 row, which squeezed the activity
              list into a column too narrow for its status/priority chips). ── */}
       <div className="col-card-new">
@@ -172,7 +172,7 @@ const TaskDashboard = ({ onOpenTasks }) => {
                   <tr><th>Task</th><th>Status</th><th>Updated</th></tr>
                 </thead>
                 <tbody>
-                  {/* Same row shape as the Task List screen — see TaskDashboardWidget. */}
+                  {/* Same row shape as the Task List screen - see TaskDashboardWidget. */}
                   {recent.map((t) => {
                     const last = (t.remarks || [])[(t.remarks || []).length - 1];
                     const note = last && last.content && last.content !== 'Task created.' ? last.content : '';

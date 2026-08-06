@@ -1,5 +1,5 @@
 // ============================================================
-// WORKSPACE ROLE CONFIG — Dynamic from API
+// WORKSPACE ROLE CONFIG - Dynamic from API
 // ============================================================
 
 export const ROLE_LABELS = {
@@ -135,11 +135,11 @@ export const getActionsForRole = (actions = {}, roleCode) => {
 
     return action;
   });
-  
+
   const fallbacks = FALLBACK_ACTIONS[roleCode] || [];
 
   // Actions explicitly hidden for a role even if the backend config still returns them.
-  // Sales Head has no Lost/Cold closure action — a cold lead is handed back to the SM
+  // Sales Head has no Lost/Cold closure action - a cold lead is handed back to the SM
   // (via SH_NEGOTIATION_COLD), it is never closed-lost by the SH.
   const HIDDEN_ACTIONS_BY_ROLE = { SH: ['SH_LOST'] };
   const hidden = new Set(HIDDEN_ACTIONS_BY_ROLE[roleCode] || []);

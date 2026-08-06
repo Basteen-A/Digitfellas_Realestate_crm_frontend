@@ -32,7 +32,7 @@ const FinanceCollections = () => {
   const [projectId, setProjectId] = useState('');
 
   useEffect(() => {
-    projectApi.getDropdown().then((r) => setProjects(r.data || [])).catch(() => {});
+    projectApi.getDropdown().then((r) => setProjects(r.data || [])).catch(() => { });
   }, []);
 
   const load = useCallback(async () => {
@@ -112,12 +112,12 @@ const FinanceCollections = () => {
                 const pct = value > 0 ? Math.round((Number(r.total_received || 0) / value) * 100) : 0;
                 return (
                   <tr key={i}>
-                    <td style={{ ...td, fontWeight: 500 }}>{r.project_name || '—'}</td>
+                    <td style={{ ...td, fontWeight: 500 }}>{r.project_name || '-'}</td>
                     <td style={td}>{r.booked_units || 0}/{r.total_units || 0}</td>
                     <td style={td}>{formatCurrency(value)}</td>
                     <td style={{ ...td, fontWeight: 500 }}>{formatCurrency(r.total_received || 0)}</td>
                     <td style={td}>{formatCurrency(dueOf(r))}</td>
-                    <td style={td}>{r.total_refund ? formatCurrency(r.total_refund) : '—'}</td>
+                    <td style={td}>{r.total_refund ? formatCurrency(r.total_refund) : '-'}</td>
                     <td style={{ ...td, fontWeight: 500 }}>{pct}%</td>
                   </tr>
                 );

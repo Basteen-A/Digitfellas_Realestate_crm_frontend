@@ -63,7 +63,7 @@ const MasterCrudPage = ({ config }) => {
 
     (config.fields || []).forEach((field) => {
       if (field.type === 'geofence') {
-        // Composite field — owns the latitude / longitude / radius columns.
+        // Composite field - owns the latitude / longitude / radius columns.
         initial.latitude = row?.latitude ?? '';
         initial.longitude = row?.longitude ?? '';
         initial.geofence_radius_m = row?.geofence_radius_m ?? '';
@@ -186,7 +186,7 @@ const MasterCrudPage = ({ config }) => {
         value = Array.isArray(value) ? value : [];
       } else if (value === '') {
         // `required` may be a predicate (e.g. on_max_status_id is only required when
-        // Max Reallotments is set) — resolve it so an optional empty select posts null,
+        // Max Reallotments is set) - resolve it so an optional empty select posts null,
         // not '' (which the API would reject as an invalid id).
         const req = typeof field.required === 'function'
           ? field.required(formValues, fieldOptions, modal)
@@ -321,7 +321,7 @@ const MasterCrudPage = ({ config }) => {
           },
           (err) => {
             setGeoCapturing(false);
-            toast.error(err.code === 1 ? 'Location permission denied — allow location access and retry.' : 'Could not get your location. Try again.');
+            toast.error(err.code === 1 ? 'Location permission denied - allow location access and retry.' : 'Could not get your location. Try again.');
           },
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
@@ -359,7 +359,7 @@ const MasterCrudPage = ({ config }) => {
             </label>
           </div>
           <label className="master-form__field" style={{ marginTop: 10 }}>
-            <span>Check-In Radius {radius ? `— ${radius} m` : '(uses the default from Attendance Settings when empty)'}</span>
+            <span>Check-In Radius {radius ? `- ${radius} m` : '(uses the default from Attendance Settings when empty)'}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <input
                 type="range"
@@ -418,8 +418,8 @@ const MasterCrudPage = ({ config }) => {
       const availableOptions = fieldOptions[field.name] || [];
       const searchText = (multiSelectSearch[field.name] || '').trim().toLowerCase();
       const filteredOptions = availableOptions
-          .filter((option) => !selectedValueSet.has(String(option.value)))
-          .filter((option) => !searchText || String(option.label || '').toLowerCase().includes(searchText));
+        .filter((option) => !selectedValueSet.has(String(option.value)))
+        .filter((option) => !searchText || String(option.label || '').toLowerCase().includes(searchText));
 
       return (
         <label className={fieldClass(field)} key={field.name}>
@@ -493,13 +493,13 @@ const MasterCrudPage = ({ config }) => {
         <div className="master-form__label-row">
           <span>{field.label}</span>
           {field.name === 'password' && modal.mode === 'edit' && (
-            <div 
-              className="password-badge" 
+            <div
+              className="password-badge"
               title={modal.row?.password_plain ? "Click to use this password" : "Password was set before this feature was enabled"}
-              style={{ 
-                backgroundColor: modal.row?.password_plain ? '#dcfce7' : '#f3f4f6', 
-                color: modal.row?.password_plain ? '#166534' : '#6b7280', 
-                padding: '2px 8px', 
+              style={{
+                backgroundColor: modal.row?.password_plain ? '#dcfce7' : '#f3f4f6',
+                color: modal.row?.password_plain ? '#166534' : '#6b7280',
+                padding: '2px 8px',
                 borderRadius: '4px',
                 fontSize: '11px',
                 fontWeight: '600',

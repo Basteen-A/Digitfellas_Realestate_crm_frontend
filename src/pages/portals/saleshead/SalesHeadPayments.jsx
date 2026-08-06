@@ -75,7 +75,7 @@ const SalesHeadPayments = ({ user }) => {
         <div className="crm-card-body-flush">
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center' }}>
-               <div className="col-empty-icon"><ClockIcon style={{ width: 28, height: 28 }} /></div>
+              <div className="col-empty-icon"><ClockIcon style={{ width: 28, height: 28 }} /></div>
               <p>Loading bookings...</p>
             </div>
           ) : bookings.length === 0 ? (
@@ -154,7 +154,7 @@ const SalesHeadPayments = ({ user }) => {
         <div className="col-modal-overlay" onClick={() => setPaymentModal(false)}>
           <div className="col-modal" onClick={e => e.stopPropagation()}>
             <div className="col-modal-header">
-              <h2><CreditCardIcon style={{ width: 18, height: 18, marginRight: 6, verticalAlign: 'text-bottom' }} />Add Payment — {selectedBooking.booking_number}</h2>
+              <h2><CreditCardIcon style={{ width: 18, height: 18, marginRight: 6, verticalAlign: 'text-bottom' }} />Add Payment - {selectedBooking.booking_number}</h2>
               <button className="col-modal-close" onClick={() => setPaymentModal(false)}>×</button>
             </div>
             <form onSubmit={handleAddPayment}>

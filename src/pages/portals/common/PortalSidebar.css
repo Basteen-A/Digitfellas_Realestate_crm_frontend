@@ -1,5 +1,5 @@
 /* ============================================================
-   PORTAL SIDEBAR — Matches revised.html sidebar exactly
+   PORTAL SIDEBAR - Matches revised.html sidebar exactly
    ============================================================ */
 
 .portal-sidebar {
@@ -584,7 +584,7 @@
   font-family: inherit;
 }
 
-/* Phone lookup input (react-phone-input-2) — mirrors the new-lead creation field */
+/* Phone lookup input (react-phone-input-2) - mirrors the new-lead creation field */
 .portal-phone-lookup-wrap {
   position: relative;
   flex: 1;
@@ -1070,7 +1070,7 @@
 }
 
 /* ============================================================
-   MOBILE RESPONSIVE — Portal Layout Shell
+   MOBILE RESPONSIVE - Portal Layout Shell
    ============================================================ */
 @media (max-width: 768px) {
   .portal-layout {

@@ -1,4 +1,4 @@
-// VoiceNoteField — reusable voice-note composer (record + transcribe + translate),
+// VoiceNoteField - reusable voice-note composer (record + transcribe + translate),
 // extracted from the task update modal so the SM/SH lead quick-action remarks can
 // offer the exact same feature. Self-contained (inline styles, no external CSS).
 //
@@ -170,7 +170,7 @@ export default function VoiceNoteField({ voice, onVoiceChange, transcribeApi, on
             </div>
           ) : (
             <div style={S.done}>
-              <CheckCircleIcon style={{ width: 14, height: 14 }} /> Transcribed — text added to the remark above
+              <CheckCircleIcon style={{ width: 14, height: 14 }} /> Transcribed - text added to the remark above
             </div>
           )}
         </div>

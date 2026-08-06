@@ -9,7 +9,7 @@ import './Sidebar.css';
 
 const MOBILE_BREAKPOINT = 768;
 
-/** Renders a menu icon — accepts a Heroicon component or falls back to a dot */
+/** Renders a menu icon - accepts a Heroicon component or falls back to a dot */
 const MenuIcon = ({ icon, className = 'sidebar-icon' }) => {
   if (!icon) return <span className={className}>•</span>;
   if (typeof icon === 'function' || typeof icon === 'object') {
@@ -98,7 +98,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
   const [openGroups, setOpenGroups] = useState(() => getInitialOpenGroups());
   // Section headers are collapsible too. This map holds only the sections the
-  // user (or the auto-open effect) has actually touched — an absent key falls
+  // user (or the auto-open effect) has actually touched - an absent key falls
   // back to the section's own default, so the menu arriving late (the role menu
   // is rebuilt once `user` loads) can never leave every group folded shut.
   const [openSections, setOpenSections] = useState({});
@@ -136,7 +136,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     });
   }, [location.pathname, menu]);
 
-  // Same for the section that owns the active route — navigating into a
+  // Same for the section that owns the active route - navigating into a
   // collapsed section (SETTINGS) opens it so the current page is never hidden.
   // Only writes when the section is actually shut, so an already-open section
   // costs no render.
@@ -196,7 +196,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     };
   }, [flyout]);
 
-  // Keep the panel inside the viewport — it opens level with its icon, then
+  // Keep the panel inside the viewport - it opens level with its icon, then
   // slides up if it would run off the bottom. Re-runs when a group inside the
   // panel opens/closes and changes its height.
   useLayoutEffect(() => {
@@ -218,7 +218,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       : { label: section.label, icon: sectionIcon(section), items: section.items, anchor }));
   };
 
-  /** One menu entry — icon + label, and a chevron when it has children. Used by
+  /** One menu entry - icon + label, and a chevron when it has children. Used by
       both the expanded sidebar and the collapsed rail's flyout panel, so the two
       read identically; the flyout used to drop the icon column, which left the
       whole collapsed state icon-less once you opened a group. */
@@ -325,66 +325,66 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             <XMarkIcon style={{ width: 20, height: 20 }} />
           </button>
         )}
-      {/* Brand — same as the portal sidebar: full logo when expanded, square
+        {/* Brand - same as the portal sidebar: full logo when expanded, square
           mark on the collapsed rail. No extra text. */}
-      <div className="app-sidebar__brand">
-        <div className="app-sidebar__logo">
-          <img src={logoFull} alt={siteTitle} className="sidebar-logo sidebar-logo--full" />
-          <img src={logoMark} alt={siteTitle} className="sidebar-logo sidebar-logo--mark" />
+        <div className="app-sidebar__brand">
+          <div className="app-sidebar__logo">
+            <img src={logoFull} alt={siteTitle} className="sidebar-logo sidebar-logo--full" />
+            <img src={logoMark} alt={siteTitle} className="sidebar-logo sidebar-logo--mark" />
+          </div>
         </div>
-      </div>
 
-      {/* Navigation. Three renderings:
+        {/* Navigation. Three renderings:
             • collapsed + sectioned → an icon rail of section categories, each
               opening a flyout panel;
             • expanded + sectioned  → collapsible section headers (admin/SA);
             • flat portal menu      → one plain list, no headers.
           Labels/chevrons always render; CSS hides them on the collapsed rail. */}
-      <nav className={`app-sidebar__nav ${isRail ? 'app-sidebar__nav--rail' : ''}`} ref={railRef}>
-        {isRail
-          ? sections.map((section) => {
-            const isOpen = flyout?.label === section.label;
-            const hasActive = section.items.some(isItemActive);
-            return (
-              <button
-                key={section.label}
-                type="button"
-                className={`app-sidebar__rail-button ${hasActive ? 'is-active' : ''} ${isOpen ? 'is-open' : ''}`}
-                onClick={(e) => toggleFlyout(section, e.currentTarget)}
-                title={section.label}
-                aria-label={section.label}
-                aria-expanded={isOpen}
-              >
-                <MenuIcon icon={sectionIcon(section)} className="sidebar-icon sidebar-icon--rail" />
-              </button>
-            );
-          })
-          : isSectioned
-            ? sections.map((section) => renderSection(section))
-            : menu.map((item) => renderMenuItem(item))}
-      </nav>
+        <nav className={`app-sidebar__nav ${isRail ? 'app-sidebar__nav--rail' : ''}`} ref={railRef}>
+          {isRail
+            ? sections.map((section) => {
+              const isOpen = flyout?.label === section.label;
+              const hasActive = section.items.some(isItemActive);
+              return (
+                <button
+                  key={section.label}
+                  type="button"
+                  className={`app-sidebar__rail-button ${hasActive ? 'is-active' : ''} ${isOpen ? 'is-open' : ''}`}
+                  onClick={(e) => toggleFlyout(section, e.currentTarget)}
+                  title={section.label}
+                  aria-label={section.label}
+                  aria-expanded={isOpen}
+                >
+                  <MenuIcon icon={sectionIcon(section)} className="sidebar-icon sidebar-icon--rail" />
+                </button>
+              );
+            })
+            : isSectioned
+              ? sections.map((section) => renderSection(section))
+              : menu.map((item) => renderMenuItem(item))}
+        </nav>
 
-      {/* No profile/logout footer here — the header user menu is the single place
+        {/* No profile/logout footer here - the header user menu is the single place
           for profile and logout, and carrying both duplicated the same controls. */}
 
-    </aside>
+      </aside>
 
-    {/* Flyout panel for the collapsed rail. Rendered outside <aside> because the
+      {/* Flyout panel for the collapsed rail. Rendered outside <aside> because the
         sidebar clips its overflow; it is fixed-positioned against the rail. */}
-    {isRail && flyout && (
-      <nav
-        className="app-sidebar__flyout"
-        ref={flyoutRef}
-        style={{ top: flyoutTop }}
-        aria-label={flyout.label}
-      >
-        <div className="app-sidebar__flyout-title">
-          <MenuIcon icon={flyout.icon} className="sidebar-icon sidebar-icon--xs" />
-          <span>{flyout.label}</span>
-        </div>
-        {flyout.items.map((item) => renderMenuItem(item))}
-      </nav>
-    )}
+      {isRail && flyout && (
+        <nav
+          className="app-sidebar__flyout"
+          ref={flyoutRef}
+          style={{ top: flyoutTop }}
+          aria-label={flyout.label}
+        >
+          <div className="app-sidebar__flyout-title">
+            <MenuIcon icon={flyout.icon} className="sidebar-icon sidebar-icon--xs" />
+            <span>{flyout.label}</span>
+          </div>
+          {flyout.items.map((item) => renderMenuItem(item))}
+        </nav>
+      )}
     </>
   );
 };

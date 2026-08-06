@@ -32,11 +32,11 @@ const fmtDay = (d) => {
 };
 
 // Default value rendering: plain Indian-grouped integers. Money charts pass their own
-// `format` (exact rupees) so the figure you actually read is never abbreviated — only
+// `format` (exact rupees) so the figure you actually read is never abbreviated - only
 // the axis scale is (see `tickFormat` below).
 const defaultValueFormat = (v) => (Number(v) || 0).toLocaleString('en-IN');
 
-// Shared, theme-aware tooltip — replaces recharts' default white box so every
+// Shared, theme-aware tooltip - replaces recharts' default white box so every
 // chart reads consistently and respects dark mode.
 const ChartTooltip = ({ active, payload, label, labelFormatter, total, format = defaultValueFormat }) => {
   if (!active || !payload || !payload.length) return null;
@@ -181,7 +181,7 @@ export const TrendLine = ({
 export const SimpleBar = ({ data, xKey, bars, valueFormat = defaultValueFormat, tickFormat }) => {
   const isMobile = useIsMobile();
   const single = bars.length === 1;
-  // Top-of-bar labels are dropped on money charts — a full rupee figure over every
+  // Top-of-bar labels are dropped on money charts - a full rupee figure over every
   // bar is unreadable; the tooltip carries the exact number instead.
   const showLabels = single && !isMobile && !tickFormat;
   return (
@@ -231,7 +231,7 @@ export const FunnelDonut = ({ data, valueFormat = defaultValueFormat, centreLabe
 };
 
 // Proper sales funnel (descending trapezoids) with the stage name, count and
-// % of the top stage labelled inside each band — the Qualified → Site Visit →
+// % of the top stage labelled inside each band - the Qualified → Site Visit →
 // Negotiation → Booking flow reads as a real conversion funnel.
 export const SalesFunnel = ({ data, total }) => {
   const isMobile = useIsMobile();

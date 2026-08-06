@@ -18,7 +18,7 @@ const bookingApi = {
   verifyPayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/verify`, data),
   // Second signature on Other Registration Expenses (Admin / Super Admin).
   verifyPaymentAdmin: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/verify/admin`, data),
-  // Super Admin — edit an existing payment
+  // Super Admin - edit an existing payment
   updatePayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}`, data),
 
   // Scoped to current user (Collection Manager)
@@ -31,7 +31,7 @@ const bookingApi = {
 
   // Development cost (Collection Manager)
   updateDevelopmentCost: (bookingId, data) => api.patch(`/bookings/${bookingId}/development-cost`, data),
-  // Switch Registration Charges between 2% (default) and 1% — Collection Manager / Super Admin.
+  // Switch Registration Charges between 2% (default) and 1% - Collection Manager / Super Admin.
   updateRegistrationRate: (bookingId, registrationPercentage) =>
     api.patch(`/bookings/${bookingId}/registration-rate`, { registration_percentage: registrationPercentage }),
 
@@ -41,7 +41,7 @@ const bookingApi = {
   // Activities
   getActivities: (bookingId) => api.get(`/bookings/${bookingId}/activities`),
 
-  // Documents — flat list of EVERY document on the booking's lead, as an ARRAY.
+  // Documents - flat list of EVERY document on the booking's lead, as an ARRAY.
   // Kept that shape on purpose; the folder view is getDocumentTree below.
   getDocuments: (bookingId) => api.get(`/bookings/${bookingId}/documents`),
   uploadDocuments: (bookingId, formData) => api.post(`/bookings/${bookingId}/documents`, formData, {
@@ -51,7 +51,7 @@ const bookingApi = {
   // Document folders. The archive is a folder tree; `folderId` of null/undefined
   // addresses the root, otherwise a folder id. getDocumentTree returns ONE level
   // as { folderId, breadcrumb, folders, documents }. Folders are scoped to the
-  // booking's LEAD — the same scope the documents already use.
+  // booking's LEAD - the same scope the documents already use.
   getDocumentTree: (bookingId, folderId = null) => api.get(`/bookings/${bookingId}/document-tree`, {
     params: folderId ? { folderId } : undefined,
   }),
@@ -71,21 +71,21 @@ const bookingApi = {
   // Cancel reasons dropdown
   getCancelReasons: () => api.get('/bookings/cancel-reasons'),
 
-  // Accounts — reject payment
+  // Accounts - reject payment
   rejectPayment: (bookingId, paymentId, data) => api.patch(`/bookings/${bookingId}/payments/${paymentId}/reject`, data),
 
-  // Accounts — all payments queue (filterable)
+  // Accounts - all payments queue (filterable)
   getAllPayments: (params = {}) => api.get('/bookings/payments/all', { params }),
 
   // Payment form master data
   getPaymentFormMasters: () => api.get('/bookings/payments/form-masters'),
 
-  // Approval gate — Booking Open → Pending → Approved/Rejected
+  // Approval gate - Booking Open → Pending → Approved/Rejected
   sendForApproval: (id) => api.patch(`/bookings/${id}/send-for-approval`),
   approveBooking: (id) => api.patch(`/bookings/${id}/approve`),
   rejectBooking: (id, data) => api.patch(`/bookings/${id}/reject`, data),
 
-  // Collection workflow — booking status actions
+  // Collection workflow - booking status actions
   registerBooking: (id, formData) => api.patch(`/bookings/${id}/register`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
@@ -98,7 +98,7 @@ const bookingApi = {
   processRefund: (id, data) => api.post(`/bookings/${id}/refunds`, data),
   getCancellationRequests: (params) => api.get('/bookings/cancellation-requests', { params }),
 
-  // Record Manager — record the registration details (Doc No / Doc Date / Seller)
+  // Record Manager - record the registration details (Doc No / Doc Date / Seller)
   updateRegistrationDetails: (id, data) => api.patch(`/bookings/${id}/registration-details`, data),
   // Record Manager work status (OPEN | COMPLETED); Super Admin can re-open.
   updateRecordStatus: (id, data) => api.patch(`/bookings/${id}/record-status`, data),

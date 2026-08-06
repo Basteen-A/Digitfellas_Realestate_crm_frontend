@@ -60,7 +60,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
     { label: 'Rejected', value: stats?.rejectedCount || 0, sub: 'this week', icon: XCircleIcon, variant: 'danger' },
     { label: 'Total Verified (Month)', value: formatCurrency(stats?.totalCollected || 0), sub: `${stats?.verifiedPaymentsCount || 0} payments`, icon: CurrencyRupeeIcon, variant: '' },
     { label: 'Unreconciled', value: stats?.unreconciledCount || 0, sub: 'bank entries', icon: LinkIcon, variant: 'info' },
-    { label: 'Avg. Turnaround', value: stats?.avgTurnaround || '—', sub: 'verification time', icon: ClockIcon, variant: '' },
+    { label: 'Avg. Turnaround', value: stats?.avgTurnaround || '-', sub: 'verification time', icon: ClockIcon, variant: '' },
   ];
 
   const pendingPayments = stats?.recentPayments?.filter((p) => !p.is_verified && !p.is_bounced) || [];
@@ -72,7 +72,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
       <div className="col-page-header">
         <div className="col-page-header-left">
           <h1>{getGreeting()}, {firstName}</h1>
-          <p>Accounts overview — {today}</p>
+          <p>Accounts overview - {today}</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadStats}>
@@ -110,7 +110,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
               <MagnifyingGlassIcon style={{ width: 20, height: 20, color: 'var(--col-primary, #4f46e5)' }} />
               <div>
                 <div className="col-card-title-new">Pending Verification Queue</div>
-                <div className="col-card-subtitle-new">Oldest first — action needed</div>
+                <div className="col-card-subtitle-new">Oldest first - action needed</div>
               </div>
             </div>
             <button className="col-btn col-btn-primary col-btn-sm" onClick={() => onNavigate('verify')}>
@@ -140,7 +140,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
                       <td>
                         <div className="col-cell-primary">{p.customer_name}</div>
                         <div className="col-cell-mono col-cell-secondary">
-                          {p.payment_number || '—'} · {p.booking_number}
+                          {p.payment_number || '-'} · {p.booking_number}
                         </div>
                       </td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(p.amount)}</td>
@@ -198,7 +198,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
                       <td>
                         <div className="col-cell-primary">{p.customer_name}</div>
                         <div className="col-cell-mono col-cell-secondary">
-                          {p.payment_number || '—'} · {p.booking_number}
+                          {p.payment_number || '-'} · {p.booking_number}
                         </div>
                       </td>
                       <td style={{ fontWeight: 600, color: 'var(--accent-green, #10b981)' }}>
@@ -207,7 +207,7 @@ export const AccountsDashboard = ({ user, onNavigate }) => {
                       <td style={{ fontSize: 12, color: 'var(--text-muted, #9ca3af)' }}>
                         {p.verified_at ? new Date(p.verified_at).toLocaleString('en-IN', {
                           day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                        }) : '—'}
+                        }) : '-'}
                       </td>
                     </tr>
                   ))}

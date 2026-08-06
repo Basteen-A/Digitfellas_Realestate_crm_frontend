@@ -2,7 +2,7 @@
 //
 // This is the org-wide twin of the Collection portal's Payments screen
 // (portals/collection/CollectionPayments.jsx) and is deliberately kept
-// IDENTICAL to it in layout, filters, columns, wording and badges — same
+// IDENTICAL to it in layout, filters, columns, wording and badges - same
 // header, same four stat cards, same search + multi-select filter dropdowns,
 // same record-count bar, same table. Only two things differ, both on purpose:
 //   • the data source is every payment in the organisation (getAllPayments)
@@ -29,7 +29,7 @@ const extractRows = (data) => (Array.isArray(data) ? data : (data?.rows || data?
 // The three verification states, resolved the same way the badge renders them.
 const statusOf = (p) => (p.is_verified ? 'Verified' : p.is_bounced ? 'Rejected' : 'Unverified');
 
-// Distinct values of one field, alphabetically — the option list of a filter.
+// Distinct values of one field, alphabetically - the option list of a filter.
 const optionsOf = (rows, pick) => {
   const set = new Set();
   rows.forEach((r) => { const v = pick(r); if (v) set.add(v); });
@@ -297,10 +297,10 @@ const FinanceRevenue = () => {
                     >
                       <td style={{ fontWeight: 600, color: '#2563eb' }}>{p.payment_number}</td>
                       <td>
-                        <p className="lead-title">{p.customer_name || '—'}</p>
+                        <p className="lead-title">{p.customer_name || '-'}</p>
                         <small>{p.booking_number}</small>
                       </td>
-                      <td className="hide-mobile">{p.payment_category || '—'}</td>
+                      <td className="hide-mobile">{p.payment_category || '-'}</td>
                       <td className="hide-mobile">{p.payment_type}</td>
                       <td className="hide-mobile">{p.payment_mode}</td>
                       <td className="hide-mobile">{formatCurrency(p.amount)}</td>
@@ -308,7 +308,7 @@ const FinanceRevenue = () => {
                       <td>
                         {p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
                           : p.is_bounced ? <span className="bkd-badge bkd-badge-danger">Rejected</span>
-                          : <span className="bkd-badge bkd-badge-warning">Unverified</span>}
+                            : <span className="bkd-badge bkd-badge-warning">Unverified</span>}
                       </td>
                     </tr>
                   ))}

@@ -1,6 +1,6 @@
 // ============================================================
 // AUTHENTICATED FILE ACCESS
-// The backend no longer hands out presigned S3 URLs — S3-stored files resolve
+// The backend no longer hands out presigned S3 URLs - S3-stored files resolve
 // to API-relative paths (/files/stream?key=…, /bookings/documents/:id/view)
 // that REQUIRE a Bearer token on every fetch. A copied link pasted into
 // another tab gets a 401. These helpers fetch the bytes through the
@@ -42,7 +42,7 @@ export async function openAuthedFile(url) {
     if (win) win.location = blobUrl;
     else window.open(blobUrl, '_blank');
     // Blob URLs are local to this browser session (unshareable), but revoke
-    // fast anyway — the viewer tab loads it from memory within moments, and
+    // fast anyway - the viewer tab loads it from memory within moments, and
     // after this a copied blob: URL is dead even in the same browser.
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
   } catch (err) {

@@ -9,7 +9,7 @@ const SiteSettingsContext = createContext(null);
 // Effective branding = stored value, else the bundled default.
 //  - siteName: the configured name, possibly '' (blank = logo-only; consumers
 //    should render the name text only when it's non-empty).
-//  - siteTitle: always non-empty — siteName or the app default — for the
+//  - siteTitle: always non-empty - siteName or the app default - for the
 //    browser tab title and image alt text.
 const toEffective = (settings) => {
   const siteName = (settings?.site_name || '').trim();
@@ -83,8 +83,8 @@ export const useSiteSettings = () => {
       favicon: null,
       raw: null,
       loading: false,
-      refresh: () => {},
-      setSettings: () => {},
+      refresh: () => { },
+      setSettings: () => { },
     };
   }
   return ctx;

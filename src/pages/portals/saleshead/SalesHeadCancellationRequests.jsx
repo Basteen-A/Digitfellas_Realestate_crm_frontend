@@ -66,14 +66,14 @@ const SalesHeadCancellationRequests = ({ user }) => {
   const getDaysBadge = (req) => {
     if (req.cancel_approved) {
       const label = req.cancel_auto_approved ? '✓ Auto-approved' : '✓ Approved';
-      return <span style={{...badgeStyle, background:'#16A34A22', color:'#16A34A'}}>{label}</span>;
+      return <span style={{ ...badgeStyle, background: '#16A34A22', color: '#16A34A' }}>{label}</span>;
     }
     if (req.cancel_rejected) {
-      return <span style={{...badgeStyle, background:'#EF444422', color:'#EF4444'}}>Rejected — no auto-approve</span>;
+      return <span style={{ ...badgeStyle, background: '#EF444422', color: '#EF4444' }}>Rejected - no auto-approve</span>;
     }
     const daysLeft = req.days_until_auto_approve ?? Math.max(0, 7 - (req.days_since_request || 0));
-    if (daysLeft <= 0) return <span style={{...badgeStyle, background:'#EF444422', color:'#EF4444'}}>Auto-approving…</span>;
-    return <span style={{...badgeStyle, background:'#F59E0B22', color:'#F59E0B'}}>Auto-approves in {daysLeft} day{daysLeft === 1 ? '' : 's'}</span>;
+    if (daysLeft <= 0) return <span style={{ ...badgeStyle, background: '#EF444422', color: '#EF4444' }}>Auto-approving…</span>;
+    return <span style={{ ...badgeStyle, background: '#F59E0B22', color: '#F59E0B' }}>Auto-approves in {daysLeft} day{daysLeft === 1 ? '' : 's'}</span>;
   };
 
   const badgeStyle = { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, display: 'inline-block' };
@@ -85,10 +85,10 @@ const SalesHeadCancellationRequests = ({ user }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Cancellation Requests</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Approve or reject cancellation requests any time — untouched requests auto-approve after the 7-day follow-up window</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Approve or reject cancellation requests any time - untouched requests auto-approve after the 7-day follow-up window</p>
         </div>
         <button className="crm-btn crm-btn-ghost" onClick={loadRequests} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <ArrowPathIcon style={{width:16,height:16}}/> Refresh
+          <ArrowPathIcon style={{ width: 16, height: 16 }} /> Refresh
         </button>
       </div>
 
@@ -99,10 +99,10 @@ const SalesHeadCancellationRequests = ({ user }) => {
             <p style={{ color: 'var(--text-secondary)' }}>Loading cancellation requests...</p>
           </div>
         ) : requests.length === 0 ? (
-          <div style={{padding:48,textAlign:'center',color:'var(--text-muted)'}}>
-            <ClipboardDocumentListIcon style={{width:48,height:48,margin:'0 auto 12px',opacity:0.4}}/>
-            <div style={{fontWeight:600, fontSize:15}}>No pending cancellation requests</div>
-            <div style={{fontSize:13,marginTop:4}}>All clear! No bookings are awaiting cancellation review.</div>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
+            <ClipboardDocumentListIcon style={{ width: 48, height: 48, margin: '0 auto 12px', opacity: 0.4 }} />
+            <div style={{ fontWeight: 600, fontSize: 15 }}>No pending cancellation requests</div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>All clear! No bookings are awaiting cancellation review.</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -113,38 +113,38 @@ const SalesHeadCancellationRequests = ({ user }) => {
                   <th style={thStyle}>Customer</th>
                   <th style={thStyle}>Project · Unit</th>
                   <th style={thStyle}>Amount</th>
-                    <th style={thStyle}>Cancel Reason</th>
-                    <th style={thStyle}>Remarks</th>
-                    <th style={thStyle}>Previous Status</th>
-                    <th style={thStyle}>Follow-Up Status</th>
-                    <th style={{...thStyle, textAlign:'center'}}>Actions</th>
-                  </tr>
+                  <th style={thStyle}>Cancel Reason</th>
+                  <th style={thStyle}>Remarks</th>
+                  <th style={thStyle}>Previous Status</th>
+                  <th style={thStyle}>Follow-Up Status</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {pageItems.map(req => (
                   <tr key={req.id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                    <td style={{...tdStyle, fontWeight:700, color:'var(--accent-blue)'}}>{req.booking_number}</td>
+                    <td style={{ ...tdStyle, fontWeight: 700, color: 'var(--accent-blue)' }}>{req.booking_number}</td>
                     <td style={tdStyle}>
-                      <div style={{fontWeight:600}}>{req.customer?.buyer_name || req.buyer_name || req.customer_name || '—'}</div>
-                      <div style={{fontSize:11,color:'var(--text-muted)'}}>{req.customer?.phone || ''}</div>
+                      <div style={{ fontWeight: 600 }}>{req.customer?.buyer_name || req.buyer_name || req.customer_name || '-'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.customer?.phone || ''}</div>
                     </td>
                     <td style={tdStyle}>
-                      <div style={{fontWeight:500}}>{req.project?.project_name || req.project_name || '—'}</div>
-                      <div style={{fontSize:11,color:'var(--text-muted)'}}>Unit: {req.inventoryUnit?.unit_number || req.unit_number || 'TBD'}</div>
+                      <div style={{ fontWeight: 500 }}>{req.project?.project_name || req.project_name || '-'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Unit: {req.inventoryUnit?.unit_number || req.unit_number || 'TBD'}</div>
                     </td>
-                    <td style={{...tdStyle, fontWeight:600}}>{formatCurrency(req.net_amount || req.total_amount || 0)}</td>
-                    <td style={{...tdStyle, fontSize:12}}>{req.cancelReason?.reason_name || '—'}</td>
-                    <td style={{...tdStyle, fontSize:12, maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{req.cancel_remarks || '—'}</td>
-                    <td style={{...tdStyle, fontSize:12}}>{req.previous_status_name || '—'}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>{formatCurrency(req.net_amount || req.total_amount || 0)}</td>
+                    <td style={{ ...tdStyle, fontSize: 12 }}>{req.cancelReason?.reason_name || '-'}</td>
+                    <td style={{ ...tdStyle, fontSize: 12, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.cancel_remarks || '-'}</td>
+                    <td style={{ ...tdStyle, fontSize: 12 }}>{req.previous_status_name || '-'}</td>
                     <td style={tdStyle}>{getDaysBadge(req)}</td>
-                    <td style={{...tdStyle, textAlign:'center'}}>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       {!req.cancel_approved ? (
-                        <div style={{display:'flex',gap:6,justifyContent:'center'}}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                           <button
                             onClick={() => openActionModal(req, 'reject')}
-                            style={{...actionBtnStyle, background:'#FEE2E2', color:'#DC2626', border:'1px solid #FECACA'}}
+                            style={{ ...actionBtnStyle, background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}
                           >
-                            <XCircleIcon style={{width:13,height:13}}/> Cancel
+                            <XCircleIcon style={{ width: 13, height: 13 }} /> Cancel
                           </button>
                           <button
                             onClick={() => openActionModal(req, 'approve')}
@@ -155,11 +155,11 @@ const SalesHeadCancellationRequests = ({ user }) => {
                               border: '1px solid #BBF7D0',
                             }}
                           >
-                            <CheckCircleIcon style={{width:13,height:13}}/> Approve
+                            <CheckCircleIcon style={{ width: 13, height: 13 }} /> Approve
                           </button>
                         </div>
                       ) : (
-                        <span style={{fontSize:11,color:'#16A34A',fontWeight:600}}>Approved ✓</span>
+                        <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 600 }}>Approved ✓</span>
                       )}
                     </td>
                   </tr>
@@ -181,17 +181,17 @@ const SalesHeadCancellationRequests = ({ user }) => {
       {!loading && requests.length > 0 && (
         <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <span><strong>{requests.length}</strong> total requests</span>
-          <span><strong style={{color:'#16A34A'}}>{requests.filter(r => !r.cancel_approved).length}</strong> pending decision</span>
-          <span><strong style={{color:'#F59E0B'}}>{requests.filter(r => !r.cancel_approved && (r.days_until_auto_approve ?? 7) <= 2).length}</strong> auto-approving soon</span>
-          <span><strong style={{color:'#16A34A'}}>{requests.filter(r => r.cancel_approved).length}</strong> approved</span>
+          <span><strong style={{ color: '#16A34A' }}>{requests.filter(r => !r.cancel_approved).length}</strong> pending decision</span>
+          <span><strong style={{ color: '#F59E0B' }}>{requests.filter(r => !r.cancel_approved && (r.days_until_auto_approve ?? 7) <= 2).length}</strong> auto-approving soon</span>
+          <span><strong style={{ color: '#16A34A' }}>{requests.filter(r => r.cancel_approved).length}</strong> approved</span>
         </div>
       )}
 
       {/* Approve/Reject Modal */}
       {actionBooking && actionMode && (
         <div className="col-modal-overlay" onClick={() => { setActionBooking(null); setActionMode(null); setRemarks(''); }}>
-          <div className="qa-modal-panel" style={{maxWidth:500}} onClick={e => e.stopPropagation()}>
-            <div className="qa-drawer-handle"/>
+          <div className="qa-modal-panel" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div className="qa-drawer-handle" />
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
                 <div className="qa-drawer-avatar" style={{
@@ -209,17 +209,17 @@ const SalesHeadCancellationRequests = ({ user }) => {
               </div>
               <button className="qa-drawer-close" onClick={() => { setActionBooking(null); setActionMode(null); setRemarks(''); }}>×</button>
             </div>
-            <div className="qa-drawer-divider"/>
-            <div style={{padding:'16px 20px'}}>
+            <div className="qa-drawer-divider" />
+            <div style={{ padding: '16px 20px' }}>
               {actionMode === 'approve' && (
-                <div style={{background:'#FEF3C7', border:'1px solid #F59E0B44', borderRadius:8, padding:12, marginBottom:16, fontSize:12, color:'#92400E'}}>
+                <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B44', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 12, color: '#92400E' }}>
                   <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Important:
                   </strong> Approving releases the booked plot to <strong>Available</strong> immediately (even before any refund) and lets the Collection Manager finalize the cancellation. Make sure you have completed follow-up with the customer.
                 </div>
               )}
               {actionMode === 'reject' && (
-                <div style={{background:'#DBEAFE', border:'1px solid #3B82F644', borderRadius:8, padding:12, marginBottom:16, fontSize:12, color:'#1E40AF'}}>
+                <div style={{ background: '#DBEAFE', border: '1px solid #3B82F644', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 12, color: '#1E40AF' }}>
                   <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     <InformationCircleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Note:
                   </strong> Rejecting will record your remarks. The booking will stay in Request to Cancel. The Collection Manager will discuss with the customer to decide whether to reactivate the booking or resubmit the cancellation.
@@ -229,14 +229,14 @@ const SalesHeadCancellationRequests = ({ user }) => {
                 <label className="bkd-form-label">Remarks *</label>
                 <textarea className="bkd-form-control" rows={3}
                   placeholder={actionMode === 'approve' ? 'Document follow-up outcome...' : 'Reason for rejection (e.g., customer approached another unit)...'}
-                  value={remarks} onChange={e => setRemarks(e.target.value)}/>
+                  value={remarks} onChange={e => setRemarks(e.target.value)} />
               </div>
             </div>
-            <div style={{padding:'16px 20px', borderTop:'1px solid var(--border-primary)'}}>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-primary)' }}>
               <button className="qa-drawer-save-btn" style={{
                 background: actionMode === 'approve' ? '#16A34A' : '#EF4444',
                 width: '100%', padding: '10px 20px', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-                }}
+              }}
                 disabled={saving || !remarks.trim()}
                 onClick={actionMode === 'approve' ? handleApprove : handleReject}>
                 {saving ? 'Processing...' : actionMode === 'approve' ? 'Approve Cancellation' : 'Reject Cancellation'}

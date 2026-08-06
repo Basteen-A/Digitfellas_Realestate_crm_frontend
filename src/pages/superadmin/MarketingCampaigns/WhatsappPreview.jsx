@@ -5,7 +5,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // ============================================================
-// Shared WhatsApp message preview — renders a chat bubble from a
+// Shared WhatsApp message preview - renders a chat bubble from a
 // template-like object so the template builder AND the campaign
 // builder show an identical, provider-style "Message Preview".
 // ============================================================

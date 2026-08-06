@@ -9,7 +9,7 @@
 
 /* Desktop: the sidebar column matches the sidebar's own width. The collapsed
    rail hover-to-expand grows the track too (see :has rule below) so the page
-   content is pushed aside — same behaviour as the telecaller portal — instead
+   content is pushed aside - same behaviour as the telecaller portal - instead
    of the sidebar overlaying the content. */
 @media (min-width: 768px) {
   .main-layout { grid-template-columns: 250px 1fr; }

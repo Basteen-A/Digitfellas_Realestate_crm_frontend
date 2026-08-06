@@ -13,7 +13,7 @@ export const STAGE_COLORS = {
   cancelled: '#9F1239',   // rose (lost / cancelled)
 };
 
-// Badge-system 50-shade backgrounds for the matching foreground color — used by
+// Badge-system 50-shade backgrounds for the matching foreground color - used by
 // stage chips and funnel rows.
 export const STAGE_BG = {
   qualified: '#EFF6FF',

@@ -44,7 +44,7 @@ const WhatsappSettings = () => {
       setCfg(c);
       setForm({
         phone_id: c.phone_id || '',
-        api_key: '', // never prefilled — leave blank to keep the stored key
+        api_key: '', // never prefilled - leave blank to keep the stored key
         base_url: c.base_url || 'https://partnersv1.pinbot.ai/v3',
         waba_id: c.waba_id || '',
         default_header_image_url: c.default_header_image_url || '',
@@ -102,7 +102,7 @@ const WhatsappSettings = () => {
         template_id: testTemplateId,
         header_image_url: testHeaderImageUrl || undefined,
       });
-      toast.success(`Test message sent to ${testPhone.trim()} — check WhatsApp on that number.`);
+      toast.success(`Test message sent to ${testPhone.trim()} - check WhatsApp on that number.`);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Test message failed'));
     } finally {
@@ -134,13 +134,13 @@ const WhatsappSettings = () => {
           <label style={labelStyle}>Phone Number ID</label>
           <input style={inputStyle} value={form.phone_id} onChange={onChange('phone_id')} placeholder="e.g. 1066045729919705" />
 
-          <label style={labelStyle}>API Key {cfg?.key_set && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(stored: {cfg.api_key_masked} — leave blank to keep)</span>}</label>
+          <label style={labelStyle}>API Key {cfg?.key_set && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(stored: {cfg.api_key_masked} - leave blank to keep)</span>}</label>
           <input style={inputStyle} type="password" value={form.api_key} onChange={onChange('api_key')} placeholder={cfg?.key_set ? '•••••••• (unchanged)' : 'Paste API key'} autoComplete="new-password" />
 
           <label style={labelStyle}>Base URL</label>
           <input style={inputStyle} value={form.base_url} onChange={onChange('base_url')} placeholder="https://partnersv1.pinbot.ai/v3" />
 
-          <label style={labelStyle}>WABA ID <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — enables template sync)</span></label>
+          <label style={labelStyle}>WABA ID <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional - enables template sync)</span></label>
           <input style={inputStyle} value={form.waba_id} onChange={onChange('waba_id')} placeholder="WhatsApp Business Account ID" />
 
           <label style={labelStyle}>Default Header Image URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
@@ -148,10 +148,10 @@ const WhatsappSettings = () => {
 
           <label style={labelStyle}>Login OTP Template <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(mobile app OTP login)</span></label>
           <select style={selectStyle} value={form.otp_template_id} onChange={onChange('otp_template_id')}>
-            <option value="">Not configured — OTP login disabled</option>
+            <option value="">Not configured - OTP login disabled</option>
             {templates.filter((t) => t.status === 'APPROVED').map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.language_code}){t.category ? ` — ${t.category}` : ''}
+                {t.name} ({t.language_code}){t.category ? ` - ${t.category}` : ''}
               </option>
             ))}
           </select>
@@ -179,7 +179,7 @@ const WhatsappSettings = () => {
             <option value="">Select a template…</option>
             {templates.filter((t) => t.status === 'APPROVED').map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.language_code}){t.header_type !== 'NONE' ? ` — ${t.header_type} header` : ''}
+                {t.name} ({t.language_code}){t.header_type !== 'NONE' ? ` - ${t.header_type} header` : ''}
               </option>
             ))}
           </select>
@@ -187,7 +187,7 @@ const WhatsappSettings = () => {
             <div style={{ fontSize: 11, color: '#991b1b', marginTop: 4 }}>No approved templates available. Sync or create templates first.</div>
           )}
           {templates.length === 0 && (
-            <div style={{ fontSize: 11, color: '#b45309', marginTop: 4 }}>No templates yet — add one on the Templates page first.</div>
+            <div style={{ fontSize: 11, color: '#b45309', marginTop: 4 }}>No templates yet - add one on the Templates page first.</div>
           )}
 
           {selectedTemplate && ['IMAGE', 'DOCUMENT', 'VIDEO'].includes(selectedTemplate.header_type) && (
@@ -195,14 +195,14 @@ const WhatsappSettings = () => {
               <label style={labelStyle}>
                 Header {selectedTemplate.header_type || 'Image'} {needsHeaderMedia
                   ? <span style={{ fontWeight: 800, color: '#dc2626' }}>* REQUIRED</span>
-                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — overrides template/default)</span>}
+                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional - overrides template/default)</span>}
               </label>
               <HeaderMediaInput value={testHeaderImageUrl} onChange={setTestHeaderImageUrl} />
               {needsHeaderMedia && (
                 <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
                   <span>
-                    This template has a <strong>{selectedTemplate.header_type}</strong> header — you <strong>must upload a file</strong> above
+                    This template has a <strong>{selectedTemplate.header_type}</strong> header - you <strong>must upload a file</strong> above
                     before testing, otherwise the send will fail.
                   </span>
                 </div>
@@ -239,7 +239,7 @@ const WhatsappSettings = () => {
                 <span style={{ fontWeight: 700 }}>Messaging: </span>
                 {conn.phone ? (
                   <span style={{ color: '#166534' }}>
-                    ✓ {conn.phone.verified_name || '—'} ({conn.phone.display_phone_number || '—'})
+                    ✓ {conn.phone.verified_name || '-'} ({conn.phone.display_phone_number || '-'})
                     {conn.phone.quality_rating ? ` · quality ${conn.phone.quality_rating}` : ''}
                   </span>
                 ) : (
@@ -259,7 +259,7 @@ const WhatsappSettings = () => {
                 {conn.templates_access ? (
                   <span style={{ color: '#166534' }}>✓ enabled (create / sync / edit / delete)</span>
                 ) : (
-                  <span style={{ color: '#991b1b' }}>✗ blocked — templates must be managed in the pinbot panel</span>
+                  <span style={{ color: '#991b1b' }}>✗ blocked - templates must be managed in the pinbot panel</span>
                 )}
               </div>
               {Array.isArray(conn.numbers) && conn.numbers.length > 0 && (

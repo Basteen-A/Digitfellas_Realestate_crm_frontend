@@ -47,7 +47,7 @@ const SalesHeadTeamPerformance = () => {
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1>Team Performance</h1>
-          <p className="hidden sm:block">SMs who have shared leads with you — Visits Done reflects the selected date range</p>
+          <p className="hidden sm:block">SMs who have shared leads with you - Visits Done reflects the selected date range</p>
         </div>
         <div className="page-header-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <select

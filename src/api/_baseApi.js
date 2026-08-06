@@ -1,6 +1,6 @@
 // ============================================================
 // BASE API FACTORY
-// DRY pattern — generates standard CRUD API functions
+// DRY pattern - generates standard CRUD API functions
 // ============================================================
 
 import api from './axiosInstance';

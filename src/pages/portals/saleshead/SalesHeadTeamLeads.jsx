@@ -117,8 +117,8 @@ const SalesHeadTeamLeads = () => {
     }
   };
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const formatDateTime = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+  const formatDateTime = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-';
   const selectedVisitDetails = getVisitDetails(selectedVisit);
   const rawSelectedVisitDetails = getRawVisitDetails(selectedVisit);
 
@@ -233,7 +233,7 @@ const SalesHeadTeamLeads = () => {
               <div style={{ display: 'flex', gap: 20 }}>
                 <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-blue)' }}>{selectedSM.activeLeads}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Active</div></div>
                 <div style={{ textAlign: 'center' }}><div style={{ fontSize: 22, fontWeight: 800, color: '#15803d' }}>{selectedSM.completedVisits}</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Visits Done</div></div>
-                
+
               </div>
             </div>
 
@@ -262,7 +262,7 @@ const SalesHeadTeamLeads = () => {
                           <tr>
                             <th>Lead</th>
                             <th>Stage</th>
-                            
+
                             <th>Project</th>
                             <th>SV Date</th>
                             <th>Last Contact</th>
@@ -281,9 +281,9 @@ const SalesHeadTeamLeads = () => {
                                   {lead.stageLabel}
                                 </span>
                               </td>
-                              <td style={{ fontSize: 12 }}>{lead.svDoneProject || lead.project || '—'}</td>
+                              <td style={{ fontSize: 12 }}>{lead.svDoneProject || lead.project || '-'}</td>
                               <td style={{ fontSize: 12, color: lead.svDoneDate ? '#15803d' : 'var(--text-secondary)' }}>
-                                {lead.svDoneDate ? formatDate(lead.svDoneDate) : '—'}
+                                {lead.svDoneDate ? formatDate(lead.svDoneDate) : '-'}
                               </td>
                               <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDateTime(lead.lastContactedAt)}</td>
                               <td style={{ textAlign: 'right' }}>
@@ -340,7 +340,7 @@ const SalesHeadTeamLeads = () => {
                                 <div style={{ fontWeight: 600, fontSize: 13 }}>{v.lead?.first_name} {v.lead?.last_name || ''}</div>
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{v.lead?.phone}</div>
                               </td>
-                              <td style={{ fontSize: 12 }}>{v.project?.project_name || '—'}</td>
+                              <td style={{ fontSize: 12 }}>{v.project?.project_name || '-'}</td>
                               <td style={{ fontSize: 12 }}>{formatDate(v.scheduled_date)}</td>
                               <td>{getStatusBadge(v.status)}</td>
                               <td>
@@ -348,7 +348,7 @@ const SalesHeadTeamLeads = () => {
                                   <span style={{ fontWeight: 700, fontSize: 12, color: v.rating >= 4 ? '#15803d' : v.rating >= 3 ? '#d97706' : '#dc2626' }}>
                                     {v.rating}/5
                                   </span>
-                                ) : '—'}
+                                ) : '-'}
                               </td>
                               <td>
                                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setSelectedVisit(v)}>Details</button>
@@ -431,11 +431,11 @@ const SalesHeadTeamLeads = () => {
             <div className="col-modal-body">
               <div className="sh-visit-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Lead</div><div style={{ fontWeight: 600 }}>{selectedVisit.lead?.first_name} {selectedVisit.lead?.last_name || ''}</div></div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '—'}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '—'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Phone</div>{selectedVisit.lead?.phone || '-'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Project</div>{selectedVisit.project?.project_name || '-'}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Visit Date</div>{formatDate(selectedVisit.scheduled_date)}</div>
                 <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Status</div>{getStatusBadge(selectedVisit.status)}</div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '—'}</div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Attended By</div>{selectedVisit.attendedBy ? `${selectedVisit.attendedBy.first_name} ${selectedVisit.attendedBy.last_name || ''}` : '-'}</div>
                 {selectedVisit.rating && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Rating</div><span style={{ fontWeight: 700, fontSize: 16 }}>{selectedVisit.rating}/5</span></div>}
                 {selectedVisit.time_spent && <div><div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>Time Spent</div>{selectedVisit.time_spent} mins</div>}
               </div>

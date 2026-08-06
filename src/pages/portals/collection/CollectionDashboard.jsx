@@ -118,7 +118,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
   }
 
   // Amount tiles are scoped by the period picker, so each one says which window it
-  // covers — without it "Collected" (period) reads as contradicting "Verified" (all time).
+  // covers - without it "Collected" (period) reads as contradicting "Verified" (all time).
   const periodLabel = dateFilter === 'custom'
     ? (customStart && customEnd ? `${customStart} to ${customEnd}` : 'all time')
     : (DATE_PRESETS.find(p => p.key === dateFilter)?.label || 'All Time').toLowerCase();
@@ -136,7 +136,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
       label: 'This Month', value: formatCurrency(stats?.monthRevenue || 0),
       sub: 'current month', icon: ArrowPathIcon, variant: ''
     },
-     {
+    {
       label: 'Verified Payments', value: formatCurrency(stats?.verifiedAmount || 0),
       sub: `verified · ${periodLabel}`, icon: CheckCircleIcon, variant: ''
     },
@@ -163,7 +163,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
       <div className="col-page-header">
         <div className="col-page-header-left">
           <h1>Dashboard</h1>
-          <p>Bookings assigned to you — update status, follow-ups and record payments</p>
+          <p>Bookings assigned to you - update status, follow-ups and record payments</p>
         </div>
         <div className="col-page-header-actions">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={loadStats}>
@@ -211,17 +211,17 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                   let badgeBg = '#FEF3C7';
                   let badgeText = '#D97706';
                   let badgeLabel = 'Awaiting SH Review';
-                  let remarksText = req.cancel_remarks || '—';
+                  let remarksText = req.cancel_remarks || '-';
                   if (req.approved_by) {
                     badgeBg = '#D1FAE5';
                     badgeText = '#065F46';
                     badgeLabel = 'Approved (Awaiting Confirm)';
-                    remarksText = req.approval_remarks || '—';
+                    remarksText = req.approval_remarks || '-';
                   } else if (req.rejected_by) {
                     badgeBg = '#FEE2E2';
                     badgeText = '#991B1B';
                     badgeLabel = 'Rejected (Action Required)';
-                    remarksText = req.rejection_remarks || '—';
+                    remarksText = req.rejection_remarks || '-';
                   }
                   return (
                     <tr key={req.id}>
@@ -234,7 +234,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                         <div className="col-cell-primary">{req.customer_name}</div>
                         <div className="col-cell-secondary">{req.project_name}</div>
                       </td>
-                      <td style={{ fontSize: 12 }}>{req.cancel_reason || '—'}</td>
+                      <td style={{ fontSize: 12 }}>{req.cancel_reason || '-'}</td>
                       <td>
                         <span style={{
                           display: 'inline-block', padding: '3px 10px', borderRadius: 12,
@@ -303,7 +303,7 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
               <table className="col-table-new">
                 <thead>
                   <tr>
-                     <th>Booking</th>
+                    <th>Booking</th>
                     <th>Customer</th>
                     <th>Date</th>
                     <th></th>
@@ -325,8 +325,8 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                         <div className="col-cell-primary">{c.customer_name}</div>
                         <div className="col-cell-secondary">{c.project_name} {c.unit_number ? `- ${c.unit_number}` : ''}</div>
                       </td>
-                      
-                      <td>{c.booking_date ? new Date(c.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+
+                      <td>{c.booking_date ? new Date(c.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
                       <td>
                         <button type="button" className="view-link" title="View details" onClick={() => onSelectBooking(c.booking_id)}>
                           View
@@ -380,9 +380,9 @@ export const CollectionDashboard = ({ user, onNavigate, onSelectBooking }) => {
                             className="col-booking-link"
                             onClick={() => onSelectBooking(p.booking_id)}
                           >
-                            {p.booking_number || '—'}
+                            {p.booking_number || '-'}
                           </button>
-                        ) : (p.booking_number || '—')}
+                        ) : (p.booking_number || '-')}
                       </td>
                       <td>
                         <div className="col-cell-primary">{p.customer_name}</div>

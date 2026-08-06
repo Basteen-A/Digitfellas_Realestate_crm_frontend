@@ -21,7 +21,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   // The org decides what the identity field accepts (Super Admin → Org Settings).
-  // The field is still submitted as `email` — the server treats that as "the
+  // The field is still submitted as `email` - the server treats that as "the
   // identifier" and resolves it against whichever identities are enabled.
   const identityLabel = webLoginIdentifier === 'username'
     ? 'Login ID'
@@ -29,7 +29,7 @@ const Login = () => {
   const identityPlaceholder = webLoginIdentifier === 'username'
     ? 'e.g. ramesh.TC'
     : webLoginIdentifier === 'both' ? 'you@company.com or ramesh.TC' : 'you@company.com';
-  // Only constrain the input to an email address when nothing else is accepted —
+  // Only constrain the input to an email address when nothing else is accepted -
   // type="email" would otherwise reject a perfectly valid Login ID.
   const identityInputType = webLoginIdentifier === 'email' ? 'email' : 'text';
 

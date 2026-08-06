@@ -9,21 +9,21 @@
 
 // Canonical text color → { bg, border } (badge-system.html v1.0)
 export const BADGE_PALETTE = {
-  '#1D4ED8': { bg: '#EFF6FF', border: '#BFDBFE' }, // blue — new / open / starting
-  '#0F766E': { bg: '#F0FDFA', border: '#99F6E4' }, // teal — follow up / in progress
-  '#92400E': { bg: '#FFFBEB', border: '#FDE68A' }, // amber — pending / scheduled
-  '#166534': { bg: '#F0FDF4', border: '#BBF7D0' }, // green — done / approved / verified
-  '#3730A3': { bg: '#EEF2FF', border: '#C7D2FE' }, // indigo — revisit / EMI
-  '#C2410C': { bg: '#FFF7ED', border: '#FED7AA' }, // orange — WIP / warm / active
-  '#475569': { bg: '#F8FAFC', border: '#CBD5E1' }, // slate — cold / stalled
-  '#BE123C': { bg: '#FFF1F2', border: '#FECDD3' }, // red — hot / urgent action
-  '#065F46': { bg: '#ECFDF5', border: '#A7F3D0' }, // emerald — booked / registered
-  '#6B21A8': { bg: '#FAF5FF', border: '#E9D5FF' }, // purple — RnR / held
-  '#6B7280': { bg: '#F9FAFB', border: '#E5E7EB' }, // grey — junk / disqualified
-  '#4B5563': { bg: '#F3F4F6', border: '#D1D5DB' }, // grey dark — spam
-  '#9F1239': { bg: '#FFF1F2', border: '#FECDD3' }, // rose — lost / cancelled / rejected
-  '#155E75': { bg: '#ECFEFF', border: '#A5F3FC' }, // cyan — reallot / loan
-  '#64748B': { bg: '#F1F5F9', border: '#CBD5E1' }, // cool grey — inactive / closed
+  '#1D4ED8': { bg: '#EFF6FF', border: '#BFDBFE' }, // blue - new / open / starting
+  '#0F766E': { bg: '#F0FDFA', border: '#99F6E4' }, // teal - follow up / in progress
+  '#92400E': { bg: '#FFFBEB', border: '#FDE68A' }, // amber - pending / scheduled
+  '#166534': { bg: '#F0FDF4', border: '#BBF7D0' }, // green - done / approved / verified
+  '#3730A3': { bg: '#EEF2FF', border: '#C7D2FE' }, // indigo - revisit / EMI
+  '#C2410C': { bg: '#FFF7ED', border: '#FED7AA' }, // orange - WIP / warm / active
+  '#475569': { bg: '#F8FAFC', border: '#CBD5E1' }, // slate - cold / stalled
+  '#BE123C': { bg: '#FFF1F2', border: '#FECDD3' }, // red - hot / urgent action
+  '#065F46': { bg: '#ECFDF5', border: '#A7F3D0' }, // emerald - booked / registered
+  '#6B21A8': { bg: '#FAF5FF', border: '#E9D5FF' }, // purple - RnR / held
+  '#6B7280': { bg: '#F9FAFB', border: '#E5E7EB' }, // grey - junk / disqualified
+  '#4B5563': { bg: '#F3F4F6', border: '#D1D5DB' }, // grey dark - spam
+  '#9F1239': { bg: '#FFF1F2', border: '#FECDD3' }, // rose - lost / cancelled / rejected
+  '#155E75': { bg: '#ECFEFF', border: '#A5F3FC' }, // cyan - reallot / loan
+  '#64748B': { bg: '#F1F5F9', border: '#CBD5E1' }, // cool grey - inactive / closed
 };
 
 // Legacy / off-palette hexes → canonical text color.
@@ -89,7 +89,7 @@ export const badgeStyle = (color, fallback) => {
 };
 
 // Fixed (non-DB-driven) statuses from badge-system.html, keyed how the code
-// refers to them. Values are canonical TEXT colors — pass to badgeColors/Style.
+// refers to them. Values are canonical TEXT colors - pass to badgeColors/Style.
 export const TASK_STATUS_TEXT = {
   open: '#1D4ED8',
   pending: '#92400E',

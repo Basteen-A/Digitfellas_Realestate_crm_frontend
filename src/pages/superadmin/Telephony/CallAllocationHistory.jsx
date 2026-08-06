@@ -28,8 +28,8 @@ const CALL_STATUS_BADGE = {
 
 const fmtDateTime = (d) => (d
   ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  : '—');
-const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || '—' : '—');
+  : '-');
+const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || '-' : '-');
 
 const EMPTY_FILTERS = { dateFrom: '', dateTo: '', leadSourceId: '', userId: '', outcome: '', search: '' };
 const LIVE_INTERVAL_MS = 15000;
@@ -50,7 +50,7 @@ const CallAllocationHistory = () => {
   useEffect(() => {
     (async () => {
       try {
-        // Name/role-only picker list — the Collection Manager renders this same
+        // Name/role-only picker list - the Collection Manager renders this same
         // screen and is not allowed the admin-only allocation-rule endpoints.
         const [srcResp, tcResp] = await Promise.all([
           leadSourceApi.getDropdown(),
@@ -112,7 +112,7 @@ const CallAllocationHistory = () => {
             type="button"
             className={`crm-btn crm-btn-sm ${live ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
             onClick={() => setLive((v) => !v)}
-            title={live ? `Live — auto-refreshing every ${LIVE_INTERVAL_MS / 1000}s. Click to stop.` : 'Click to start live auto-refresh'}
+            title={live ? `Live - auto-refreshing every ${LIVE_INTERVAL_MS / 1000}s. Click to stop.` : 'Click to start live auto-refresh'}
           >
             <span style={{
               display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 6,
@@ -218,7 +218,7 @@ const CallAllocationHistory = () => {
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
                     <td style={td}>
                       <div style={{ fontWeight: 600 }}>
-                        {r.lead ? (`${r.lead.first_name || ''} ${r.lead.last_name || ''}`.trim() || r.lead.lead_number) : (r.lead_name || '—')}
+                        {r.lead ? (`${r.lead.first_name || ''} ${r.lead.last_name || ''}`.trim() || r.lead.lead_number) : (r.lead_name || '-')}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                         {r.lead?.lead_number || ''}{r.phone ? ` · ${r.phone}` : ''}
@@ -240,7 +240,7 @@ const CallAllocationHistory = () => {
                         ? (
                           (r.callLog?.agent ? userName(r.callLog.agent) : r.callLog?.agent_name)
                             ? <span style={{ fontWeight: 600 }}>{r.callLog?.agent ? userName(r.callLog.agent) : r.callLog.agent_name}</span>
-                            : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            : <span style={{ color: 'var(--text-muted)' }}>-</span>
                         )
                         : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>No answer</span>}
                     </td>
@@ -249,25 +249,25 @@ const CallAllocationHistory = () => {
                     </td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, ...badgeStyle(src?.color_code) }}>
-                        {src?.source_name || r.source_label || '—'}
+                        {src?.source_name || r.source_label || '-'}
                       </span>
                       {r.leadSubSource && (
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>› {r.leadSubSource.sub_source_name}</div>
                       )}
                     </td>
                     <td style={td}>
-                      {r.toUser ? userName(r.toUser) : '—'}
+                      {r.toUser ? userName(r.toUser) : '-'}
                       {r.fromUser && (
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>from {userName(r.fromUser)}</div>
                       )}
                     </td>
-                    <td style={td}>{r.campaign_name || '—'}</td>
+                    <td style={td}>{r.campaign_name || '-'}</td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg }}>
                         {badge.label}
                       </span>
                     </td>
-                    <td style={{ ...td, maxWidth: 280, color: 'var(--text-muted)', fontSize: 12 }}>{r.reason || '—'}</td>
+                    <td style={{ ...td, maxWidth: 280, color: 'var(--text-muted)', fontSize: 12 }}>{r.reason || '-'}</td>
                   </tr>
                 );
               })}

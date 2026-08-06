@@ -1,22 +1,22 @@
 // ============================================================
 // COLLECTION REPORTS
 // Same shell, filter bar, sidebar catalogue and report atoms as the Reports and
-// Marketing Reports pages — only the report set differs:
-//   1. Collection — Item wise      (how much came in, split by cost item, drilling
+// Marketing Reports pages - only the report set differs:
+//   1. Collection - Item wise      (how much came in, split by cost item, drilling
 //                                   item → project → phase → unit)
-//   2. Collection — Project wise   (how much came in, split by project)
-//   3. Outstanding — Item wise     (what is still owed, split by cost item)
-//   4. Outstanding — Project wise  (what is still owed, split by project + ageing)
+//   2. Collection - Project wise   (how much came in, split by project)
+//   3. Outstanding - Item wise     (what is still owed, split by cost item)
+//   4. Outstanding - Project wise  (what is still owed, split by project + ageing)
 //   5. Overdue 90+ Days            (bookings past their payment due date by 90+ days)
 // One fetch (GET /reports/collection) feeds all five; switching reports is instant
 // and never re-hits the API.
 //
 // Reports 4 and 5 age the same balance on DIFFERENT axes, deliberately: report 4
-// ages from the BOOKING DATE, report 5 from the PAYMENT DUE DATE — which is the
+// ages from the BOOKING DATE, report 5 from the PAYMENT DUE DATE - which is the
 // collection follow-up date entered when a booking's payment status is updated.
 //
 // ── Two date dimensions, by design ──────────────────────────────────────────
-// COLLECTION blocks are anchored on the PAYMENT DATE — money that landed inside the
+// COLLECTION blocks are anchored on the PAYMENT DATE - money that landed inside the
 // period. OUTSTANDING blocks are a LIVE SNAPSHOT of the balance owed right now, so
 // the period chips deliberately do not move them; only Project / Collection Manager
 // do. Each outstanding block says so on screen so the two can never be misread.
@@ -24,7 +24,7 @@
 // ── One component, two homes ────────────────────────────────────────────────
 // Rendered both at /super-admin/collection-reports (org-wide) and inside the
 // Collection Manager portal (own book). The server decides the scope from the
-// caller's role — the page only hides the Collection Manager filter when it isn't
+// caller's role - the page only hides the Collection Manager filter when it isn't
 // the org-wide view.
 // ============================================================
 
@@ -56,7 +56,7 @@ const PERIODS = [
   { key: 'all', label: 'All Time' },
 ];
 
-// Users who can own a booking's collection — the org-wide "Collection Manager" filter.
+// Users who can own a booking's collection - the org-wide "Collection Manager" filter.
 const COLLECTION_ROLE_CODES = ['COL', 'CE'];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -65,9 +65,9 @@ const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
 const pct1 = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
 const cnt = (v) => num(v).toLocaleString('en-IN');
 const sumBy = (rows, key) => (rows || []).reduce((a, r) => a + num(r[key]), 0);
-const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '—' : '—');
+const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '-' : '-');
 
-// Every rupee figure on this page is EXACT — Collection & Accounts screens never
+// Every rupee figure on this page is EXACT - Collection & Accounts screens never
 // abbreviate to Lakh/Crore. Rounded to whole rupees: paise carry no meaning on a
 // report read at this altitude, and they made the KPI figures hard to scan.
 const money = (v) => formatCurrencyExact(Math.round(num(v)));
@@ -82,7 +82,7 @@ const axisMoney = (v) => {
   if (a >= 1e3) return `₹${Math.round(n / 1e3)}K`;
   return `₹${n}`;
 };
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '-');
 
 // Donut slices: the biggest N plus an "Others" rollup, so the slices always add up to
 // the real total shown in the donut centre.
@@ -96,7 +96,7 @@ const mixOf = (rows, nameKey, valueKey, top = 7) => {
 };
 
 // The drill-down's leaf: booking × item rows folded onto the UNIT they belong to. A
-// unit normally carries exactly one booking, but nothing in the schema guarantees it —
+// unit normally carries exactly one booking, but nothing in the schema guarantees it -
 // so a re-booked unit sums, and names both bookings rather than showing one of them.
 const unitsOf = (rows) => {
   const m = new Map();
@@ -173,9 +173,9 @@ const GROUPS = [
 ];
 const FIRST_KEY = GROUPS[0].keys[0];
 
-// Caption repeated on every outstanding block — the single most important thing to
+// Caption repeated on every outstanding block - the single most important thing to
 // understand about this report.
-const SNAPSHOT_NOTE = 'Live balance across every open booking — the period filter applies to collection only';
+const SNAPSHOT_NOTE = 'Live balance across every open booking - the period filter applies to collection only';
 
 // ── expandable group list (item → project, project → item) ───────────────────
 // Mirrors the Marketing / Reports drill-down so the interaction is identical.
@@ -230,7 +230,7 @@ const GroupRows = ({ groups, head, renderRow, totalCells, emptyLabel }) => {
 // renders the same expandable header, and the deepest one renders the unit table.
 const Branch = ({ node, depth, leafHead, renderLeaf, leafTotals }) => {
   const [open, setOpen] = useState(false);
-  // An empty children array is a leaf, not a branch — otherwise expanding it would
+  // An empty children array is a leaf, not a branch - otherwise expanding it would
   // render nothing at all instead of the table's own empty state.
   const kids = node.children?.length ? node.children : null;
 
@@ -302,7 +302,7 @@ const AGE_COLS = [
 ];
 
 // Overdue buckets are measured from the DUE DATE (the collection follow-up entered
-// on the last payment-status update) — a different axis from AGE_COLS above, which
+// on the last payment-status update) - a different axis from AGE_COLS above, which
 // measures from the booking date.
 const OVERDUE_COLS = [
   { key: 'd0_30', label: '1–30 days' },
@@ -324,7 +324,7 @@ const Panel = ({ rkey, d, registerRef }) => {
   const itemLabel = (key) => byItem.find((i) => i.item === key)?.item_label || key;
 
   switch (rkey) {
-    // ── 1. Total Collection — Item wise ──
+    // ── 1. Total Collection - Item wise ──
     case 'collection-item': {
       const collecting = byItem.filter((i) => num(i.collected) !== 0);
       const ranked = [...collecting].sort((a, b) => num(b.collected) - num(a.collected));
@@ -388,7 +388,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="Refunds" value={money(t.refunds)} sub={`${pct1(num(t.refunds), num(t.gross))}% of gross`} color={COLORS.cancelled} icon={ReceiptRefundIcon} valueSize={19} />
             <KpiCard label="Verified" value={money(t.verified)} sub={`${pct1(num(t.verified), num(t.gross))}% of receipts verified`} color={COLORS.siteVisit} icon={DocumentCheckIcon} valueSize={19} />
             <KpiCard label="Bookings Paying" value={cnt(t.bookingsPaying)} sub={`of ${cnt(t.bookings)} live booking${num(t.bookings) === 1 ? '' : 's'}`} color={COLORS.leads} icon={Squares2X2Icon} />
-            <KpiCard label="Top Item" value={top?.item_label || '—'} sub={top ? `${money(top.collected)} · ${pct(num(top.collected), num(t.collected))}% share` : ''} color={COLORS.negotiation} icon={TrophyIcon} valueSize={16} />
+            <KpiCard label="Top Item" value={top?.item_label || '-'} sub={top ? `${money(top.collected)} · ${pct(num(top.collected), num(t.collected))}% share` : ''} color={COLORS.negotiation} icon={TrophyIcon} valueSize={16} />
           </KpiRow>
 
           <div className="reports-charts-grid">
@@ -427,7 +427,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <Td bold>{money(i.collected)}</Td>
                   <Td><Pill tone="blue">{pct1(num(i.collected), num(t.collected))}%</Pill></Td>
                   <Td color={COLORS.qualified}>{money(i.gross)}</Td>
-                  <Td color={COLORS.cancelled}>{num(i.refunds) ? money(i.refunds) : '—'}</Td>
+                  <Td color={COLORS.cancelled}>{num(i.refunds) ? money(i.refunds) : '-'}</Td>
                   <Td>{cnt(i.payments)}</Td>
                   <Td color={COLORS.siteVisit}>{money(i.verified)}</Td>
                   <Td>{money(i.collected_ltd)}</Td>
@@ -453,7 +453,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                 <Tr key={u.unit_label}>
                   <Td bold>{u.unit_label}</Td>
                   <Td>{u.bookings.join(', ')}</Td>
-                  <Td>{u.buyers.join(', ') || '—'}</Td>
+                  <Td>{u.buyers.join(', ') || '-'}</Td>
                   <Td>{money(u.collected)}</Td>
                 </Tr>
               )}
@@ -464,7 +464,7 @@ const Panel = ({ rkey, d, registerRef }) => {
       );
     }
 
-    // ── 2. Total Collection — Project wise ──
+    // ── 2. Total Collection - Project wise ──
     case 'collection-project': {
       const collecting = byProject.filter((p) => num(p.collected) !== 0)
         .sort((a, b) => num(b.collected) - num(a.collected));
@@ -489,7 +489,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           <KpiRow>
             <KpiCard label="Net Collected" value={money(t.collected)} sub="Across every project, this period" color={COLORS.booking} icon={BanknotesIcon} valueSize={19} />
             <KpiCard label="Projects Collecting" value={cnt(collecting.length)} sub={`of ${cnt(t.projects)} with live bookings`} color={COLORS.negotiation} icon={BuildingOffice2Icon} />
-            <KpiCard label="Top Project" value={top?.project_name || '—'} sub={top ? `${money(top.collected)} · ${pct(num(top.collected), num(t.collected))}% share` : ''} color={COLORS.qualified} icon={TrophyIcon} valueSize={16} />
+            <KpiCard label="Top Project" value={top?.project_name || '-'} sub={top ? `${money(top.collected)} · ${pct(num(top.collected), num(t.collected))}% share` : ''} color={COLORS.qualified} icon={TrophyIcon} valueSize={16} />
             <KpiCard label="Payments" value={cnt(t.payments)} sub={`${money(t.refunds)} refunded`} color={COLORS.siteVisit} icon={CreditCardIcon} />
           </KpiRow>
 
@@ -541,7 +541,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <Td bold>{p.project_name}</Td>
                   <Td bold>{money(p.total)}</Td>
                   {itemCols.map((c) => (
-                    <Td key={c} className={p.byItem[c] ? '' : 'opacity-40'}>{p.byItem[c] ? money(p.byItem[c]) : '—'}</Td>
+                    <Td key={c} className={p.byItem[c] ? '' : 'opacity-40'}>{p.byItem[c] ? money(p.byItem[c]) : '-'}</Td>
                   ))}
                 </Tr>
               ))}
@@ -576,7 +576,7 @@ const Panel = ({ rkey, d, registerRef }) => {
       );
     }
 
-    // ── 3. Total Outstanding — Item wise ──
+    // ── 3. Total Outstanding - Item wise ──
     case 'outstanding-item': {
       const ranked = [...byItem].sort((a, b) => num(b.outstanding) - num(a.outstanding));
       const withDues = ranked.filter((i) => num(i.outstanding) > 0);
@@ -603,7 +603,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <KpiCard label="Collected to date" value={money(t.collectedLtd)} sub={`${realisation}% of billed`} color={COLORS.booking} icon={BanknotesIcon} valueSize={19} />
             <KpiCard label="Realisation" value={`${realisation}%`} sub="Collected ÷ billed" color={COLORS.qualified} icon={ArrowTrendingUpIcon} />
             <KpiCard label="Items Pending" value={cnt(withDues.length)} sub={`of ${cnt(ranked.length)} billed item${ranked.length === 1 ? '' : 's'}`} color={COLORS.negotiation} icon={Squares2X2Icon} />
-            <KpiCard label="Biggest Gap" value={top?.item_label || '—'} sub={top ? `${money(top.outstanding)} · ${pct(num(top.outstanding), num(t.outstanding))}% of dues` : 'Nothing outstanding'} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={16} />
+            <KpiCard label="Biggest Gap" value={top?.item_label || '-'} sub={top ? `${money(top.outstanding)} · ${pct(num(top.outstanding), num(t.outstanding))}% of dues` : 'Nothing outstanding'} color={COLORS.siteVisit} icon={TrophyIcon} valueSize={16} />
           </KpiRow>
 
           <div className="reports-charts-grid">
@@ -633,8 +633,8 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <ItemCell row={i} />
                     <Td bold>{money(i.demand)}</Td>
                     <Td color={COLORS.booking}>{money(i.collected_ltd)}</Td>
-                    <Td color={COLORS.cancelled}>{num(i.outstanding) ? money(i.outstanding) : '—'}</Td>
-                    <Td color={COLORS.siteVisit}>{num(i.excess) ? money(i.excess) : '—'}</Td>
+                    <Td color={COLORS.cancelled}>{num(i.outstanding) ? money(i.outstanding) : '-'}</Td>
+                    <Td color={COLORS.siteVisit}>{num(i.excess) ? money(i.excess) : '-'}</Td>
                     <Td><Pill tone={ratioTone(r)}>{r}%</Pill></Td>
                     <Td><ProgressBar value={r} color={r >= 100 ? COLORS.booking : COLORS.negotiation} /></Td>
                     <Td>{cnt(i.bookings_pending)}</Td>
@@ -659,7 +659,7 @@ const Panel = ({ rkey, d, registerRef }) => {
           <Card title="Who Owes Each Item" sub="Expand an item to see the projects still carrying the balance">
             <GroupRows
               groups={groups}
-              emptyLabel="Nothing outstanding — every item is fully collected."
+              emptyLabel="Nothing outstanding - every item is fully collected."
               head={['Project', 'Billed', 'Collected', 'Outstanding']}
               renderRow={(r) => (
                 <Tr key={`${r.item}-${r.project_id}`}>
@@ -678,7 +678,7 @@ const Panel = ({ rkey, d, registerRef }) => {
       );
     }
 
-    // ── 4. Total Outstanding — Project wise ──
+    // ── 4. Total Outstanding - Project wise ──
     case 'outstanding-project': {
       const ranked = [...byProject].sort((a, b) => num(b.outstanding) - num(a.outstanding));
       const withDues = ranked.filter((p) => num(p.outstanding) > 0);
@@ -717,7 +717,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             </ChartCard>
           </div>
 
-          {/* Fully Paid counts only bookings that were BILLED something and owe nothing —
+          {/* Fully Paid counts only bookings that were BILLED something and owe nothing -
               a booking with no pricing captured yet has no balance by arithmetic, and is
               neither pending nor fully paid. */}
           <Card title="Outstanding by Project" sub={SNAPSHOT_NOTE}>
@@ -729,7 +729,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <Td bold>{p.project_name}</Td>
                     <Td bold>{money(p.demand)}</Td>
                     <Td color={COLORS.booking}>{money(p.collected_ltd)}</Td>
-                    <Td color={COLORS.cancelled}>{num(p.outstanding) ? money(p.outstanding) : '—'}</Td>
+                    <Td color={COLORS.cancelled}>{num(p.outstanding) ? money(p.outstanding) : '-'}</Td>
                     <Td><Pill tone={ratioTone(r)}>{r}%</Pill></Td>
                     <Td><ProgressBar value={r} color={r >= 100 ? COLORS.booking : COLORS.negotiation} /></Td>
                     <Td>{cnt(p.bookings_pending)}</Td>
@@ -751,14 +751,14 @@ const Panel = ({ rkey, d, registerRef }) => {
             </Table>
           </Card>
 
-          <Card title="Ageing" sub="Outstanding bucketed by how long ago the booking was made — there is no per-item demand schedule, so booking age is the ageing axis">
+          <Card title="Ageing" sub="Outstanding bucketed by how long ago the booking was made - there is no per-item demand schedule, so booking age is the ageing axis">
             <Table head={['Project', ...AGE_COLS.map((c) => c.label), 'Total', 'Bookings']} colSpan={AGE_COLS.length + 3} empty={aging.length === 0}>
               {aging.map((r) => (
                 <Tr key={r.project_id}>
                   <Td bold>{r.project_name}</Td>
                   {AGE_COLS.map((c, i) => (
                     <Td key={c.key} color={i >= 2 ? COLORS.cancelled : undefined} className={num(r[c.key]) ? '' : 'opacity-40'}>
-                      {num(r[c.key]) ? money(r[c.key]) : '—'}
+                      {num(r[c.key]) ? money(r[c.key]) : '-'}
                     </Td>
                   ))}
                   <Td bold>{money(r.total)}</Td>
@@ -781,7 +781,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <Td bold>{p.project_name}</Td>
                   <Td bold>{money(p.total)}</Td>
                   {itemCols.map((c) => (
-                    <Td key={c} className={p.byItem[c] ? '' : 'opacity-40'}>{p.byItem[c] ? money(p.byItem[c]) : '—'}</Td>
+                    <Td key={c} className={p.byItem[c] ? '' : 'opacity-40'}>{p.byItem[c] ? money(p.byItem[c]) : '-'}</Td>
                   ))}
                 </Tr>
               ))}
@@ -795,10 +795,10 @@ const Panel = ({ rkey, d, registerRef }) => {
           </Card>
 
           {/* Outstanding here is the SUM of each item's shortfall, not the netted
-              booking balance — money over-paid into one item never settles another.
+              booking balance - money over-paid into one item never settles another.
               The Excess column makes that arithmetic visible: Billed − Collected +
               Excess = Outstanding. */}
-          <Card title="Highest Outstanding Bookings" sub="The 25 biggest balances — the call list" right={`${topOutstanding.length} shown`}>
+          <Card title="Highest Outstanding Bookings" sub="The 25 biggest balances - the call list" right={`${topOutstanding.length} shown`}>
             <Table head={['Booking', 'Buyer', 'Project', 'Booked', 'Age', 'Billed', 'Collected', 'Excess', 'Outstanding', 'Collected %']} colSpan={10} empty={topOutstanding.length === 0}>
               {topOutstanding.map((b) => {
                 const r = pct(num(b.collected), num(b.demand));
@@ -808,10 +808,10 @@ const Panel = ({ rkey, d, registerRef }) => {
                     <Td>{b.buyer_name}</Td>
                     <Td>{b.project_name}</Td>
                     <Td>{fmtDate(b.booking_date)}</Td>
-                    <Td color={num(b.age_days) > 90 ? COLORS.cancelled : undefined}>{b.age_days == null ? '—' : `${cnt(b.age_days)}d`}</Td>
+                    <Td color={num(b.age_days) > 90 ? COLORS.cancelled : undefined}>{b.age_days == null ? '-' : `${cnt(b.age_days)}d`}</Td>
                     <Td>{money(b.demand)}</Td>
                     <Td color={COLORS.booking}>{money(b.collected)}</Td>
-                    <Td color={COLORS.siteVisit}>{num(b.excess) ? money(b.excess) : '—'}</Td>
+                    <Td color={COLORS.siteVisit}>{num(b.excess) ? money(b.excess) : '-'}</Td>
                     <Td bold color={COLORS.cancelled}>{money(b.outstanding)}</Td>
                     <Td><Pill tone={ratioTone(r)}>{r}%</Pill></Td>
                   </Tr>
@@ -824,7 +824,7 @@ const Panel = ({ rkey, d, registerRef }) => {
     }
 
     // ── 5. Overdue 90+ Days ──
-    // Aged from the DUE DATE (bookings.next_follow_up_at — the follow-up the
+    // Aged from the DUE DATE (bookings.next_follow_up_at - the follow-up the
     // collection team commits to when updating a booking's payment status), not
     // from the booking date. The shorter buckets sit alongside so the page shows
     // what is heading toward 90 days, not just a bare count.
@@ -848,7 +848,7 @@ const Panel = ({ rkey, d, registerRef }) => {
               sub="Bookings past their due date by 90+ days" color={COLORS.cancelled} icon={ExclamationTriangleIcon} />
             <KpiCard label="Amount at Risk" value={money(s.outstanding)}
               sub={`${share}% of all past-due money`} color={COLORS.cancelled} icon={BanknotesIcon} valueSize={19} />
-            <KpiCard label="Oldest Overdue" value={s.oldest_days ? `${cnt(s.oldest_days)}d` : '—'}
+            <KpiCard label="Oldest Overdue" value={s.oldest_days ? `${cnt(s.oldest_days)}d` : '-'}
               sub="Longest a due date has been missed" color={COLORS.negotiation} icon={ClockIcon} />
             <KpiCard label="All Past Due" value={cnt(s.overdue_bookings_total)}
               sub={`${money(s.overdue_outstanding_total)} owed past due date`} color={COLORS.negotiation} icon={BuildingOffice2Icon} />
@@ -878,7 +878,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <Td color={COLORS.pending}>No due date set</Td>
                   <Td>{cnt(noDue.bookings)}</Td>
                   <Td>{money(noDue.outstanding)}</Td>
-                  <Td>—</Td>
+                  <Td>-</Td>
                 </Tr>
               )}
             </Table>
@@ -893,7 +893,7 @@ const Panel = ({ rkey, d, registerRef }) => {
 
           <Card
             title={`Bookings Overdue by ${threshold}+ Days`}
-            sub="Due date missed by more than 90 days and still carrying a balance — the escalation list"
+            sub="Due date missed by more than 90 days and still carrying a balance - the escalation list"
             right={`${rows.length} booking${rows.length === 1 ? '' : 's'}`}
           >
             <Table
@@ -917,7 +917,7 @@ const Panel = ({ rkey, d, registerRef }) => {
                   <Td>{money(b.demand)}</Td>
                   <Td color={COLORS.booking}>{money(b.collected)}</Td>
                   <Td bold color={COLORS.cancelled}>{money(b.outstanding)}</Td>
-                  <Td>{b.payment_status || '—'}</Td>
+                  <Td>{b.payment_status || '-'}</Td>
                 </Tr>
               ))}
               {rows.length > 0 && (
@@ -967,7 +967,7 @@ const CollectionReportsPage = ({ orgWide = true }) => {
       .catch(() => { /* filters are non-fatal */ });
   }, []);
 
-  // The Collection Manager filter only exists on the org-wide view — a Collection
+  // The Collection Manager filter only exists on the org-wide view - a Collection
   // user is always pinned to their own book (the server enforces it too).
   useEffect(() => {
     if (!orgWide) return;
@@ -1028,7 +1028,7 @@ const CollectionReportsPage = ({ orgWide = true }) => {
         </div>
       </div>
 
-      {/* Filter bar — identical structure to the Reports / Marketing Reports bar */}
+      {/* Filter bar - identical structure to the Reports / Marketing Reports bar */}
       <div className="reports-filter-bar reports-filter-bar--card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wide mr-1" style={{ color: 'var(--text-muted)' }}>Period</span>

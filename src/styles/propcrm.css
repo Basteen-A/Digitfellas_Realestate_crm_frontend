@@ -84,7 +84,7 @@
 .change-down { color: var(--accent-red); background: var(--accent-red-bg); }
 .change-neutral { color: var(--text-muted); background: var(--bg-secondary); }
 
-/* ===== STAT BAR — unified dashboard summary cards =====
+/* ===== STAT BAR - unified dashboard summary cards =====
    Flat label-over-value card shared by the Telecaller / Sales Manager /
    Sales Head dashboards so their stat rows stay visually consistent. */
 .stat-bar {
@@ -143,7 +143,7 @@
   .stat-bar .stat-val { font-size: 17px; }
 }
 
-/* ===== DASHBOARD WIDGET GRID — shared lead-list cards (dashboard.html reference) =====
+/* ===== DASHBOARD WIDGET GRID - shared lead-list cards (dashboard.html reference) =====
    Used by the Telecaller / Sales Manager / Sales Head dashboards so every
    list box (lead rows) shares one look: header + count/view-all, then rows of
    avatar · name/meta · status chip + due-date + action. */
@@ -429,7 +429,7 @@
 .crm-btn-sm { padding: 5px 10px; font-size: 12px; }
 .crm-btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 6px; }
 
-/* Text "View" link — replaces the eye/view icon in list/table action cells */
+/* Text "View" link - replaces the eye/view icon in list/table action cells */
 .view-link {
   display: inline-flex;
   align-items: center;
@@ -516,7 +516,7 @@
   flex-shrink: 0;
 }
 
-/* Stage badges — badge-system triples (badge-system.html / utils/badgeColors.js) */
+/* Stage badges - badge-system triples (badge-system.html / utils/badgeColors.js) */
 .badge-new { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
 .badge-new .crm-badge-dot { background: #1D4ED8; }
 .badge-contacted { background: #F0FDFA; color: #0F766E; border-color: #99F6E4; }
@@ -1250,7 +1250,7 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
 .s-badge-green { background: var(--accent-green-bg); color: var(--accent-green); }
 
 /* ============================================================
-   MOBILE RESPONSIVE — PropCRM Design System
+   MOBILE RESPONSIVE - PropCRM Design System
    SM & SH portal pages all use these classes
    ============================================================ */
 
@@ -1651,7 +1651,7 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
 }
 
 /* ============================================================
-   SM/SH PORTAL — Inline Grid Mobile Overrides
+   SM/SH PORTAL - Inline Grid Mobile Overrides
    ============================================================ */
 
 /* SM Incoming leads: 7-col grid → stacked card on mobile */
@@ -1699,7 +1699,7 @@ textarea.crm-form-input { resize: vertical; min-height: 80px; }
   }
 }
 
-/* WhatsApp template / campaign builder — collapse the live-preview pane below
+/* WhatsApp template / campaign builder - collapse the live-preview pane below
    the form on narrow screens so the form fields stay usable. */
 @media (max-width: 1024px) {
   .wa-builder-grid {

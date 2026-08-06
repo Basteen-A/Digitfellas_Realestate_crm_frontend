@@ -35,7 +35,7 @@ const getDateRangeForFilter = (option) => {
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const now = new Date();
-  
+
   const formatLocalIso = (d) => {
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -199,7 +199,7 @@ const AdminLeadManagement = () => {
   }, [loadUsers]);
 
   // A search term is looked up across every date, so the date range is suppressed
-  // while one is active — otherwise a search only ever matches today's leads.
+  // while one is active - otherwise a search only ever matches today's leads.
   const searchTerm = search.trim();
   const isSearching = searchTerm.length > 0;
 
@@ -434,7 +434,7 @@ const AdminLeadManagement = () => {
   };
 
   const closeTransfer = () => {
-    if (transferring) return; // a transfer job is in flight — keep the modal up
+    if (transferring) return; // a transfer job is in flight - keep the modal up
     resetTransferModal();
   };
 
@@ -446,13 +446,13 @@ const AdminLeadManagement = () => {
   // the modal's progress bar along the way.
   const pollBulkTransfer = async (jobId, total) => {
     setTransferProgress({ done: 0, total });
-    for (;;) {
+    for (; ;) {
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
       const res = await leadWorkflowApi.getBulkTransferStatus(jobId);
       const job = res?.data || {};
       setTransferProgress({ done: job.done ?? 0, total: job.total ?? total });
       if (job.status === 'done') return job.result || {};
-      if (job.status === 'failed') throw new Error(job.message || 'Lead transfer failed — no leads were moved.');
+      if (job.status === 'failed') throw new Error(job.message || 'Lead transfer failed - no leads were moved.');
     }
   };
 
@@ -488,7 +488,7 @@ const AdminLeadManagement = () => {
   const handleDeleteUser = async () => {
     if (!transferFrom) { toast.error('Pick the source user to delete.'); return; }
     if (!window.confirm(
-      `Delete user "${userName(transferFrom)}"?\n\nTransfer their leads first — any leads still owned by them will be left unassigned.`
+      `Delete user "${userName(transferFrom)}"?\n\nTransfer their leads first - any leads still owned by them will be left unassigned.`
     )) return;
     setDeletingUser(true);
     try {
@@ -528,11 +528,11 @@ const AdminLeadManagement = () => {
     }
   };
 
-  // Soft delete only — the server flags is_deleted; the lead disappears from
+  // Soft delete only - the server flags is_deleted; the lead disappears from
   // every portal but stays in the database.
   const handleDeleteLead = async (e, lead) => {
     e.stopPropagation();
-    const label = `${lead.leadNumber || 'this lead'}${lead.fullName ? ` — ${lead.fullName}` : ''}`;
+    const label = `${lead.leadNumber || 'this lead'}${lead.fullName ? ` - ${lead.fullName}` : ''}`;
     const ok = window.confirm(`Delete lead ${label}?\n\nThe lead will be hidden from all portals. It is NOT permanently removed.`);
     if (!ok) return;
     try {
@@ -570,7 +570,7 @@ const AdminLeadManagement = () => {
 
       {/* Filters Bar */}
       <div className="admin-lead-mgmt__filters">
-        {/* Search — searches every date, ignoring the range below */}
+        {/* Search - searches every date, ignoring the range below */}
         <div className="alm-filter-group alm-filter-group--search">
           <MagnifyingGlassIcon className="alm-filter-icon" />
           <input
@@ -613,7 +613,7 @@ const AdminLeadManagement = () => {
           </select>
         </div>
 
-        {/* Date Range — visible when custom range is selected, inert during search */}
+        {/* Date Range - visible when custom range is selected, inert during search */}
         {datePreset === 'custom' && (
           <div className={`alm-filter-group${isSearching ? ' alm-filter-group--muted' : ''}`}>
             <CalendarDaysIcon className="alm-filter-icon" />
@@ -843,12 +843,12 @@ const AdminLeadManagement = () => {
         )}
         {selectedLocationId && (
           <span className="alm-stat alm-stat--filter">
-            Location: {locations.find((l) => l.id === selectedLocationId)?.location_name || locations.find((l) => l.id === selectedLocationId)?.city || '—'}
+            Location: {locations.find((l) => l.id === selectedLocationId)?.location_name || locations.find((l) => l.id === selectedLocationId)?.city || '-'}
           </span>
         )}
         {selectedProjectId && (
           <span className="alm-stat alm-stat--filter">
-            Project: {projects.find((p) => p.id === selectedProjectId)?.project_name || '—'}
+            Project: {projects.find((p) => p.id === selectedProjectId)?.project_name || '-'}
           </span>
         )}
         {selectedStatus && (
@@ -858,22 +858,22 @@ const AdminLeadManagement = () => {
         )}
         {selectedBookingStatus && (
           <span className="alm-stat alm-stat--filter">
-            Booking status: {bookingStatuses.find((s) => s.id === selectedBookingStatus)?.status_name || '—'}
+            Booking status: {bookingStatuses.find((s) => s.id === selectedBookingStatus)?.status_name || '-'}
           </span>
         )}
         {selectedPaymentStatus && (
           <span className="alm-stat alm-stat--filter">
-            Payment status: {paymentStatuses.find((s) => s.id === selectedPaymentStatus)?.status_name || '—'}
+            Payment status: {paymentStatuses.find((s) => s.id === selectedPaymentStatus)?.status_name || '-'}
           </span>
         )}
         {selectedSourceId && (
           <span className="alm-stat alm-stat--filter">
-            Source: {sources.find((s) => s.id === selectedSourceId)?.source_name || '—'}
+            Source: {sources.find((s) => s.id === selectedSourceId)?.source_name || '-'}
           </span>
         )}
         {selectedSubSourceId && (
           <span className="alm-stat alm-stat--filter">
-            Sub-source: {subSources.find((s) => s.id === selectedSubSourceId)?.sub_source_name || '—'}
+            Sub-source: {subSources.find((s) => s.id === selectedSubSourceId)?.sub_source_name || '-'}
           </span>
         )}
       </div>
@@ -915,35 +915,35 @@ const AdminLeadManagement = () => {
             {!loading && leads.map((lead) => (
               <tr key={lead.id} className="alm-table__row" onClick={() => handleViewLead(lead.id)}>
                 <td className="alm-table__cell-lead">
-                  <div className="alm-lead-name">{lead.fullName || '—'}</div>
+                  <div className="alm-lead-name">{lead.fullName || '-'}</div>
                   <a
                     href={`/lead/${lead.id}`}
                     className="alm-lead-link"
                     onClick={(e) => { e.stopPropagation(); handleViewLead(lead.id); }}
                   >
-                    {lead.leadNumber || '—'}
+                    {lead.leadNumber || '-'}
                   </a>
                 </td>
                 <td>
                   <div className="alm-contact-cell">
-                    <span className="alm-contact-phone">{lead.phone || '—'}</span>
+                    <span className="alm-contact-phone">{lead.phone || '-'}</span>
                     {lead.email && <span className="alm-contact-email">{lead.email}</span>}
                   </div>
                 </td>
                 <td>
                   <div className="alm-source-cell">
-                    <span>{lead.source || '—'}</span>
+                    <span>{lead.source || '-'}</span>
                     {lead.subSource && <span className="alm-sub-source">{lead.subSource}</span>}
                   </div>
                 </td>
                 <td>
                   <div className="alm-project-cell">
-                    <span>{lead.project || '—'}</span>
+                    <span>{lead.project || '-'}</span>
                     {lead.location && <span className="alm-location">{cleanRepeatingLocation(lead.location)}</span>}
                   </div>
                 </td>
                 <td>
-                  <span className="alm-user-chip">{lead.createdByUserName || '—'}</span>
+                  <span className="alm-user-chip">{lead.createdByUserName || '-'}</span>
                 </td>
                 <td>
                   <span className={`alm-user-chip ${!lead.assignedToUserName ? 'alm-user-chip--unassigned' : ''}`}>
@@ -955,7 +955,7 @@ const AdminLeadManagement = () => {
                 </td>
                 <td>
                   <span className="alm-status-badge" style={getStatusStyle(lead.statusCode)}>
-                    {lead.statusLabel || lead.statusCode || '—'}
+                    {lead.statusLabel || lead.statusCode || '-'}
                   </span>
                 </td>
                 <td>
@@ -1014,7 +1014,7 @@ const AdminLeadManagement = () => {
               <div>
                 <div className="alm-modal__title">Transfer Leads</div>
                 <div className="alm-modal__sub">
-                  Move every lead from one user to another — status, site visits, telecaller history and timeline all carry over.
+                  Move every lead from one user to another - status, site visits, telecaller history and timeline all carry over.
                 </div>
               </div>
               <button className="alm-modal__close" onClick={closeTransfer} aria-label="Close"><XMarkIcon style={{ width: 18, height: 18 }} /></button>
@@ -1104,7 +1104,7 @@ const AdminLeadManagement = () => {
                   <div className="alm-transfer-progress__label">
                     Moving leads… {transferProgress.done.toLocaleString('en-IN')} / {transferProgress.total.toLocaleString('en-IN')}
                     {' '}({transferProgress.total > 0 ? Math.round((transferProgress.done / transferProgress.total) * 100) : 0}%)
-                    — keep this window open
+                    - keep this window open
                   </div>
                 </div>
               )}

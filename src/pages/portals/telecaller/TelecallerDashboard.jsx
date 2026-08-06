@@ -33,7 +33,7 @@ const isFollowUpMissed = (dateStr) => {
 };
 
 const renderFollowUpDate = (dateStr, isLeadClosed = false) => {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const missed = isFollowUpMissed(dateStr) && !isLeadClosed;
   const arrowColor = missed ? '#e80d0dff' : '#000000';
   const formatted = new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -231,19 +231,19 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                   {unassignedLeads.slice(0, 10).map((lead) => {
                     const due = lead.next_follow_up_date || lead.scheduled_at;
                     return (
-                    <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadRowClick(lead)}>
-                      <td>
-                        <div className="col-cell-primary">{leadName(lead)}</div>
-                        <StatusChip name={lead.statusName} color={lead.statusColor} />
-                      </td>
-                      <td className="col-cell-mono">{lead.phone || '—'}</td>
-                      <td>{due ? renderFollowUpDate(due, lead.isClosed) : '—'}</td>
-                      <td>
-                        <button className="col-btn col-btn-primary col-btn-sm" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>
-                          Claim
-                        </button>
-                      </td>
-                    </tr>
+                      <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadRowClick(lead)}>
+                        <td>
+                          <div className="col-cell-primary">{leadName(lead)}</div>
+                          <StatusChip name={lead.statusName} color={lead.statusColor} />
+                        </td>
+                        <td className="col-cell-mono">{lead.phone || '-'}</td>
+                        <td>{due ? renderFollowUpDate(due, lead.isClosed) : '-'}</td>
+                        <td>
+                          <button className="col-btn col-btn-primary col-btn-sm" onClick={(e) => { e.stopPropagation(); handleLeadClick(lead.id); }}>
+                            Claim
+                          </button>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -251,14 +251,14 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
             )}
           </div>
         </div>
-         {/* Missed Follow-ups */}
+        {/* Missed Follow-ups */}
         <div className="col-card-new">
           <div className="col-card-header-new">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <ExclamationTriangleIcon style={{ width: 20, height: 20, color: 'var(--accent-red)' }} />
               <div>
                 <div className="col-card-title-new">Missed Follow-ups</div>
-                <div className="col-card-subtitle-new">Overdue — needs attention</div>
+                <div className="col-card-subtitle-new">Overdue - needs attention</div>
               </div>
             </div>
             <button className="col-btn col-btn-ghost col-btn-sm" onClick={() => onNavigate?.('leads', { tab: 'missed' })}>
@@ -290,11 +290,11 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                           <div className="col-cell-primary">{leadName(fu)}</div>
                           {fu.statusName && <div className="col-cell-secondary"><StatusChip name={fu.statusName} color={fu.statusColor} /></div>}
                         </td>
-                        <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '—'}</td>
-                        <td>{due ? renderFollowUpDate(due, fu.isClosed || fu.lead?.isClosed) : '—'}</td>
+                        <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '-'}</td>
+                        <td>{due ? renderFollowUpDate(due, fu.isClosed || fu.lead?.isClosed) : '-'}</td>
                         <td>
                           <button className="col-btn col-btn-success-soft col-btn-sm" disabled={!leadPhone(fu)} onClick={(e) => { e.stopPropagation(); callLead(leadPhone(fu)); }}>
-                            <PhoneIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }}/> Call
+                            <PhoneIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> Call
                           </button>
                         </td>
                       </tr>
@@ -345,11 +345,11 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                           <div className="col-cell-primary">{leadName(fu)}</div>
                           {fu.statusName && <div className="col-cell-secondary"><StatusChip name={fu.statusName} color={fu.statusColor} /></div>}
                         </td>
-                        <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '—'}</td>
-                        <td>{due ? renderFollowUpDate(due, fu.isClosed || fu.lead?.isClosed) : '—'}</td>
+                        <td className="col-cell-mono">{fu.phone || fu.lead?.phone || '-'}</td>
+                        <td>{due ? renderFollowUpDate(due, fu.isClosed || fu.lead?.isClosed) : '-'}</td>
                         <td>
                           <button className="col-btn col-btn-success-soft col-btn-sm" disabled={!leadPhone(fu)} onClick={(e) => { e.stopPropagation(); callLead(leadPhone(fu)); }}>
-                          <PhoneIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }}/>  Call
+                            <PhoneIcon style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />  Call
                           </button>
                         </td>
                       </tr>
@@ -361,7 +361,7 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
           </div>
         </div>
 
-       
+
 
         {/* SV Scheduled */}
         <div className="col-card-new">
@@ -397,9 +397,9 @@ const TelecallerDashboard = ({ user, onNavigate }) => {
                     <tr key={lead.id} className="col-clickable-row" onClick={() => handleLeadRowClick(lead)}>
                       <td>
                         <div className="col-cell-primary">{leadName(lead)}</div>
-                        <div className="col-cell-secondary">{lead.phone || '—'}</div>
+                        <div className="col-cell-secondary">{lead.phone || '-'}</div>
                       </td>
-                      <td>{lead.project || '—'}</td>
+                      <td>{lead.project || '-'}</td>
                       <td>{renderFollowUpDate(lead.scheduled_at || lead.next_follow_up_date, lead.isClosed)}</td>
                     </tr>
                   ))}

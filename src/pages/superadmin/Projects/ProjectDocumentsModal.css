@@ -81,7 +81,7 @@
   cursor: not-allowed;
 }
 
-/* "any file type" hint under the picker — the capability was invisible before,
+/* "any file type" hint under the picker - the capability was invisible before,
    so people assumed the archive only took images. */
 .proj-docs__upload-hint {
   margin-top: 8px;
@@ -281,7 +281,7 @@
   background: var(--bg-tertiary, #f1f5f9);
 }
 
-/* The last crumb is where you already are — inert, not a link. */
+/* The last crumb is where you already are - inert, not a link. */
 .proj-docs__crumb.is-current {
   color: var(--text-primary, #0f172a);
   cursor: default;

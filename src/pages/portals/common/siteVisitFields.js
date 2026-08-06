@@ -31,7 +31,7 @@ export const EMPTY_VISIT_DETAILS = {
 };
 export const VISIT_DETAIL_KEYS = Object.keys(EMPTY_VISIT_DETAILS);
 
-// Optional visit-detail fields — captured/displayed but not required to submit.
+// Optional visit-detail fields - captured/displayed but not required to submit.
 export const OPTIONAL_VISIT_DETAIL_KEYS = ['secondaryContact'];
 
 // Keys that must be filled before a site visit can be submitted.
@@ -139,7 +139,7 @@ export const parseVisitDetailsValue = (value) => {
 export const hasVisitDetailsData = (value) => VISIT_DETAIL_KEYS.some((key) => String(value?.[key] ?? '').trim() !== '');
 
 export const displayVisitDetailValue = (key, value) => {
-  if (value === null || value === undefined || value === '') return '—';
+  if (value === null || value === undefined || value === '') return '-';
   if (key === 'timelineToBuy') return TIMELINE_LABEL[value] || value;
   return value;
 };

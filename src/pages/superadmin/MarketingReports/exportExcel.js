@@ -1,4 +1,4 @@
-// Excel export for the Marketing Reports page — one styled workbook holding
+// Excel export for the Marketing Reports page - one styled workbook holding
 // every report on screen (so a marketing review needs one file, not five):
 //   Overview · Leads by Source · Leads by Sub Source · Project × Source
 //   · Source-wise Site Visits · Visits by Project · Acquisition Trend
@@ -8,7 +8,7 @@ import ExcelJS from 'exceljs';
 import * as htmlToImage from 'html-to-image';
 import { argb, COLORS } from '../Reports/analytics/palette';
 
-const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '—');
+const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '-');
 const n = (v) => Number(v) || 0;
 const pct = (a, b) => (n(b) > 0 ? Math.round((n(a) / n(b)) * 1000) / 10 : 0);
 
@@ -67,7 +67,7 @@ const addSheet = (wb, title, columns, rows) => {
         rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: argb(COLORS.primary) } }],
       });
     } catch (e) {
-      // Conditional formatting is cosmetic — never let it break the export.
+      // Conditional formatting is cosmetic - never let it break the export.
     }
   }
   autoWidth(sheet);
@@ -95,7 +95,7 @@ export const exportMarketingReports = async (payload, meta = {}) => {
   title.alignment = { vertical: 'middle', horizontal: 'left' };
   ov.getRow(1).height = 28;
   ov.mergeCells('A2:F2');
-  ov.getCell('A2').value = `Period: ${meta.period || '—'}   |   From: ${fmtDate(meta.from || payload.meta?.from)}   |   To: ${fmtDate(meta.to || payload.meta?.to)}`;
+  ov.getCell('A2').value = `Period: ${meta.period || '-'}   |   From: ${fmtDate(meta.from || payload.meta?.from)}   |   To: ${fmtDate(meta.to || payload.meta?.to)}`;
   ov.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
 
   const kpis = [
@@ -151,7 +151,7 @@ export const exportMarketingReports = async (payload, meta = {}) => {
         ov.addImage(imageId, { tl: { col: 0, row: anchorRow }, ext: { width: 520, height: 280 } });
         anchorRow += 16;
       } catch (e) {
-        // chart not capturable (e.g. detached) — skip silently
+        // chart not capturable (e.g. detached) - skip silently
       }
     }
   }

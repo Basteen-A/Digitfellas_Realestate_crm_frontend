@@ -17,7 +17,7 @@ const PERIODS = [
 
 // Self-service reports for a TC / SM / SH user. The backend locks the payload to
 // the logged-in user's own data (selfOnly), so there is no role picker, no user
-// drill-down and no export — just this user's performance for the chosen period.
+// drill-down and no export - just this user's performance for the chosen period.
 const PortalReports = ({ role }) => {
   const [period, setPeriod] = useState('mtd');
   const [data, setData] = useState(null);
@@ -43,7 +43,7 @@ const PortalReports = ({ role }) => {
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
           <h1><ChartBarIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />My Reports</h1>
-          <p className="hidden sm:block">Your own performance — site visits, calls &amp; conversions</p>
+          <p className="hidden sm:block">Your own performance - site visits, calls &amp; conversions</p>
         </div>
       </div>
 

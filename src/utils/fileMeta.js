@@ -6,7 +6,7 @@ import {
   DocumentIcon, TableCellsIcon, PresentationChartBarIcon, ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 
-// `Icon` is the heroicon *component* for the file type — render it as
+// `Icon` is the heroicon *component* for the file type - render it as
 // `<meta.Icon style={{ width: 16, height: 16 }} />`, not as `{meta.Icon}`.
 export const getFileMeta = (mimeType = '', fileName = '') => {
   const mt = String(mimeType).toLowerCase();
@@ -35,7 +35,7 @@ export const getFileMeta = (mimeType = '', fileName = '') => {
 };
 
 export const humanFileSize = (bytes) => {
-  if (!bytes) return '—';
+  if (!bytes) return '-';
   const b = Number(bytes);
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;

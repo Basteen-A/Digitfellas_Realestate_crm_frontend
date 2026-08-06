@@ -66,7 +66,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
 
   // One row per lead (rows arrive newest-first, so the first occurrence is the
   // latest handoff). The metric is "leads this user shared to the next role", so a
-  // lead is kept even if it was later marked LOST or re-handed-off — the share
+  // lead is kept even if it was later marked LOST or re-handed-off - the share
   // still happened and must keep counting. Every stat below is derived from THIS
   // list, so the count cards always equal the rows actually shown.
   const visibleRows = useMemo(() => {
@@ -88,7 +88,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
       total,
       incoming: visibleRows.filter((row) => row.direction === 'incoming').length,
       // TC "SV Done" = every lead in this list: marked SV Done and handed up to
-      // Sales. Awaiting the SM's acceptance does NOT subtract — the telecaller's
+      // Sales. Awaiting the SM's acceptance does NOT subtract - the telecaller's
       // work is done at handoff, and the Telecaller report counts it the same
       // way. Pending is surfaced as its own card instead.
       outgoing: workspaceRole === 'TC' ? total : visibleRows.filter((row) => row.direction === 'outgoing').length,
@@ -219,7 +219,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 <>
                   <th>Lead</th>
                   {/* TC counts and filters on the SV Done date, so that is the
-                      date the row must show — not the handoff timestamp. */}
+                      date the row must show - not the handoff timestamp. */}
                   <th>{isTC ? 'SV Done' : 'When'}</th>
                 </>
               ) : (
@@ -233,9 +233,9 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
               {showStage && <th>Stage</th>}
               {isTC ? (
                 <>
-                <th>Acceptance</th>
+                  <th>Acceptance</th>
                   <th className="hide-tablet">Assigned</th>
-                  
+
                   <th>Status</th>
                 </>
               ) : (
@@ -299,7 +299,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                 )}
                 {isTC ? (
                   <>
-                   <td>
+                    <td>
                       <span className={`handoff-chip ${row.pendingAcceptance ? 'handoff-accept--pending' : 'handoff-accept--accepted'}`}>
                         {row.pendingAcceptance ? 'Pending' : 'Accepted'}
                       </span>
@@ -308,7 +308,7 @@ const HandoffLeadsPage = ({ workspaceRole, defaultType = 'all', showStage = fals
                       <div>{row.currentAssigneeName || '-'}</div>
                       <small>{ROLE_LABELS[row.currentAssigneeRole] || row.currentAssigneeRole || '-'}</small>
                     </td>
-                   
+
                     <td>
                       <span className="handoff-chip" style={statusChipStyle(row.statusColor)}>
                         {row.statusName || '-'}

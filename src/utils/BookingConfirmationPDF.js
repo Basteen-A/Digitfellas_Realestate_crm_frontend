@@ -1,13 +1,13 @@
 // ============================================================
 // UTILITY: Booking Form PDF Generator (web, client-side jsPDF)
 // Renders the company "BOOKING FORM" as bordered tables:
-//   Page 1 — Plot Details + Customer Details
-//   Page 2 — Terms and Conditions
-//   Page 3 — Documentation / cost calculation table
-//   Page 4 — Account Details (one bordered block per split account)
+//   Page 1 - Plot Details + Customer Details
+//   Page 2 - Terms and Conditions
+//   Page 3 - Documentation / cost calculation table
+//   Page 4 - Account Details (one bordered block per split account)
 // Kept in lock-step with the server copy at
 // server/src/utils/bookingConfirmationPdf.js (shared, duplicated code) with ONE
-// deliberate exception — see "Balance Amount" below:
+// deliberate exception - see "Balance Amount" below:
 //   • Balance Amount prints Other Registration Expenses × 5, and that figure is kept
 //     OUT of the Documentation Amount total and out of TOTAL VALUE.
 // That divergence is intentional and web-only; do NOT port it to the server copy, and
@@ -52,11 +52,11 @@ const numberToWords = (num) => {
 };
 
 /* ── Safe text helper ── */
-const safe = (v, fallback = '—') => (v != null && String(v).trim() !== '' ? String(v).trim() : fallback);
+const safe = (v, fallback = '-') => (v != null && String(v).trim() !== '' ? String(v).trim() : fallback);
 
 /* ── Bank Name mapping from IFSC prefix ── */
 const getBankNameFromIFSC = (ifsc) => {
-  if (!ifsc) return '—';
+  if (!ifsc) return '-';
   const prefix = ifsc.substring(0, 4).toUpperCase();
   const mapping = {
     KVBL: 'KARUR VYSYA BANK', ICIC: 'ICICI BANK', KKBK: 'KOTAK MAHINDRA BANK',
@@ -76,7 +76,7 @@ const cleanTermText = (term) => {
     .replace(/&quot;/g, '"').replace(/&#39;/g, '\'').replace(/&rsquo;|&lsquo;/g, '\'')
     .replace(/&rdquo;|&ldquo;/g, '"').replace(/&ndash;|&mdash;/g, '-').replace(/&hellip;/g, '...')
     .replace(/&bull;|&#8226;/g, '-');
-  t = t.replace(/[‘’‚‛]/g, '\'').replace(/[“”„‟]/g, '"').replace(/[–—―]/g, '-').replace(/…/g, '...')
+  t = t.replace(/[‘’‚‛]/g, '\'').replace(/[“”„‟]/g, '"').replace(/[–-―]/g, '-').replace(/…/g, '...')
     .replace(/[•‣⁃⁌⁍∙▪●○◦‧․·]/g, '-').replace(/₹/g, 'Rs.')
     .replace(/[ \u3000]/g, ' ').replace(/[\u200b-\u200d\ufeff\u00ad]/g, '').trim();
   t = Array.from(t).filter((ch) => ch.codePointAt(0) <= 0xFF).join('');
@@ -107,13 +107,13 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const plotNo = safe(booking.unit_number || inventoryUnit.unit_number, 'N/A');
   const projectName = safe(booking.project_name || project.project_name, 'N/A');
   const phaseName = safe(booking.phase_name || booking.phase?.phase_name || inventoryUnit.phase?.phase_name, '');
-  const displayProjectName = (phaseName && phaseName !== '—' && !projectName.toLowerCase().includes(phaseName.toLowerCase()))
+  const displayProjectName = (phaseName && phaseName !== '-' && !projectName.toLowerCase().includes(phaseName.toLowerCase()))
     ? `${projectName} ${phaseName}` : projectName;
   const locationName = safe(project.location?.location_name || project.location?.name, '');
 
-  const area = safe(booking.carpet_area || inventoryUnit.unit_area, '—');
+  const area = safe(booking.carpet_area || inventoryUnit.unit_area, '-');
 
-  const customerPhone = safe(customer.phone, '—');
+  const customerPhone = safe(customer.phone, '-');
   const altPhone = safe(customer.alternate_phone, '');
   const relationType = safe(booking.relation_type || customer.relation_type, '');
   const relationName = safe(booking.relation_name || customer.relation_name, '');
@@ -123,7 +123,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const occupation = safe(customer.occupation, '');
   const pincode = safe(customer.pincode, '');
   const addressParts = [customer.address_line_1, customer.address_line_2, customer.city, customer.state].filter(Boolean);
-  const customerAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
+  const customerAddress = addressParts.length > 0 ? addressParts.join(', ') : '-';
 
   // Investment computations
   const toAmt = (v) => { const n = parseFloat(v || 0); return Number.isFinite(n) ? n : 0; };
@@ -131,7 +131,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const guidelineRate = toAmt(booking.guideline_value);
   const plotAreaSqft = toAmt(booking.plot_area);
   const perSqftCost = toAmt(booking.development_cost_per_sqft);
-  // Stamp / registration charges are always included — registration no longer
+  // Stamp / registration charges are always included - registration no longer
   // hides or zeroes them. Stored booking values win (they are what was billed
   // and collected); the guideline × area formula only fills missing values.
   const formulaPlotValue = (guidelineRate > 0 && plotAreaSqft > 0)
@@ -162,20 +162,20 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const docOther = toAmt(savedRegSplit.other_registration_expenses);
   // The "Balance Amount" row on the cost sheet carries Other Registration Expenses at
   // FIVE TIMES the stored figure. The multiplier is print-only and is never named on the
-  // form — the row is labelled plainly as "Balance Amount".
+  // form - the row is labelled plainly as "Balance Amount".
   const balanceAmount = docOther * 5;
   // Other Registration Expenses is deliberately OUTSIDE this total: it is presented on
   // its own as Balance Amount and must not be counted again here. Because TOTAL VALUE is
   // built from documentationAmount, it is outside that too.
   const documentationAmount = stampValue + docStampCommission + registrationValue + docOnline + docWriter + docPatta;
   const totalValue = plotValue + developmentValue + documentationAmount;
-  // NOTE: booking.balance_amount is intentionally NOT used — the "Balance Amount"
+  // NOTE: booking.balance_amount is intentionally NOT used - the "Balance Amount"
   // row on the cost sheet prints balanceAmount (see the cost table below).
 
   const bookingNumber = safe(booking.booking_number, 'UNKNOWN');
   const bookingD = booking.booking_date ? new Date(booking.booking_date) : null;
-  const bookingDateLong = bookingD ? bookingD.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—';
-  const bookingDateShort = bookingD ? `${bookingD.getDate()}-${bookingD.toLocaleDateString('en-US', { month: 'short' })}` : '—';
+  const bookingDateLong = bookingD ? bookingD.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-';
+  const bookingDateShort = bookingD ? `${bookingD.getDate()}-${bookingD.toLocaleDateString('en-US', { month: 'short' })}` : '-';
 
   // ── Split rows normalization (plot + dev bank accounts) ──
   const normalizeSplits = (input) => {
@@ -262,7 +262,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const LV2 = [55, 131];         // label | value (account rows: value spans wide)
 
   // ============================================================
-  // PAGE 1 — BOOKING FORM: Plot + Customer details
+  // PAGE 1 - BOOKING FORM: Plot + Customer details
   // ============================================================
   let y = TOP;
   doc.setFont('helvetica', 'bold');
@@ -286,7 +286,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     { cells: [cell('Project', KV[0]), cell(displayProjectName, KV[1], 'left')] },
     { cells: [cell('Plot Number', KV[0]), cell(plotNo, KV[1], 'left')] },
     { cells: [cell('Extent', KV[0]), cell(String(area), KV[1], 'left')] },
-    { cells: [cell('Location', KV[0]), cell(locationName || '—', KV[1], 'left')] },
+    { cells: [cell('Location', KV[0]), cell(locationName || '-', KV[1], 'left')] },
     { cells: [cell('Date', KV[0]), cell(bookingDateLong, KV[1], 'left')] },
   ]);
   y += 10;
@@ -295,8 +295,8 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const custRows = [
     { cells: [cell('Name', KV[0]), cell(displayBuyer, KV[1], 'left')] },
   ];
-  if (relationName && relationName !== '—') {
-    custRows.push({ cells: [cell(relationType && relationType !== '—' ? relationType : 'S/o', KV[0]), cell(relationName, KV[1], 'left')] });
+  if (relationName && relationName !== '-') {
+    custRows.push({ cells: [cell(relationType && relationType !== '-' ? relationType : 'S/o', KV[0]), cell(relationName, KV[1], 'left')] });
   }
   custRows.push({ cells: [cell('Contact Number', KV[0]), cell(customerPhone, KV[1], 'left')] });
   if (altPhone) custRows.push({ cells: [cell('Alternate Number', KV[0]), cell(altPhone, KV[1], 'left')] });
@@ -308,7 +308,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   drawTable(y, custRows);
 
   // ============================================================
-  // PAGE 2 — TERMS AND CONDITIONS
+  // PAGE 2 - TERMS AND CONDITIONS
   // ============================================================
   doc.addPage();
   y = TOP;
@@ -352,7 +352,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   });
 
   // ============================================================
-  // PAGE 3 — DOCUMENTATION / COST TABLE
+  // PAGE 3 - DOCUMENTATION / COST TABLE
   // ============================================================
   doc.addPage();
   y = TOP;
@@ -361,7 +361,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
   const LW = [78, 108];
   const paramRow = (label, value) => ({ cells: [cell(label, LW[0]), cell(String(value == null ? '' : value), LW[1], 'left')] });
   const amtRow = (label, value) => ({ cells: [cell(label, LW[0]), cell(`Rs. ${fmtAmt(value)}\n${w(value)}`, LW[1], 'left')] });
-  // Development is quoted inclusive of 18% GST — show the base + GST split-up.
+  // Development is quoted inclusive of 18% GST - show the base + GST split-up.
   const devBase = (perSqftCost > 0 && plotAreaSqft > 0) ? Math.round(plotAreaSqft * perSqftCost) : Math.round(developmentValue / 1.18);
   const devGst = developmentValue - devBase;
   y = drawTable(y, [
@@ -377,7 +377,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     amtRow('Development Amount (incl. GST)', developmentValue),
     // "Balance Amount" deliberately carries the OTHER REGISTRATION EXPENSES figure,
     // multiplied by 5. The customer copy shows that amount without naming either the
-    // charge or the multiplier, so it has no row of its own further down — and it is
+    // charge or the multiplier, so it has no row of its own further down - and it is
     // NOT part of the Documentation Amount group, its total, or TOTAL VALUE.
     amtRow('Balance Amount', balanceAmount),
     // The group header comes first, then its total as the group's opening row.
@@ -389,13 +389,13 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     amtRow('Online Commission, Computer Fees, Extra pages, Survey Fees, CD Etc..', docOnline),
     amtRow('Writer Charges', docWriter),
     amtRow('Patta Transfer Charges', docPatta),
-    // No 'Other Registration Expenses' row — it prints as Balance Amount above, and is
+    // No 'Other Registration Expenses' row - it prints as Balance Amount above, and is
     // excluded from this group's total.
     { cells: [cell('TOTAL VALUE', LW[0], 'center', true), cell(`Rs. ${fmtAmt(totalValue)}\n${w(totalValue)}`, LW[1], 'left', true)] },
   ]);
 
   // ============================================================
-  // PAGE 4 — ACCOUNT DETAILS
+  // PAGE 4 - ACCOUNT DETAILS
   // ============================================================
   doc.addPage();
   y = TOP;
@@ -448,7 +448,7 @@ export const generateBookingConfirmationPDF = (booking, plotSplitsParam, devSpli
     doc.text(`${bookingNumber}  |  Page ${i} of ${totalPages}`, pageW / 2, pageH - 8, { align: 'center' });
   }
 
-  // ── Open in a new tab — never save to the user's machine automatically ──
+  // ── Open in a new tab - never save to the user's machine automatically ──
   // The form is normally reviewed on screen and printed, so a silent download into
   // the Downloads folder was unwanted. The viewer's own toolbar still offers Save
   // and Print. `doc.save()` remains only as the popup-blocked fallback, so a

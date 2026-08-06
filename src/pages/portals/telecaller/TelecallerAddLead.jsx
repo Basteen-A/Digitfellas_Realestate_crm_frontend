@@ -40,7 +40,7 @@ const toDateTimeLocalValue = (value) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-// Follow-ups are date-only — shortcuts resolve to the start of the chosen day.
+// Follow-ups are date-only - shortcuts resolve to the start of the chosen day.
 const getQuickFollowUpValue = (dayOffset) => {
   const date = new Date();
   date.setDate(date.getDate() + dayOffset);
@@ -369,7 +369,7 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
                 <label className="crm-form-label">Full Name *</label>
                 <input className="crm-form-input" value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))} required placeholder="Enter buyer full name" />
               </div>
-              
+
               <div className="crm-form-group">
                 <label className="crm-form-label">Phone Number *</label>
                 <input className="crm-form-input" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: sanitizePhoneNumberInput(e.target.value) }))} required placeholder="Primary contact number" inputMode="numeric" maxLength={12} />
@@ -379,18 +379,18 @@ const TelecallerAddLead = ({ onNavigate, prefillPhone = '' }) => {
                 <label className="crm-form-label">WhatsApp Details</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={form.whatsappSameAsPhone} 
-                      onChange={(e) => setForm((p) => ({ ...p, whatsappSameAsPhone: e.target.checked, whatsapp_number: e.target.checked ? '' : p.whatsapp_number }))} 
+                    <input
+                      type="checkbox"
+                      checked={form.whatsappSameAsPhone}
+                      onChange={(e) => setForm((p) => ({ ...p, whatsappSameAsPhone: e.target.checked, whatsapp_number: e.target.checked ? '' : p.whatsapp_number }))}
                     />
                     WhatsApp same as phone
                   </label>
                   {!form.whatsappSameAsPhone && (
-                    <input 
-                      className="crm-form-input" 
-                      value={form.whatsapp_number} 
-                      onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: sanitizePhoneNumberInput(e.target.value) }))} 
+                    <input
+                      className="crm-form-input"
+                      value={form.whatsapp_number}
+                      onChange={(e) => setForm((p) => ({ ...p, whatsapp_number: sanitizePhoneNumberInput(e.target.value) }))}
                       placeholder="Enter WhatsApp number"
                       inputMode="numeric"
                       maxLength={12}

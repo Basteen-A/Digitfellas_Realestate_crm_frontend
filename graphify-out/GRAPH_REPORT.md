@@ -400,7 +400,7 @@ Nodes (4): AccountsVerifyPayments(), fmt(), fmtDate(), isVerifiedPayment()
 ## Knowledge Gaps
 - **349 isolated node(s):** `extends`, `no-unused-vars`, `no-console`, `react/prop-types`, `react-hooks/exhaustive-deps` (+344 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** - run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

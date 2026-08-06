@@ -20,10 +20,10 @@ import {
 
 /* ─── Filter Presets ─────────────────────────────────────────── */
 const DATE_PRESETS = [
-  { key: 'all',   label: 'All Time' },
+  { key: 'all', label: 'All Time' },
   { key: 'today', label: 'Today' },
-  { key: 'wtd',   label: 'Week to Date' },
-  { key: 'mtd',   label: 'Month to Date' },
+  { key: 'wtd', label: 'Week to Date' },
+  { key: 'mtd', label: 'Month to Date' },
   { key: 'custom', label: 'Custom Range' },
 ];
 
@@ -177,7 +177,7 @@ const SiteRow = ({ site }) => (
       }}>{site.bookings}</span>
     </div>
     <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, color: 'var(--text-primary)' }}>
-      {site.totalSqft > 0 ? `${site.totalSqft.toLocaleString()} sq.ft.` : '—'}
+      {site.totalSqft > 0 ? `${site.totalSqft.toLocaleString()} sq.ft.` : '-'}
     </div>
   </div>
 );
@@ -228,7 +228,7 @@ const SMRow = ({ sm, isOpen, onToggle }) => {
           }}>{sm.totalBookings}</span>
         </div>
         <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, color: 'var(--accent-blue)' }}>
-          {sm.totalSqft > 0 ? `${sm.totalSqft.toLocaleString()} sq.ft.` : '—'}
+          {sm.totalSqft > 0 ? `${sm.totalSqft.toLocaleString()} sq.ft.` : '-'}
         </div>
       </div>
 
@@ -366,7 +366,7 @@ const SalesHeadBookingSummary = () => {
       {/* Page Header */}
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1>Bookings — SM Wise Summary</h1>
+          <h1>Bookings - SM Wise Summary</h1>
           <p className="hidden sm:block">
             SV counts and square feet booking breakdown by Sales Manager and Site
             {dateFilter !== 'all' && (
@@ -453,7 +453,7 @@ const SalesHeadBookingSummary = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <UserIcon style={{ width: 14, height: 14 }} />
-            Sales Manager 
+            Sales Manager
           </div>
           <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <CheckCircleIcon style={{ width: 13, height: 13, color: '#15803d' }} />

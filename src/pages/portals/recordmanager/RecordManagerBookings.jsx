@@ -12,7 +12,7 @@ import '../collection/CollectionWorkspace.css';
 
 const fmtDate = (d) => (d
   ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  : '—');
+  : '-');
 
 const RecordManagerBookings = ({ onSelectBooking, showCompleted = false }) => {
   const [bookings, setBookings] = useState([]);
@@ -142,37 +142,37 @@ const RecordManagerBookings = ({ onSelectBooking, showCompleted = false }) => {
                   {bookings.map((booking) => {
                     const seller = booking.seller_name || booking.project?.builder_name || booking.builder_name;
                     return (
-                    <tr key={booking.id} style={{ cursor: 'pointer' }} onClick={() => onSelectBooking(booking.id)}>
-                      <td style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>
-                        {booking.registration_number || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>—</span>}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(booking.registration_document_date)}</td>
-                      <td className="lead-col-lead">
-                        <p className="lead-title">{booking.buyer_name || booking.customer_name || '—'}</p>
-                        <small>{booking.booking_number}</small>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: 13 }}>{seller || <span style={{ color: 'var(--text-muted)' }}>—</span>}</span>
-                      </td>
-                      <td className="hide-mobile">{renderUploadStatus(booking)}</td>
-                      <td className="hide-mobile">
-                        {booking.record_status === 'COMPLETED' ? (
-                          <span className="col-badge" style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' }}>Completed</span>
-                        ) : (
-                          <span className="col-badge" style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>Open</span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          className="view-link"
-                          title="View details"
-                          onClick={(e) => { e.stopPropagation(); onSelectBooking(booking.id); }}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
+                      <tr key={booking.id} style={{ cursor: 'pointer' }} onClick={() => onSelectBooking(booking.id)}>
+                        <td style={{ fontWeight: 500 }}>
+                          {booking.registration_number || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>-</span>}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(booking.registration_document_date)}</td>
+                        <td className="lead-col-lead">
+                          <p className="lead-title">{booking.buyer_name || booking.customer_name || '-'}</p>
+                          <small>{booking.booking_number}</small>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: 13 }}>{seller || <span style={{ color: 'var(--text-muted)' }}>-</span>}</span>
+                        </td>
+                        <td className="hide-mobile">{renderUploadStatus(booking)}</td>
+                        <td className="hide-mobile">
+                          {booking.record_status === 'COMPLETED' ? (
+                            <span className="col-badge" style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' }}>Completed</span>
+                          ) : (
+                            <span className="col-badge" style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>Open</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="view-link"
+                            title="View details"
+                            onClick={(e) => { e.stopPropagation(); onSelectBooking(booking.id); }}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>

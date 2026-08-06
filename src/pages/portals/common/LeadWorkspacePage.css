@@ -1,11 +1,11 @@
 /* ============================================================
-   LEAD WORKSPACE — Corporate Standard UI
+   LEAD WORKSPACE - Corporate Standard UI
    Matches revised.html design system
    ============================================================ */
 
 /* ── Layout ── */
 .lead-workspace {
-  /* No own padding — the parent .portal-content already provides the page
+  /* No own padding - the parent .portal-content already provides the page
      gutter (24px / 12px / 8px responsive), so this stays aligned with the
      dashboard and other portal pages. height:100% fills that padded area. */
   padding: 0;
@@ -961,7 +961,7 @@
   flex-shrink: 0;
 }
 
-/* Stage badges — badge-system triples (badge-system.html / utils/badgeColors.js) */
+/* Stage badges - badge-system triples (badge-system.html / utils/badgeColors.js) */
 .badge-new {
   background: #EFF6FF;
   color: #1D4ED8;
@@ -1668,7 +1668,7 @@ textarea.crm-form-input {
 }
 
 /* ══════════════════════════════════════════════════════════
-   ✦ Create New Lead Modal — Professional Redesign
+   ✦ Create New Lead Modal - Professional Redesign
    ══════════════════════════════════════════════════════════ */
 
 /* ── Modal Panel Override ── */
@@ -3636,7 +3636,7 @@ textarea.crm-form-input {
 
 /* Style CalendarPicker input to match standard drawer inputs (border, padding, border-radius, background) */
 .qa-drawer-ctx-block .cp-input {
-  /* Opaque card surface — a transparent fill lets the modal's dark blurred
+  /* Opaque card surface - a transparent fill lets the modal's dark blurred
      backdrop show through as a grey block. */
   background: var(--bg-card, #fff);
   border: 1.5px solid var(--border-primary, #e2e8f0);
@@ -3769,7 +3769,6 @@ textarea.crm-form-input {
 .qa-drawer-hist-date {
   font-size: 11px;
   color: var(--text-muted, #94a3b8);
-  font-family: 'DM Mono', monospace;
 }
 
 .qa-drawer-hist-remark {
@@ -4139,7 +4138,7 @@ textarea.crm-form-input {
 }
 
 /* ============================================================
-   MOBILE RESPONSIVE — Lead Workspace Page
+   MOBILE RESPONSIVE - Lead Workspace Page
    Comprehensive mobile-first responsive overrides
    ============================================================ */
 

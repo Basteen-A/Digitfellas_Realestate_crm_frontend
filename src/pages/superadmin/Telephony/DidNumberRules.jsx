@@ -15,7 +15,7 @@ const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', border
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 
-const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '—' : '—');
+const userName = (u) => (u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || '-' : '-');
 
 const EMPTY_FORM = {
   id: null, rule_name: '', did_number: '', lead_source_id: '', lead_sub_source_id: '',
@@ -109,10 +109,10 @@ const ModeSwitch = ({ checked, disabled, onChange }) => (
 
 // Super Admin → Telephony → Call Settings: "Ad Number Allocation" card.
 // A master toggle switches between two inbound-call allocation modes:
-//   • ON  — per ad-number (DID) rules: each advertised Tata number maps to its
+//   • ON  - per ad-number (DID) rules: each advertised Tata number maps to its
 //           own Lead Source / Sub-Source / campaign + a telecaller round-robin
 //           pool, so ad attribution is traceable on the lead.
-//   • OFF — one common pool: every inbound call, whichever number was dialled,
+//   • OFF - one common pool: every inbound call, whichever number was dialled,
 //           is round-robin assigned to a selected set of telecallers.
 // The common pool is also the fallback for numbers without a rule when ON.
 const DidNumberRules = () => {
@@ -221,7 +221,7 @@ const DidNumberRules = () => {
     loadSubSources(sourceId);
   };
 
-  // Master mode toggle — persists immediately (like the per-rule active toggle).
+  // Master mode toggle - persists immediately (like the per-rule active toggle).
   const setMode = async (enabled) => {
     setTogglingMode(true);
     try {
@@ -316,7 +316,7 @@ const DidNumberRules = () => {
       return <span style={{ fontWeight: 600, color: '#16A34A' }}>All telecallers</span>;
     }
     const ids = Array.isArray(rule.telecaller_ids) ? rule.telecaller_ids : [];
-    if (ids.length === 0) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+    if (ids.length === 0) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
     const names = ids.map((id) => userName(tcById[id]) || 'Unknown');
     const shown = names.slice(0, 3).join(', ');
     return (
@@ -327,7 +327,7 @@ const DidNumberRules = () => {
     );
   };
 
-  // The common-pool editor — primary when rules are off, "fallback pool" when on.
+  // The common-pool editor - primary when rules are off, "fallback pool" when on.
   const commonPoolEditor = (
     <div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', border: '1px solid var(--border-primary)', borderRadius: 8, background: commonForm.assign_all ? '#f0fdf4' : 'var(--bg-primary)', marginBottom: 12 }}>
@@ -368,7 +368,7 @@ const DidNumberRules = () => {
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, maxWidth: 620 }}>
             Each Tata number maps to a <strong>source / sub-source / campaign</strong> that always tags the
-            lead. The switch below decides <em>who</em> gets the call — each number's own telecallers, or one
+            lead. The switch below decides <em>who</em> gets the call - each number's own telecallers, or one
             common pool round-robining every call regardless of the number dialled.
           </div>
         </div>
@@ -392,88 +392,88 @@ const DidNumberRules = () => {
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {didEnabled
               ? 'Each advertised number is routed by its rule below. Turn off to send every call to one common pool.'
-              : 'Every inbound call — whichever number was dialled — is round-robin assigned to the common pool below. Turn on to route per ad-number instead.'}
+              : 'Every inbound call - whichever number was dialled - is round-robin assigned to the common pool below. Turn on to route per ad-number instead.'}
           </div>
         </div>
       </div>
 
       {!didEnabled && (
         <div style={{ padding: '10px 18px', background: '#fffbeb', borderBottom: '1px solid var(--border-primary)', fontSize: 12, color: '#92400e' }}>
-          The telecaller pools below are <strong>paused</strong> — every inbound call goes to the common pool.
+          The telecaller pools below are <strong>paused</strong> - every inbound call goes to the common pool.
           Each number's <strong>source / medium / campaign</strong> is still applied to the lead, so keep these configured.
         </div>
       )}
 
       <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
-              <thead>
-                <tr>
-                  <th style={th}>Rule</th>
-                  <th style={th}>Ad (DID) Number</th>
-                  <th style={th}>Source / Medium</th>
-                  <th style={th}>{didEnabled ? 'Telecallers (Round-robin)' : 'Telecallers (paused)'}</th>
-                  <th style={th}>Status</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>Loading…</td></tr>
-                )}
-                {!loading && rules.length === 0 && (
-                  <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No ad-number rules yet. Create one per advertised Tata number.</td></tr>
-                )}
-                {!loading && rules.map((rule) => (
-                  <tr key={rule.id}>
-                    <td style={td}>
-                      <div style={{ fontWeight: 600 }}>{rule.rule_name}</div>
-                      {rule.campaign_name && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Campaign: {rule.campaign_name}</div>
-                      )}
-                    </td>
-                    <td style={td}>
-                      <code style={{ fontSize: 13, fontWeight: 600 }}>{rule.did_number}</code>
-                    </td>
-                    <td style={td}>
-                      <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, ...badgeStyle(rule.leadSource?.color_code) }}>
-                        {rule.leadSource?.source_name || '—'}
-                      </span>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-                        {rule.leadSubSource ? `› ${rule.leadSubSource.sub_source_name}` : 'Whole source'}
-                      </div>
-                    </td>
-                    <td style={{ ...td, ...(didEnabled ? {} : { opacity: 0.45 }) }}>{renderTelecallerSummary(rule)}</td>
-                    <td style={td}>
-                      <button
-                        type="button"
-                        onClick={() => toggleActive(rule)}
-                        className="crm-btn crm-btn-sm"
-                        style={{
-                          background: rule.is_active ? '#dcfce7' : '#f3f4f6',
-                          color: rule.is_active ? '#166534' : '#6b7280',
-                          border: `1px solid ${rule.is_active ? '#bbf7d0' : '#e5e7eb'}`,
-                          fontWeight: 700,
-                        }}
-                        title="Click to toggle"
-                      >
-                        {rule.is_active ? 'Active' : 'Inactive'}
-                      </button>
-                    </td>
-                    <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(rule)} title="Edit">
-                        <PencilSquareIcon style={{ width: 15, height: 15 }} />
-                      </button>
-                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => remove(rule)} title="Delete" style={{ color: '#dc2626' }}>
-                        <TrashIcon style={{ width: 15, height: 15 }} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+          <thead>
+            <tr>
+              <th style={th}>Rule</th>
+              <th style={th}>Ad (DID) Number</th>
+              <th style={th}>Source / Medium</th>
+              <th style={th}>{didEnabled ? 'Telecallers (Round-robin)' : 'Telecallers (paused)'}</th>
+              <th style={th}>Status</th>
+              <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>Loading…</td></tr>
+            )}
+            {!loading && rules.length === 0 && (
+              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No ad-number rules yet. Create one per advertised Tata number.</td></tr>
+            )}
+            {!loading && rules.map((rule) => (
+              <tr key={rule.id}>
+                <td style={td}>
+                  <div style={{ fontWeight: 600 }}>{rule.rule_name}</div>
+                  {rule.campaign_name && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Campaign: {rule.campaign_name}</div>
+                  )}
+                </td>
+                <td style={td}>
+                  <code style={{ fontSize: 13, fontWeight: 600 }}>{rule.did_number}</code>
+                </td>
+                <td style={td}>
+                  <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, ...badgeStyle(rule.leadSource?.color_code) }}>
+                    {rule.leadSource?.source_name || '-'}
+                  </span>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                    {rule.leadSubSource ? `› ${rule.leadSubSource.sub_source_name}` : 'Whole source'}
+                  </div>
+                </td>
+                <td style={{ ...td, ...(didEnabled ? {} : { opacity: 0.45 }) }}>{renderTelecallerSummary(rule)}</td>
+                <td style={td}>
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(rule)}
+                    className="crm-btn crm-btn-sm"
+                    style={{
+                      background: rule.is_active ? '#dcfce7' : '#f3f4f6',
+                      color: rule.is_active ? '#166534' : '#6b7280',
+                      border: `1px solid ${rule.is_active ? '#bbf7d0' : '#e5e7eb'}`,
+                      fontWeight: 700,
+                    }}
+                    title="Click to toggle"
+                  >
+                    {rule.is_active ? 'Active' : 'Inactive'}
+                  </button>
+                </td>
+                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => openEdit(rule)} title="Edit">
+                    <PencilSquareIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                  <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => remove(rule)} title="Delete" style={{ color: '#dc2626' }}>
+                    <TrashIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Common / fallback pool — the everything-pool when rules are off, the
+      {/* Common / fallback pool - the everything-pool when rules are off, the
           no-rule fallback when they're on. */}
       <div style={{ padding: '16px 18px', borderTop: '1px solid var(--border-primary)' }}>
         <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{didEnabled ? 'Fallback pool' : 'Common pool'}</div>
@@ -506,7 +506,7 @@ const DidNumberRules = () => {
                 <input
                   style={inputStyle}
                   value={form.rule_name}
-                  placeholder="e.g. Newspaper Ad — July"
+                  placeholder="e.g. Newspaper Ad - July"
                   onChange={(e) => setForm((f) => ({ ...f, rule_name: e.target.value }))}
                 />
               </div>
@@ -520,7 +520,7 @@ const DidNumberRules = () => {
                   onChange={(e) => setForm((f) => ({ ...f, did_number: e.target.value }))}
                 />
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                  The number printed in the ad — calls landing on it are matched by the last 10 digits.
+                  The number printed in the ad - calls landing on it are matched by the last 10 digits.
                 </div>
               </div>
 
@@ -554,7 +554,7 @@ const DidNumberRules = () => {
               </div>
 
               <div>
-                <label style={labelStyle}>Campaign Name <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional — stamped on the lead)</span></label>
+                <label style={labelStyle}>Campaign Name <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional - stamped on the lead)</span></label>
                 <input
                   style={inputStyle}
                   value={form.campaign_name}

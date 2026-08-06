@@ -214,13 +214,13 @@
 }
 
 /* ============================================================
-   GLOBAL MOBILE — applies to ADMIN (MainLayout) pages too, not
+   GLOBAL MOBILE - applies to ADMIN (MainLayout) pages too, not
    just the portals. Fixes iOS tap-to-zoom + sideways scroll.
    ============================================================ */
 @media (max-width: 767px) {
   /* Prevent iOS Safari auto-zoom on focus: it fires whenever the focused
      control's font-size is < 16px. The .portal-content rule above only covered
-     portal screens — this covers the admin Reports / masters pages as well. */
+     portal screens - this covers the admin Reports / masters pages as well. */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select,
   textarea {

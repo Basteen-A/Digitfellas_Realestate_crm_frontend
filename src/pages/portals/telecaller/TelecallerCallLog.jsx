@@ -12,9 +12,9 @@ const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', border
 
 const fmtDateTime = (d) => (d
   ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-  : '—');
+  : '-');
 const fmtDuration = (secs) => {
-  if (!secs && secs !== 0) return '—';
+  if (!secs && secs !== 0) return '-';
   const m = Math.floor(secs / 60);
   const s = secs % 60;
   return m ? `${m}m ${s}s` : `${s}s`;
@@ -32,7 +32,7 @@ const TABS = [
   { key: 'MISSED', label: 'Missed' },
 ];
 
-// Real call log for the logged-in telecaller — answered & missed calls captured
+// Real call log for the logged-in telecaller - answered & missed calls captured
 // from Tata Smartflo webhooks, with recording playback. (Replaces the old mock.)
 const TelecallerCallLog = () => {
   const [rows, setRows] = useState([]);
@@ -124,7 +124,7 @@ const TelecallerCallLog = () => {
                         </>
                       ) : <span style={{ color: 'var(--text-muted)' }}>Unknown lead</span>}
                     </td>
-                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.customer_number || '—'}</td>
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.customer_number || '-'}</td>
                     <td style={td}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg }}>
                         {answered ? <PhoneArrowUpRightIcon style={{ width: 12, height: 12 }} /> : <PhoneXMarkIcon style={{ width: 12, height: 12 }} />}

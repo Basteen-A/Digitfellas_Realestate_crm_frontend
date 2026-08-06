@@ -1,10 +1,10 @@
 /* ============================================================
-   CSS CUSTOM PROPERTIES — Design Tokens
+   CSS CUSTOM PROPERTIES - Design Tokens
    Default: Light Theme | Optional: Dark Theme
    ============================================================ */
 
 :root {
-  /* ── Colors — Primary Palette (Light Default) ── */
+  /* ── Colors - Primary Palette (Light Default) ── */
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
   --bg-tertiary: #e2e8f0;
@@ -28,7 +28,7 @@
   --sidebar-border: #e8ecf1;
   --sidebar-brand-bg: linear-gradient(135deg, rgba(98, 90, 250, 0.04) 0%, rgba(139, 92, 246, 0.03) 100%);
   --sidebar-active-bg: rgba(98, 90, 250, 0.10);
-  /* Opaque equivalent of --sidebar-active-bg over a white card — for sticky table headers. */
+  /* Opaque equivalent of --sidebar-active-bg over a white card - for sticky table headers. */
   --sidebar-active-bg-solid: #efeefe;
   --sidebar-active-text: #625afa;
   --sidebar-active-border: #625afa;
@@ -37,7 +37,7 @@
   --sidebar-separator: #edf2f7;
 
   /* ── Text Colors (Light Default) ── */
-  /* Primary/body text is pure black — matches the mobile app's `text` token.
+  /* Primary/body text is pure black - matches the mobile app's `text` token.
      Secondary/tertiary/muted stay grey so hierarchy still reads. */
   --text-primary: #000000;
   --text-secondary: #334155;
@@ -154,7 +154,7 @@
   --sidebar-border: #1e293b;
   --sidebar-brand-bg: linear-gradient(135deg, rgba(98, 90, 250, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
   --sidebar-active-bg: rgba(98, 90, 250, 0.18);
-  /* Opaque equivalent of --sidebar-active-bg over a dark card — for sticky table headers. */
+  /* Opaque equivalent of --sidebar-active-bg over a dark card - for sticky table headers. */
   --sidebar-active-bg-solid: #2a325d;
   --sidebar-active-text: #a5b4fc;
   --sidebar-active-border: #818cf8;

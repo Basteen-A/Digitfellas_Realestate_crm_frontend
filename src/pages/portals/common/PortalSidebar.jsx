@@ -4,7 +4,7 @@ import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import './PortalSidebar.css';
 
 
-/** Renders a menu icon — accepts a Heroicon component or falls back to a dot */
+/** Renders a menu icon - accepts a Heroicon component or falls back to a dot */
 const MenuIcon = ({ icon, className = 'portal-sidebar__hero-icon' }) => {
   if (!icon) return null;
   if (typeof icon === 'function' || typeof icon === 'object') {

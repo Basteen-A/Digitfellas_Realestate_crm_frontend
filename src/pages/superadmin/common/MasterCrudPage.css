@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* MASTER CRUD PAGE — Enhanced Clean Table/Modal Design         */
+/* MASTER CRUD PAGE - Enhanced Clean Table/Modal Design         */
 /* Full dark/light theme support                                 */
 /* ============================================================ */
 
@@ -542,7 +542,7 @@
 .master-page__header { padding-bottom: 4px; border-bottom: 1px solid var(--border-secondary); margin-bottom: 4px; }
 
 /* ============================================================ */
-/* Responsive — tablet & mobile                                  */
+/* Responsive - tablet & mobile                                  */
 /* ============================================================ */
 @media (max-width: 768px) {
   .master-page__header {
@@ -588,7 +588,7 @@
     padding: 0;
     place-items: stretch;
   }
-  /* Full-screen sheet on phones — easier to use, no tiny centered box. */
+  /* Full-screen sheet on phones - easier to use, no tiny centered box. */
   .master-modal__panel {
     width: 100%;
     max-height: 100%;

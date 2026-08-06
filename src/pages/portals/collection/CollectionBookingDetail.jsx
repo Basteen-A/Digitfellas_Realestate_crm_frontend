@@ -34,8 +34,8 @@ import '../common/LeadWorkspacePage.css';
 import './CollectionWorkspace.css';
 
 /* ── tiny helpers ── */
-const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-// Full rupee value (no Lakh/Crore shortening) — used inside the edit popup where
+const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+// Full rupee value (no Lakh/Crore shortening) - used inside the edit popup where
 // the actual figures must be visible.
 const fmtFull = (v) => {
   const n = Number(v);
@@ -64,7 +64,7 @@ const BkdStatCell = ({ label, value, border = true }) => {
   );
 };
 
-// PaymentSummary-style edit-modal primitives — clean ledger rows with a right-
+// PaymentSummary-style edit-modal primitives - clean ledger rows with a right-
 // aligned ₹ amount input, mirroring PaymentSummary.jsx's "Edit cost breakdown".
 // Defined at module scope so the inputs keep focus across the parent's re-renders.
 const PS = {
@@ -130,7 +130,7 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
   const target = parseFloat(valueText?.replace(/[^0-9.-]/g, '') || 0);
   const due = target - paid;
   const pct = target > 0 ? Math.round((paid / target) * 100) : 0;
-  const dueText = due > 0 ? `Due: ${fmtFull(due)}` : (paid > 0 ? 'Fully Paid' : '—');
+  const dueText = due > 0 ? `Due: ${fmtFull(due)}` : (paid > 0 ? 'Fully Paid' : '-');
   const pctText = target > 0 ? `${pct}% paid` : '';
   return (
     <div
@@ -148,7 +148,7 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
             fontSize: 14, fontWeight: 500,
             color: "var(--col-text, #000000)",
             whiteSpace: "nowrap",
-            // A row carrying an interactive control must not clip it — the
+            // A row carrying an interactive control must not clip it - the
             // ellipsis treatment is for long labels, not for buttons.
             overflow: action ? "visible" : "hidden",
             textOverflow: action ? "clip" : "ellipsis",
@@ -178,7 +178,7 @@ const BkdLedgerRow = ({ label, note, valueText, indent = 0, onClick, expandIcon,
 // Label / value row for the Customer Information card. Mirrors the Financial
 // Summary ledger rows (same padding, dividers, 500-weight value) but keeps the
 // string value LEFT-aligned in a second column instead of right-aligned like money.
-const BkdInfoRow = ({ label, value, mono = false }) => (
+const BkdInfoRow = ({ label, value }) => (
   <div style={{
     display: 'flex', alignItems: 'baseline', gap: 16,
     padding: '11px 24px', borderBottom: '1px solid var(--col-border, #e2e8f0)',
@@ -186,7 +186,7 @@ const BkdInfoRow = ({ label, value, mono = false }) => (
     <div style={{ width: 150, flexShrink: 0, fontSize: 13, color: 'var(--col-text-secondary, #64748b)' }}>{label}</div>
     <div style={{
       flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, color: 'var(--col-text, #0f172a)',
-      wordBreak: 'break-word', fontFamily: mono ? 'monospace' : undefined,
+      wordBreak: 'break-word',
     }}>{value}</div>
   </div>
 );
@@ -206,14 +206,14 @@ const execName = (u) => `${u?.first_name || ''} ${u?.last_name || ''}`.trim() ||
 // That one cost item needs two signatures before its money counts: Accounts, and an
 // Admin / Super Admin. `is_verified` stays the single money gate, so a half-signed
 // payment reads as "Partly verified" rather than pretending to be either extreme.
-// These compare against user_types.short_code, so they must be the codes themselves —
+// These compare against user_types.short_code, so they must be the codes themselves -
 // Admin is 'ADM', not 'ADMIN'. Spelling it out by hand had hidden this button from
 // every Admin while the server returned 403, making the feature Super-Admin-only.
 // Kept in lock-step with ADMIN_VERIFIER_ROLES in server/src/controllers/bookingController.js.
 const ADMIN_VERIFIER_ROLES = [ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN];
 const canAdminVerify = (user) => ADMIN_VERIFIER_ROLES.includes(String(user?.userType?.short_code || user?.userTypeCode || '').toUpperCase());
 
-// Who signed, as circle avatars — the same look as the task assignee UI, so "who
+// Who signed, as circle avatars - the same look as the task assignee UI, so "who
 // touched this" reads identically wherever it appears in the app. A slot the process
 // requires but nobody has signed yet shows as a dashed placeholder, so a missing
 // signature is visible rather than merely absent.
@@ -224,7 +224,7 @@ const VerifierAvatars = ({ payment }) => {
   if (payment.dual_verification_required) {
     slots.push({ key: 'admin', user: payment.adminVerifier, done: payment.admin_verified, label: 'Admin' });
   }
-  if (!slots.some((sl) => sl.done || payment.dual_verification_required)) return <span style={{ color: '#9ca3af' }}>—</span>;
+  if (!slots.some((sl) => sl.done || payment.dual_verification_required)) return <span style={{ color: '#9ca3af' }}>-</span>;
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center' }}>
@@ -291,7 +291,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [payStatusSaving, setPayStatusSaving] = useState(false);
   const [smPointsValue, setSmPointsValue] = useState('');
   const [shPointsValue, setShPointsValue] = useState('');
-  // Payment editing — reuses the rich Record-Payment modal, prefilled. Only
+  // Payment editing - reuses the rich Record-Payment modal, prefilled. Only
   // pending/unverified (and non-refund/non-bounced) payments are editable.
   const [editingPaymentId, setEditingPaymentId] = useState(null);
   // Verified / rejected / refund payments aren't editable, but can be opened
@@ -473,16 +473,16 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const previousLeadAssignee = booking?.lead?.previousAssignedToUser || null;
   // The booking/customer owner = the Collection Manager the SH selected at booking
   // time (booking.collection_manager_id). This is intentionally separate from the
-  // lead's assignee (the lead stays with the SH — lead ⇄ collection decoupling),
+  // lead's assignee (the lead stays with the SH - lead ⇄ collection decoupling),
   // so the "Collection Owner" row must reflect the collection manager, NOT the SH.
   const collectionOwner = booking?.collectionManager || null;
-  const paymentPlanLabel = booking?.paymentPlan?.plan_name || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_name || '—';
+  const paymentPlanLabel = booking?.paymentPlan?.plan_name || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_name || '-';
   const paymentPlanType = booking?.paymentPlan?.plan_type || paymentPlans.find((plan) => String(plan.id) === String(booking?.payment_plan_id))?.plan_type || '';
   const quickStatusOptions = statusOptions.filter((status) => QUICK_STATUS_CODES.includes(status.status_code));
   const isCancelStatusCode = (code) => ['CANCEL', 'CANCELLED'].includes(code);
   // "Cancelled" is offered in the status grid ONLY once SH has approved (or the
   // 7-day window auto-approved) the cancellation request. There is no direct
-  // cancel — it always goes through the approval gate, and the full collected
+  // cancel - it always goes through the approval gate, and the full collected
   // amount must be refunded before it can be applied (enforced below + server-side).
   const cancelApprovedForGrid = (booking?.bookingStatus?.status_code || booking?.status_code) === 'REQUEST_TO_CANCEL'
     && !!booking?.custom_fields?.cancel_approved_by;
@@ -491,7 +491,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     ? [...quickStatusOptions, cancelStatusOption]
     : quickStatusOptions;
 
-  // The actual SM/SH who handled this lead — resolved from assignment history by the
+  // The actual SM/SH who handled this lead - resolved from assignment history by the
   // API (booking.salesManager / booking.salesHead). Fall back to the reports_to chain.
   const salesManager = booking?.salesManager || leadAssignee?.manager || null;
   const salesHead = booking?.salesHead || salesManager?.manager || null;
@@ -605,7 +605,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // The Admin half of the dual verification on "Other Registration Expenses".
   // Every rule lives on the server (the payment must actually require a second
   // signature, must not already carry one, and must not be signed by the same
-  // user who gave the Accounts signature) — this only surfaces its refusal, so
+  // user who gave the Accounts signature) - this only surfaces its refusal, so
   // the two sides can never drift apart.
   const [adminVerifyingId, setAdminVerifyingId] = useState(null);
 
@@ -844,22 +844,22 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // The lead's name (customer first/last mirror the originating lead).
   const leadFullName = (booking.lead
     ? `${booking.lead.first_name || ''} ${booking.lead.last_name || ''}`.trim()
-    : `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) || '—';
-  // The actual buyer comes from the dedicated buyer_name field — NOT the lead name.
-  const buyerName = booking.buyer_name || customer.buyer_name || booking.customer_name || leadFullName || '—';
+    : `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) || '-';
+  // The actual buyer comes from the dedicated buyer_name field - NOT the lead name.
+  const buyerName = booking.buyer_name || customer.buyer_name || booking.customer_name || leadFullName || '-';
   const customerPhoneRaw = customer.phone || customer.phone_number || customer.mobile || booking.customer_phone || '';
-  const customerPhone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(customerPhoneRaw || '')) ? '—' : (customerPhoneRaw || '—');
+  const customerPhone = /^\s*LD[-_ ]?\d+\s*$/i.test(String(customerPhoneRaw || '')) ? '-' : (customerPhoneRaw || '-');
   const toAmount = (v) => {
     const n = parseFloat(v || 0);
     return Number.isFinite(n) ? n : 0;
   };
   const totalPaid = toAmount(booking.total_paid);
-  // Show the STORED booking values first — they are what was actually billed
-  // and collected against — and only fall back to the guideline × area formula
+  // Show the STORED booking values first - they are what was actually billed
+  // and collected against - and only fall back to the guideline × area formula
   // (Plot = ROUNDUP(rate × sqft, -2); Stamp 7%; Registration 2%) when a stored
   // value is missing. Recomputing over stored values drifts from total_paid
   // whenever the stored charges used different rounding or manual amounts.
-  // Registration does NOT hide or zero any of these — the full breakdown stays
+  // Registration does NOT hide or zero any of these - the full breakdown stays
   // visible for the life of the booking.
   const guidelineRate = toAmount(booking.guideline_value);
   const plotAreaSqft = toAmount(booking.plot_area);
@@ -909,7 +909,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return acc;
   }, {});
 
-  // Every payment category stays available after registration — nothing is
+  // Every payment category stays available after registration - nothing is
   // hidden from the Add Payment dropdown or the progress bars.
   const filteredCategories = PAYMENT_CATEGORIES.filter(cat => {
     if (cat === 'MODT') {
@@ -921,7 +921,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
     return true;
   });
   // Registration charges break into three independently-collected buckets (no
-  // double-counting — grand total is unchanged):
+  // double-counting - grand total is unchanged):
   //   • Registration            → the base 2% legal charge only.
   //   • Registration Expenses    → ONE combined bar for all of the misc split
   //                                items (Stamp Commission, Regn Misc. Expenses,
@@ -944,7 +944,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   // ── Registration-charges paid allocation ──
   // Payments are recorded at the CATEGORY level ('Registration Expenses' lumps the four
-  // misc items, 'Other Registration Expenses' is separate, MODT is its own) — never per
+  // misc items, 'Other Registration Expenses' is separate, MODT is its own) - never per
   // sub-line. So the "Registration Charges" parent row and its sub-rows had no `paid`
   // value and always read "0% paid / Due: full" even when fully collected. Allocate each
   // category's collected amount across the sub-items it funds, in listed order (waterfall,
@@ -971,7 +971,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
 
   const canEditPayments = getRoleCode(user) === ROLE_CODES.SUPER_ADMIN;
   // Registration rate is the Collection Manager's call (Super Admin can always).
-  // A cancelled or registered booking is settled — its legal charges stay put.
+  // A cancelled or registered booking is settled - its legal charges stay put.
   const canEditRegistrationRate =
     [ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN].includes(getRoleCode(user))
     && !booking?.is_cancelled;
@@ -1000,7 +1000,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const devCostGuidelineValue = toAmount(devCostForm.guideline_value || booking.guideline_value);
   const devCostPlotAreaValue = toAmount(devCostForm.plot_area || booking.plot_area);
   const devCostPerSqftValue = toAmount(devCostForm.development_cost_per_sqft || booking.development_cost_per_sqft);
-  // Plot Value = ROUNDUP(rate × sqft, -2) — nearest 100; Stamp (7%) & Registration (2%) exact, no rounding.
+  // Plot Value = ROUNDUP(rate × sqft, -2) - nearest 100; Stamp (7%) & Registration (2%) exact, no rounding.
   const previewPlotValue = Math.ceil((devCostGuidelineValue * devCostPlotAreaValue) / 100) * 100;
   const previewStampValue = computeStampValue(previewPlotValue);
   const previewRegistrationValue = computeRegistrationValue(previewPlotValue, registrationRate);
@@ -1033,7 +1033,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const isOverdue = booking.next_follow_up_at && new Date(booking.next_follow_up_at) < new Date();
   const overdueDays = isOverdue ? Math.floor((Date.now() - new Date(booking.next_follow_up_at).getTime()) / 86400000) : 0;
 
-  // Cancel-approved status override — show "Cancel Pending" once SH approves the cancellation request
+  // Cancel-approved status override - show "Cancel Pending" once SH approves the cancellation request
   // (the booking is only truly "Cancelled" after Collection finalizes the refund/cancellation)
   const isCancelApproved = (booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !!booking.custom_fields?.cancel_approved_by;
   const effectiveStatusLabel = isCancelApproved ? 'Cancel Pending' : booking.status_label;
@@ -1043,7 +1043,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   // ── Customer Information card fields ──
   const ciAreaLabel = (booking.carpet_area || booking.plot_area)
     ? `${Number(booking.carpet_area || booking.plot_area).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sq.ft`
-    : '—';
+    : '-';
   const ciReservedDate = fmtD(booking.unit_reserved_at || booking.reserved_at || booking.created_at || booking.booking_date);
   const ciTeamMembers = [
     { role: 'Collection Owner', person: collectionOwner },
@@ -1131,7 +1131,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           <button className="bkd-back-btn" onClick={onBack}><ArrowLeftIcon style={{ width: 16, height: 16 }} /></button>
           <div>
             <h1 className="bkd-title">
-              Booking Details — {booking.booking_number}{' '}
+              Booking Details - {booking.booking_number}{' '}
 
               <span className="bkd-status-badge" style={{ background: effectiveStatusBadge.bg, color: effectiveStatusBadge.text, border: `1px solid ${effectiveStatusBadge.border}` }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: effectiveStatusBadge.text, display: 'inline-block' }} /> {effectiveStatusLabel}
@@ -1158,7 +1158,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </>
           )}
           {/* Booking Open → send to Super Admin for approval (unit reserved).
-              This is a Collection action — the Super Admin never sends for approval. */}
+              This is a Collection action - the Super Admin never sends for approval. */}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_OPEN' && !canEditPayments && (
             <button className="bkd-btn bkd-btn-primary" disabled={sendingApproval} onClick={() => setShowApprovalConfirm(true)}>
               <CheckCircleIcon style={{ width: 14, height: 14 }} /> {sendingApproval ? 'Sending…' : 'Send for Approval'}
@@ -1181,7 +1181,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               </span>
             )
           )}
-          {/* Collection Executive assignees — circle avatars (like the task assignee UI). */}
+          {/* Collection Executive assignees - circle avatars (like the task assignee UI). */}
           {[ROLE_CODES.COLLECTION, ROLE_CODES.SUPER_ADMIN, ROLE_CODES.ADMIN].includes(getRoleCode(user)) && !booking.is_cancelled && (() => {
             const execs = booking.collectionExecutives || [];
             return (
@@ -1214,12 +1214,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               className="bkd-btn bkd-btn-primary"
               style={{ background: '#16A34A', boxShadow: '0 1px 2px rgba(22,163,74,0.25)' }}
               onClick={() => setPdfModalOpen(true)}
-              title="Generate the Booking Form PDF — split the plot & development amounts across bank accounts"
+              title="Generate the Booking Form PDF - split the plot & development amounts across bank accounts"
             >
               <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Generate Booking Form
             </button>
           )}
-          {/* Overflow menu — routine + destructive actions, decluttered out of the bar. */}
+          {/* Overflow menu - routine + destructive actions, decluttered out of the bar. */}
           <KebabMenu items={[
             (!booking.is_cancelled && !isCancelApproved && ['BOOKING_OPEN', 'BOOKING_PENDING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'BOOKED', 'REGISTERED', 'EMI', 'TOKEN_RECEIVED', 'FORM_SUBMITTED', 'AGREEMENT_DRAFT', 'AGREEMENT_SIGNED'].includes(booking.bookingStatus?.status_code || booking.status_code)) && { key: 'reqcancel', label: 'Request Cancel', Icon: ExclamationTriangleIcon, color: '#EF4444', onClick: () => setWorkflowMode('requestCancel') },
             (refundableAmt > 0.01) && { key: 'refund', label: `Process Refund (${formatCurrency(refundableAmt)})`, Icon: BanknotesIcon, color: '#B45309', onClick: () => { setRefundSourcePayment(null); setRefundForm({ refund_amount: '', refund_mode_id: '', refund_reference: '', refund_date: '', refund_remarks: '' }); setWorkflowMode('refund'); } },
@@ -1232,13 +1232,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
         </div>
       </div>
 
-      {/* Rejection banner — shows the Super Admin's reject remarks */}
+      {/* Rejection banner - shows the Super Admin's reject remarks */}
       {(booking.bookingStatus?.status_code || booking.status_code) === 'BOOKING_REJECTED' && (
         <div className="bkd-alert-banner" style={{ background: '#FEF2F2', borderColor: '#FECACA' }}>
           <XCircleIcon style={{ width: 18, height: 18, flexShrink: 0, color: '#DC2626' }} />
           <div>
             <span className="bkd-alert-title" style={{ color: '#991B1B' }}>Booking Rejected by Super Admin</span>
-            <span className="bkd-alert-text">{booking.custom_fields?.reject_remarks || 'No remarks provided.'}{totalPaid > 0 ? ` — refund of ${formatCurrency(totalPaid)} pending.` : ''}</span>
+            <span className="bkd-alert-text">{booking.custom_fields?.reject_remarks || 'No remarks provided.'}{totalPaid > 0 ? ` - refund of ${formatCurrency(totalPaid)} pending.` : ''}</span>
           </div>
         </div>
       )}
@@ -1264,7 +1264,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
           <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
           <div>
             <span className="bkd-alert-title">Payment Overdue</span>
-            <span className="bkd-alert-text">Balance of {formatCurrency(balanceDue)} — {overdueDays} days overdue (due {fmtD(booking.next_follow_up_at)})</span>
+            <span className="bkd-alert-text">Balance of {formatCurrency(balanceDue)} - {overdueDays} days overdue (due {fmtD(booking.next_follow_up_at)})</span>
           </div>
         </div>
       )}
@@ -1282,7 +1282,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               </div>
               {/* Collection Owner = the Collection Manager the SH selected at booking
                     time. Shown here as an always-visible assignee profile (the lead
-                    itself stays with the SH — lead ⇄ collection decoupling). */}
+                    itself stays with the SH - lead ⇄ collection decoupling). */}
               {collectionOwner && (
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ textAlign: 'right', minWidth: 0 }}>
@@ -1299,18 +1299,18 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               )}
             </div>
 
-            {/* Flat label / value rows — mirrors the Financial Summary card, but
+            {/* Flat label / value rows - mirrors the Financial Summary card, but
                   with left-aligned string values (see BkdInfoRow). */}
             <div>
-              <BkdInfoRow label="Buyer Name" value={buyerName || '—'} />
-              <BkdInfoRow label="Lead Name" value={leadFullName || '—'} />
-              <BkdInfoRow label="Customer Phone" value={customerPhone || '—'} mono />
-              <BkdInfoRow label="Project" value={booking.project_name || '—'} />
-              <BkdInfoRow label="Unit" value={booking.unit_display || booking.unit_number || '—'} />
+              <BkdInfoRow label="Buyer Name" value={buyerName || '-'} />
+              <BkdInfoRow label="Lead Name" value={leadFullName || '-'} />
+              <BkdInfoRow label="Customer Phone" value={customerPhone || '-'} />
+              <BkdInfoRow label="Project" value={booking.project_name || '-'} />
+              <BkdInfoRow label="Unit" value={booking.unit_display || booking.unit_number || '-'} />
               <BkdInfoRow label="Area" value={ciAreaLabel} />
               <BkdInfoRow label="Booking Date" value={fmtD(booking.booking_date)} />
               <BkdInfoRow label="Payment Plan" value={paymentPlanLabel} />
-              <BkdInfoRow label="Plan Type" value={paymentPlanType || '—'} />
+              <BkdInfoRow label="Plan Type" value={paymentPlanType || '-'} />
               <BkdInfoRow label="Unit Reserved" value={ciReservedDate} />
             </div>
 
@@ -1319,7 +1319,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               {ciIdentityOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
               <span className="ci-section-label" style={{ margin: 0 }}>Identity</span>
               <span className="ci-collapsible-summary">
-                {[customer.pan_number ? 'PAN' : null, customer.aadhar_number ? 'Aadhaar' : null].filter(Boolean).join(' · ') || '—'}
+                {[customer.pan_number ? 'PAN' : null, customer.aadhar_number ? 'Aadhaar' : null].filter(Boolean).join(' · ') || '-'}
               </span>
             </button>
             {ciIdentityOpen && (
@@ -1327,15 +1327,15 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div className="ci-grid ci-grid-3">
                   <div className="ci-field">
                     <div className="ci-field-label">PAN</div>
-                    <div className="ci-field-value mono">{customer.pan_number || '—'}</div>
+                    <div className="ci-field-value mono">{customer.pan_number || '-'}</div>
                   </div>
                   <div className="ci-field">
                     <div className="ci-field-label">Aadhaar</div>
-                    <div className="ci-field-value mono">{customer.aadhar_number || '—'}</div>
+                    <div className="ci-field-value mono">{customer.aadhar_number || '-'}</div>
                   </div>
                   <div className="ci-field">
                     <div className="ci-field-label">Email</div>
-                    <div className="ci-field-value mono">{customer.email || '—'}</div>
+                    <div className="ci-field-value mono">{customer.email || '-'}</div>
                   </div>
                 </div>
               </div>
@@ -1346,7 +1346,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               {ciTeamOpen ? <ChevronDownIcon style={{ width: 16, height: 16 }} /> : <ChevronRightIcon style={{ width: 16, height: 16 }} />}
               <span className="ci-section-label" style={{ margin: 0 }}>Team &amp; Ownership</span>
               <span className="ci-collapsible-summary">
-                {ciTeamMembers.length ? `${ciTeamMembers.length} ${ciTeamMembers.length === 1 ? 'person' : 'people'}` : '—'}
+                {ciTeamMembers.length ? `${ciTeamMembers.length} ${ciTeamMembers.length === 1 ? 'person' : 'people'}` : '-'}
               </span>
             </button>
             {ciTeamOpen && (
@@ -1579,12 +1579,12 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             </button>
           </div>
 
-          {/* Pending cost changes — highlighted inline for the approver */}
+          {/* Pending cost changes - highlighted inline for the approver */}
           {pendingCostChanges?.changes?.length > 0 && (
             <div style={{ padding: '14px 24px', background: '#FFFBEB', borderBottom: '1px solid #FDE68A' }}>
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#92400E', marginBottom: 10 }}>
                 <ExclamationTriangleIcon style={{ width: 15, height: 15 }} />
-                Cost edited — awaiting approval
+                Cost edited - awaiting approval
                 <span style={{ fontWeight: 500, color: '#B45309' }}>
                   · by {pendingCostChanges.submitted_by_name || 'user'}{pendingCostChanges.submitted_at ? ` · ${new Date(pendingCostChanges.submitted_at).toLocaleString()}` : ''}
                 </span>
@@ -1631,7 +1631,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               action={canEditRegistrationRate ? (
                 // Edited INLINE rather than in a popover: this row is
                 // `overflow: hidden`, which clipped an absolutely-positioned
-                // menu into invisibility — the pen appeared dead because the
+                // menu into invisibility - the pen appeared dead because the
                 // panel it opened was never painted.
                 ratePickerOpen ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 2 }}>
@@ -1642,7 +1642,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           key={r}
                           type="button"
                           disabled={rateSaving}
-                          title={`${r}% — ${fmtFull(computeRegistrationValue(plotValue, r))}`}
+                          title={`${r}% - ${fmtFull(computeRegistrationValue(plotValue, r))}`}
                           onClick={(e) => { e.stopPropagation(); handleRegistrationRateChange(r); }}
                           style={{
                             padding: '2px 9px', borderRadius: 6, fontSize: 12, lineHeight: 1.6,
@@ -1813,8 +1813,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         {isRefund ? '−' : ''}{(p.amount)}
                       </td>
                       <td>{p.payment_mode}</td>
-                      <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '—'}</td>
-                      <td style={{ fontSize: 12 }}>{p.bank_name || '—'}</td>
+                      <td style={{ fontWeight: 400 }}>{p.transaction_ref || p.utr_number || p.cheque_dd_number || '-'}</td>
+                      <td style={{ fontSize: 12 }}>{p.bank_name || '-'}</td>
                       {/* Three states, not two: a dual-verification payment that has one
                           signature is neither Verified nor Unverified, and calling it
                           either would misrepresent the money. */}
@@ -1822,7 +1822,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                         : isRefund ? <span className="bkd-badge bkd-badge-danger">Refunded</span>
                           : p.is_verified ? <span className="bkd-badge bkd-badge-success">Verified</span>
                             : (p.accounts_verified || p.admin_verified)
-                              ? <span className="bkd-badge bkd-badge-warning" title={p.accounts_verified ? 'Accounts verified — awaiting Admin verification' : 'Admin verified — awaiting Accounts verification'}>Partly verified</span>
+                              ? <span className="bkd-badge bkd-badge-warning" title={p.accounts_verified ? 'Accounts verified - awaiting Admin verification' : 'Admin verified - awaiting Accounts verification'}>Partly verified</span>
                               : <span className="bkd-badge bkd-badge-warning">Unverified</span>}</td>
                       <td onClick={(e) => e.stopPropagation()}><VerifierAvatars payment={p} /></td>
                       <td>
@@ -1838,21 +1838,21 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           )}
                           {/* The Admin half of the dual verification. Shown only on rows
                               that actually require it, and hidden from the person who
-                              already gave the Accounts signature — one user must never
+                              already gave the Accounts signature - one user must never
                               be able to supply both (the server refuses it too). */}
                           {p.dual_verification_required && !p.admin_verified && !p.is_bounced && !isRefund
                             && canAdminVerify(user) && String(p.verified_by || '') !== String(user?.id || '') && (
-                            <button
-                              className="view-link"
-                              style={{ color: '#1a7a40' }}
-                              disabled={adminVerifyingId === p.id}
-                              title="Give the Admin verification for this Other Registration Expenses payment"
-                              onClick={(e) => { e.stopPropagation(); adminVerifyPayment(p); }}
-                            >
-                              {adminVerifyingId === p.id ? 'Verifying…' : 'Admin Verify'}
-                            </button>
-                          )}
-                          {/* Per-row refund — only for verified (non-refund, non-bounced) money,
+                              <button
+                                className="view-link"
+                                style={{ color: '#1a7a40' }}
+                                disabled={adminVerifyingId === p.id}
+                                title="Give the Admin verification for this Other Registration Expenses payment"
+                                onClick={(e) => { e.stopPropagation(); adminVerifyPayment(p); }}
+                              >
+                                {adminVerifyingId === p.id ? 'Verifying…' : 'Admin Verify'}
+                              </button>
+                            )}
+                          {/* Per-row refund - only for verified (non-refund, non-bounced) money,
                           capped at this row's amount (and the booking's overall refundable). */}
                           {p.is_verified && !isRefund && !p.is_bounced && refundableAmt > 0.01 && (
                             <button
@@ -1972,7 +1972,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     {dragActive ? 'Drop files here' : 'Click to choose files or drag & drop'}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--col-text-secondary, #6b7280)' }}>
-                    Any file type — PDF, images, Word, Excel, ZIP, video, audio, anything.
+                    Any file type - PDF, images, Word, Excel, ZIP, video, audio, anything.
                   </div>
                 </div>
 
@@ -2168,7 +2168,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
               }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary, #0A2540)' }}>Edit cost breakdown</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-muted, #8792A2)', marginTop: 2 }}>Update line items — totals recalculate automatically</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted, #8792A2)', marginTop: 2 }}>Update line items - totals recalculate automatically</div>
                 </div>
                 <button type="button" onClick={closeActionModal} disabled={devCostSaving} style={{
                   border: 'none', background: 'var(--bg-secondary, #F6F8FB)', borderRadius: 8, width: 30, height: 30,
@@ -2201,7 +2201,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {actionMode === 'pay' && (
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, maxHeight: 520 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-                  {/* Net / Paid / Balance already sits in the drawer header — no repeat here. */}
+                  {/* Net / Paid / Balance already sits in the drawer header - no repeat here. */}
                   <div className="qa-drawer-section" style={{ padding: '0 0 10px' }}>{editingPaymentId ? 'Edit Payment' : 'Record New Payment'}</div>
                   <div className="bkd-form-row">
                     <div className="bkd-form-group" style={{ flex: 1 }}>
@@ -2215,8 +2215,8 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           const paid = bucket?.paid || 0;
                           const balance = Math.max(target - paid, 0);
                           const suffix = target > 0
-                            ? ` — Balance ${formatCurrency(balance)}`
-                            : (paid > 0 ? ` — Paid ${formatCurrency(paid)}` : '');
+                            ? ` - Balance ${formatCurrency(balance)}`
+                            : (paid > 0 ? ` - Paid ${formatCurrency(paid)}` : '');
                           return <option key={cat} value={cat}>{categoryLabel(cat)}{suffix}</option>;
                         })}
                       </select>
@@ -2318,7 +2318,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           </div>
                           {totalPaid > 0.01 && (
                             <>
-                              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Refund (required — must equal total collected)</div>
+                              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Refund (required - must equal total collected)</div>
                               <div className="bkd-form-row">
                                 <div className="bkd-form-group">
                                   <label className="bkd-form-label">Refund Amount (₹) *</label>
@@ -2396,7 +2396,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           <label className="qa-drawer-field-label">Cancel Reason *</label>
                           <select className="qa-drawer-field-select" style={{ width: '100%' }} value={cancelReasonId}
                             onChange={e => setCancelReasonId(e.target.value)}>
-                            <option value="">— Select reason —</option>
+                            <option value="">- Select reason -</option>
                             {cancelReasons.map(r => <option key={r.id} value={r.id}>{r.reason_name}</option>)}
                           </select>
                           <div style={{ marginTop: 8 }}>
@@ -2605,7 +2605,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     </PsFieldRow>
 
                     <PsSectionLabel top={18}>Registration charges</PsSectionLabel>
-                    <PsFieldRow label="Stamp Commission" note="1% of Stamp Duty — auto">
+                    <PsFieldRow label="Stamp Commission" note="1% of Stamp Duty - auto">
                       <PsAmountInput value={previewStampCommission} readOnly title="Auto-computed as 1% of Stamp Value" />
                     </PsFieldRow>
                     {regSplitFields.map(f => (
@@ -2614,7 +2614,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                           onChange={(v) => setRegField(f.key, v)} />
                       </PsFieldRow>
                     ))}
-                    <PsSubtotalRow label="Subtotal — registration charges" value={fmtFull(previewRegSplitTotal)} />
+                    <PsSubtotalRow label="Subtotal - registration charges" value={fmtFull(previewRegSplitTotal)} />
 
                     <PsSectionLabel top={18}>MODT charges</PsSectionLabel>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 0 8px' }}>
@@ -2632,7 +2632,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                               onChange={(v) => setModtField(f.key, v)} />
                           </PsFieldRow>
                         ))}
-                        <PsSubtotalRow label="Subtotal — MODT" value={fmtFull(previewModtSplitTotal)} />
+                        <PsSubtotalRow label="Subtotal - MODT" value={fmtFull(previewModtSplitTotal)} />
                       </>
                     )}
 
@@ -2821,7 +2821,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </div>
 
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
-                  Refund (required — must equal total collected amount)
+                  Refund (required - must equal total collected amount)
                 </div>
                 <div className="bkd-form-row">
                   <div className="bkd-form-group">
@@ -2862,7 +2862,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     onChange={(e) => setCancelRefundForm(p => ({ ...p, refund_remarks: e.target.value }))} />
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)', marginBottom: 12 }}>
-                  Refund is operator-entered. It is subtracted from collected balance — never auto-derived from plot value.
+                  Refund is operator-entered. It is subtracted from collected balance - never auto-derived from plot value.
                 </div>
 
                 <div className="qa-drawer-save-row">
@@ -2902,7 +2902,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 <div style={{ padding: '16px 20px' }}>
                   <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
                     <strong>Record Refund Payment</strong>
-                    <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded — unverified payments must be verified by Accounts first.</p>
+                    <p style={{ margin: '6px 0 0' }}>A refund can be recorded at any time. Only <strong>verified</strong> collected money can be refunded - unverified payments must be verified by Accounts first.</p>
                   </div>
 
                   <div style={{ background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12 }}>
@@ -3045,7 +3045,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 );
               })()}
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>
-                Assigned executives can update status, follow-ups and record payments for this booking — without seeing financial summary details. All assignees and the manager share the same activity timeline.
+                Assigned executives can update status, follow-ups and record payments for this booking - without seeing financial summary details. All assignees and the manager share the same activity timeline.
               </p>
               <button className="bkd-btn bkd-btn-primary" style={{ marginTop: 16, width: '100%' }} disabled={assigning} onClick={handleAssignExecutive}>
                 {assigning ? 'Saving…' : (selectedExecIds.length ? `Save Assignment (${selectedExecIds.length})` : 'Clear Assignment')}

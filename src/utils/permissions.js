@@ -37,7 +37,7 @@ export const hasTaskPortalAccess = (user) => {
 
 export const isTaskAdmin = (user) => ['SA', 'ADM'].includes(getRoleCode(user));
 
-// ── Per-module access. Mirrors server/src/utils/accessGrants.js — and it MUST,
+// ── Per-module access. Mirrors server/src/utils/accessGrants.js - and it MUST,
 // because these same predicates drive GrantRoute. When only the server copy was
 // made matrix-aware, a custom role granted Booking Approvals sailed past the API
 // and was still bounced to /dashboard by the client guard.
@@ -51,7 +51,7 @@ const moduleLevelOf = (user, key) => user?.permissions?.[key] || 'none';
 const RANK = { none: 0, read: 1, write: 2, full: 3 };
 const holds = (user, key, required) => RANK[moduleLevelOf(user, key)] >= RANK[required];
 
-// Reports — view ALL reports like a Super Admin. Keyed to reports:'full', NOT
+// Reports - view ALL reports like a Super Admin. Keyed to reports:'full', NOT
 // 'read': TC / SM / SH hold reports:'read' for their own self-service numbers and
 // must never satisfy this. Same split as the server.
 export const canViewAllReports = (user) => {
@@ -61,7 +61,7 @@ export const canViewAllReports = (user) => {
     || hasGrant(user, 'reportsAccess', 'reports_access');
 };
 
-// Tasks — All Access: see / edit / delete EVERY task.
+// Tasks - All Access: see / edit / delete EVERY task.
 export const canManageAllTasks = (user) => {
   const code = getRoleCode(user);
   return code === 'SA' || code === 'ADM'
@@ -69,14 +69,14 @@ export const canManageAllTasks = (user) => {
     || hasGrant(user, 'tasksAllAccess', 'tasks_all_access');
 };
 
-// Booking Approval — view queue + approve/reject. SA-only by design (Admin cannot approve)
+// Booking Approval - view queue + approve/reject. SA-only by design (Admin cannot approve)
 // plus granted OH users.
 export const canAccessBookingApprovals = (user) =>
   getRoleCode(user) === 'SA'
   || holds(user, 'booking_approvals', 'read')
   || hasGrant(user, 'bookingApprovalReadWrite', 'booking_approval_read_write');
 
-// Booking Approval — All Access: act on EVERY booking.
+// Booking Approval - All Access: act on EVERY booking.
 export const canApproveAllBookings = (user) =>
   getRoleCode(user) === 'SA'
   || holds(user, 'booking_approvals', 'full')
