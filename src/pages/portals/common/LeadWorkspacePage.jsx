@@ -6205,8 +6205,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   {/* ── Contextual: Site Visit Details (full capture, matches Add Site Visit) ── */}
                   {(quickWorkflowAction?.needsSvDetails && quickWorkflowAction?.code !== 'TC_SV_DONE') && (
                     <div className="qa-drawer-ctx-block">
-                      {/* 📅 Visit Details */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>📅 Visit Details</div>
+                      {/* Visit Details */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDaysIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Visit Details</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Visit Date *</label>
@@ -6260,8 +6260,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         </div>
                       </div>
 
-                      {/* 👤 Customer Profile */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>👤 Customer Profile</div>
+                      {/* Customer Profile */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Customer Profile</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Buyer Profile *</label>
@@ -6317,8 +6317,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         </div>
                       </div>
 
-                      {/* 🏠 Property Requirement */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>🏠 Property Requirement</div>
+                      {/* Property Requirement */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Property Requirement</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Customer Requirement *</label>
@@ -6393,8 +6393,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         />
                       </div>
 
-                      {/* 💰 Purchase Intent */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>💰 Purchase Intent</div>
+                      {/* Purchase Intent */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><BanknotesIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Purchase Intent</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Purpose Of Purchase *</label>

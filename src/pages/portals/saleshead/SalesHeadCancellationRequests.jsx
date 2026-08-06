@@ -5,6 +5,7 @@ import { formatCurrency } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import {
   ArrowPathIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentListIcon,
+  ExclamationTriangleIcon, InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
@@ -212,12 +213,16 @@ const SalesHeadCancellationRequests = ({ user }) => {
             <div style={{padding:'16px 20px'}}>
               {actionMode === 'approve' && (
                 <div style={{background:'#FEF3C7', border:'1px solid #F59E0B44', borderRadius:8, padding:12, marginBottom:16, fontSize:12, color:'#92400E'}}>
-                  <strong>⚠ Important:</strong> Approving releases the booked plot to <strong>Available</strong> immediately (even before any refund) and lets the Collection Manager finalize the cancellation. Make sure you have completed follow-up with the customer.
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Important:
+                  </strong> Approving releases the booked plot to <strong>Available</strong> immediately (even before any refund) and lets the Collection Manager finalize the cancellation. Make sure you have completed follow-up with the customer.
                 </div>
               )}
               {actionMode === 'reject' && (
                 <div style={{background:'#DBEAFE', border:'1px solid #3B82F644', borderRadius:8, padding:12, marginBottom:16, fontSize:12, color:'#1E40AF'}}>
-                  <strong>ℹ Note:</strong> Rejecting will record your remarks. The booking will stay in Request to Cancel. The Collection Manager will discuss with the customer to decide whether to reactivate the booking or resubmit the cancellation.
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <InformationCircleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Note:
+                  </strong> Rejecting will record your remarks. The booking will stay in Request to Cancel. The Collection Manager will discuss with the customer to decide whether to reactivate the booking or resubmit the cancellation.
                 </div>
               )}
               <div className="bkd-form-group">

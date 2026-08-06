@@ -27,6 +27,7 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
+  TrophyIcon,
   PhoneXMarkIcon,
   CheckCircleIcon,
   TagIcon,
@@ -598,7 +599,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
                   </button>
                   {hasAnyRole(user, ['SM', 'SH']) && (
                     <button type="button" className="portal-topbar__dropdown-item" onClick={() => { setTopbarMenuOpen(false); setPointsModalOpen(true); }}>
-                      <span style={{ fontSize: 13, marginRight: 6 }}>🏆</span> Reward Points
+                      <TrophyIcon style={{ width: 16, height: 16, marginRight: 6 }} /> Reward Points
                     </button>
                   )}
                   {isAdmin && (
@@ -751,7 +752,7 @@ const PortalLayout = ({ menuItems, roleName, user, defaultScreen, children, sear
             <div className="portal-phone-modal" role="dialog" aria-modal="true" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
               <div className="portal-phone-modal__header">
                 <div>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 16 }}>🏆 Loyalty &amp; Reward Points</h3>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 16 }}><TrophyIcon style={{ width: 18, height: 18, flexShrink: 0 }} /> Loyalty &amp; Reward Points</h3>
                   <p style={{ margin: '4px 0 0', fontSize: 12.5 }}>Your performance points history and lead breakdown</p>
                 </div>
                 <button type="button" className="portal-phone-modal__close" onClick={() => setPointsModalOpen(false)} aria-label="Close points history">

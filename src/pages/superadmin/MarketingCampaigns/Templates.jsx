@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import {
   DocumentTextIcon, PlusIcon, TrashIcon, PencilSquareIcon, ArrowPathIcon,
-  ArrowLeftIcon, XMarkIcon, FunnelIcon,
+  ArrowLeftIcon, XMarkIcon, FunnelIcon, FaceSmileIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -379,7 +379,7 @@ const Templates = () => {
         ? await whatsappCampaignApi.updateTemplate(editing, payload)
         : await whatsappCampaignApi.createTemplate(payload);
       if (resp?.message && /NOT (submitted|pushed)/i.test(resp.message)) {
-        toast(resp.message, { icon: '⚠️', duration: 12000 });
+        toast(resp.message, { icon: <ExclamationTriangleIcon style={{ width: 20, height: 20, color: '#B45309' }} />, duration: 12000 });
       } else {
         toast.success(editing ? 'Template updated' : 'Template created');
       }
@@ -398,7 +398,7 @@ const Templates = () => {
       const resp = await whatsappCampaignApi.deleteTemplate(t.id);
       // Surface whether the provider copy was removed too (or why not).
       if (resp?.message && /not removed/i.test(resp.message)) {
-        toast(resp.message, { icon: '⚠️', duration: 9000 });
+        toast(resp.message, { icon: <ExclamationTriangleIcon style={{ width: 20, height: 20, color: '#B45309' }} />, duration: 9000 });
       } else {
         toast.success(resp?.message || 'Template deleted');
       }
@@ -639,7 +639,7 @@ const Templates = () => {
               <div style={{ marginBottom: 6 }}>
                 <label style={labelStyle}>Message : *</label>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 8, background: 'var(--bg-secondary)', padding: 4, borderRadius: 6, width: 'fit-content' }}>
-                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px' }} onClick={() => setShowEmojis(!showEmojis)} title="Add Emoji">😊</button>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px' }} onClick={() => setShowEmojis(!showEmojis)} title="Add Emoji"><FaceSmileIcon style={{ width: 14, height: 14 }} /></button>
                   <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', fontWeight: 'bold' }} onClick={() => insertFormatting('*', '*')} title="Bold">B</button>
                   <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', fontStyle: 'italic' }} onClick={() => insertFormatting('_', '_')} title="Italic">I</button>
                   <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" style={{ padding: '2px 8px', textDecoration: 'line-through' }} onClick={() => insertFormatting('~', '~')} title="Strikethrough">S</button>

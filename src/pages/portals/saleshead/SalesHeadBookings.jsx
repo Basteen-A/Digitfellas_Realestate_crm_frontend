@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { ClipboardDocumentListIcon, LinkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon, LinkIcon, ArrowPathIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
 import '../collection/CollectionWorkspace.css';
@@ -120,7 +120,9 @@ const SalesHeadBookings = ({ user }) => {
     if (String(ownerId || '') === String(user?.id || '')) {
       navigate(`/portal/lead/${selectedBooking.lead_id}`);
     } else {
-      toast(`This lead is now assigned to ${ownerName || 'another user'} — you can't access it.`, { icon: '🔒' });
+      toast(`This lead is now assigned to ${ownerName || 'another user'} — you can't access it.`, {
+        icon: <LockClosedIcon style={{ width: 20, height: 20, color: 'var(--text-muted)' }} />,
+      });
     }
   };
 

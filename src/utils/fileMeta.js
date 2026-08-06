@@ -1,7 +1,13 @@
 // Shared file-type helpers for document lists / uploaders.
 // Mirrors the logic used in CollectionBookingDetail so every document UI
 // (Record Manager, project archive, collection) looks and behaves the same.
+import {
+  PaperClipIcon, PhotoIcon, DocumentTextIcon, FilmIcon, MusicalNoteIcon,
+  DocumentIcon, TableCellsIcon, PresentationChartBarIcon, ArchiveBoxIcon,
+} from '@heroicons/react/24/outline';
 
+// `Icon` is the heroicon *component* for the file type — render it as
+// `<meta.Icon style={{ width: 16, height: 16 }} />`, not as `{meta.Icon}`.
 export const getFileMeta = (mimeType = '', fileName = '') => {
   const mt = String(mimeType).toLowerCase();
   const name = String(fileName).toLowerCase();
@@ -15,17 +21,17 @@ export const getFileMeta = (mimeType = '', fileName = '') => {
   const isSlide = ['ppt', 'pptx', 'odp'].includes(ext) || mt.includes('presentation') || mt.includes('powerpoint');
   const isZip = ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mt.includes('zip') || mt.includes('compressed');
   const isText = mt.startsWith('text/') || ['txt', 'md', 'json', 'xml', 'log'].includes(ext);
-  let icon = '📎';
-  if (isImage) icon = '🖼️';
-  else if (isPdf) icon = '📕';
-  else if (isVideo) icon = '🎬';
-  else if (isAudio) icon = '🎵';
-  else if (isDoc) icon = '📄';
-  else if (isSheet) icon = '📊';
-  else if (isSlide) icon = '📽️';
-  else if (isZip) icon = '🗜️';
-  else if (isText) icon = '📝';
-  return { icon, isImage, isPdf, ext };
+  let Icon = PaperClipIcon;
+  if (isImage) Icon = PhotoIcon;
+  else if (isPdf) Icon = DocumentTextIcon;
+  else if (isVideo) Icon = FilmIcon;
+  else if (isAudio) Icon = MusicalNoteIcon;
+  else if (isDoc) Icon = DocumentIcon;
+  else if (isSheet) Icon = TableCellsIcon;
+  else if (isSlide) Icon = PresentationChartBarIcon;
+  else if (isZip) Icon = ArchiveBoxIcon;
+  else if (isText) Icon = DocumentTextIcon;
+  return { Icon, isImage, isPdf, ext };
 };
 
 export const humanFileSize = (bytes) => {

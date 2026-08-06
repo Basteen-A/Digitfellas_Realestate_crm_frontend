@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
+import {
+  MagnifyingGlassIcon, ArrowPathIcon, PhoneIcon, EnvelopeIcon, BuildingOffice2Icon,
+  UserIcon, CheckCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, PaperAirplaneIcon,
+} from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 
 const ROLE_LABELS = { TC: 'Telecaller', SM: 'Sales Manager', SH: 'Sales Head', COL: 'Collection' };
@@ -81,7 +85,9 @@ const SalesManagerPullLead = ({ user }) => {
             disabled={searching || phone.length < 7}
             style={{ height: 42, padding: '0 24px' }}
           >
-            {searching ? '⏳ Searching...' : ' Search'}
+            {searching
+              ? <><ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4 }} />Searching...</>
+              : <><MagnifyingGlassIcon style={{ width: 14, height: 14, marginRight: 4 }} />Search</>}
           </button>
         </div>
       </div>
@@ -91,7 +97,7 @@ const SalesManagerPullLead = ({ user }) => {
         <div className="crm-card">
           {results.length === 0 && !searching && (
             <div className="empty-state">
-              <div className="empty-icon"></div>
+              <div className="empty-icon"><MagnifyingGlassIcon style={{ width: 44, height: 44, color: 'var(--text-muted)' }} /></div>
               <div className="empty-title">No leads found</div>
               <div className="empty-desc">No leads match this phone number. The customer may be a new lead.</div>
             </div>
@@ -113,8 +119,15 @@ const SalesManagerPullLead = ({ user }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                     <div>
                       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{lead.fullName}</div>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-                        📞 {lead.phone} {lead.email ? `· ✉️ ${lead.email}` : ''}
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <PhoneIcon style={{ width: 13, height: 13, flexShrink: 0 }} />{lead.phone}
+                        </span>
+                        {lead.email && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            · <EnvelopeIcon style={{ width: 13, height: 13, flexShrink: 0 }} />{lead.email}
+                          </span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                         <span className="crm-badge" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: 11 }}>
@@ -122,12 +135,16 @@ const SalesManagerPullLead = ({ user }) => {
                         </span>
                         <span className="crm-badge" style={{ fontSize: 11 }}>{lead.stageLabel}</span>
                         <span className="crm-badge" style={{ fontSize: 11 }}>{lead.statusLabel}</span>
-                        {lead.project && <span className="crm-badge" style={{ fontSize: 11 }}>🏗️ {lead.project}</span>}
+                        {lead.project && (
+                          <span className="crm-badge" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <BuildingOffice2Icon style={{ width: 12, height: 12, flexShrink: 0 }} />{lead.project}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-blue)' }}>
-                        👤 {lead.assignedToName}
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-blue)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <UserIcon style={{ width: 13, height: 13, flexShrink: 0 }} />{lead.assignedToName}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                         {ROLE_LABELS[lead.assignedToRole] || lead.assignedToRoleName}
@@ -137,16 +154,16 @@ const SalesManagerPullLead = ({ user }) => {
 
                   {/* Pull Request Action */}
                   {lead.hasPendingPullRequest ? (
-                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-green-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-green)', fontWeight: 600 }}>
-                      ✅ Pull request sent
+                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-green-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircleIcon style={{ width: 15, height: 15, flexShrink: 0 }} />Pull request sent
                     </div>
                   ) : lead.assignedToId === user?.id ? (
-                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-blue-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-blue)', fontWeight: 600 }}>
-                      ℹ️ This lead is already assigned to you
+                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-blue-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-blue)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <InformationCircleIcon style={{ width: 15, height: 15, flexShrink: 0 }} />This lead is already assigned to you
                     </div>
                   ) : lead.assignedToRole !== 'TC' ? (
-                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-yellow-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-yellow)', fontWeight: 600 }}>
-                      ⚠️ Pull request allowed only for Telecaller-owned leads
+                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-yellow-bg)', borderRadius: 8, fontSize: 13, color: 'var(--accent-yellow)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <ExclamationTriangleIcon style={{ width: 15, height: 15, flexShrink: 0 }} />Pull request allowed only for Telecaller-owned leads
                     </div>
                   ) : (
                     <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -163,7 +180,9 @@ const SalesManagerPullLead = ({ user }) => {
                         disabled={sending[lead.id]}
                         style={{ whiteSpace: 'nowrap' }}
                       >
-                        {sending[lead.id] ? '⏳ Sending...' : '📤 Send Pull Request'}
+                        {sending[lead.id]
+                          ? <><ArrowPathIcon style={{ width: 14, height: 14, marginRight: 4 }} />Sending...</>
+                          : <><PaperAirplaneIcon style={{ width: 14, height: 14, marginRight: 4 }} />Send Pull Request</>}
                       </button>
                     </div>
                   )}

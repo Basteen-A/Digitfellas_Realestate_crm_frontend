@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   PlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon,
-  ArrowsRightLeftIcon, XMarkIcon, CircleStackIcon,
+  ArrowsRightLeftIcon, XMarkIcon, CircleStackIcon, MapPinIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import DangerDeleteModal from '../../../components/common/DangerDeleteModal';
@@ -333,7 +333,7 @@ const MasterCrudPage = ({ config }) => {
             <span style={{ fontWeight: 600 }}>{field.label || 'Attendance Geofence (Check-In)'}</span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="master-page__secondary" onClick={captureCurrent} disabled={geoCapturing}>
-                📍 {geoCapturing ? 'Locating…' : 'Capture Current Location'}
+                <MapPinIcon style={{ width: 14, height: 14, marginRight: 4 }} />{geoCapturing ? 'Locating…' : 'Capture Current Location'}
               </button>
               {hasCoords && (
                 <a

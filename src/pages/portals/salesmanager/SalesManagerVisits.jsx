@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import siteVisitApi from '../../../api/siteVisitApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon, BuildingOfficeIcon, HomeModernIcon, CheckIcon,
+} from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
 
@@ -159,8 +161,8 @@ const SalesManagerVisits = ({ onNavigate }) => {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                 }}
               >
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  🏢 {p.project_name}
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <BuildingOfficeIcon style={{ width: 13, height: 13, flexShrink: 0 }} />{p.project_name}
                 </div>
                 <div style={{ display: 'flex', gap: 10, fontSize: 11 }}>
                   <div>
@@ -191,7 +193,7 @@ const SalesManagerVisits = ({ onNavigate }) => {
           <p>Loading visits...</p>
         </div>
       ) : filteredVisits.length === 0 ? (
-        <div className="crm-card"><div className="empty-state"><div className="empty-icon">🏠</div><div className="empty-title">No visits found</div><div className="empty-desc">There are no visits in the "{filter}" category.</div></div></div>
+        <div className="crm-card"><div className="empty-state"><div className="empty-icon"><HomeModernIcon style={{ width: 44, height: 44, color: 'var(--text-muted)' }} /></div><div className="empty-title">No visits found</div><div className="empty-desc">There are no visits in the "{filter}" category.</div></div></div>
       ) : (
         <div className="crm-card">
           <div className="crm-card-body-flush" style={{ overflowX: 'auto' }}>
@@ -338,7 +340,7 @@ const SalesManagerVisits = ({ onNavigate }) => {
               </div>
               <div className="col-modal-footer">
                 <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setCompletingVisit(null)}>Cancel</button>
-                <button type="submit" className="crm-btn crm-btn-success">💾 Save Completion</button>
+                <button type="submit" className="crm-btn crm-btn-success"><CheckIcon style={{ width: 14, height: 14, marginRight: 4 }} />Save Completion</button>
               </div>
             </form>
           </div>

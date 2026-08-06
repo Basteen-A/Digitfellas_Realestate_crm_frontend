@@ -244,10 +244,10 @@ const adminSidebar = [
     icon: NavSpeakerphone,
     children: [
       { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
-      { label: 'Marketing Metrix', path: '/super-admin/marketing-metrix' },
-      { label: 'Marketing Campaigns', path: '/super-admin/marketing-campaigns' },
+      { label: 'Campaigns', path: '/super-admin/marketing-metrix' },
+      { label: 'WA Campaigns', path: '/super-admin/marketing-campaigns' },
       { label: 'Templates', path: '/super-admin/marketing-templates' },
-      { label: 'WhatsApp Settings', path: '/super-admin/whatsapp-settings' },
+      
     ],
   },
   {
@@ -316,6 +316,7 @@ const adminSidebar = [
       { label: 'Terms & Conditions', path: '/super-admin/terms-and-conditions' },
       { label: 'Departments', path: '/super-admin/departments' },
       { label: 'Sub-Departments', path: '/super-admin/sub-departments' },
+      { label: 'WA Settings', path: '/super-admin/whatsapp-settings' },
     ],
   },
 ];

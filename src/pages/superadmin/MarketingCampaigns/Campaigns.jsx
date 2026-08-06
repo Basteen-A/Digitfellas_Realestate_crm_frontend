@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import toast from 'react-hot-toast';
 import {
   MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, CheckCircleIcon, XCircleIcon, ArrowLeftIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import leadStatusApi from '../../../api/leadStatusApi';
@@ -324,7 +325,7 @@ const Campaigns = () => {
               <HeaderMediaInput value={headerImageUrl} onChange={setHeaderImageUrl} />
               {needsHeaderMedia && (
                 <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
+                  <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
                   <span>
                     This template has a <strong>{selectedTemplate.header_type}</strong> header — you <strong>must upload a file</strong> above
                     before sending, otherwise WhatsApp will reject every message.
@@ -332,8 +333,9 @@ const Campaigns = () => {
                 </div>
               )}
               {/x-amz-(signature|expires|credential)/i.test(headerImageUrl || '') && !String(headerImageUrl || '').includes('sujatha-crm-uploads') && (
-                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309' }}>
-                  ⚠ This is a temporary presigned link that expires within days — use the Upload button for a permanent URL.
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }} />
+                  This is a temporary presigned link that expires within days — use the Upload button for a permanent URL.
                 </div>
               )}
             </div>
@@ -403,7 +405,7 @@ const Campaigns = () => {
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="page-header-left">
-          <h1><MegaphoneIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />Marketing Campaigns</h1>
+          <h1><MegaphoneIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />WhatsApp Campaigns</h1>
           <p className="hidden sm:block">Send approved WhatsApp templates to filtered leads and track delivery</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>

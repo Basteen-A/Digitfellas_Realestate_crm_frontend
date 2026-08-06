@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Cog6ToothIcon, PaperAirplaneIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, PaperAirplaneIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import HeaderMediaInput from './HeaderMediaInput';
@@ -200,7 +200,7 @@ const WhatsappSettings = () => {
               <HeaderMediaInput value={testHeaderImageUrl} onChange={setTestHeaderImageUrl} />
               {needsHeaderMedia && (
                 <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
+                  <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
                   <span>
                     This template has a <strong>{selectedTemplate.header_type}</strong> header — you <strong>must upload a file</strong> above
                     before testing, otherwise the send will fail.

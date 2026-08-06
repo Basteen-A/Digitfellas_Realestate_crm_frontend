@@ -52,6 +52,8 @@ import {
   HomeModernIcon,
   ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
+// Solid — this one is a filled timeline marker, not an outline glyph.
+import { StarIcon } from '@heroicons/react/24/solid';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import VoiceNoteField from '../../../components/common/VoiceNoteField';
 import { canUseVoiceNotes } from '../../../utils/voiceNotes';
@@ -1774,8 +1776,8 @@ const LeadDetailsPage = () => {
 
                         {selectedAction.needsSvDetails && selectedAction.code !== 'TC_SV_DONE' && (
                           <>
-                            {/* 📅 Visit Details */}
-                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 6, marginBottom: 4 }}>📅 Visit Details</div>
+                            {/* Visit Details */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 6, marginBottom: 4 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDaysIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Visit Details</span></div>
                             <div className="lead-actions-grid">
                               <label className="lead-actions-label">
                                 Visit Date *
@@ -1819,8 +1821,8 @@ const LeadDetailsPage = () => {
                               </label>
                             </div>
 
-                            {/* 👤 Customer Profile */}
-                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>👤 Customer Profile</div>
+                            {/* Customer Profile */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Customer Profile</span></div>
                             <div className="lead-actions-grid">
                               <label className="lead-actions-label">
                                 Buyer Profile *
@@ -1866,8 +1868,8 @@ const LeadDetailsPage = () => {
                               </label>
                             </div>
 
-                            {/* 🏠 Property Requirement */}
-                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>🏠 Property Requirement</div>
+                            {/* Property Requirement */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Property Requirement</span></div>
                             <div className="lead-actions-grid">
                               <label className="lead-actions-label">
                                 Customer Requirement *
@@ -1927,8 +1929,8 @@ const LeadDetailsPage = () => {
                               />
                             </label>
 
-                            {/* 💰 Purchase Intent */}
-                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>💰 Purchase Intent</div>
+                            {/* Purchase Intent */}
+                            <div className="lead-actions-section-head" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><BanknotesIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Purchase Intent</span></div>
                             <div className="lead-actions-grid">
                               <label className="lead-actions-label">
                                 Purpose Of Purchase *
@@ -2224,7 +2226,7 @@ const LeadDetailsPage = () => {
                     {enquiries.firstEnquiry && (
                       <div className="lead-details-timeline-item">
                         <div className="lead-details-timeline-icon">
-                          <span style={{ fontSize: 10 }}>★</span>
+                          <StarIcon style={{ width: 10, height: 10 }} />
                         </div>
                         <div className="lead-details-timeline-content">
                           <div className="lead-details-timeline-header">
@@ -2729,8 +2731,8 @@ const LeadDetailsPage = () => {
                   {/* ── Contextual: Site Visit Details ── */}
                   {(quickSelectedAction?.needsSvDetails && quickSelectedAction?.code !== 'TC_SV_DONE') && (
                     <div className="qa-drawer-ctx-block">
-                      {/* 📅 Visit Details */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>📅 Visit Details</div>
+                      {/* Visit Details */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDaysIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Visit Details</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Visit Date *</label>
@@ -2784,8 +2786,8 @@ const LeadDetailsPage = () => {
                         </div>
                       </div>
 
-                      {/* 👤 Customer Profile */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>👤 Customer Profile</div>
+                      {/* Customer Profile */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Customer Profile</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Buyer Profile *</label>
@@ -2841,8 +2843,8 @@ const LeadDetailsPage = () => {
                         </div>
                       </div>
 
-                      {/* 🏠 Property Requirement */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>🏠 Property Requirement</div>
+                      {/* Property Requirement */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Property Requirement</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Customer Requirement *</label>
@@ -2917,8 +2919,8 @@ const LeadDetailsPage = () => {
                         />
                       </div>
 
-                      {/* 💰 Purchase Intent */}
-                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>💰 Purchase Intent</div>
+                      {/* Purchase Intent */}
+                      <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><BanknotesIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Purchase Intent</span></div>
                       <div className="qa-drawer-field-row" style={{ marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label className="qa-drawer-field-label">Purpose Of Purchase *</label>

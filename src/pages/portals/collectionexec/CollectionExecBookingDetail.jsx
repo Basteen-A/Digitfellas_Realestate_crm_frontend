@@ -9,7 +9,7 @@ import { openAuthedFile } from '../../../utils/authedFile';
 import {
   ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, CreditCardIcon, PlusIcon,
   CloudArrowUpIcon, DocumentTextIcon, ArrowDownTrayIcon, UserIcon, ClockIcon,
-  CheckCircleIcon, ExclamationTriangleIcon, CalendarDaysIcon,
+  CheckCircleIcon, ExclamationTriangleIcon, CalendarDaysIcon, PaperClipIcon,
 } from '@heroicons/react/24/outline';
 import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
@@ -358,7 +358,9 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
               <div style={{ marginBottom: 12 }}>
                 {selectedFiles.map((f, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '6px 10px', background: 'var(--bg-secondary, #f8fafc)', borderRadius: 6, marginBottom: 6 }}>
-                    <span>📎 {f.name} <span style={{ color: 'var(--text-muted)' }}>· {humanFileSize(f.size)}</span></span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <PaperClipIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> {f.name} <span style={{ color: 'var(--text-muted)' }}>· {humanFileSize(f.size)}</span>
+                    </span>
                     <button type="button" onClick={() => setSelectedFiles((p) => p.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 16 }}>×</button>
                   </div>
                 ))}
@@ -414,7 +416,9 @@ const CollectionExecBookingDetail = ({ bookingId, onBack }) => {
             <div className="qa-drawer-header">
               <div className="qa-drawer-header-left">
                 <div className="qa-drawer-avatar">
-                  {actionMode === 'status' ? '✏️' : actionMode === 'payStatus' ? '💳' : '＋'}
+                  {actionMode === 'status' ? <PencilSquareIcon style={{ width: 20, height: 20 }} />
+                    : actionMode === 'payStatus' ? <CreditCardIcon style={{ width: 20, height: 20 }} />
+                      : <PlusIcon style={{ width: 20, height: 20 }} />}
                 </div>
                 <div>
                   <div className="qa-drawer-name">{buyerName}</div>

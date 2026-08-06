@@ -501,7 +501,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                       return (
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, padding: '3px 0' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-                            <span style={{ fontSize: 14 }}>{meta.icon}</span>
+                            <meta.Icon style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--text-muted, #94a3b8)' }} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{file.name}</span>
                           </span>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -553,7 +553,7 @@ const RecordManagerBookingDetail = ({ bookingId, onBack }) => {
                           <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                             {meta.isImage && viewUrl
                               ? <AuthedImage src={viewUrl} alt={doc.document_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : <span>{meta.icon}</span>}
+                              : <meta.Icon style={{ width: 22, height: 22, color: 'var(--text-muted, #94a3b8)' }} />}
                           </div>
                           <div className="bkd-document-main" style={{ flex: 1, minWidth: 0 }}>
                             <div className="bkd-document-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

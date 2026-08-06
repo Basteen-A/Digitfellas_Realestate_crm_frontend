@@ -4,7 +4,10 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { formatDateTime } from '../../../utils/formatters';
 import { badgeStyle } from '../../../utils/badgeColors';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon, ExclamationTriangleIcon, PhoneIcon, BuildingOffice2Icon,
+  ChatBubbleLeftEllipsisIcon, XCircleIcon, CheckCircleIcon, ClipboardDocumentListIcon,
+} from '@heroicons/react/24/outline';
 import '../common/LeadWorkspacePage.css';
 
 const TelecallerPullRequests = ({ user }) => {
@@ -57,14 +60,16 @@ const TelecallerPullRequests = ({ user }) => {
       </div>
 
       {loading ? (
-        <div className="crm-card" style={{ textAlign: 'center', padding: 40 }}>⏳ Loading...</div>
+        <div className="crm-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 40 }}>
+          <ArrowPathIcon style={{ width: 18, height: 18, color: 'var(--text-muted)' }} /> Loading...
+        </div>
       ) : (
         <>
           {/* Pending Requests */}
           {pending.length > 0 && (
             <div className="crm-card" style={{ marginBottom: 20 }}>
-              <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 700, color: 'var(--accent-yellow)' }}>
-                ⚠️ Pending Requests ({pending.length})
+              <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 700, color: 'var(--accent-yellow)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ExclamationTriangleIcon style={{ width: 16, height: 16, flexShrink: 0 }} />Pending Requests ({pending.length})
               </h3>
               {pending.map((pr) => (
                 <div key={pr.id} style={{
@@ -79,13 +84,19 @@ const TelecallerPullRequests = ({ user }) => {
                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                         {pr.leadName} <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>({pr.leadNumber})</span>
                       </div>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>📞 {pr.leadPhone}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <PhoneIcon style={{ width: 13, height: 13, flexShrink: 0 }} />{pr.leadPhone}
+                      </div>
                       <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                         <span className="crm-badge" style={{ ...badgeStyle(pr.leadStageColor), fontSize: 11 }}>
                           {pr.leadStage}
                         </span>
                         <span className="crm-badge" style={{ fontSize: 11 }}>{pr.leadStatus}</span>
-                        {pr.leadProject && <span className="crm-badge" style={{ fontSize: 11 }}>🏗️ {pr.leadProject}</span>}
+                        {pr.leadProject && (
+                          <span className="crm-badge" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <BuildingOffice2Icon style={{ width: 12, height: 12, flexShrink: 0 }} />{pr.leadProject}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -100,8 +111,8 @@ const TelecallerPullRequests = ({ user }) => {
                   </div>
 
                   {pr.note && (
-                    <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
-                      💬 {pr.note}
+                    <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: 6, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                      <ChatBubbleLeftEllipsisIcon style={{ width: 14, height: 14, flexShrink: 0, marginTop: 2 }} />{pr.note}
                     </div>
                   )}
 
@@ -111,14 +122,14 @@ const TelecallerPullRequests = ({ user }) => {
                       onClick={() => handleRespond(pr.id, 'REJECTED')}
                       disabled={responding[pr.id]}
                     >
-                      ❌ Reject
+                      <XCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Reject
                     </button>
                     <button
                       className="crm-btn crm-btn-success crm-btn-sm"
                       onClick={() => handleRespond(pr.id, 'ACCEPTED')}
                       disabled={responding[pr.id]}
                     >
-                      ✅ Accept & Transfer
+                      <CheckCircleIcon style={{ width: 14, height: 14, marginRight: 4 }} />Accept &amp; Transfer
                     </button>
                   </div>
                 </div>
@@ -130,7 +141,7 @@ const TelecallerPullRequests = ({ user }) => {
           {pending.length === 0 && (
             <div className="crm-card" style={{ marginBottom: 20 }}>
               <div className="empty-state">
-                <div className="empty-icon">✅</div>
+                <div className="empty-icon"><CheckCircleIcon style={{ width: 44, height: 44, color: 'var(--text-muted)' }} /></div>
                 <div className="empty-title">No pending requests</div>
                 <div className="empty-desc">You have no pending pull requests from Sales Managers</div>
               </div>
@@ -140,8 +151,8 @@ const TelecallerPullRequests = ({ user }) => {
           {/* History */}
           {history.length > 0 && (
             <div className="crm-card">
-              <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                📋 History ({history.length})
+              <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ClipboardDocumentListIcon style={{ width: 16, height: 16, flexShrink: 0 }} />History ({history.length})
               </h3>
               {history.map((pr) => (
                 <div key={pr.id} style={{
@@ -165,8 +176,13 @@ const TelecallerPullRequests = ({ user }) => {
                     background: pr.status === 'ACCEPTED' ? 'var(--accent-green-bg)' : 'var(--accent-red-bg)',
                     color: pr.status === 'ACCEPTED' ? 'var(--accent-green)' : 'var(--accent-red)',
                     fontSize: 11,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}>
-                    {pr.status === 'ACCEPTED' ? '✅ Accepted' : '❌ Rejected'}
+                    {pr.status === 'ACCEPTED'
+                      ? <><CheckCircleIcon style={{ width: 12, height: 12, flexShrink: 0 }} />Accepted</>
+                      : <><XCircleIcon style={{ width: 12, height: 12, flexShrink: 0 }} />Rejected</>}
                   </span>
                 </div>
               ))}

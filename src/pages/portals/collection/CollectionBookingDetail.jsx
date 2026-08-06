@@ -26,7 +26,8 @@ import {
   ExclamationTriangleIcon, PlusIcon,
   CheckCircleIcon, CalendarDaysIcon, ClipboardDocumentListIcon, ShieldCheckIcon,
   ArrowDownTrayIcon, XCircleIcon,
-  ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon, InformationCircleIcon
+  ChevronDownIcon, ChevronRightIcon, XMarkIcon, CheckIcon, InformationCircleIcon,
+  TrophyIcon, ArrowUturnLeftIcon
 } from '@heroicons/react/24/outline';
 import { badgeColors } from '../../../utils/badgeColors';
 import '../common/LeadWorkspacePage.css';
@@ -1088,7 +1089,7 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                     act.activity_type === 'PAYMENT_STATUS_CHANGE' ? <CreditCardIcon style={{ width: 13, height: 13 }} /> :
                       act.activity_type === 'PAYMENT_RECORDED' ? <BanknotesIcon style={{ width: 13, height: 13 }} /> :
                         act.activity_type === 'PAYMENT_VERIFIED' ? <ShieldCheckIcon style={{ width: 13, height: 13 }} /> :
-                          act.activity_type === 'POINTS_AWARDED' ? <span style={{ fontSize: 13 }}>🏆</span> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
+                          act.activity_type === 'POINTS_AWARDED' ? <TrophyIcon style={{ width: 13, height: 13 }} /> : <PencilSquareIcon style={{ width: 13, height: 13 }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{act.title}</div>
@@ -1146,7 +1147,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             <button className="bkd-btn bkd-btn-primary" style={{ background: '#DC2626' }} onClick={() => setWorkflowMode('confirmCancel')}><XCircleIcon style={{ width: 14, height: 14 }} /> Confirm Cancel</button>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && !booking.custom_fields?.cancel_approved_by && !booking.custom_fields?.cancel_rejected_by && (
-            <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, padding: '6px 12px', background: '#F59E0B18', borderRadius: 6 }}>⏳ Awaiting SH Approval</span>
+            <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, padding: '6px 12px', background: '#F59E0B18', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <ClockIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Awaiting SH Approval
+            </span>
           )}
           {(booking.bookingStatus?.status_code || booking.status_code) === 'REQUEST_TO_CANCEL' && booking.custom_fields?.cancel_rejected_by && (
             <>
@@ -1173,7 +1176,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                 </button>
               </>
             ) : (
-              <span style={{ fontSize: 12, color: '#B45309', fontWeight: 600, padding: '6px 12px', background: '#F59E0B18', borderRadius: 6 }}>⏳ Awaiting Super Admin Approval</span>
+              <span style={{ fontSize: 12, color: '#B45309', fontWeight: 600, padding: '6px 12px', background: '#F59E0B18', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <ClockIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Awaiting Super Admin Approval
+              </span>
             )
           )}
           {/* Collection Executive assignees — circle avatars (like the task assignee UI). */}
@@ -1797,7 +1802,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       title={editable ? 'Click to edit this payment' : 'Click to view this payment'}
                       onClick={editable ? () => openEditPayment(p) : () => setViewPaymentId(p.id)}>
                       <td>{fmtD(p.payment_date)}</td>
-                      <td style={{ fontWeight: 400, color: '#1f2937' }}>{isRefund ? '↩ Refund' : catKey}</td>
+                      <td style={{ fontWeight: 400, color: '#1f2937' }}>
+                        {isRefund ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <ArrowUturnLeftIcon style={{ width: 13, height: 13, flexShrink: 0 }} /> Refund
+                          </span>
+                        ) : catKey}
+                      </td>
                       <td style={{ color: isRefund ? '#DC2626' : undefined }}>
                         {isRefund ? '−' : ''}{(p.amount)}
                       </td>
@@ -2297,7 +2308,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                       return (
                         <div style={{ marginTop: 14 }}>
                           <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: '#991B1B' }}>
-                            <strong>⚠ Cancelling is permanent.</strong> The unit is released back to <strong>Available</strong> and the lead is moved to <strong>Lost</strong>. {totalPaid > 0.01 ? 'The full collected amount must be refunded first.' : 'No amount has been collected, so no refund is required.'}
+                            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Cancelling is permanent.
+                            </strong> The unit is released back to <strong>Available</strong> and the lead is moved to <strong>Lost</strong>. {totalPaid > 0.01 ? 'The full collected amount must be refunded first.' : 'No amount has been collected, so no refund is required.'}
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12 }}>
                             <span>Total Collected</span>
@@ -2660,7 +2673,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   color: (workflowMode === 'register' || workflowMode === 'revertCancel') ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
                   border: `2px solid ${(workflowMode === 'register' || workflowMode === 'revertCancel') ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
                 }}>
-                  {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : (workflowMode === 'refund' || workflowMode === 'revertCancel') ? '↩' : '⚠'}
+                  {workflowMode === 'register' ? <ClipboardDocumentListIcon style={{ width: 20, height: 20 }} />
+                    : workflowMode === 'emi' ? <BanknotesIcon style={{ width: 20, height: 20 }} />
+                      : workflowMode === 'confirmCancel' ? <XMarkIcon style={{ width: 20, height: 20 }} />
+                        : (workflowMode === 'refund' || workflowMode === 'revertCancel') ? <ArrowUturnLeftIcon style={{ width: 20, height: 20 }} />
+                          : <ExclamationTriangleIcon style={{ width: 20, height: 20 }} />}
                 </div>
                 <div>
                   <div className="qa-drawer-name">
@@ -2722,7 +2739,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {workflowMode === 'revertCancel' && (
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 12, color: '#166534' }}>
-                  <strong>ℹ Note:</strong> This will reactivate the booking and revert it back to its original active status (<strong>{booking.custom_fields?.previous_status_name || 'Booked'}</strong>).
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <InformationCircleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Note:
+                  </strong> This will reactivate the booking and revert it back to its original active status (<strong>{booking.custom_fields?.previous_status_name || 'Booked'}</strong>).
                 </div>
                 <div className="bkd-form-group">
                   <label className="bkd-form-label">Remarks / Follow-up Notes</label>
@@ -2754,7 +2773,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {workflowMode === 'requestCancel' && (
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B44', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 12, color: '#92400E' }}>
-                  <strong>⚠ Note:</strong> This will send the request to the Sales Head for 7-day follow-up review.
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Note:
+                  </strong> This will send the request to the Sales Head for 7-day follow-up review.
                 </div>
                 <div className="bkd-form-group">
                   <label className="bkd-form-label">Cancel Reason *</label>
@@ -2786,7 +2807,9 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
             {workflowMode === 'confirmCancel' && (
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 16, marginBottom: 16, fontSize: 13 }}>
-                  <strong>⚠ Confirm Cancellation</strong>
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ExclamationTriangleIcon style={{ width: 15, height: 15, flexShrink: 0 }} /> Confirm Cancellation
+                  </strong>
                   <p style={{ margin: '8px 0 0', color: '#991B1B' }}>SH has approved this cancellation. This action is permanent: the booking is cancelled, the unit is released back to <strong>Available</strong>, and the lead is moved to <strong>Lost</strong>.</p>
                 </div>
 

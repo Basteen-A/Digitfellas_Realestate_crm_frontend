@@ -347,7 +347,7 @@ const ProjectDocumentsPanel = ({ project }) => {
                 <div className="proj-docs__thumb">
                   {meta.isImage && href
                     ? <AuthedImage src={href} alt={doc.document_name} />
-                    : <span>{meta.icon}</span>}
+                    : <meta.Icon style={{ width: 22, height: 22, color: 'var(--text-muted, #94a3b8)' }} />}
                 </div>
                 <div className="proj-docs__row-main">
                   <div className="proj-docs__row-name">{doc.document_name || doc.file_name}</div>

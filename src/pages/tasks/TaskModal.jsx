@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   PlusIcon, ChevronDownIcon, ClipboardDocumentListIcon, ArrowPathIcon,
   CheckCircleIcon, LockClosedIcon, XCircleIcon, ClockIcon, MicrophoneIcon,
-  StopCircleIcon, TrashIcon, DocumentIcon,
+  StopCircleIcon, TrashIcon, DocumentIcon, DocumentTextIcon, PaperClipIcon,
 } from '@heroicons/react/24/outline';
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
@@ -707,7 +707,9 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                   <span>Priority: {cap(task.priority)}</span>
                   {task.creator && <span>· by {fullName(task.creator)}</span>}
                   {task.status === 'completed' && autoCloseLabel(task.completed_at) && (
-                    <span style={{ color: '#B45309', fontWeight: 600 }}>· ⏳ {autoCloseLabel(task.completed_at)}</span>
+                    <span style={{ color: '#B45309', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      · <ClockIcon style={{ width: 14, height: 14 }} /> {autoCloseLabel(task.completed_at)}
+                    </span>
                   )}
                 </div>
               )}
@@ -1001,7 +1003,9 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                                 className="tm-attach-row"
                                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
                                 <span style={{ width: 34, height: 34, borderRadius: 6, background: '#f1f5f9', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                  {isImg ? <AuthedImage src={att.file_url} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{(att.mime_type || '').includes('pdf') ? '📄' : '📎'}</span>}
+                                  {isImg ? <AuthedImage src={att.file_url} alt={att.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : ((att.mime_type || '').includes('pdf')
+                                    ? <DocumentTextIcon style={{ width: 18, height: 18, color: 'var(--text-muted)' }} />
+                                    : <PaperClipIcon style={{ width: 18, height: 18, color: 'var(--text-muted)' }} />)}
                                 </span>
                                 <span style={{ flex: 1, minWidth: 0 }}>
                                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

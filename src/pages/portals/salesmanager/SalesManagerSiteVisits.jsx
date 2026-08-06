@@ -8,6 +8,7 @@ import motivationApi from '../../../api/motivationApi';
 import {
   HomeModernIcon, MapPinIcon, ArrowPathIcon, CheckCircleIcon, CalendarDaysIcon,
   PhoneIcon, HandRaisedIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon,
+  UserIcon, BanknotesIcon,
 } from '@heroicons/react/24/outline';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -1047,8 +1048,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
                     <div className="qa-drawer-divider" />
 
-                    {/* ── 📅 Visit Details ── */}
-                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>📅 Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</div>
+                    {/* ── Visit Details ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDaysIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Visit Details {svFieldsRequired ? '(Required)' : '(Optional)'}</span></div>
                     <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
                         <label className="qa-drawer-field-label">Visit Date {svFieldsRequired ? '*' : ''}</label>
@@ -1072,8 +1073,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                       </div>
                     </div>
 
-                    {/* ── 👤 Customer Profile ── */}
-                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>👤 Customer Profile</div>
+                    {/* ── Customer Profile ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Customer Profile</span></div>
                     <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
                         <label className="qa-drawer-field-label">Buyer Profile *</label>
@@ -1102,8 +1103,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                       </div>
                     </div>
 
-                    {/* ── 🏠 Property Requirement ── */}
-                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>🏠 Property Requirement</div>
+                    {/* ── Property Requirement ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HomeModernIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Property Requirement</span></div>
                     <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
                         <label className="qa-drawer-field-label">Customer Requirement *</label>
@@ -1137,8 +1138,8 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                       </div>
                     </div>
 
-                    {/* ── 💰 Purchase Intent ── */}
-                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}>💰 Purchase Intent</div>
+                    {/* ── Purchase Intent ── */}
+                    <div className="qa-drawer-section" style={{ padding: '0 0 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><BanknotesIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Purchase Intent</span></div>
                     <div className="sm-sv-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
                       <div>
                         <label className="qa-drawer-field-label">Purpose Of Purchase *</label>

@@ -1066,7 +1066,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                       return (
                         <div style={{ marginTop: 14 }}>
                           <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: '#991B1B' }}>
-                            <strong>⚠ Cancelling is permanent.</strong> The unit is released back to <strong>Available</strong> and the lead is moved to <strong>Lost</strong>. {drawerTotalPaid > 0.01 ? 'The full collected amount must be refunded first.' : 'No amount has been collected, so no refund is required.'}
+                            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Cancelling is permanent.
+                            </strong> The unit is released back to <strong>Available</strong> and the lead is moved to <strong>Lost</strong>. {drawerTotalPaid > 0.01 ? 'The full collected amount must be refunded first.' : 'No amount has been collected, so no refund is required.'}
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary, #F8FAFC)', border: '1px solid var(--border-primary, #E2E8F0)', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12 }}>
                             <span>Total Collected</span>
@@ -1418,7 +1420,10 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
                   color: workflowMode === 'register' ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444',
                   border: `2px solid ${workflowMode === 'register' ? '#16A34A' : workflowMode === 'emi' ? '#F59E0B' : '#EF4444'}`,
                 }}>
-                  {workflowMode === 'register' ? '📋' : workflowMode === 'emi' ? '💰' : workflowMode === 'confirmCancel' ? '✕' : '⚠'}
+                  {workflowMode === 'register' ? <ClipboardDocumentListIcon style={{ width: 20, height: 20 }} />
+                    : workflowMode === 'emi' ? <BanknotesIcon style={{ width: 20, height: 20 }} />
+                      : workflowMode === 'confirmCancel' ? <XMarkIcon style={{ width: 20, height: 20 }} />
+                        : <ExclamationTriangleIcon style={{ width: 20, height: 20 }} />}
                 </div>
                 <div>
                   <div className="qa-drawer-name">
@@ -1463,7 +1468,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
             {workflowMode === 'requestCancel' && (
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B44', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 12, color: '#92400E' }}>
-                  <strong>⚠ Note:</strong> This will send the request to the Sales Head for 7-day follow-up review.
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0 }} /> Note:
+                  </strong> This will send the request to the Sales Head for 7-day follow-up review.
                 </div>
                 <div className="bkd-form-group">
                   <label className="bkd-form-label">Cancel Reason *</label>
@@ -1490,7 +1497,9 @@ export const CollectionBookings = ({ user, onSelectBooking, initialTab }) => {
               return (
                 <div style={{ padding: '16px 20px' }}>
                   <div style={{ background: '#FEE2E2', border: '1px solid #EF444444', borderRadius: 8, padding: 16, marginBottom: 16, fontSize: 13 }}>
-                    <strong>⚠ Confirm Cancellation</strong>
+                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <ExclamationTriangleIcon style={{ width: 15, height: 15, flexShrink: 0 }} /> Confirm Cancellation
+                    </strong>
                     <p style={{ margin: '8px 0 0', color: '#991B1B' }}>SH has approved this cancellation. This action is permanent: the booking is cancelled, the unit is released back to <strong>Available</strong>, and the lead is moved to <strong>Lost</strong>.</p>
                   </div>
 

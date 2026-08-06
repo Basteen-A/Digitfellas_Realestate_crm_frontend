@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon, ExclamationTriangleIcon, RocketLaunchIcon, BuildingOffice2Icon,
+} from '@heroicons/react/24/outline';
 
 const ELIGIBLE_STAGE_CODES = ['VISIT', 'REVISIT'];
 
@@ -82,7 +84,7 @@ const SalesManagerPushLeads = ({ onNavigate }) => {
       {!canPush && !loading && (
         <div className="crm-card" style={{ marginBottom: 16 }}>
           <div className="empty-state" style={{ padding: '24px 20px' }}>
-            <div className="empty-icon">⚠️</div>
+            <div className="empty-icon"><ExclamationTriangleIcon style={{ width: 44, height: 44, color: 'var(--text-muted)' }} /></div>
             <div className="empty-title">No Sales Head available</div>
             <div className="empty-desc">Please ask admin to create and activate Sales Head users.</div>
           </div>
@@ -94,7 +96,7 @@ const SalesManagerPushLeads = ({ onNavigate }) => {
       ) : leads.length === 0 ? (
         <div className="crm-card">
           <div className="empty-state" style={{ padding: '60px 20px' }}>
-            <div className="empty-icon">🚀</div>
+            <div className="empty-icon"><RocketLaunchIcon style={{ width: 44, height: 44, color: 'var(--text-muted)' }} /></div>
             <div className="empty-title">No leads ready to push</div>
             <div className="empty-desc">Leads in VISIT or REVISIT stage will appear here.</div>
             <button className="crm-btn crm-btn-primary" style={{ marginTop: 16 }} onClick={() => onNavigate?.('leads')}>Open My Leads</button>
@@ -123,7 +125,11 @@ const SalesManagerPushLeads = ({ onNavigate }) => {
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       <span className="crm-badge" style={{ fontSize: 11 }}>{lead.stageLabel}</span>
                       <span className="crm-badge" style={{ fontSize: 11 }}>{lead.statusLabel}</span>
-                      {lead.project && <span className="crm-badge" style={{ fontSize: 11 }}>🏗️ {lead.project}</span>}
+                      {lead.project && (
+                        <span className="crm-badge" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <BuildingOffice2Icon style={{ width: 12, height: 12, flexShrink: 0 }} />{lead.project}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
