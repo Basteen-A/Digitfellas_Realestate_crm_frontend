@@ -245,7 +245,7 @@ const adminSidebar = [
     children: [
       { label: 'Campaigns', path: '/super-admin/marketing-metrix' },
       { label: 'WA Campaigns', path: '/super-admin/marketing-campaigns' },
-      { label: 'Templates', path: '/super-admin/marketing-templates' },
+      { label: 'WA Templates', path: '/super-admin/marketing-templates' },
       { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
     ],
   },
@@ -305,6 +305,9 @@ const adminSidebar = [
   { label: 'Auto-Reassign Rules', path: '/super-admin/reallotment-rules', icon: NavRoute },
   { label: 'Reassign History', path: '/super-admin/reallotment-logs', icon: NavHistory },
   { label: 'Automated Actions', path: '/super-admin/workflow-actions', icon: NavBolt },
+  // Date-triggered WhatsApp drips - sits with the other automation rules rather
+  // than under Campaigns, because it is a standing rule, not a one-off send-out.
+  { label: 'WA Automation', path: '/super-admin/wa-automation', icon: NavSpeakerphone },
   { label: 'Marketing Integrations', path: '/super-admin/marketing-api-keys', icon: NavPlug },
   {
     label: 'Other Settings',

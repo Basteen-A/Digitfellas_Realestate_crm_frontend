@@ -102,6 +102,7 @@ const MODULE_LINKS = {
   automation: {
     section: 'AUTOMATION', items: [
       { label: 'Workflow Actions', path: '/super-admin/workflow-actions', icon: BoltIcon, level: 'write' },
+      { label: 'WA Automation', path: '/super-admin/wa-automation', icon: ChatBubbleLeftRightIcon, level: 'write' },
       { label: 'Reallocation Rules', path: '/super-admin/reallotment-rules', icon: ArrowsRightLeftIcon, level: 'write' },
       { label: 'Reallocation History', path: '/super-admin/reallotment-logs', icon: ArrowPathIcon },
     ]

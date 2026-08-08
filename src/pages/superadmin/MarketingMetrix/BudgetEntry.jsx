@@ -40,14 +40,25 @@ import marketingBudgetApi from '../../../api/marketingBudgetApi';
 import leadSubSourceApi from '../../../api/leadSubSourceApi';
 import { formatCurrencyExact } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { Card, Table, Tr, Td, TotalRow } from '../Reports/analytics/ui';
+import { Card, Table, Tr, Td, TotalRow, HeadTip } from '../Reports/analytics/ui';
 import BudgetDrawer from './BudgetDrawer';
+
+// The ledger's cost-per-lead is the same figure the row drawer opens on, computed by
+// the same latest-touch attribution rule server-side - so the column and the drawer can
+// never disagree. Stated here because a cost-per is only meaningful once you know which
+// leads it divided by.
+const COST_PER_LEAD_TIP = 'Budget ÷ the leads this line brought in over its own period. '
+  + 'Leads are counted against the source, sub-source and campaign of their latest marketing touch - '
+  + 'their creation, or their newest re-enquiry, whichever is later. '
+  + 'Shown as "-" when the line has no leads yet or no budget: that means the cost is unknown, not zero. '
+  + 'Open the row for the full funnel and the cost per qualified lead, site visit and booking.';
 
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 const hintStyle = { fontSize: 11.5, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 };
 
 const money = (v) => formatCurrencyExact(Number(v) || 0);
+const cnt = (v) => (Number(v) || 0).toLocaleString('en-IN');
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
 
 // A DATEONLY column comes back as 'YYYY-MM-DD' - exactly what <input type="date"> wants,
@@ -346,7 +357,11 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
         right={`Total ${money(total)}`}
       >
         <Table
-          head={['Period', 'Days', 'Campaign', 'Source', 'Sub Source', 'Budget', 'Per day', 'Remarks', '']}
+          head={[
+            'Campaign', 'Period', 'Days', 'Source', 'Sub Source', 'Budget', 'Per day',
+            <HeadTip key="cpl" label="Cost per Lead" tip={COST_PER_LEAD_TIP} />,
+            '',
+          ]}
           colSpan={9}
           empty={!loading && rows.length === 0}
           emptyLabel="No budget recorded for this period. Add a line to start measuring cost per lead."
@@ -355,9 +370,11 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
             const names = rowSubSourceNames(r);
             return (
               <Tr key={r.id} onClick={() => setDrawerId(r.id)}>
-                <Td bold>{fmtPeriod(r.start_date, r.end_date)}</Td>
+                <Td bold className={r.campaign_name ? '' : 'opacity-60'}>
+                  {r.campaign_name || 'Not tied to a campaign'}
+                </Td>
+                <Td>{fmtPeriod(r.start_date, r.end_date)}</Td>
                 <Td className="opacity-70">{r.day_count || dayCount(r.start_date, r.end_date) || '-'}</Td>
-                <Td className={r.campaign_name ? '' : 'opacity-60'}>{r.campaign_name || 'Not tied to a campaign'}</Td>
                 <Td>{r.source_name || r.leadSource?.source_name || '-'}</Td>
                 <Td className={names.length ? '' : 'opacity-60'}>
                   {names.length ? names.join(', ') : 'Whole source'}
@@ -369,7 +386,14 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
                     return d > 0 ? money((Number(r.amount) || 0) / d) : '-';
                   })()}
                 </Td>
-                <Td className="opacity-70">{r.remarks || '-'}</Td>
+                {/* null = not computable (no leads, or no budget). Shown as "-" with the
+                    lead count beside it - 0 would claim the leads were free. */}
+                <Td bold={r.cost_per_lead != null}>
+                  {r.cost_per_lead != null ? money(r.cost_per_lead) : '-'}
+                  <span className="opacity-60" style={{ fontWeight: 400 }}>
+                    {` · ${cnt(r.lead_count)} lead${Number(r.lead_count) === 1 ? '' : 's'}`}
+                  </span>
+                </Td>
                 <Td className="whitespace-nowrap text-right">
                   <button
                     className="crm-btn crm-btn-ghost crm-btn-sm"

@@ -26,7 +26,7 @@ import {
   CurrencyRupeeIcon, ArrowPathIcon, ArrowDownTrayIcon, FunnelIcon, ChevronDownIcon,
   ChevronRightIcon, MegaphoneIcon, UsersIcon, CheckBadgeIcon, MapPinIcon,
   BuildingOffice2Icon, TrophyIcon, ScaleIcon, ChartPieIcon, Squares2X2Icon,
-  BanknotesIcon, ArrowTrendingUpIcon,
+  BanknotesIcon, ArrowTrendingUpIcon, InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import reportApi from '../../../api/reportApi';
 import leadSourceApi from '../../../api/leadSourceApi';
@@ -151,9 +151,10 @@ const MM = {
 };
 
 const GROUPS = [
+  { label: 'Spend', keys: ['budgets'] },
   { label: 'Cost Metrics', keys: ['source', 'subsource'] },
   { label: 'Analysis', keys: ['efficiency'] },
-  { label: 'Spend', keys: ['budgets'] },
+
 ];
 const FIRST_KEY = GROUPS[0].keys[0];
 
@@ -582,6 +583,8 @@ const MarketingMetrixPage = () => {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // "How to read this page" starts closed and opens from the (i) in the header.
+  const [noteOpen, setNoteOpen] = useState(false);
   const [selected, setSelected] = useState(FIRST_KEY);
 
   const chartRefs = useRef({});
@@ -639,31 +642,50 @@ const MarketingMetrixPage = () => {
   return (
     <div className="reports-page">
       <div className="page-header flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="page-header-left">
-          <h1>
+        <div className="page-header-left" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{ margin: 0 }}>
             <CurrencyRupeeIcon style={{ width: 22, height: 22, marginRight: 6, verticalAlign: 'text-bottom' }} />
             Campaigns
           </h1>
-          <p className="hidden sm:block">Marketing spend against leads, qualified leads, site visits & bookings - and what each one costs</p>
+          {/* The two rules below change what every number on this page means, so they
+              stay one click away rather than scrolled past - the note is long, and
+              regulars stop reading a banner that is always open. */}
+          <button
+            type="button"
+            onClick={() => setNoteOpen((o) => !o)}
+            aria-expanded={noteOpen}
+            aria-controls="mm-how-to-read"
+            title={noteOpen ? 'Hide how to read this page' : 'How to read this page'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: noteOpen ? '#EFF6FF' : 'transparent',
+              color: noteOpen ? '#2563eb' : 'var(--text-muted)',
+            }}
+          >
+            <InformationCircleIcon style={{ width: 18, height: 18 }} />
+            <span className="sr-only">How to read this page</span>
+          </button>
         </div>
       </div>
 
-      {/* Two rules change what every number here means, so both are stated up front
-          rather than buried in a tooltip: WHICH period a lead lands in (attribution),
-          and WHAT the outcome columns count (acquisition cohort, not activity). */}
-      <NoteBar>
-        <strong style={{ color: 'var(--text-primary)' }}>How to read this page.</strong>
-        {' '}
-        {ATTRIBUTION_NOTE}
-        {' '}
-        A re-enquiry through a new campaign therefore credits that campaign, in the month it came in.
-        <br />
-        {COHORT_NOTE}
-        {' '}
-        So <em>Site Visits</em> here means “leads bought this period that have visited”, not “visits that
-        happened this period” - for that, open <strong>Marketing › Reports › Source-wise Site Visits</strong>,
-        which anchors on the visit date. The two are both correct and will normally differ.
-      </NoteBar>
+      {noteOpen && (
+        <div id="mm-how-to-read">
+          <NoteBar>
+            <strong style={{ color: 'var(--text-primary)' }}>How to read this page.</strong>
+            {' '}
+            {ATTRIBUTION_NOTE}
+            {' '}
+            A re-enquiry through a new campaign therefore credits that campaign, in the month it came in.
+            <br />
+            {COHORT_NOTE}
+            {' '}
+            So <em>Site Visits</em> here means “leads bought this period that have visited”, not “visits that
+            happened this period” - for that, open <strong>Marketing › Reports › Source-wise Site Visits</strong>,
+            which anchors on the visit date. The two are both correct and will normally differ.
+          </NoteBar>
+        </div>
+      )}
 
       {/* Filter bar - identical structure to the Reports / Marketing Reports bar */}
       <div className="reports-filter-bar reports-filter-bar--card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>

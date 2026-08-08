@@ -49,6 +49,9 @@ const ROUTE_MODULES = [
   ['/super-admin/workflow-actions', 'automation', 'write'],
   ['/super-admin/reallotment-rules', 'automation', 'write'],
   ['/super-admin/reallotment-logs', 'automation', 'read'],
+  // WA Automation lives under Automation but sends through the marketing
+  // provider - the server admits marketing:write here too.
+  ['/super-admin/wa-automation', 'automation', 'write'],
 
   // ── Marketing ──
   ['/super-admin/marketing-allocation-history', 'marketing', 'read'],

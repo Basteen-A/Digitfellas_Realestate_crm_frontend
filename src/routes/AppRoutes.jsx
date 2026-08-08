@@ -70,6 +70,7 @@ import MarketingAllocationHistory from '../pages/superadmin/MarketingAllocation/
 import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingApiKeys';
 import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns';
 import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
+import WhatsappAutomations from '../pages/superadmin/MarketingCampaigns/Automations';
 import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
 import MarketingReports from '../pages/superadmin/MarketingReports';
 import CollectionReports from '../pages/superadmin/CollectionReports';
@@ -292,6 +293,7 @@ const AppRoutes = () => {
               <Route path="/super-admin/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/super-admin/reallotment-rules" element={<ReallotmentRules />} />
               <Route path="/super-admin/reallotment-logs" element={<ReallotmentLogs />} />
+              <Route path="/super-admin/wa-automation" element={<WhatsappAutomations />} />
               <Route path="/super-admin/marketing-allocation" element={<MarketingAllocationRules />} />
               <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
               <Route path="/super-admin/marketing-api-keys" element={<MarketingApiKeys />} />
