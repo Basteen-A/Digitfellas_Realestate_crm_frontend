@@ -245,7 +245,7 @@ const CallAllocationHistory = () => {
                         : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>No answer</span>}
                     </td>
                     <td style={td}>
-                      <RecordingCell callId={r.callLog?.id} hasRecording={Boolean(r.callLog?.recording_url)} />
+                      <RecordingCell callId={r.callLog?.id} hasRecording={Boolean(r.callLog?.has_recording ?? r.callLog?.recording_url)} />
                     </td>
                     <td style={td}>
                       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, ...badgeStyle(src?.color_code) }}>

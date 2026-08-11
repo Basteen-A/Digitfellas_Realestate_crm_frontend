@@ -2180,7 +2180,7 @@ const LeadDetailsPage = () => {
                           </p>
                           <span className="lead-details-timeline-by">By {agentName}</span>
                           <div style={{ marginTop: 6 }}>
-                            <RecordingCell callId={call.id} hasRecording={Boolean(call.recording_url)} />
+                            <RecordingCell callId={call.id} hasRecording={Boolean(call.has_recording ?? call.recording_url)} />
                           </div>
                         </div>
                       </div>

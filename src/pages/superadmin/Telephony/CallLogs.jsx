@@ -204,7 +204,7 @@ const CallLogs = () => {
                       </span>
                     </td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDuration(r.duration)}</td>
-                    <td style={td}><RecordingCell callId={r.id} hasRecording={Boolean(r.recording_url)} /></td>
+                    <td style={td}><RecordingCell callId={r.id} hasRecording={Boolean(r.has_recording ?? r.recording_url)} /></td>
                   </tr>
                 );
               })}

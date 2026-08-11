@@ -144,7 +144,7 @@ const MM = {
   },
   budgets: {
     icon: BanknotesIcon,
-    title: 'Budget Entry',
+    title: 'Campaigns List',
     sub: 'Record spend: Campaign + Source + Sub Source + Period + Budget',
     rs: 'Spend ledger',
   },
