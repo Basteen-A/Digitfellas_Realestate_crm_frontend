@@ -23,6 +23,41 @@
 }
 .ba-booking-link:hover { text-decoration: underline; }
 
+/* ── Row actions (View + Statement of Account) ── */
+.ba-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Deliberately quieter than .view-link: the statement is a secondary action on
+   the row, and every row carries one, so a second blue link would compete with
+   the booking number and the View link for attention. */
+.ba-statement-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 6px;
+  background: var(--bg-card, #fff);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.ba-statement-btn:hover:not(:disabled) {
+  background: var(--bg-secondary, #f8fafc);
+  border-color: var(--accent-blue, #2563eb);
+  color: var(--accent-blue, #2563eb);
+}
+.ba-statement-btn:disabled { opacity: .6; cursor: default; }
+
 .ba-chevron { width: 15px; height: 15px; color: var(--text-muted); transition: transform .15s; flex-shrink: 0; }
 .ba-chevron.open { transform: rotate(90deg); }
 

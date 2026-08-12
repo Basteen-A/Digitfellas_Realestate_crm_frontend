@@ -6,13 +6,15 @@ import { formatCurrency } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
 import {
   CreditCardIcon, ArrowPathIcon, ChevronRightIcon, ChevronDownIcon,
-  MagnifyingGlassIcon, FunnelIcon, XMarkIcon,
+  MagnifyingGlassIcon, FunnelIcon, XMarkIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../components/common/Pagination';
 import usePagination from '../../hooks/usePagination';
 import { useAuthContext } from '../../contexts/AuthContext';
 import CollectionBookingDetail from '../portals/collection/CollectionBookingDetail';
 import { badgeStyle, badgeColors } from '../../utils/badgeColors';
+import { openBookingStatement } from '../../utils/bookingStatement';
+import { isAdminLevel } from '../../utils/permissions';
 import './BookingApprovals.css';
 
 const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
@@ -68,8 +70,27 @@ const BookingApprovals = () => {
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [showProjectFilter, setShowProjectFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
+  // Id of the booking whose statement is being generated, so only that row's
+  // button shows a busy state.
+  const [statementFor, setStatementFor] = useState(null);
   const projectFilterRef = useRef(null);
   const statusFilterRef = useRef(null);
+
+  // The Statement of Account is a Super Admin / Admin document - it puts the whole
+  // financial and verification trail of a customer on one sheet. The server guards
+  // the endpoint the same way; this only keeps the button off other portals' screens.
+  const canViewStatement = isAdminLevel(user);
+
+  // Generated on demand and opened in a tab - nothing is stored anywhere.
+  const handleStatement = async (booking) => {
+    setStatementFor(booking.id);
+    try {
+      const result = await openBookingStatement(booking.id, { bookingNumber: booking.booking_number });
+      if (!result.ok) toast.error(result.error);
+    } finally {
+      setStatementFor(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -356,7 +377,7 @@ const BookingApprovals = () => {
                     <th className="lead-col-status">Status</th>
                     <th className="hide-mobile" style={{ width: 130 }}>Payment Status</th>
                     <th className="hide-mobile" style={{ width: 100 }}>Assignee</th>
-                    <th className="hide-mobile" style={{ textAlign: 'center', width: 100 }}>Action</th>
+                    <th className="hide-mobile" style={{ textAlign: 'center', width: canViewStatement ? 150 : 100 }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -457,7 +478,21 @@ const BookingApprovals = () => {
                             })()}
                           </td>
                           <td className="hide-mobile" style={{ textAlign: 'center' }}>
-                            <button type="button" className="view-link" title="View details" onClick={() => setSelectedBookingId(booking.id)}>View</button>
+                            <div className="ba-row-actions">
+                              <button type="button" className="view-link" title="View details" onClick={() => setSelectedBookingId(booking.id)}>View</button>
+                              {canViewStatement && (
+                                <button
+                                  type="button"
+                                  className="ba-statement-btn"
+                                  title="Statement of Account - charges with GST, amount paid and due, and the full payment log with verification status. Opens as a PDF in a new tab."
+                                  disabled={statementFor === booking.id}
+                                  onClick={() => handleStatement(booking)}
+                                >
+                                  <DocumentTextIcon style={{ width: 13, height: 13 }} />
+                                  {statementFor === booking.id ? 'Preparing…' : 'Statement'}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                         {isExpanded && (
@@ -491,7 +526,20 @@ const BookingApprovals = () => {
                                   </div>
                                   <div className="expanded-info-item full-width">
                                     <label>Actions</label>
-                                    <button type="button" className="view-link" onClick={() => setSelectedBookingId(booking.id)}>View Details</button>
+                                    <div className="ba-row-actions">
+                                      <button type="button" className="view-link" onClick={() => setSelectedBookingId(booking.id)}>View Details</button>
+                                      {canViewStatement && (
+                                        <button
+                                          type="button"
+                                          className="ba-statement-btn"
+                                          disabled={statementFor === booking.id}
+                                          onClick={() => handleStatement(booking)}
+                                        >
+                                          <DocumentTextIcon style={{ width: 13, height: 13 }} />
+                                          {statementFor === booking.id ? 'Preparing…' : 'Statement'}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>

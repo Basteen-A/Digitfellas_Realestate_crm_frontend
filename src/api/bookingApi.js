@@ -108,6 +108,11 @@ const bookingApi = {
   // Collection Executive assignment (Collection Manager)
   getCollectionExecutives: () => api.get('/bookings/collection-executives'),
   assignCollectionExecutive: (id, data) => api.patch(`/bookings/${id}/assign-collection-executive`, data),
+
+  // Statement of Account (Super Admin / Admin). Rendered server-side and returned
+  // as a PDF blob - it is never stored, so every open is freshly generated. The
+  // caller opens it in a tab (see openBookingStatement in utils/bookingStatement.js).
+  getStatementPdf: (id) => api.get(`/bookings/${id}/statement-pdf`, { responseType: 'blob' }),
 };
 
 export default bookingApi;
