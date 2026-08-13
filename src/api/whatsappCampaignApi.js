@@ -76,8 +76,15 @@ const whatsappCampaignApi = {
     const { data } = await api.get(`${BASE}/campaigns/${id}`, { params: { _t: Date.now() } });
     return data;
   },
+  // params: { page, limit, search, status } - status also accepts the two
+  // reply pseudo-filters REPLIED / NO_REPLY.
   getRecipients: async (id, params = {}) => {
     const { data } = await api.get(`${BASE}/campaigns/${id}/recipients`, { params: { ...params, _t: Date.now() } });
+    return data;
+  },
+  // Live counters recounted off the recipient rows (incl. replies).
+  getCampaignStats: async (id) => {
+    const { data } = await api.get(`${BASE}/campaigns/${id}/stats`, { params: { _t: Date.now() } });
     return data;
   },
 };

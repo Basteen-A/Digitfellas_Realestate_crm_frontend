@@ -58,6 +58,9 @@ const ROUTE_MODULES = [
   ['/super-admin/marketing-allocation', 'marketing', 'write'],
   ['/super-admin/marketing-api-keys', 'marketing', 'full'],
   ['/super-admin/marketing-campaigns', 'marketing', 'write'],
+  // Two-way inbox - same gate as campaigns: replying to a customer is a
+  // marketing send, and it goes out on the same provider number.
+  ['/super-admin/whatsapp-inbox', 'marketing', 'write'],
   ['/super-admin/marketing-templates', 'marketing', 'write'],
   ['/super-admin/whatsapp-settings', 'marketing', 'full'],
 

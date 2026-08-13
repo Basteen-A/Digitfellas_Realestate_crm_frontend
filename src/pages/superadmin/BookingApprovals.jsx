@@ -6,9 +6,10 @@ import { formatCurrency } from '../../utils/formatters';
 import { getErrorMessage } from '../../utils/helpers';
 import {
   CreditCardIcon, ArrowPathIcon, ChevronRightIcon, ChevronDownIcon,
-  MagnifyingGlassIcon, FunnelIcon, XMarkIcon, DocumentTextIcon,
+  MagnifyingGlassIcon, FunnelIcon, XMarkIcon, DocumentTextIcon, EyeIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../components/common/Pagination';
+import KebabMenu from '../../components/common/KebabMenu';
 import usePagination from '../../hooks/usePagination';
 import { useAuthContext } from '../../contexts/AuthContext';
 import CollectionBookingDetail from '../portals/collection/CollectionBookingDetail';
@@ -90,6 +91,39 @@ const BookingApprovals = () => {
     } finally {
       setStatementFor(null);
     }
+  };
+
+  // Row actions, collapsed behind the vertical ⋮ menu (components/common/KebabMenu).
+  // Built once and rendered by both the desktop row and the expanded mobile card so
+  // the two can never offer a different set. With nothing to collapse (a grant-based
+  // role that cannot pull statements) the plain View link is kept instead - a kebab
+  // hiding a single item just adds a click.
+  const rowActions = (booking) => {
+    const items = [
+      {
+        key: 'view',
+        label: 'View Details',
+        Icon: EyeIcon,
+        onClick: () => setSelectedBookingId(booking.id),
+      },
+    ];
+    if (canViewStatement) {
+      items.push({
+        key: 'statement',
+        label: statementFor === booking.id ? 'Preparing statement…' : 'Statement of Account',
+        Icon: DocumentTextIcon,
+        disabled: statementFor === booking.id,
+        onClick: () => handleStatement(booking),
+      });
+    }
+    if (items.length === 1) {
+      return (
+        <button type="button" className="view-link" title="View details" onClick={() => setSelectedBookingId(booking.id)}>
+          View
+        </button>
+      );
+    }
+    return <KebabMenu items={items} title="Booking actions" />;
   };
 
   const load = useCallback(async () => {
@@ -377,7 +411,7 @@ const BookingApprovals = () => {
                     <th className="lead-col-status">Status</th>
                     <th className="hide-mobile" style={{ width: 130 }}>Payment Status</th>
                     <th className="hide-mobile" style={{ width: 100 }}>Assignee</th>
-                    <th className="hide-mobile" style={{ textAlign: 'center', width: canViewStatement ? 150 : 100 }}>Action</th>
+                    <th className="hide-mobile" style={{ textAlign: 'center', width: 70 }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -478,21 +512,7 @@ const BookingApprovals = () => {
                             })()}
                           </td>
                           <td className="hide-mobile" style={{ textAlign: 'center' }}>
-                            <div className="ba-row-actions">
-                              <button type="button" className="view-link" title="View details" onClick={() => setSelectedBookingId(booking.id)}>View</button>
-                              {canViewStatement && (
-                                <button
-                                  type="button"
-                                  className="ba-statement-btn"
-                                  title="Statement of Account - charges with GST, amount paid and due, and the full payment log with verification status. Opens as a PDF in a new tab."
-                                  disabled={statementFor === booking.id}
-                                  onClick={() => handleStatement(booking)}
-                                >
-                                  <DocumentTextIcon style={{ width: 13, height: 13 }} />
-                                  {statementFor === booking.id ? 'Preparing…' : 'Statement'}
-                                </button>
-                              )}
-                            </div>
+                            <div className="ba-row-actions">{rowActions(booking)}</div>
                           </td>
                         </tr>
                         {isExpanded && (
@@ -526,20 +546,7 @@ const BookingApprovals = () => {
                                   </div>
                                   <div className="expanded-info-item full-width">
                                     <label>Actions</label>
-                                    <div className="ba-row-actions">
-                                      <button type="button" className="view-link" onClick={() => setSelectedBookingId(booking.id)}>View Details</button>
-                                      {canViewStatement && (
-                                        <button
-                                          type="button"
-                                          className="ba-statement-btn"
-                                          disabled={statementFor === booking.id}
-                                          onClick={() => handleStatement(booking)}
-                                        >
-                                          <DocumentTextIcon style={{ width: 13, height: 13 }} />
-                                          {statementFor === booking.id ? 'Preparing…' : 'Statement'}
-                                        </button>
-                                      )}
-                                    </div>
+                                    <div className="ba-row-actions">{rowActions(booking)}</div>
                                   </div>
                                 </div>
                               </div>

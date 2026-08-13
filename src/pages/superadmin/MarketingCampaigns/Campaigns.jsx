@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, CheckCircleIcon, XCircleIcon, ArrowLeftIcon,
-  ExclamationTriangleIcon,
+  MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, ArrowLeftIcon,
+  ExclamationTriangleIcon, ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import leadStatusApi from '../../../api/leadStatusApi';
@@ -45,9 +46,26 @@ const MultiCheck = ({ label, options, selected, onToggle }) => (
   </div>
 );
 
-const EMPTY_FILTERS = { statusIds: [], projectIds: [], locationIds: [], stageIds: [], sourceIds: [], dateFrom: '', dateTo: '' };
+// Re-target an earlier campaign by how people reacted to it. Mirrors
+// ENGAGEMENT_CLAUSES in server/src/utils/leadAudienceFilter.js - keep the
+// values identical or the server silently ignores the filter.
+const ENGAGEMENT_OPTIONS = [
+  { value: '', label: 'No engagement filter' },
+  { value: 'REPLIED', label: 'Replied to the campaign' },
+  { value: 'NO_REPLY', label: 'Got it but never replied' },
+  { value: 'READ', label: 'Read it' },
+  { value: 'DELIVERED', label: 'Received it (delivered)' },
+  { value: 'NOT_DELIVERED', label: 'Sent but never delivered' },
+  { value: 'FAILED', label: 'Delivery failed' },
+];
+
+const EMPTY_FILTERS = {
+  statusIds: [], projectIds: [], locationIds: [], stageIds: [], sourceIds: [],
+  dateFrom: '', dateTo: '', engagement: '', engagementCampaignId: '',
+};
 
 const Campaigns = () => {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [view, setView] = useState('list'); // 'list' | 'form'
 
@@ -71,10 +89,6 @@ const Campaigns = () => {
   const [preview, setPreview] = useState(null); // { total, sample }
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
-
-  // Recipients drill-down
-  const [drill, setDrill] = useState(null); // { campaign, recipients, statusFilter }
-  const [drillLoading, setDrillLoading] = useState(false);
 
   const pollRef = useRef(null);
 
@@ -123,29 +137,6 @@ const Campaigns = () => {
     return () => { if (pollRef.current && !inFlight) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [campaigns, loadCampaigns]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
-
-  // While the recipients drill-down is open, silently re-fetch it every 5s so
-  // delivery receipts arriving via the provider webhook (DELIVERED/READ/FAILED)
-  // show up without a manual refresh.
-  const drillCampaignId = drill?.campaign?.id || null;
-  const drillStatusFilter = drill?.statusFilter ?? '';
-  useEffect(() => {
-    if (!drillCampaignId) return undefined;
-    const timer = setInterval(async () => {
-      try {
-        const [cResp, rResp] = await Promise.all([
-          whatsappCampaignApi.getCampaign(drillCampaignId),
-          whatsappCampaignApi.getRecipients(drillCampaignId, { limit: 100, status: drillStatusFilter || undefined }),
-        ]);
-        setDrill((d) => (
-          d && d.campaign.id === drillCampaignId && (d.statusFilter ?? '') === drillStatusFilter
-            ? { campaign: cResp.data || d.campaign, recipients: rResp.data || d.recipients, statusFilter: d.statusFilter }
-            : d
-        ));
-      } catch { /* silent - next tick retries */ }
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [drillCampaignId, drillStatusFilter]);
 
   const toggleFilter = (key) => (val) => setFilters((f) => ({
     ...f,
@@ -237,19 +228,6 @@ const Campaigns = () => {
       toast.error(getErrorMessage(err, 'Failed to create campaign'));
     } finally {
       setSending(false);
-    }
-  };
-
-  const openDrill = async (campaign, statusFilter = '') => {
-    setDrill({ campaign, recipients: [], statusFilter });
-    setDrillLoading(true);
-    try {
-      const resp = await whatsappCampaignApi.getRecipients(campaign.id, { limit: 100, status: statusFilter || undefined });
-      setDrill({ campaign, recipients: resp.data || [], statusFilter });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to load recipients'));
-    } finally {
-      setDrillLoading(false);
     }
   };
 
@@ -373,6 +351,46 @@ const Campaigns = () => {
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>No filter = all leads with a phone number. Leads with no valid phone are skipped automatically.</div>
             </div>
 
+            {/* Follow-up targeting: re-run against how people reacted to an
+                earlier blast. Reply data only exists once the provider webhook
+                is configured, which is what the hint below is warning about. */}
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 2 }}>Follow-up Targeting <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                Narrow the audience above to how leads reacted to an earlier WhatsApp campaign - e.g. chase everyone who
+                received the last blast but never wrote back.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Reaction</label>
+                  <select
+                    style={selectStyle}
+                    value={filters.engagement}
+                    onChange={(e) => setFilters((f) => ({ ...f, engagement: e.target.value }))}
+                  >
+                    {ENGAGEMENT_OPTIONS.map((o) => <option key={o.value || 'none'} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>In campaign</label>
+                  <select
+                    style={selectStyle}
+                    value={filters.engagementCampaignId}
+                    onChange={(e) => setFilters((f) => ({ ...f, engagementCampaignId: e.target.value }))}
+                    disabled={!filters.engagement}
+                  >
+                    <option value="">Any campaign</option>
+                    {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              {filters.engagement === 'REPLIED' && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Tip: people who replied are inside the 24-hour window, so you can also just answer them directly from the WhatsApp Inbox.
+                </div>
+              )}
+            </div>
+
             {/* Audience count */}
             <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 13 }}>
@@ -410,6 +428,9 @@ const Campaigns = () => {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={loadCampaigns}><ArrowPathIcon style={{ width: 15, height: 15 }} /> Refresh</button>
+          <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => navigate('/super-admin/whatsapp-inbox')}>
+            <ChatBubbleLeftRightIcon style={{ width: 15, height: 15 }} /> Inbox
+          </button>
           <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={openBuilder}><PlusIcon style={{ width: 16, height: 16 }} /> New Campaign</button>
         </div>
       </div>
@@ -424,6 +445,7 @@ const Campaigns = () => {
                 <th style={th}>Recipients</th>
                 <th style={th}>Sent</th>
                 <th style={th} title="Confirmed on the phone (via provider webhook); read count in brackets">Delivered</th>
+                <th style={th} title="Recipients who wrote back at least once (provider webhook)">Replied</th>
                 <th style={th}>Failed</th>
                 <th style={th}>Progress</th>
                 <th style={th}>Status</th>
@@ -433,7 +455,7 @@ const Campaigns = () => {
             </thead>
             <tbody>
               {campaigns.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={10}>No campaigns yet. Create your first send-out.</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={11}>No campaigns yet. Create your first send-out.</td></tr>
               )}
               {campaigns.map((c) => {
                 const sc = STATUS_COLORS[c.status] || STATUS_COLORS.QUEUED;
@@ -446,6 +468,7 @@ const Campaigns = () => {
                     <td style={{ ...td, color: c.delivered_count ? '#166534' : 'var(--text-muted)', fontWeight: c.delivered_count ? 700 : 400 }}>
                       {c.delivered_count ?? 0}{c.read_count ? ` (${c.read_count} read)` : ''}
                     </td>
+                    <td style={{ ...td, color: c.replied_count ? '#0f766e' : 'var(--text-muted)', fontWeight: c.replied_count ? 700 : 400 }}>{c.replied_count ?? 0}</td>
                     <td style={{ ...td, color: c.failed_count ? '#991b1b' : 'var(--text-muted)', fontWeight: c.failed_count ? 700 : 400 }}>{c.failed_count}</td>
                     <td style={td}>
                       <div style={{ width: 90, height: 6, background: 'var(--bg-secondary)', borderRadius: 99 }}>
@@ -455,7 +478,14 @@ const Campaigns = () => {
                     <td style={td}><span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span></td>
                     <td style={td}>{fmtDateTime(c.created_at)}</td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button type="button" className="view-link" onClick={() => openDrill(c)} title="View recipients">View</button>
+                      <button
+                        type="button"
+                        className="view-link"
+                        onClick={() => navigate(`/super-admin/marketing-campaigns/${c.id}`)}
+                        title="Open the campaign report"
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 );
@@ -465,74 +495,6 @@ const Campaigns = () => {
         </div>
       </div>
 
-      {/* Recipients drill-down */}
-      {drill && (
-        <div onClick={() => setDrill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 20, overflowY: 'auto' }}>
-          <div onClick={(e) => e.stopPropagation()} className="crm-card" style={{ width: '100%', maxWidth: 760, marginTop: 30, marginBottom: 40, padding: 0, background: 'var(--bg-primary)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{drill.campaign.name}</h2>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  <CheckCircleIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: '#16A34A' }} /> {drill.campaign.sent_count} sent
-                  &nbsp;·&nbsp; {drill.campaign.delivered_count ?? 0} delivered
-                  &nbsp;·&nbsp; {drill.campaign.read_count ?? 0} read
-                  &nbsp;·&nbsp; <XCircleIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: '#dc2626' }} /> {drill.campaign.failed_count} failed
-                  &nbsp;·&nbsp; {drill.campaign.total_recipients} total
-                </div>
-              </div>
-              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setDrill(null)}>Close</button>
-            </div>
-            <div style={{ padding: '12px 20px 4px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {['', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'PENDING'].map((s) => (
-                <button key={s || 'ALL'} className={`crm-btn crm-btn-sm ${drill.statusFilter === s ? 'crm-btn-primary' : 'crm-btn-ghost'}`} onClick={() => openDrill(drill.campaign, s)}>
-                  {s || 'All'}
-                </button>
-              ))}
-            </div>
-            <div style={{ padding: '0 20px 10px', fontSize: 11, color: 'var(--text-muted)' }}>
-              SENT = accepted by WhatsApp. Delivered / Read / Failed arrive via the provider webhook - configure the
-              callback URL in the pinbot panel to keep these in sync.
-            </div>
-            <div style={{ padding: '0 20px 20px', maxHeight: '60vh', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Lead</th>
-                    <th style={th}>Phone</th>
-                    <th style={th}>Status</th>
-                    <th style={th}>Detail</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {drillLoading && <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={4}>Loading…</td></tr>}
-                  {!drillLoading && drill.recipients.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={4}>No recipients.</td></tr>}
-                  {!drillLoading && drill.recipients.map((r) => {
-                    const statusColor = {
-                      SENT: '#2563eb', DELIVERED: '#166534', READ: '#7c3aed', FAILED: '#991b1b',
-                    }[r.status] || '#a16207';
-                    let detail = r.error || '-';
-                    if (r.status === 'SENT') detail = 'Accepted by WhatsApp - awaiting delivery receipt';
-                    else if (r.status === 'DELIVERED') detail = `Delivered${r.delivered_at ? ` ${fmtDateTime(r.delivered_at)}` : ''}`;
-                    else if (r.status === 'READ') detail = `Read${r.read_at ? ` ${fmtDateTime(r.read_at)}` : ''}`;
-                    return (
-                      <tr key={r.id}>
-                        <td style={td}>{r.lead_name || '-'}</td>
-                        <td style={td}>{r.phone}</td>
-                        <td style={td}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: statusColor }}>{r.status}</span>
-                        </td>
-                        <td style={{ ...td, color: 'var(--text-muted)', fontSize: 12, maxWidth: 280, whiteSpace: 'normal' }}>
-                          {detail}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

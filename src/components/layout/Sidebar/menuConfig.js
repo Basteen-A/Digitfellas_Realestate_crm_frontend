@@ -245,6 +245,7 @@ const adminSidebar = [
     children: [
       { label: 'Campaigns', path: '/super-admin/marketing-metrix' },
       { label: 'WA Campaigns', path: '/super-admin/marketing-campaigns' },
+      { label: 'WA Inbox', path: '/super-admin/whatsapp-inbox' },
       { label: 'WA Templates', path: '/super-admin/marketing-templates' },
       { label: 'Marketing Reports', path: '/super-admin/marketing-reports' },
     ],

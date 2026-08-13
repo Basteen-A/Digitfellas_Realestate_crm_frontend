@@ -113,6 +113,7 @@ const MODULE_LINKS = {
       { label: 'Marketing Allocation', path: '/super-admin/marketing-allocation', icon: MegaphoneIcon, level: 'write' },
       { label: 'Allocation History', path: '/super-admin/marketing-allocation-history', icon: PhoneArrowDownLeftIcon },
       { label: 'Campaigns', path: '/super-admin/marketing-campaigns', icon: ChatBubbleLeftRightIcon, level: 'write' },
+      { label: 'WA Inbox', path: '/super-admin/whatsapp-inbox', icon: ChatBubbleLeftRightIcon, level: 'write' },
       { label: 'Marketing API Keys', path: '/super-admin/marketing-api-keys', icon: KeyIcon, level: 'full' },
     ]
   },

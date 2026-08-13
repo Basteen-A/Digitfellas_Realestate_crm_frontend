@@ -69,6 +69,8 @@ import MarketingAllocationRules from '../pages/superadmin/MarketingAllocation/Ma
 import MarketingAllocationHistory from '../pages/superadmin/MarketingAllocation/MarketingAllocationHistory';
 import MarketingApiKeys from '../pages/superadmin/MarketingAllocation/MarketingApiKeys';
 import MarketingCampaigns from '../pages/superadmin/MarketingCampaigns/Campaigns';
+import MarketingCampaignDetail from '../pages/superadmin/MarketingCampaigns/CampaignDetail';
+import WhatsappInbox from '../pages/superadmin/MarketingCampaigns/Inbox';
 import WhatsappTemplates from '../pages/superadmin/MarketingCampaigns/Templates';
 import WhatsappAutomations from '../pages/superadmin/MarketingCampaigns/Automations';
 import WhatsappSettings from '../pages/superadmin/MarketingCampaigns/WhatsappSettings';
@@ -298,6 +300,12 @@ const AppRoutes = () => {
               <Route path="/super-admin/marketing-allocation-history" element={<MarketingAllocationHistory />} />
               <Route path="/super-admin/marketing-api-keys" element={<MarketingApiKeys />} />
               <Route path="/super-admin/marketing-campaigns" element={<MarketingCampaigns />} />
+              {/* Recipient report - a real page, not the old modal, so a
+                  10k-recipient send can be paged, filtered and searched. */}
+              <Route path="/super-admin/marketing-campaigns/:id" element={<MarketingCampaignDetail />} />
+              {/* Two-way chat fed by the `messages` half of the provider webhook. */}
+              <Route path="/super-admin/whatsapp-inbox" element={<WhatsappInbox />} />
+              <Route path="/super-admin/whatsapp-inbox/:id" element={<WhatsappInbox />} />
               <Route path="/super-admin/marketing-templates" element={<WhatsappTemplates />} />
               <Route path="/super-admin/whatsapp-settings" element={<WhatsappSettings />} />
               <Route path="/super-admin/telephony/settings" element={<TelephonyCallSettings />} />
