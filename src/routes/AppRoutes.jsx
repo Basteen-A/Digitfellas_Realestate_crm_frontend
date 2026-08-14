@@ -80,6 +80,7 @@ import MarketingMetrix from '../pages/superadmin/MarketingMetrix';
 import TelephonyCallSettings from '../pages/superadmin/Telephony/CallSettings';
 import TelephonyCallLogs from '../pages/superadmin/Telephony/CallLogs';
 import TelephonyCallAllocationHistory from '../pages/superadmin/Telephony/CallAllocationHistory';
+import TelephonyCallAnalysisSettings from '../pages/superadmin/Telephony/CallAnalysisSettings';
 import AdminRecordManager from '../pages/superadmin/RecordManager/AdminRecordManager';
 import AttendancePage from '../pages/superadmin/Attendance/AttendancePage';
 import {
@@ -311,6 +312,7 @@ const AppRoutes = () => {
               <Route path="/super-admin/telephony/settings" element={<TelephonyCallSettings />} />
               <Route path="/super-admin/telephony/call-logs" element={<TelephonyCallLogs />} />
               <Route path="/super-admin/telephony/allocation-history" element={<TelephonyCallAllocationHistory />} />
+              <Route path="/super-admin/telephony/ai-analysis" element={<TelephonyCallAnalysisSettings />} />
               <Route path="/super-admin/attendance" element={<AttendancePage />} />
               <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
             </Route>

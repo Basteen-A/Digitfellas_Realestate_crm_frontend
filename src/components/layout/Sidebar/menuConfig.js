@@ -257,6 +257,7 @@ const adminSidebar = [
       { label: 'Call Logs', path: '/super-admin/telephony/call-logs' },
       { label: 'Allocation History', path: '/super-admin/telephony/allocation-history' },
       { label: 'Call Settings', path: '/super-admin/telephony/settings' },
+      { label: 'AI Call Analysis', path: '/super-admin/telephony/ai-analysis' },
     ],
   },
   { label: 'Lead Assignment', path: '/super-admin/marketing-allocation', icon: NavArrowsExchange },

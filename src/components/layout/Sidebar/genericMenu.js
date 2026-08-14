@@ -17,7 +17,7 @@ import {
   BanknotesIcon, MagnifyingGlassIcon, BoltIcon, ArrowsRightLeftIcon,
   ArrowPathIcon, MegaphoneIcon, KeyIcon, ChatBubbleLeftRightIcon, PhoneIcon,
   PhoneArrowDownLeftIcon, UserGroupIcon, FingerPrintIcon, Cog6ToothIcon,
-  FolderOpenIcon, ShieldCheckIcon,
+  FolderOpenIcon, ShieldCheckIcon, SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { hasModule } from '../../../utils/modulePermissions';
 
@@ -123,6 +123,7 @@ const MODULE_LINKS = {
       { label: 'Call Logs', path: '/super-admin/telephony/call-logs', icon: PhoneIcon },
       { label: 'Allocation History', path: '/super-admin/telephony/allocation-history', icon: PhoneArrowDownLeftIcon, level: 'full' },
       { label: 'Call Settings', path: '/super-admin/telephony/settings', icon: Cog6ToothIcon, level: 'full' },
+      { label: 'AI Call Analysis', path: '/super-admin/telephony/ai-analysis', icon: SparklesIcon, level: 'full' },
     ]
   },
 

@@ -6,6 +6,7 @@ import leadWorkflowApi from '../../../api/leadWorkflowApi';
 import AuthedAudio from '../../../components/AuthedAudio';
 import SmartfloCallButton from '../../../components/telephony/SmartfloCallButton';
 import RecordingCell from '../../../components/telephony/RecordingCell';
+import CallAnalysisPanel from '../../../components/telephony/CallAnalysisPanel';
 import CallDirectionIcon from '../../../components/telephony/CallDirectionIcon';
 import telephonyApi from '../../../api/telephonyApi';
 import projectApi from '../../../api/projectApi';
@@ -723,9 +724,10 @@ const LeadDetailsPage = () => {
   }, [activeTab, enquiries, id]);
 
   // Lazy-load this lead's Smartflo call logs the first time the Call Logs tab
-  // is opened.
+  // is opened. The AI Analysis tab needs them too - it lists recorded calls
+  // that have no analysis yet so one can be triggered by hand.
   useEffect(() => {
-    if (activeTab !== 'calls' || callLogs || !id) return;
+    if ((activeTab !== 'calls' && activeTab !== 'aianalysis') || callLogs || !id) return;
     telephonyApi.getCallLogs({ lead_id: id, limit: 100 })
       .then((resp) => setCallLogs(resp.data || []))
       .catch((err) => {
@@ -1680,6 +1682,7 @@ const LeadDetailsPage = () => {
             <button className={`lead-details-tab ${activeTab === 'activity' ? 'active' : ''}`} onClick={() => setActiveTab('activity')}>Activity</button>
             <button className={`lead-details-tab ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>Notes</button>
             <button className={`lead-details-tab ${activeTab === 'calls' ? 'active' : ''}`} onClick={() => setActiveTab('calls')}>Call Logs</button>
+            <button className={`lead-details-tab ${activeTab === 'aianalysis' ? 'active' : ''}`} onClick={() => setActiveTab('aianalysis')}>AI Analysis</button>
             <button className={`lead-details-tab ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => setActiveTab('enquiries')}>Enquiries</button>
             {roleCode !== 'TC' && (
               <button className={`lead-details-tab ${activeTab === 'sitevisits' ? 'active' : ''}`} onClick={() => setActiveTab('sitevisits')}>Site Visits</button>
@@ -2188,6 +2191,16 @@ const LeadDetailsPage = () => {
                   })
                 )}
               </div>
+            )}
+
+            {activeTab === 'aianalysis' && (
+              <CallAnalysisPanel
+                leadId={id}
+                callLogs={callLogs}
+                // Analysing spends money on the provider, so the button is
+                // limited to the roles that own the telecalling floor.
+                canAnalyze={['SA', 'ADM', 'SH', 'SM'].includes(roleCode)}
+              />
             )}
 
             {activeTab === 'enquiries' && (
