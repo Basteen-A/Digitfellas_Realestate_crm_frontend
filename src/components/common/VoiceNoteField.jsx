@@ -11,6 +11,7 @@ import {
   MicrophoneIcon, StopCircleIcon, CheckCircleIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { NO_DOWNLOAD_AUDIO_PROPS } from '../AuthedAudio';
 
 const mmss = (secs) => {
   const s = Math.max(0, Math.round(secs || 0));
@@ -146,7 +147,10 @@ export default function VoiceNoteField({ voice, onVoiceChange, transcribeApi, on
       ) : voice?.blob ? (
         <div style={S.card}>
           <div style={S.row}>
-            <audio style={S.audio} src={voice.url} controls preload="metadata" />
+            {/* Local blob preview - cannot go through AuthedAudio
+                (resolveLegacyHref would prefix a blob: URL), so it spreads the
+                shared no-download props directly. */}
+            <audio {...NO_DOWNLOAD_AUDIO_PROPS} style={S.audio} src={voice.url} controls preload="metadata" />
             <span style={S.time}>{mmss(duration)}</span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               {!transcribed && (

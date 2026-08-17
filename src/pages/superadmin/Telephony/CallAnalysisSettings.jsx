@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import {
   SparklesIcon, CheckCircleIcon, ArrowPathIcon, PlayIcon, ArrowUturnLeftIcon,
+  ExclamationTriangleIcon, SpeakerWaveIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import callAnalysisApi from '../../../api/callAnalysisApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -9,15 +10,6 @@ import { getErrorMessage } from '../../../utils/helpers';
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, marginTop: 16, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 const hintStyle = { fontSize: 11, color: 'var(--text-muted)', marginTop: 4 };
-
-// Models that can read an audio file directly. A text-only model cannot be
-// offered here - it would need a separate speech-to-text pass before it ever
-// saw the call, which this feature does not do.
-const MODEL_OPTIONS = [
-  { value: 'gemini-flash-latest', label: 'Gemini Flash (latest) - fastest, cheapest' },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash - balanced' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro - deepest analysis, slowest' },
-];
 
 const LANGUAGES = ['English', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Malayalam'];
 
@@ -38,8 +30,194 @@ const StatTile = ({ label, value }) => (
   </div>
 );
 
-// Super Admin → Calls → AI Call Analysis. Sets the provider key, the model, the
-// minimum call length that qualifies, and the analyst prompt that every
+// Amber callout used for "this model cannot hear" and other blocking notes.
+const Notice = ({ tone = 'warn', icon: Icon = ExclamationTriangleIcon, children }) => {
+  const tones = {
+    warn: { bg: '#FFFBEB', border: '#FDE68A', fg: '#92400E' },
+    info: { bg: '#EFF6FF', border: '#BFDBFE', fg: '#1D4ED8' },
+    ok: { bg: '#F0FDF4', border: '#BBF7D0', fg: '#166534' },
+  };
+  const t = tones[tone] || tones.warn;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 12,
+      padding: '10px 12px', borderRadius: 8,
+      background: t.bg, border: `1px solid ${t.border}`, color: t.fg, fontSize: 12.5, lineHeight: 1.5,
+    }}>
+      <Icon style={{ width: 16, height: 16, flexShrink: 0, marginTop: 1 }} />
+      <div>{children}</div>
+    </div>
+  );
+};
+
+/**
+ * Provider + key + model, for one stage of the pipeline.
+ *
+ * The model dropdown is populated by asking the PROVIDER what this key can use
+ * (POST /call-analysis/models), so a newly released model shows up without a
+ * code change. The free-text box underneath stays, because a model released
+ * after the provider updated its own catalogue - or a private/fine-tuned
+ * deployment that never appears in it - still has to be selectable.
+ */
+const ProviderBlock = ({
+  stage, providers, form, setForm, cfg, cached, onFetched, filter,
+}) => {
+  const [fetching, setFetching] = useState(false);
+  const isAnalysis = stage === 'analysis';
+
+  // Field names differ per stage; everything else about the block is identical.
+  const f = isAnalysis
+    ? { provider: 'provider', key: 'api_key', model: 'model', base: 'base_url' }
+    : { provider: 'transcribe_provider', key: 'transcribe_api_key', model: 'transcribe_model', base: 'transcribe_base_url' };
+
+  const providerId = form[f.provider];
+  const provider = providers.find((p) => p.id === providerId) || null;
+  const keySet = isAnalysis ? cfg?.key_set : cfg?.transcribe_key_set;
+  const keyMask = isAnalysis ? cfg?.api_key_masked : cfg?.transcribe_api_key_masked;
+
+  // Only offer models that can do this stage's job. Everything else stays
+  // reachable through the free-text box, so the filter never traps anyone.
+  const allModels = cached?.models || [];
+  const usable = filter ? allModels.filter(filter) : allModels;
+  const hiddenCount = allModels.length - usable.length;
+
+  const eligible = providers.filter((p) => (isAnalysis ? true : p.can_transcribe));
+
+  const fetchModels = async () => {
+    if (!form[f.key] && !keySet) {
+      toast.error('Enter an API key first.');
+      return;
+    }
+    setFetching(true);
+    try {
+      const resp = await callAnalysisApi.listModels({
+        stage,
+        provider: providerId,
+        api_key: form[f.key] || undefined, // undefined -> server uses the stored key
+        base_url: form[f.base] || undefined,
+      });
+      onFetched(resp.data);
+      const d = resp.data || {};
+      toast.success(
+        isAnalysis
+          ? `${d.total} model(s) found - ${d.audio_capable} can read audio.`
+          : `${d.total} model(s) found - ${d.transcribe_capable} can transcribe.`
+      );
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not fetch models from the provider'));
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  return (
+    <>
+      <label style={labelStyle}>Provider</label>
+      <select
+        style={inputStyle}
+        value={providerId || ''}
+        onChange={(e) => {
+          const next = e.target.value;
+          const p = providers.find((x) => x.id === next);
+          // Switching provider invalidates the model AND the key - never carry
+          // an OpenAI key over to an Anthropic selection.
+          setForm((prev) => ({
+            ...prev,
+            [f.provider]: next,
+            [f.model]: '',
+            [f.key]: '',
+            [f.base]: p?.base_url_editable ? (prev[f.base] || '') : '',
+          }));
+        }}
+      >
+        {!isAnalysis && <option value="">- none -</option>}
+        {eligible.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+      </select>
+      {provider?.note && <div style={hintStyle}>{provider.note}</div>}
+
+      {provider?.base_url_editable && (
+        <>
+          <label style={labelStyle}>Endpoint base URL</label>
+          <input
+            style={inputStyle}
+            value={form[f.base] || ''}
+            onChange={(e) => setForm((prev) => ({ ...prev, [f.base]: e.target.value }))}
+            placeholder="https://api.groq.com/openai/v1"
+          />
+          <div style={hintStyle}>
+            Must serve <code>/models</code> and <code>/chat/completions</code>. Works with Groq,
+            OpenRouter, Together, xAI, DeepSeek, Azure, vLLM, Ollama and LM Studio.
+          </div>
+        </>
+      )}
+
+      {provider && (
+        <>
+          <label style={labelStyle}>API key</label>
+          <input
+            style={inputStyle}
+            type="password"
+            value={form[f.key] || ''}
+            onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+            placeholder={keySet ? `Saved (${keyMask}). Leave blank to keep.` : (provider.key_hint || 'Required')}
+            autoComplete="new-password"
+          />
+
+          <label style={labelStyle}>
+            Model
+            <button
+              type="button"
+              className="crm-btn crm-btn-ghost crm-btn-sm"
+              style={{ marginLeft: 10, verticalAlign: 'middle', textTransform: 'none', fontWeight: 600 }}
+              onClick={fetchModels}
+              disabled={fetching}
+            >
+              <ArrowPathIcon style={{ width: 13, height: 13 }} /> {fetching ? 'Fetching…' : 'Fetch models'}
+            </button>
+          </label>
+
+          <select
+            style={inputStyle}
+            value={usable.some((m) => m.id === form[f.model]) ? form[f.model] : '__custom'}
+            onChange={(e) => {
+              if (e.target.value === '__custom') return;
+              setForm((prev) => ({ ...prev, [f.model]: e.target.value }));
+            }}
+          >
+            {usable.length === 0 && <option value="__custom">- press “Fetch models”, or type an id below -</option>}
+            {usable.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label !== m.id ? `${m.label} (${m.id})` : m.id}{m.audio ? '  ·  reads audio' : ''}
+              </option>
+            ))}
+            {form[f.model] && !usable.some((m) => m.id === form[f.model]) && (
+              <option value="__custom">{form[f.model]} (typed in)</option>
+            )}
+          </select>
+
+          <input
+            style={{ ...inputStyle, marginTop: 8 }}
+            value={form[f.model] || ''}
+            onChange={(e) => setForm((prev) => ({ ...prev, [f.model]: e.target.value }))}
+            placeholder="Or type a model id"
+          />
+
+          {cached?.fetched_at && (
+            <div style={hintStyle}>
+              {usable.length} usable model{usable.length === 1 ? '' : 's'}
+              {hiddenCount > 0 && ` (${hiddenCount} hidden - they cannot ${isAnalysis ? 'be used for analysis' : 'transcribe'})`}
+              {' · '}fetched {new Date(cached.fetched_at).toLocaleString()}
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+};
+
+// Super Admin → Calls → AI Call Analysis. Picks the provider and model for the
+// analysis (and, when that model cannot hear, for a transcription stage before
+// it), the minimum call length that qualifies, and the analyst prompt every
 // qualifying recording is sent with.
 const CallAnalysisSettings = () => {
   const [cfg, setCfg] = useState(null);
@@ -47,11 +225,29 @@ const CallAnalysisSettings = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [modelCache, setModelCache] = useState({});
   const [form, setForm] = useState({
-    api_key: '', model: 'gemini-flash-latest', min_duration_minutes: 2,
-    prompt: '', output_language: 'English', is_active: false, auto_analyze: true,
-    max_per_run: 10, max_attempts: 3,
+    provider: 'gemini', api_key: '', model: 'gemini-flash-latest', base_url: '',
+    transcribe_provider: '', transcribe_api_key: '', transcribe_model: '', transcribe_base_url: '',
+    min_duration_minutes: 2, prompt: '', output_language: 'English',
+    is_active: false, auto_analyze: true, max_per_run: 10, max_attempts: 3,
   });
+
+  const providers = cfg?.providers || [];
+  const analysisProvider = providers.find((p) => p.id === form.provider) || null;
+
+  // Does the CURRENTLY SELECTED analysis model read audio? Mirrors the server's
+  // aiProviderService.supportsAudio() so the screen can warn before saving
+  // rather than after the first failed pass.
+  const analysisReadsAudio = useMemo(() => {
+    if (!analysisProvider || !analysisProvider.can_hear_audio) return false;
+    const id = String(form.model || '').toLowerCase();
+    if (!id) return false;
+    if (form.provider === 'gemini') return id.includes('gemini');
+    return /(audio|omni|realtime)/.test(id);
+  }, [analysisProvider, form.provider, form.model]);
+
+  const needsTranscription = Boolean(form.model) && !analysisReadsAudio;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,9 +259,16 @@ const CallAnalysisSettings = () => {
       const c = cfgResp.data || {};
       setCfg(c);
       setStats(statsResp.data || null);
+      setModelCache(c.model_cache || {});
       setForm({
+        provider: c.provider || 'gemini',
         api_key: '', // never prefilled - blank means "keep the stored key"
-        model: c.model || 'gemini-flash-latest',
+        model: c.model || '',
+        base_url: c.base_url || '',
+        transcribe_provider: c.transcribe_provider || '',
+        transcribe_api_key: '',
+        transcribe_model: c.transcribe_model || '',
+        transcribe_base_url: c.transcribe_base_url || '',
         min_duration_minutes: c.min_duration_minutes ?? 2,
         prompt: c.prompt || c.default_prompt || '',
         output_language: c.output_language || 'English',
@@ -83,19 +286,31 @@ const CallAnalysisSettings = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  const onModelsFetched = (stage) => (data) => {
+    setModelCache((prev) => ({ ...prev, [stage]: data }));
+  };
+
   const save = async () => {
     if (!form.prompt.trim()) { toast.error('A prompt is required.'); return; }
+    if (!form.model.trim()) { toast.error('Select an analysis model.'); return; }
     if (form.is_active && !form.api_key && !cfg?.key_set) {
       toast.error('Add an API key before switching analysis on.');
+      return;
+    }
+    if (form.is_active && needsTranscription && !form.transcribe_provider) {
+      toast.error(`${form.model} cannot read audio - set up a transcription provider first.`);
       return;
     }
     setSaving(true);
     try {
       const payload = { ...form };
-      if (!payload.api_key) delete payload.api_key; // keep the stored secret
+      // Blank means "keep the stored secret" - do not send it at all.
+      if (!payload.api_key) delete payload.api_key;
+      if (!payload.transcribe_api_key) delete payload.transcribe_api_key;
       const resp = await callAnalysisApi.updateConfig(payload);
       setCfg(resp.data);
-      setForm((f) => ({ ...f, api_key: '' }));
+      setModelCache(resp.data?.model_cache || {});
+      setForm((f) => ({ ...f, api_key: '', transcribe_api_key: '' }));
       toast.success('Call analysis settings saved');
       callAnalysisApi.getStats().then((r) => setStats(r.data)).catch(() => {});
     } catch (err) {
@@ -111,7 +326,9 @@ const CallAnalysisSettings = () => {
       const resp = await callAnalysisApi.runNow();
       const r = resp.data || {};
       if (r.skipped) {
-        toast(r.reason === 'disabled' ? 'Analysis is off or has no API key.' : 'A pass is already running.');
+        if (r.reason === 'misconfigured') toast.error(r.message || 'The provider setup is incomplete.');
+        else if (r.reason === 'disabled') toast('Analysis is off or auto-analysis is disabled.');
+        else toast('A pass is already running.');
       } else {
         toast.success(`Pass complete - ${r.succeeded || 0} analysed, ${r.failed || 0} failed.`);
       }
@@ -128,6 +345,8 @@ const CallAnalysisSettings = () => {
     if (!window.confirm('Replace the prompt with the default analyst prompt?')) return;
     setForm((f) => ({ ...f, prompt: cfg.default_prompt }));
   };
+
+  const transcribeLabel = providers.find((p) => p.id === form.transcribe_provider)?.label;
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out', maxWidth: 900 }}>
@@ -169,54 +388,86 @@ const CallAnalysisSettings = () => {
         {cfg?.last_error && (
           <div style={{ ...hintStyle, color: '#b91c1c' }}>Last error: {cfg.last_error}</div>
         )}
+        {cfg?.config_error && (
+          <Notice>{cfg.config_error}</Notice>
+        )}
       </div>
 
-      {/* Provider */}
+      {/* Analysis provider */}
       <div className="crm-card" style={{ padding: 18, marginBottom: 16 }}>
-        <div style={{ fontWeight: 700, marginBottom: 4 }}>Provider</div>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Analysis model</div>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
-          Google Gemini reads the recording directly and returns the full analysis in one call.
-          Get a key from Google AI Studio.
+          The model that writes the analysis. Paste a key and press <strong>Fetch models</strong> -
+          the list comes from the provider itself, so whatever that key can use shows up here.
         </p>
 
-        <label style={labelStyle}>API key</label>
-        <input
-          style={inputStyle}
-          type="password"
-          value={form.api_key}
-          onChange={(e) => setForm((f) => ({ ...f, api_key: e.target.value }))}
-          placeholder={cfg?.key_set ? `Saved (${cfg.api_key_masked}). Leave blank to keep.` : 'Not set - required to analyse anything'}
-          autoComplete="new-password"
+        <ProviderBlock
+          stage="analysis"
+          providers={providers}
+          form={form}
+          setForm={setForm}
+          cfg={cfg}
+          cached={modelCache.analysis}
+          onFetched={onModelsFetched('analysis')}
         />
 
-        <label style={labelStyle}>Model</label>
-        <select
-          style={inputStyle}
-          value={MODEL_OPTIONS.some((m) => m.value === form.model) ? form.model : '__custom'}
-          onChange={(e) => {
-            if (e.target.value === '__custom') return;
-            setForm((f) => ({ ...f, model: e.target.value }));
-          }}
-        >
-          {MODEL_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-          {!MODEL_OPTIONS.some((m) => m.value === form.model) && (
-            <option value="__custom">{form.model} (custom)</option>
-          )}
-        </select>
-        <input
-          style={{ ...inputStyle, marginTop: 8 }}
-          value={form.model}
-          onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-          placeholder="Or type a model id"
-        />
-        <div style={hintStyle}>
-          The model must accept audio input. Text-only models (ChatGPT, Claude) cannot read a
-          recording without a separate transcription step and will fail here.
+        {form.model && (
+          analysisReadsAudio ? (
+            <Notice tone="ok" icon={SpeakerWaveIcon}>
+              <strong>{form.model}</strong> reads the recording directly - one API call per call,
+              no transcription step needed.
+            </Notice>
+          ) : (
+            <Notice icon={DocumentTextIcon}>
+              <strong>{form.model}</strong> cannot listen to audio, so the recording has to be turned
+              into text first. Configure the transcription step below.
+              {form.provider === 'anthropic' && ' Claude has no audio input at all - this is always required for it.'}
+            </Notice>
+          )
+        )}
+      </div>
+
+      {/* Transcription stage - only when the analysis model is deaf */}
+      {needsTranscription && (
+        <div className="crm-card" style={{ padding: 18, marginBottom: 16, borderLeft: '3px solid #f59e0b' }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Transcription step</div>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
+            Turns the recording into text before it reaches the analysis model. This can be a
+            different vendor and a different key - Gemini and OpenAI Whisper are both cheap for this.
+          </p>
+
+          <ProviderBlock
+            stage="transcription"
+            providers={providers}
+            form={form}
+            setForm={setForm}
+            cfg={cfg}
+            cached={modelCache.transcription}
+            onFetched={onModelsFetched('transcription')}
+            filter={(m) => m.transcribe}
+          />
+
+          <div style={{
+            marginTop: 14, padding: '10px 12px', borderRadius: 8,
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+            fontSize: 12.5, color: 'var(--text-secondary)',
+          }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Pipeline:</strong>{' '}
+            recording → {transcribeLabel || 'transcription'}{form.transcribe_model ? ` (${form.transcribe_model})` : ''}
+            {' '}→ {analysisProvider?.label || 'analysis'}{form.model ? ` (${form.model})` : ''} → analysis JSON
+            <div style={{ marginTop: 4, color: 'var(--text-muted)' }}>
+              Two paid calls per recording instead of one. An audio-native model such as Gemini
+              does it in a single call if cost matters more than model choice.
+            </div>
+          </div>
         </div>
+      )}
 
-        <label style={labelStyle}>Analysis language</label>
+      {/* Language */}
+      <div className="crm-card" style={{ padding: 18, marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Analysis language</div>
         <select
-          style={{ ...inputStyle, maxWidth: 240 }}
+          style={{ ...inputStyle, maxWidth: 240, marginTop: 10 }}
           value={form.output_language}
           onChange={(e) => setForm((f) => ({ ...f, output_language: e.target.value }))}
         >

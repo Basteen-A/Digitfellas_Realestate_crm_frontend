@@ -20,6 +20,13 @@ const callAnalysisApi = {
     const { data } = await api.get(`${BASE}/stats`, { params: { _t: Date.now() } });
     return data;
   },
+  // Ask the provider which models the key can actually use. POST, because the
+  // (possibly unsaved) API key travels in the body - never a query string.
+  // Omit api_key to reuse the one already stored for that stage.
+  listModels: async ({ stage = 'analysis', provider, api_key, base_url } = {}) => {
+    const { data } = await api.post(`${BASE}/models`, { stage, provider, api_key, base_url });
+    return data;
+  },
   // Kick off a worker pass immediately instead of waiting for the next tick.
   runNow: async () => {
     const { data } = await api.post(`${BASE}/run`);

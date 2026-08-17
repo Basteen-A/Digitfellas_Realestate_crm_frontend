@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import { PlayCircleIcon } from '@heroicons/react/24/outline';
+import { PlayCircleIcon } from '@heroicons/react/24/solid';
 import AuthedAudio from '../AuthedAudio';
 import telephonyApi from '../../api/telephonyApi';
 
-// Lazy call-recording player for a call-logs table cell. Renders a small "Play"
-// button; only when clicked does it mount <AuthedAudio> (which fetches the
-// recording through the token-attaching axios instance and streams it from the
-// server proxy) - so a page of rows never eager-downloads every recording.
+// Lazy call-recording player for a call-logs table cell.
+//
+// The trigger is a bare glyph - no button chrome, no "Play" label. In a dense
+// table a bordered pill per row reads as a form control competing with the data;
+// a single solid play mark is understood without being spelled out, and it is
+// the same affordance every media player on the device already uses.
+//
+// Only when it is clicked does <AuthedAudio> mount (fetching through the
+// token-attaching axios instance and streaming from the server proxy), so a
+// page of rows never eager-downloads every recording. AuthedAudio carries the
+// no-download attributes, so the expanded player has no save option either.
 export default function RecordingCell({ callId, hasRecording }) {
   const [open, setOpen] = useState(false);
 
@@ -17,12 +24,21 @@ export default function RecordingCell({ callId, hasRecording }) {
     return (
       <button
         type="button"
-        className="crm-btn crm-btn-ghost crm-btn-sm"
         onClick={() => setOpen(true)}
         title="Play recording"
-        style={{ padding: '4px 8px' }}
+        aria-label="Play recording"
+        style={{
+          background: 'none',
+          border: 0,
+          padding: 0,
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          color: 'var(--accent-blue)',
+          lineHeight: 0,
+        }}
       >
-        <PlayCircleIcon style={{ width: 16, height: 16, marginRight: 4 }} /> Play
+        <PlayCircleIcon style={{ width: 22, height: 22 }} />
       </button>
     );
   }

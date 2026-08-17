@@ -9,7 +9,7 @@ import {
 import taskApi from '../../api/taskApi';
 import departmentApi from '../../api/departmentApi';
 import subDepartmentApi from '../../api/subDepartmentApi';
-import AuthedAudio from '../../components/AuthedAudio';
+import AuthedAudio, { NO_DOWNLOAD_AUDIO_PROPS } from '../../components/AuthedAudio';
 import AuthedImage from '../../components/AuthedImage';
 import { openAuthedFile } from '../../utils/authedFile';
 
@@ -780,7 +780,10 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                       ) : voiceBlob ? (
                         <div className="tmq-voice-card">
                           <div className="tmq-voice-rec" style={{ border: 'none', background: 'transparent', padding: 0 }}>
-                            <audio className="tmq-voice-audio" src={voiceUrl} controls preload="metadata" />
+                            {/* Local blob preview - cannot go through AuthedAudio
+                                (resolveLegacyHref would prefix a blob: URL), so it
+                                spreads the shared no-download props directly. */}
+                            <audio {...NO_DOWNLOAD_AUDIO_PROPS} className="tmq-voice-audio" src={voiceUrl} controls preload="metadata" />
                             <span className="tmq-voice-time">{mmss(voiceDuration)}</span>
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                               {!transcribed && (
