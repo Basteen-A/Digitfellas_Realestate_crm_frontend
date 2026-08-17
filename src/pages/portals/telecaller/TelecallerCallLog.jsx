@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { PhoneArrowUpRightIcon, PhoneXMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import telephonyApi from '../../../api/telephonyApi';
 import Pagination from '../../../components/common/Pagination';
 import RecordingCell from '../../../components/telephony/RecordingCell';
-import CallDirectionIcon from '../../../components/telephony/CallDirectionIcon';
+import CallDirectionIcon, { CallStatusBadge } from '../../../components/telephony/CallDirectionIcon';
 import { getErrorMessage } from '../../../utils/helpers';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
@@ -20,11 +20,6 @@ const fmtDuration = (secs) => {
   return m ? `${m}m ${s}s` : `${s}s`;
 };
 const leadName = (l) => (l ? `${l.first_name || ''} ${l.last_name || ''}`.trim() || l.lead_number : null);
-
-const STATUS_BADGE = {
-  ANSWERED: { bg: '#dcfce7', fg: '#166534', label: 'Answered' },
-  MISSED: { bg: '#fee2e2', fg: '#991b1b', label: 'Missed' },
-};
 
 const TABS = [
   { key: '', label: 'All' },
@@ -106,8 +101,6 @@ const TelecallerCallLog = () => {
                 <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={6}>No calls recorded yet</td></tr>
               )}
               {!loading && rows.map((r) => {
-                const badge = STATUS_BADGE[r.call_status] || { bg: '#e5e7eb', fg: '#374151', label: r.call_status || 'Unknown' };
-                const answered = r.call_status === 'ANSWERED';
                 return (
                   <tr key={r.id}>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>
@@ -126,10 +119,7 @@ const TelecallerCallLog = () => {
                     </td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.customer_number || '-'}</td>
                     <td style={td}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg }}>
-                        {answered ? <PhoneArrowUpRightIcon style={{ width: 12, height: 12 }} /> : <PhoneXMarkIcon style={{ width: 12, height: 12 }} />}
-                        {badge.label}
-                      </span>
+                      <CallStatusBadge direction={r.direction} status={r.call_status} />
                     </td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDuration(r.duration)}</td>
                     <td style={td}>

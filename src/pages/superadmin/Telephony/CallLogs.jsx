@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { PhoneArrowUpRightIcon, PhoneXMarkIcon, FunnelIcon, ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PhoneArrowUpRightIcon, FunnelIcon, ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import telephonyApi from '../../../api/telephonyApi';
 import userApi from '../../../api/userApi';
 import Pagination from '../../../components/common/Pagination';
 import RecordingCell from '../../../components/telephony/RecordingCell';
-import CallDirectionIcon from '../../../components/telephony/CallDirectionIcon';
+import CallDirectionIcon, { CallStatusBadge } from '../../../components/telephony/CallDirectionIcon';
 import { getErrorMessage } from '../../../utils/helpers';
 
 const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
@@ -13,11 +13,6 @@ const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', border
 const selectStyle = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, background: 'var(--bg-primary)', color: 'var(--text-primary)', minWidth: 150 };
 
 const AGENT_ROLES = ['TC', 'SM', 'SH'];
-const STATUS_BADGE = {
-  ANSWERED: { bg: '#dcfce7', fg: '#166534', label: 'Answered' },
-  MISSED: { bg: '#fee2e2', fg: '#991b1b', label: 'Missed' },
-};
-
 const fmtDateTime = (d) => (d
   ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })
   : '-');
@@ -173,8 +168,6 @@ const CallLogs = () => {
                 <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>No calls match these filters</td></tr>
               )}
               {!loading && rows.map((r) => {
-                const badge = STATUS_BADGE[r.call_status] || { bg: '#e5e7eb', fg: '#374151', label: r.call_status || 'Unknown' };
-                const answered = r.call_status === 'ANSWERED';
                 return (
                   <tr key={r.id}>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>
@@ -198,10 +191,7 @@ const CallLogs = () => {
                     </td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.customer_number || '-'}</td>
                     <td style={td}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg }}>
-                        {answered ? <PhoneArrowUpRightIcon style={{ width: 12, height: 12 }} /> : <PhoneXMarkIcon style={{ width: 12, height: 12 }} />}
-                        {badge.label}
-                      </span>
+                      <CallStatusBadge direction={r.direction} status={r.call_status} />
                     </td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDuration(r.duration)}</td>
                     <td style={td}><RecordingCell callId={r.id} hasRecording={Boolean(r.has_recording ?? r.recording_url)} /></td>

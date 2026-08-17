@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import {
   SparklesIcon, CheckCircleIcon, ArrowPathIcon, PlayIcon, ArrowUturnLeftIcon,
   ExclamationTriangleIcon, SpeakerWaveIcon, DocumentTextIcon,
+  BoltIcon, XCircleIcon,
 } from '@heroicons/react/24/outline';
 import callAnalysisApi from '../../../api/callAnalysisApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -225,6 +226,8 @@ const CallAnalysisSettings = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
   const [modelCache, setModelCache] = useState({});
   const [form, setForm] = useState({
     provider: 'gemini', api_key: '', model: 'gemini-flash-latest', base_url: '',
@@ -340,6 +343,25 @@ const CallAnalysisSettings = () => {
     }
   };
 
+  // Tests the SAVED settings, not the form - so an unsaved key would give a
+  // misleading pass. Save first, then test.
+  const runTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const resp = await callAnalysisApi.testConnection();
+      setTestResult(resp.data);
+      if (resp.data?.ok) toast.success('Connection test passed');
+      else toast.error('Connection test failed - see the details below');
+    } catch (err) {
+      const message = getErrorMessage(err, 'Could not run the test');
+      setTestResult({ ok: false, stages: [{ stage: 'analysis', ok: false, message }] });
+      toast.error(message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const resetPrompt = () => {
     if (!cfg?.default_prompt) return;
     if (!window.confirm('Replace the prompt with the default analyst prompt?')) return;
@@ -361,12 +383,80 @@ const CallAnalysisSettings = () => {
             results appear on the lead's <strong>AI Analysis</strong> tab
           </p>
         </div>
-        <div className="page-header-right">
+        <div className="page-header-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={runTest} disabled={testing || loading}>
+            <BoltIcon style={{ width: 15, height: 15 }} /> {testing ? 'Testing…' : 'Test connection'}
+          </button>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={runNow} disabled={running || loading}>
             <PlayIcon style={{ width: 15, height: 15 }} /> {running ? 'Running…' : 'Run now'}
           </button>
         </div>
       </div>
+
+      {/* Connection test result */}
+      {testResult && (
+        <div
+          className="crm-card"
+          style={{ padding: 18, marginBottom: 16, borderLeft: `3px solid ${testResult.ok ? '#16a34a' : '#dc2626'}` }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            {testResult.ok
+              ? <CheckCircleIcon style={{ width: 18, height: 18, color: '#16a34a' }} />
+              : <XCircleIcon style={{ width: 18, height: 18, color: '#dc2626' }} />}
+            <span style={{ fontWeight: 700 }}>
+              {testResult.ok ? 'Connection test passed' : 'Connection test failed'}
+            </span>
+            <button
+              type="button"
+              className="crm-btn crm-btn-ghost crm-btn-sm"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => setTestResult(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+            Tests the <strong>saved</strong> settings, not what is typed above - save first, then test.
+            It spends a few tokens, never a whole recording.
+          </p>
+
+          {(testResult.stages || []).map((s) => (
+            <div
+              key={s.stage}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0',
+                borderTop: '1px solid var(--border-primary)',
+              }}
+            >
+              {s.ok
+                ? <CheckCircleIcon style={{ width: 16, height: 16, color: '#16a34a', flexShrink: 0, marginTop: 2 }} />
+                : <XCircleIcon style={{ width: 16, height: 16, color: '#dc2626', flexShrink: 0, marginTop: 2 }} />}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>
+                  {s.stage}
+                  {s.provider_label && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {s.provider_label}{s.model ? ` / ${s.model}` : ''}</span>}
+                  {Number.isFinite(s.ms) && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {s.ms} ms</span>}
+                  {Number.isFinite(s.tokens) && s.tokens !== null && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {s.tokens} tokens</span>}
+                </div>
+                <div style={{ fontSize: 12, color: s.ok ? 'var(--text-secondary)' : '#b91c1c', marginTop: 2 }}>
+                  {s.message}
+                </div>
+                {s.ok && s.stage === 'analysis' && s.json_ok === false && (
+                  <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>
+                    The key works, but this model did not return valid JSON - real analyses will likely fail.
+                    Pick a model that supports structured output.
+                  </div>
+                )}
+                {s.ok && s.stage === 'analysis' && s.reads_audio === false && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    This model cannot read audio, so every recording goes through the transcription step first.
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Status + volume */}
       <div className="crm-card" style={{ padding: 18, marginBottom: 16 }}>

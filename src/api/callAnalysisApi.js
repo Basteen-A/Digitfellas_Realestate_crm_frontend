@@ -27,6 +27,12 @@ const callAnalysisApi = {
     const { data } = await api.post(`${BASE}/models`, { stage, provider, api_key, base_url });
     return data;
   },
+  // Exercise each configured stage against the SAVED settings and report per
+  // stage whether it worked. Costs a few tokens, not a whole analysis.
+  testConnection: async () => {
+    const { data } = await api.post(`${BASE}/test`);
+    return data;
+  },
   // Kick off a worker pass immediately instead of waiting for the next tick.
   runNow: async () => {
     const { data } = await api.post(`${BASE}/run`);
