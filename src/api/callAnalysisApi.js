@@ -33,6 +33,18 @@ const callAnalysisApi = {
     const { data } = await api.post(`${BASE}/test`);
     return data;
   },
+  // Run the REAL pipeline over an uploaded clip and get the analysis back
+  // without anything being saved. Costs one provider call (two when a
+  // transcription stage is configured), so it is slower than testConnection.
+  testAudio: async (file) => {
+    const form = new FormData();
+    form.append('audio', file);
+    const { data } = await api.post(`${BASE}/test-audio`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000, // a long recording through two providers can take minutes
+    });
+    return data;
+  },
   // Kick off a worker pass immediately instead of waiting for the next tick.
   runNow: async () => {
     const { data } = await api.post(`${BASE}/run`);

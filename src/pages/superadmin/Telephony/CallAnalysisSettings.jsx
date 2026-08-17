@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
   SparklesIcon, CheckCircleIcon, ArrowPathIcon, PlayIcon, ArrowUturnLeftIcon,
   ExclamationTriangleIcon, SpeakerWaveIcon, DocumentTextIcon,
-  BoltIcon, XCircleIcon,
+  BoltIcon, XCircleIcon, MusicalNoteIcon, PaperClipIcon,
 } from '@heroicons/react/24/outline';
 import callAnalysisApi from '../../../api/callAnalysisApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -47,6 +47,107 @@ const Notice = ({ tone = 'warn', icon: Icon = ExclamationTriangleIcon, children 
     }}>
       <Icon style={{ width: 16, height: 16, flexShrink: 0, marginTop: 1 }} />
       <div>{children}</div>
+    </div>
+  );
+};
+
+/**
+ * The analysis a test clip came back with.
+ *
+ * Deliberately shows the SAME sections the lead's AI Analysis tab renders, so
+ * "does it look right here" is the same question as "will it look right there".
+ * Every field is optional - a model that skips a section should leave a visible
+ * gap rather than crash the panel, because that gap IS the finding.
+ */
+const SampleResult = ({ data }) => {
+  const s = data.sentiment || {};
+  const ratio = data.talk_ratio_agent !== null && data.talk_ratio_agent !== undefined
+    ? `${data.talk_ratio_agent}% agent / ${data.talk_ratio_customer ?? '-'}% customer`
+    : null;
+
+  const facts = [
+    ['Provider', `${data.provider} / ${data.model}`],
+    ['Path', data.transcribed_by ? `transcribed by ${data.transcribed_by}, then analysed` : 'audio read directly by the model'],
+    ['Took', `${(data.ms / 1000).toFixed(1)}s`],
+    ['Tokens', data.tokens_used ?? '-'],
+    ['Language detected', data.language_detected || '-'],
+    ['Lead score', s.lead_score_label ? `${s.lead_score_label}${data.lead_score !== null ? ` (${data.lead_score}/10)` : ''}` : '-'],
+    ['QA score', data.qa_score !== null && data.qa_score !== undefined ? `${data.qa_score}%` : '-'],
+    ['Talk ratio', ratio || '-'],
+  ];
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 6 }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop: 16, borderTop: '1px solid var(--border-primary)', paddingTop: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <CheckCircleIcon style={{ width: 18, height: 18, color: '#16a34a' }} />
+        <span style={{ fontWeight: 700 }}>Analysis returned</span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{data.file_name}</span>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {facts.map(([k, v]) => (
+          <div key={k} style={{ flex: '1 1 150px', minWidth: 150, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>{k}</div>
+            <div style={{ fontSize: 13, marginTop: 2, wordBreak: 'break-word' }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      {data.summary && (
+        <Section title="Summary"><p style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>{data.summary}</p></Section>
+      )}
+
+      {Array.isArray(data.transcript) && data.transcript.length > 0 && (
+        <Section title={`Transcript (${data.transcript.length} turns)`}>
+          <div style={{ maxHeight: 240, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 8, padding: 10 }}>
+            {data.transcript.map((t, i) => (
+              <div key={i} style={{ fontSize: 12.5, lineHeight: 1.55, marginBottom: 6 }}>
+                <strong style={{ color: 'var(--text-secondary)' }}>{t.speaker}:</strong> {t.text}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {Array.isArray(data.questionnaire) && data.questionnaire.length > 0 && (
+        <Section title="QA questionnaire">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {data.questionnaire.map((q, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5 }}>
+                <span style={{ minWidth: 190, color: 'var(--text-secondary)' }}>{q.metric}</span>
+                <strong>{q.score}{q.max_score ? ` / ${q.max_score}` : ''}</strong>
+                {q.notes && <span style={{ color: 'var(--text-muted)', minWidth: 0 }}>{q.notes}</span>}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {data.next_steps?.crm_note && (
+        <Section title="CRM note"><p style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>{data.next_steps.crm_note}</p></Section>
+      )}
+
+      <details style={{ marginTop: 14 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)' }}>
+          Raw provider response (JSON)
+        </summary>
+        <pre style={{
+          marginTop: 8, maxHeight: 300, overflow: 'auto', fontSize: 11, lineHeight: 1.5,
+          background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+          borderRadius: 8, padding: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        }}>
+          {JSON.stringify(data.raw_response ?? data, null, 2)}
+        </pre>
+      </details>
     </div>
   );
 };
@@ -229,6 +330,12 @@ const CallAnalysisSettings = () => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [modelCache, setModelCache] = useState({});
+  // Manual audio test - a real clip through the real pipeline.
+  const fileRef = useRef(null);
+  const [sampleFile, setSampleFile] = useState(null);
+  const [sampleRunning, setSampleRunning] = useState(false);
+  const [sampleResult, setSampleResult] = useState(null);
+  const [sampleError, setSampleError] = useState(null);
   const [form, setForm] = useState({
     provider: 'gemini', api_key: '', model: 'gemini-flash-latest', base_url: '',
     transcribe_provider: '', transcribe_api_key: '', transcribe_model: '', transcribe_base_url: '',
@@ -362,6 +469,33 @@ const CallAnalysisSettings = () => {
     }
   };
 
+  // Uses the SAVED settings too - the file goes through the real pipeline,
+  // transcription stage included, and nothing is written to the database.
+  const runSample = async () => {
+    if (!sampleFile) { toast.error('Choose an audio file first.'); return; }
+    setSampleRunning(true);
+    setSampleResult(null);
+    setSampleError(null);
+    try {
+      const resp = await callAnalysisApi.testAudio(sampleFile);
+      setSampleResult(resp.data);
+      toast.success('Sample analysed');
+    } catch (err) {
+      const message = getErrorMessage(err, 'Could not analyse the sample');
+      setSampleError(message);
+      toast.error(message);
+    } finally {
+      setSampleRunning(false);
+    }
+  };
+
+  const clearSample = () => {
+    setSampleFile(null);
+    setSampleResult(null);
+    setSampleError(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const resetPrompt = () => {
     if (!cfg?.default_prompt) return;
     if (!window.confirm('Replace the prompt with the default analyst prompt?')) return;
@@ -481,6 +615,80 @@ const CallAnalysisSettings = () => {
         {cfg?.config_error && (
           <Notice>{cfg.config_error}</Notice>
         )}
+      </div>
+
+      {/* Manual audio test - the real pipeline on a file you choose */}
+      <div className="crm-card" style={{ padding: 18, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <MusicalNoteIcon style={{ width: 18, height: 18, color: 'var(--accent-blue)' }} />
+          <div style={{ fontWeight: 700 }}>Test with an audio file</div>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
+          Upload a call recording and send it through the <strong>real</strong> pipeline - transcription
+          step included when the analysis model cannot hear - and read the result below. This is the
+          honest end-to-end check: it proves the prompt, the model and the output contract all work
+          together, which the connection test alone cannot. <strong>Nothing is saved</strong> - no call
+          log, no analysis record. It does spend one provider call (two with a transcription step).
+        </p>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="audio/*,video/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              setSampleFile(f);
+              setSampleResult(null);
+              setSampleError(null);
+            }}
+          />
+          <button
+            type="button"
+            className="crm-btn crm-btn-ghost crm-btn-sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={sampleRunning}
+          >
+            <PaperClipIcon style={{ width: 15, height: 15 }} /> Choose audio
+          </button>
+          <button
+            type="button"
+            className="crm-btn crm-btn-primary crm-btn-sm"
+            onClick={runSample}
+            disabled={!sampleFile || sampleRunning}
+          >
+            <PlayIcon style={{ width: 15, height: 15 }} /> {sampleRunning ? 'Analysing…' : 'Send for analysis'}
+          </button>
+          {(sampleFile || sampleResult || sampleError) && (
+            <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" onClick={clearSample} disabled={sampleRunning}>
+              Clear
+            </button>
+          )}
+          {sampleFile && (
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              {sampleFile.name} · {(sampleFile.size / 1024 / 1024).toFixed(1)} MB
+            </span>
+          )}
+        </div>
+        <div style={hintStyle}>
+          Max 18MB - the same ceiling a real recording has, because the audio is sent inline in one
+          request. Runs against the <strong>saved</strong> settings, so save any changes first.
+        </div>
+
+        {sampleRunning && (
+          <Notice tone="info" icon={ArrowPathIcon}>
+            Sending to {analysisProvider?.label || 'the provider'}
+            {needsTranscription ? ' via the transcription step' : ''} - a long recording can take a
+            minute or two.
+          </Notice>
+        )}
+
+        {sampleError && (
+          <Notice tone="warn" icon={XCircleIcon}>{sampleError}</Notice>
+        )}
+
+        {sampleResult && <SampleResult data={sampleResult} />}
       </div>
 
       {/* Analysis provider */}
