@@ -51,7 +51,21 @@ const COST_PER_LEAD_TIP = 'Budget ÷ the leads this line brought in over its own
   + 'Leads are counted against the source, sub-source and campaign of their latest marketing touch - '
   + 'their creation, or their newest re-enquiry, whichever is later. '
   + 'Shown as "-" when the line has no leads yet or no budget: that means the cost is unknown, not zero. '
-  + 'Open the row for the full funnel and the cost per qualified lead, site visit and booking.';
+  + 'Open the row for the full funnel and the cost per qualified lead and booking.';
+
+// Site visit and sq ft answer the two questions cost-per-lead cannot: what a line cost to
+// get somebody ONTO the site, and what it cost per square foot it eventually sold. Both
+// are cohort figures - the leads this line bought, wherever their visit or booking later
+// landed on the calendar - which is what makes dividing this period's budget by them fair.
+const COST_PER_SV_TIP = 'Budget ÷ the leads this line brought in that have completed a site visit - '
+  + 'whenever that visit happened. Counted once per lead, so a revisit never adds a second: '
+  + 'you did not pay twice for the same person coming back. '
+  + 'Shown as "-" when no lead from this line has visited yet, or there is no budget.';
+
+const COST_PER_SQFT_TIP = 'Budget ÷ the sq ft booked by the leads this line brought in - the plot area of their '
+  + 'live bookings, the same figure the Bookings in Sq Ft report sums. The booking may have '
+  + 'happened after this period; the lead is what the spend bought. '
+  + 'Shown as "-" until a lead from this line books.';
 
 const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
@@ -360,11 +374,13 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
           head={[
             'Campaign', 'Period', 'Days', 'Source', 'Sub Source', 'Budget', 'Per day',
             <HeadTip key="cpl" label="Cost per Lead" tip={COST_PER_LEAD_TIP} />,
+            <HeadTip key="cpsv" label="Cost per Site Visit" tip={COST_PER_SV_TIP} />,
+            <HeadTip key="cpsqft" label="Cost per Sq Ft" tip={COST_PER_SQFT_TIP} />,
             '',
           ]}
-          colSpan={9}
+          colSpan={11}
           empty={!loading && rows.length === 0}
-          emptyLabel="No budget recorded for this period. Add a line to start measuring cost per lead."
+          emptyLabel="No budget recorded for this period. Add a line to start measuring cost per lead, site visit and sq ft."
         >
           {rows.map((r) => {
             const names = rowSubSourceNames(r);
@@ -394,6 +410,19 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
                     {` · ${cnt(r.lead_count)} lead${Number(r.lead_count) === 1 ? '' : 's'}`}
                   </span>
                 </Td>
+                {/* Counted once per lead - a revisit is not a second visit you paid for. */}
+                <Td bold={r.cost_per_site_visit != null}>
+                  {r.cost_per_site_visit != null ? money(r.cost_per_site_visit) : '-'}
+                  <span className="opacity-60" style={{ fontWeight: 400 }}>
+                    {` · ${cnt(r.sv_lead_count)} visit${Number(r.sv_lead_count) === 1 ? '' : 's'}`}
+                  </span>
+                </Td>
+                <Td bold={r.cost_per_sqft != null}>
+                  {r.cost_per_sqft != null ? money(r.cost_per_sqft) : '-'}
+                  <span className="opacity-60" style={{ fontWeight: 400 }}>
+                    {` · ${cnt(r.booked_sqft)} sq ft`}
+                  </span>
+                </Td>
                 <Td className="whitespace-nowrap text-right">
                   <button
                     className="crm-btn crm-btn-ghost crm-btn-sm"
@@ -414,7 +443,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
               </Tr>
             );
           })}
-          {rows.length > 0 && <TotalRow cells={['', '', '', '', money(total), '', '', '']} label="Total" />}
+          {rows.length > 0 && <TotalRow cells={['', '', '', '', money(total), '', '', '', '', '']} label="Total" />}
         </Table>
       </Card>
 

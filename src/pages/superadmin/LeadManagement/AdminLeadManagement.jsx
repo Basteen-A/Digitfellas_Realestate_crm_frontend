@@ -22,6 +22,8 @@ import {
   ArrowsRightLeftIcon,
   TrashIcon,
   XMarkIcon,
+  ChevronDownIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../../components/common/Pagination';
 import './AdminLeadManagement.css';
@@ -93,6 +95,160 @@ const SEARCH_DEBOUNCE_MS = 400;
 // Below this a term matches too much of the table to be worth an all-dates query.
 const SEARCH_MIN_CHARS = 2;
 
+const uniq = (arr) => Array.from(new Set(arr));
+
+// Filter chips name up to three picks, then trail off with a count.
+const capNames = (names) => (
+  names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3}` : names.join(', ')
+);
+
+// ── Multi-select filter dropdown ──────────────────────────────────────────────
+// Rolled by hand rather than pulled from a library: a native <select multiple>
+// is unusable on a filter bar, and the app carries no combobox dependency.
+// The panel stays open while options are toggled so several values can be
+// picked in one pass; it closes on outside click and on Escape.
+// `options` are { value, label, group? } - a group tag renders a header row
+// (used by the user picker, which is grouped by role).
+const AlmMultiSelect = ({
+  icon: Icon,
+  allLabel,
+  options,
+  value,
+  onChange,
+  disabled = false,
+  title,
+  searchable,
+}) => {
+  const [open, setOpen] = useState(false);
+  const [term, setTerm] = useState('');
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  // A stale search term would hide options the next time the panel opens.
+  useEffect(() => { if (!open) setTerm(''); }, [open]);
+
+  const showSearch = searchable ?? options.length > 8;
+
+  const visible = useMemo(() => {
+    const q = term.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => String(o.label).toLowerCase().includes(q));
+  }, [options, term]);
+
+  const groups = useMemo(() => {
+    const map = new Map();
+    visible.forEach((o) => {
+      const g = o.group || '';
+      if (!map.has(g)) map.set(g, []);
+      map.get(g).push(o);
+    });
+    return Array.from(map.entries());
+  }, [visible]);
+
+  const toggle = (v) => {
+    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  };
+
+  const selectedLabels = options.filter((o) => value.includes(o.value)).map((o) => o.label);
+  // Ids can outlive their option list (e.g. a project dropped by a location
+  // change) - keep the count honest by counting the raw selection.
+  const summary = value.length === 0
+    ? allLabel
+    : (value.length === 1 && selectedLabels.length === 1 ? selectedLabels[0] : `${value.length} selected`);
+
+  const allVisibleSelected = visible.length > 0 && visible.every((o) => value.includes(o.value));
+
+  return (
+    <div className="alm-multi" ref={wrapRef}>
+      <button
+        type="button"
+        className={`alm-multi__btn${value.length ? ' alm-multi__btn--active' : ''}`}
+        onClick={() => { if (!disabled) setOpen((o) => !o); }}
+        disabled={disabled}
+        title={title || (selectedLabels.length ? selectedLabels.join(', ') : allLabel)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        {Icon && <Icon className="alm-filter-icon" />}
+        <span className="alm-multi__summary">{summary}</span>
+        <ChevronDownIcon className="alm-multi__chevron" />
+      </button>
+
+      {open && !disabled && (
+        <div className="alm-multi__panel" role="listbox" aria-multiselectable="true">
+          {showSearch && (
+            <input
+              type="text"
+              className="alm-multi__search"
+              value={term}
+              autoFocus
+              placeholder="Type to filter…"
+              onChange={(e) => setTerm(e.target.value)}
+            />
+          )}
+
+          <div className="alm-multi__actions">
+            <button
+              type="button"
+              className="alm-multi__link"
+              disabled={visible.length === 0 || allVisibleSelected}
+              onClick={() => onChange(uniq([...value, ...visible.map((o) => o.value)]))}
+            >
+              {term.trim() ? 'Select matches' : 'Select all'}
+            </button>
+            <button
+              type="button"
+              className="alm-multi__link"
+              disabled={value.length === 0}
+              onClick={() => onChange([])}
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="alm-multi__list">
+            {visible.length === 0 && <div className="alm-multi__empty">No matches</div>}
+            {groups.map(([groupLabel, list]) => (
+              <React.Fragment key={groupLabel || '_ungrouped'}>
+                {groupLabel && <div className="alm-multi__group">{groupLabel}</div>}
+                {list.map((o) => {
+                  const on = value.includes(o.value);
+                  return (
+                    <button
+                      type="button"
+                      key={o.value}
+                      className="alm-multi__opt"
+                      role="option"
+                      aria-selected={on}
+                      onClick={() => toggle(o.value)}
+                    >
+                      <span className={`alm-multi__box${on ? ' alm-multi__box--on' : ''}`}>
+                        {on && <CheckIcon />}
+                      </span>
+                      <span className="alm-multi__opt-label">{o.label}</span>
+                    </button>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminLeadManagement = () => {
   const navigate = useNavigate();
   const today = getTodayString();
@@ -114,15 +270,17 @@ const AdminLeadManagement = () => {
     }
   };
   const [filterMode, setFilterMode] = useState('created'); // 'created' | 'assigned' | 'handoff'
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedRole, setSelectedRole] = useState(''); // narrows the user dropdown
-  const [selectedLocationId, setSelectedLocationId] = useState('');
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedBookingStatus, setSelectedBookingStatus] = useState(''); // booking_statuses.id
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState(''); // payment_statuses.id
-  const [selectedSourceId, setSelectedSourceId] = useState('');
-  const [selectedSubSourceId, setSelectedSubSourceId] = useState('');
+  // Every dropdown below is multi-select: empty array = no filter ("All ...").
+  // They go to the API as comma-separated lists (userIds, statusCodes, ...).
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState([]); // also narrows the user dropdown
+  const [selectedLocationIds, setSelectedLocationIds] = useState([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]); // lead_statuses.status_code
+  const [selectedBookingStatuses, setSelectedBookingStatuses] = useState([]); // booking_statuses.id
+  const [selectedPaymentStatuses, setSelectedPaymentStatuses] = useState([]); // payment_statuses.id
+  const [selectedSourceIds, setSelectedSourceIds] = useState([]);
+  const [selectedSubSourceIds, setSelectedSubSourceIds] = useState([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
 
@@ -196,6 +354,13 @@ const AdminLeadManagement = () => {
     leadSourceApi.getDropdown()
       .then((res) => setSources(pick(res)))
       .catch((err) => { console.error('Load sources failed:', err); setSources([]); });
+
+    // Every sub-source at once (the dropdown payload carries lead_source_id), so
+    // the list can be narrowed client-side against a multi-source selection
+    // instead of re-fetching per source.
+    leadSubSourceApi.getDropdown()
+      .then((res) => setSubSources(pick(res)))
+      .catch((err) => { console.error('Load sub-sources failed:', err); setSubSources([]); });
   }, [loadUsers]);
 
   // A search term is looked up across every date, so the date range is suppressed
@@ -225,29 +390,33 @@ const AdminLeadManagement = () => {
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
       }
-      if (selectedStatus) params.statusCode = selectedStatus;
-      if (selectedBookingStatus) params.bookingStatusId = selectedBookingStatus;
-      if (selectedPaymentStatus) params.paymentStatusId = selectedPaymentStatus;
-      if (selectedProjectId) params.project_id = selectedProjectId;
-      if (selectedLocationId) params.location_id = selectedLocationId;
-      if (selectedSourceId) params.sourceId = selectedSourceId;
-      if (selectedSubSourceId) params.subSourceId = selectedSubSourceId;
+      // Multi-selects go over as comma-separated lists; each is OR-ed inside its
+      // own filter and AND-ed against the others. An empty array sends nothing.
+      if (selectedStatuses.length) params.statusCodes = selectedStatuses.join(',');
+      if (selectedBookingStatuses.length) params.bookingStatusIds = selectedBookingStatuses.join(',');
+      if (selectedPaymentStatuses.length) params.paymentStatusIds = selectedPaymentStatuses.join(',');
+      if (selectedProjectIds.length) params.projectIds = selectedProjectIds.join(',');
+      if (selectedLocationIds.length) params.locationIds = selectedLocationIds.join(',');
+      if (selectedSourceIds.length) params.sourceIds = selectedSourceIds.join(',');
+      if (selectedSubSourceIds.length) params.subSourceIds = selectedSubSourceIds.join(',');
 
-      // A specific user always wins; with no user picked but a ROLE selected, filter by
-      // every user of that role for the active mode (e.g. "Assigned To" + "Sales Head"
+      // Picked users always win; with no user picked but ROLES selected, filter by
+      // every user of those roles for the active mode (e.g. "Assigned To" + "Sales Head"
       // → leads assigned to any Sales Head). The role dropdown used to only narrow the
       // user list, so choosing a role without a user silently filtered nothing.
+      const userCsv = selectedUserIds.join(',');
+      const roleCsv = selectedRoles.join(',');
       if (filterMode === 'created') {
-        if (selectedUserId) params.createdBy = selectedUserId;
-        else if (selectedRole) params.createdByRole = selectedRole;
+        if (userCsv) params.createdByIds = userCsv;
+        else if (roleCsv) params.createdByRoles = roleCsv;
       } else if (filterMode === 'assigned') {
-        if (selectedUserId) params.userId = selectedUserId;
-        else if (selectedRole) params.assignedRole = selectedRole;
+        if (userCsv) params.userIds = userCsv;
+        else if (roleCsv) params.assignedRoles = roleCsv;
       } else if (filterMode === 'handoff') {
-        // A specific user → leads they handed off; a role → leads handed off by any user
-        // of that role; neither → every handoff lead.
-        if (selectedUserId) params.handoffBy = selectedUserId;
-        else if (selectedRole) params.handoffByRole = selectedRole;
+        // Picked users → leads they handed off; roles → leads handed off by any user
+        // of those roles; neither → every handoff lead.
+        if (userCsv) params.handoffByIds = userCsv;
+        else if (roleCsv) params.handoffByRoles = roleCsv;
         else params.handoffOnly = 'true';
       }
 
@@ -264,7 +433,7 @@ const AdminLeadManagement = () => {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserId, selectedRole, filterMode, selectedStatus, selectedBookingStatus, selectedPaymentStatus, selectedProjectId, selectedLocationId, selectedSourceId, selectedSubSourceId]);
+  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserIds, selectedRoles, filterMode, selectedStatuses, selectedBookingStatuses, selectedPaymentStatuses, selectedProjectIds, selectedLocationIds, selectedSourceIds, selectedSubSourceIds]);
 
   useEffect(() => {
     fetchLeads();
@@ -308,17 +477,16 @@ const AdminLeadManagement = () => {
     setDateTo('');
     setSearch('');
     setSearchInput('');
-    setSelectedUserId('');
-    setSelectedRole('');
-    setSelectedLocationId('');
-    setSelectedProjectId('');
-    setSelectedStatus('');
-    setSelectedBookingStatus('');
-    setSelectedPaymentStatus('');
-    setSelectedSourceId('');
-    setSelectedSubSourceId('');
+    setSelectedUserIds([]);
+    setSelectedRoles([]);
+    setSelectedLocationIds([]);
+    setSelectedProjectIds([]);
+    setSelectedStatuses([]);
+    setSelectedBookingStatuses([]);
+    setSelectedPaymentStatuses([]);
+    setSelectedSourceIds([]);
+    setSelectedSubSourceIds([]);
     setFilterMode('created');
-    setSubSources([]);
     setPage(1);
   };
 
@@ -331,7 +499,7 @@ const AdminLeadManagement = () => {
   // if the master fetch failed. ──
   const statusOptions = useMemo(() => {
     if (leadStatuses.length > 0) {
-      return leadStatuses.map((s) => ({ code: s.status_code, label: s.status_name }));
+      return leadStatuses.map((s) => ({ value: s.status_code, label: s.status_name }));
     }
     const map = new Map();
     leads.forEach((l) => {
@@ -339,16 +507,54 @@ const AdminLeadManagement = () => {
         map.set(l.statusCode, l.statusLabel || l.statusName || l.statusCode);
       }
     });
-    return Array.from(map.entries()).map(([code, label]) => ({ code, label }));
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [leadStatuses, leads]);
 
-  // Projects filtered by the selected location (project carries location_id).
+  const bookingStatusOptions = useMemo(
+    () => bookingStatuses.map((b) => ({ value: b.id, label: b.status_name })),
+    [bookingStatuses]
+  );
+
+  const paymentStatusOptions = useMemo(
+    () => paymentStatuses.map((ps) => ({ value: ps.id, label: ps.status_name })),
+    [paymentStatuses]
+  );
+
+  const sourceOptions = useMemo(
+    () => sources.map((src) => ({ value: src.id, label: src.source_name })),
+    [sources]
+  );
+
+  // Unnarrowed lists, so a chip can still name a pick whose parent filter moved on.
+  const allProjectOptions = useMemo(
+    () => projects.map((pr) => ({ value: pr.id, label: pr.project_name })),
+    [projects]
+  );
+
+  const allSubSourceOptions = useMemo(
+    () => subSources.map((ss) => ({ value: ss.id, label: ss.sub_source_name })),
+    [subSources]
+  );
+
+  // Projects narrowed to the selected locations (project carries location_id).
   const projectOptions = useMemo(() => {
     return projects
-      .filter((p) => !selectedLocationId || String(p.location_id) === String(selectedLocationId))
-      .map((p) => ({ id: p.id, name: p.project_name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [projects, selectedLocationId]);
+      .filter((p) => selectedLocationIds.length === 0 || selectedLocationIds.includes(String(p.location_id)))
+      .map((p) => ({ value: p.id, label: p.project_name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [projects, selectedLocationIds]);
+
+  const locationOptions = useMemo(
+    () => locations.map((l) => ({ value: l.id, label: l.location_name })),
+    [locations]
+  );
+
+  // Sub-sources narrowed to the selected sources; the whole list when none is picked.
+  const subSourceOptions = useMemo(() => {
+    return subSources
+      .filter((ss) => selectedSourceIds.length === 0 || selectedSourceIds.includes(String(ss.lead_source_id)))
+      .map((ss) => ({ value: ss.id, label: ss.sub_source_name }));
+  }, [subSources, selectedSourceIds]);
 
   // Roles present in the user list, for the role narrowing dropdown.
   const roleOptions = useMemo(() => {
@@ -357,45 +563,85 @@ const AdminLeadManagement = () => {
       const code = (u.userType?.short_code || '').toUpperCase();
       if (code && !map.has(code)) map.set(code, u.userType?.type_name || code);
     });
-    return Array.from(map.entries()).map(([code, label]) => ({ code, label }));
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [users]);
 
-  // Users narrowed by location mapping + role, grouped by role for the dropdown.
-  const userGroups = useMemo(() => {
-    const matchesLocation = (u) => {
-      if (!selectedLocationId) return true;
-      const maps = u.locationMappings || u.location_mappings || [];
-      // Users with no location mapping (e.g. SM/SH/admins) aren't location-restricted.
-      if (maps.length === 0) return true;
-      return maps.some((m) => String(m.location_id) === String(selectedLocationId));
-    };
-    const matchesRole = (u) => {
-      if (!selectedRole) return true;
-      return (u.userType?.short_code || '').toUpperCase() === selectedRole;
-    };
+  // Users narrowed by location mapping + role, tagged with their role so the
+  // dropdown can print a header per role.
+  const userMatchesFilters = useCallback((u) => {
+    const maps = u.locationMappings || u.location_mappings || [];
+    // Users with no location mapping (e.g. SM/SH/admins) aren't location-restricted.
+    const okLocation = selectedLocationIds.length === 0
+      || maps.length === 0
+      || maps.some((m) => selectedLocationIds.includes(String(m.location_id)));
+    const okRole = selectedRoles.length === 0
+      || selectedRoles.includes((u.userType?.short_code || '').toUpperCase());
+    return okLocation && okRole;
+  }, [selectedLocationIds, selectedRoles]);
 
-    const groups = new Map();
-    users
-      .filter((u) => u.is_active !== false && matchesLocation(u) && matchesRole(u))
+  const userOptions = useMemo(() => {
+    return users
+      .filter((u) => u.is_active !== false && userMatchesFilters(u))
       .map((u) => ({
-        id: u.id,
-        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Unknown',
-        roleCode: (u.userType?.short_code || '').toUpperCase() || 'OTHER',
-        roleLabel: u.userType?.type_name || u.userType?.short_code || 'Other',
+        value: u.id,
+        label: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Unknown',
+        group: u.userType?.type_name || u.userType?.short_code || 'Other',
       }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .forEach((u) => {
-        if (!groups.has(u.roleLabel)) groups.set(u.roleLabel, []);
-        groups.get(u.roleLabel).push(u);
-      });
-    return Array.from(groups.entries()).map(([label, list]) => ({ label, users: list }));
-  }, [users, selectedLocationId, selectedRole]);
+      .sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
+  }, [users, userMatchesFilters]);
 
   // Flat lookup for the stats bar.
-  const selectedUserName = useMemo(() => {
-    const u = users.find((x) => x.id === selectedUserId);
-    return u ? (`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email) : '';
-  }, [users, selectedUserId]);
+  const selectedUserNames = useMemo(() => (
+    selectedUserIds
+      .map((id) => {
+        const u = users.find((x) => x.id === id);
+        return u ? (`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email) : null;
+      })
+      .filter(Boolean)
+  ), [users, selectedUserIds]);
+
+  // ── Cascading filter handlers ──
+  // Narrowing a parent filter can strand a child selection (a project outside the
+  // new locations, a sub-source outside the new sources). Prune it rather than
+  // quietly querying on a value the user can no longer see.
+  const handleLocationsChange = (ids) => {
+    setSelectedLocationIds(ids);
+    if (ids.length) {
+      setSelectedProjectIds((prev) => prev.filter((pid) => {
+        const proj = projects.find((p) => String(p.id) === String(pid));
+        return proj ? ids.includes(String(proj.location_id)) : false;
+      }));
+      setSelectedUserIds((prev) => prev.filter((uid) => {
+        const u = users.find((x) => String(x.id) === String(uid));
+        if (!u) return false;
+        const maps = u.locationMappings || u.location_mappings || [];
+        return maps.length === 0 || maps.some((m) => ids.includes(String(m.location_id)));
+      }));
+    }
+    setPage(1);
+  };
+
+  const handleRolesChange = (codes) => {
+    setSelectedRoles(codes);
+    if (codes.length) {
+      setSelectedUserIds((prev) => prev.filter((uid) => {
+        const u = users.find((x) => String(x.id) === String(uid));
+        return u ? codes.includes((u.userType?.short_code || '').toUpperCase()) : false;
+      }));
+    }
+    setPage(1);
+  };
+
+  const handleSourcesChange = (ids) => {
+    setSelectedSourceIds(ids);
+    if (ids.length) {
+      setSelectedSubSourceIds((prev) => prev.filter((ssid) => {
+        const ss = subSources.find((x) => String(x.id) === String(ssid));
+        return ss ? ids.includes(String(ss.lead_source_id)) : false;
+      }));
+    }
+    setPage(1);
+  };
 
   // All users grouped by role for the transfer / move dropdowns.
   // `activeOnly` excludes deactivated users (used for transfer/move targets).
@@ -544,6 +790,25 @@ const AdminLeadManagement = () => {
     }
   };
 
+  // Chip text: names the picks, and once past three trails off with a count.
+  const labelsFor = useCallback((options, values) => {
+    const names = values
+      .map((v) => options.find((o) => String(o.value) === String(v))?.label)
+      .filter(Boolean);
+    if (names.length === 0) return `${values.length} selected`;
+    return capNames(names);
+  }, []);
+
+  const modeLabel = filterMode === 'created'
+    ? 'Created by'
+    : (filterMode === 'handoff' ? 'Handed off by' : 'Assigned to');
+
+  const activeFilterCount = (
+    selectedUserIds.length + selectedRoles.length + selectedLocationIds.length
+    + selectedProjectIds.length + selectedStatuses.length + selectedBookingStatuses.length
+    + selectedPaymentStatuses.length + selectedSourceIds.length + selectedSubSourceIds.length
+  );
+
   return (
     <section className="admin-lead-mgmt">
       {/* Header */}
@@ -640,71 +905,46 @@ const AdminLeadManagement = () => {
 
         {/* Location Filter */}
         <div className="alm-filter-group">
-          <MapPinIcon className="alm-filter-icon" />
-          <select
-            className="alm-select"
-            value={selectedLocationId}
-            onChange={(e) => {
-              setSelectedLocationId(e.target.value);
-              setSelectedProjectId(''); // project list depends on location
-              setSelectedUserId('');    // user list is narrowed by location
-              setPage(1);
-            }}
-          >
-            <option value="">All Locations</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>{l.location_name}</option>
-            ))}
-          </select>
+          <AlmMultiSelect
+            icon={MapPinIcon}
+            allLabel="All Locations"
+            options={locationOptions}
+            value={selectedLocationIds}
+            onChange={handleLocationsChange}
+          />
         </div>
 
         {/* Project Filter */}
         <div className="alm-filter-group">
-          <BuildingOffice2Icon className="alm-filter-icon" />
-          <select
-            className="alm-select"
-            value={selectedProjectId}
-            onChange={(e) => { setSelectedProjectId(e.target.value); setPage(1); }}
-          >
-            <option value="">All Projects</option>
-            {projectOptions.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+          <AlmMultiSelect
+            icon={BuildingOffice2Icon}
+            allLabel="All Projects"
+            options={projectOptions}
+            value={selectedProjectIds}
+            onChange={(ids) => { setSelectedProjectIds(ids); setPage(1); }}
+          />
         </div>
 
-        {/* Role Filter (narrows the user dropdown) */}
+        {/* Role Filter (also narrows the user dropdown) */}
         <div className="alm-filter-group">
-          <FunnelIcon className="alm-filter-icon" />
-          <select
-            className="alm-select"
-            value={selectedRole}
-            onChange={(e) => { setSelectedRole(e.target.value); setSelectedUserId(''); setPage(1); }}
-          >
-            <option value="">All Roles</option>
-            {roleOptions.map((r) => (
-              <option key={r.code} value={r.code}>{r.label}</option>
-            ))}
-          </select>
+          <AlmMultiSelect
+            icon={FunnelIcon}
+            allLabel="All Roles"
+            options={roleOptions}
+            value={selectedRoles}
+            onChange={handleRolesChange}
+          />
         </div>
 
         {/* User Filter (location- & role-aware, grouped by role) */}
         <div className="alm-filter-group">
-          <UserIcon className="alm-filter-icon" />
-          <select
-            className="alm-select"
-            value={selectedUserId}
-            onChange={(e) => { setSelectedUserId(e.target.value); setPage(1); }}
-          >
-            <option value="">All Users</option>
-            {userGroups.map((g) => (
-              <optgroup key={g.label} label={g.label}>
-                {g.users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <AlmMultiSelect
+            icon={UserIcon}
+            allLabel="All Users"
+            options={userOptions}
+            value={selectedUserIds}
+            onChange={(ids) => { setSelectedUserIds(ids); setPage(1); }}
+          />
         </div>
 
         {/* Filter Mode Toggle */}
@@ -736,90 +976,65 @@ const AdminLeadManagement = () => {
 
         {/* Lead Status Filter */}
         <div className="alm-filter-group">
-          <select
-            className="alm-select"
-            value={selectedStatus}
-            onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
+          <AlmMultiSelect
+            allLabel="All Lead Statuses"
             title="Filter by lead status"
-          >
-            <option value="">All Lead Statuses</option>
-            {statusOptions.map((s) => (
-              <option key={s.code} value={s.code}>{s.label}</option>
-            ))}
-          </select>
+            options={statusOptions}
+            value={selectedStatuses}
+            onChange={(codes) => { setSelectedStatuses(codes); setPage(1); }}
+          />
         </div>
 
         {/* Booking Status Filter */}
         <div className="alm-filter-group">
-          <select
-            className="alm-select"
-            value={selectedBookingStatus}
-            onChange={(e) => { setSelectedBookingStatus(e.target.value); setPage(1); }}
+          <AlmMultiSelect
+            allLabel="All Booking Statuses"
             title="Filter by the lead's booking status"
-          >
-            <option value="">All Booking Statuses</option>
-            {bookingStatuses.map((s) => (
-              <option key={s.id} value={s.id}>{s.status_name}</option>
-            ))}
-          </select>
+            options={bookingStatusOptions}
+            value={selectedBookingStatuses}
+            onChange={(ids) => { setSelectedBookingStatuses(ids); setPage(1); }}
+          />
         </div>
 
         {/* Payment Status Filter */}
         <div className="alm-filter-group">
-          <select
-            className="alm-select"
-            value={selectedPaymentStatus}
-            onChange={(e) => { setSelectedPaymentStatus(e.target.value); setPage(1); }}
+          <AlmMultiSelect
+            allLabel="All Payment Statuses"
             title="Filter by the booking's payment status"
-          >
-            <option value="">All Payment Statuses</option>
-            {paymentStatuses.map((s) => (
-              <option key={s.id} value={s.id}>{s.status_name}</option>
-            ))}
-          </select>
+            options={paymentStatusOptions}
+            value={selectedPaymentStatuses}
+            onChange={(ids) => { setSelectedPaymentStatuses(ids); setPage(1); }}
+          />
         </div>
 
         {/* Source Filter */}
         <div className="alm-filter-group">
-          <select
-            className="alm-select"
-            value={selectedSourceId}
-            onChange={(e) => {
-              const sourceId = e.target.value;
-              setSelectedSourceId(sourceId);
-              setSelectedSubSourceId('');
-              setSubSources([]);
-              setPage(1);
-              if (sourceId) {
-                leadSubSourceApi.getBySource(sourceId)
-                  .then((res) => setSubSources(Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []))
-                  .catch((err) => { console.error('Load sub-sources failed:', err); setSubSources([]); });
-              }
-            }}
+          <AlmMultiSelect
+            allLabel="All Sources"
             title="Filter by lead source"
-          >
-            <option value="">All Sources</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>{s.source_name}</option>
-            ))}
-          </select>
+            options={sourceOptions}
+            value={selectedSourceIds}
+            onChange={handleSourcesChange}
+          />
         </div>
 
-        {/* Sub Source Filter */}
+        {/* Sub Source Filter (narrowed by the picked sources, if any) */}
         <div className="alm-filter-group">
-          <select
-            className="alm-select"
-            value={selectedSubSourceId}
-            onChange={(e) => { setSelectedSubSourceId(e.target.value); setPage(1); }}
+          <AlmMultiSelect
+            allLabel="All Sub-Sources"
             title="Filter by lead sub-source"
-            disabled={!selectedSourceId}
-          >
-            <option value="">All Sub-Sources</option>
-            {subSources.map((s) => (
-              <option key={s.id} value={s.id}>{s.sub_source_name}</option>
-            ))}
-          </select>
+            options={subSourceOptions}
+            value={selectedSubSourceIds}
+            onChange={(ids) => { setSelectedSubSourceIds(ids); setPage(1); }}
+          />
         </div>
+
+        {activeFilterCount > 0 && (
+          <button type="button" className="alm-btn alm-btn--sm alm-clear-all" onClick={handleClearFilters}>
+            <XMarkIcon style={{ width: 13, height: 13 }} />
+            Clear {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}
+          </button>
+        )}
       </div>
 
       {/* Stats Bar */}
@@ -833,47 +1048,52 @@ const AdminLeadManagement = () => {
         {!isSearching && dateFrom === dateTo && dateFrom === today && (
           <span className="alm-stat alm-stat--highlight">Showing today's leads</span>
         )}
-        {filterMode === 'handoff' && !selectedUserId && (
+        {filterMode === 'handoff' && selectedUserIds.length === 0 && selectedRoles.length === 0 && (
           <span className="alm-stat alm-stat--filter">Showing all handoff leads</span>
         )}
-        {selectedUserId && (
+        {selectedUserIds.length === 0 && selectedRoles.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            {filterMode === 'created' ? 'Created by' : filterMode === 'handoff' ? 'Handed off by' : 'Assigned to'}: {selectedUserName || 'Unknown'}
+            {modeLabel}: {labelsFor(roleOptions, selectedRoles)}
           </span>
         )}
-        {selectedLocationId && (
+        {selectedUserIds.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Location: {locations.find((l) => l.id === selectedLocationId)?.location_name || locations.find((l) => l.id === selectedLocationId)?.city || '-'}
+            {modeLabel}: {capNames(selectedUserNames) || 'Unknown'}
           </span>
         )}
-        {selectedProjectId && (
+        {selectedLocationIds.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Project: {projects.find((p) => p.id === selectedProjectId)?.project_name || '-'}
+            Location: {labelsFor(locationOptions, selectedLocationIds)}
           </span>
         )}
-        {selectedStatus && (
+        {selectedProjectIds.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Lead status: {statusOptions.find((s) => s.code === selectedStatus)?.label || selectedStatus}
+            Project: {labelsFor(allProjectOptions, selectedProjectIds)}
           </span>
         )}
-        {selectedBookingStatus && (
+        {selectedStatuses.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Booking status: {bookingStatuses.find((s) => s.id === selectedBookingStatus)?.status_name || '-'}
+            Lead status: {labelsFor(statusOptions, selectedStatuses)}
           </span>
         )}
-        {selectedPaymentStatus && (
+        {selectedBookingStatuses.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Payment status: {paymentStatuses.find((s) => s.id === selectedPaymentStatus)?.status_name || '-'}
+            Booking status: {labelsFor(bookingStatusOptions, selectedBookingStatuses)}
           </span>
         )}
-        {selectedSourceId && (
+        {selectedPaymentStatuses.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Source: {sources.find((s) => s.id === selectedSourceId)?.source_name || '-'}
+            Payment status: {labelsFor(paymentStatusOptions, selectedPaymentStatuses)}
           </span>
         )}
-        {selectedSubSourceId && (
+        {selectedSourceIds.length > 0 && (
           <span className="alm-stat alm-stat--filter">
-            Sub-source: {subSources.find((s) => s.id === selectedSubSourceId)?.sub_source_name || '-'}
+            Source: {labelsFor(sourceOptions, selectedSourceIds)}
+          </span>
+        )}
+        {selectedSubSourceIds.length > 0 && (
+          <span className="alm-stat alm-stat--filter">
+            Sub-source: {labelsFor(allSubSourceOptions, selectedSubSourceIds)}
           </span>
         )}
       </div>

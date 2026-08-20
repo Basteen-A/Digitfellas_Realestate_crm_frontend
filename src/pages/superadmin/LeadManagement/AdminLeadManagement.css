@@ -231,6 +231,199 @@
   box-shadow: 0 0 0 3px var(--accent-blue-bg, #eff6ff);
 }
 
+/* ── Multi-select filter dropdown ── */
+/* Trigger is styled to read as one of the native .alm-select controls beside it. */
+.alm-multi {
+  position: relative;
+}
+
+.alm-multi__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 150px;
+  max-width: 240px;
+  border: 1px solid var(--border-input, #d1d5db);
+  border-radius: var(--border-radius-md, 8px);
+  background: var(--bg-input, #ffffff);
+  color: var(--text-primary, #111827);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.alm-multi__btn:hover:not(:disabled) {
+  border-color: var(--border-focus, #625afa);
+}
+
+.alm-multi__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* An active filter reads at a glance without colouring the whole bar. */
+.alm-multi__btn--active {
+  border-color: var(--accent-blue, #2563eb);
+  background: var(--accent-blue-bg, #eff6ff);
+  color: var(--accent-blue, #2563eb);
+  font-weight: 600;
+}
+
+.alm-multi__btn--active .alm-filter-icon {
+  color: var(--accent-blue, #2563eb);
+}
+
+.alm-multi__summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alm-multi__chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.alm-multi__panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 230px;
+  max-width: 320px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-primary, #e5e7eb);
+  border-radius: var(--border-radius-md, 8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  padding: 6px;
+}
+
+.alm-multi__search {
+  width: 100%;
+  border: 1px solid var(--border-input, #d1d5db);
+  border-radius: var(--border-radius-sm, 6px);
+  background: var(--bg-input, #ffffff);
+  color: var(--text-primary, #111827);
+  padding: 6px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  margin-bottom: 4px;
+}
+
+.alm-multi__search:focus {
+  outline: none;
+  border-color: var(--border-focus, #625afa);
+}
+
+.alm-multi__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--border-secondary, #e5e7eb);
+  margin-bottom: 4px;
+}
+
+.alm-multi__link {
+  border: none;
+  background: transparent;
+  color: var(--accent-blue, #2563eb);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.alm-multi__link:disabled {
+  color: var(--text-muted, #9ca3af);
+  cursor: default;
+}
+
+.alm-multi__list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.alm-multi__group {
+  padding: 6px 8px 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted, #9ca3af);
+}
+
+.alm-multi__opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text-primary, #111827);
+  text-align: left;
+  cursor: pointer;
+}
+
+.alm-multi__opt:hover {
+  background: var(--bg-card-hover, #f3f4f6);
+}
+
+.alm-multi__opt-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alm-multi__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-input, #d1d5db);
+  border-radius: 4px;
+  background: var(--bg-input, #ffffff);
+}
+
+.alm-multi__box--on {
+  background: var(--accent-blue, #2563eb);
+  border-color: var(--accent-blue, #2563eb);
+  color: #fff;
+}
+
+.alm-multi__box svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 3;
+}
+
+.alm-multi__empty {
+  padding: 10px 9px;
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+}
+
+/* Sits at the end of the filter bar once anything is picked. */
+.alm-clear-all {
+  margin-left: auto;
+}
+
 .alm-toggle-btn {
   border: none;
   background: transparent;
