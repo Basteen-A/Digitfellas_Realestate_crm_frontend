@@ -57,10 +57,12 @@ const COST_PER_LEAD_TIP = 'Budget ÷ the leads this line brought in over its own
 // get somebody ONTO the site, and what it cost per square foot it eventually sold. Both
 // are cohort figures - the leads this line bought, wherever their visit or booking later
 // landed on the calendar - which is what makes dividing this period's budget by them fair.
-const COST_PER_SV_TIP = 'Budget ÷ the leads this line brought in that have completed a site visit - '
-  + 'whenever that visit happened. Counted once per lead, so a revisit never adds a second: '
-  + 'you did not pay twice for the same person coming back. '
-  + 'Shown as "-" when no lead from this line has visited yet, or there is no budget.';
+const COST_PER_SV_TIP = 'Budget ÷ the site visits that HAPPENED during this line\'s period, for leads this '
+  + 'line is credited with - they may have been bought before it ran, so this can exceed the line\'s lead '
+  + 'count. Counted once per lead, on their first visit, so a revisit never adds a second: you did not pay '
+  + 'twice for the same person coming back. A telecaller marking SV Done is a hand-off, not a visit - it '
+  + 'counts only once Sales records the visit details. '
+  + 'Shown as "-" when no visit landed in this period, or there is no budget.';
 
 const COST_PER_SQFT_TIP = 'Budget ÷ the sq ft booked by the leads this line brought in - the plot area of their '
   + 'live bookings, the same figure the Bookings in Sq Ft report sums. The booking may have '

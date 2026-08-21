@@ -180,8 +180,12 @@ const BudgetDrawer = ({ budgetId, onClose }) => {
                   </div>
                 ))}
                 <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
-                  Leads acquired in this period{campaignFiltered ? ' under this campaign' : ''} - the visit or
-                  booking itself may have happened later. That is what makes the cost-per figures below valid.
+                  Leads acquired in this period{campaignFiltered ? ' under this campaign' : ''} - the booking
+                  itself may have happened later. That is what makes the cost-per figures below valid.
+                  <br />
+                  <strong>Site visits are the exception</strong>: those are the visits that HAPPENED in this
+                  period, so the visitor may have been bought earlier and the count can exceed the leads above.
+                  Once per lead, and only when Sales recorded the visit - a telecaller hand-off is not a visit.
                 </div>
               </Section>
 

@@ -51,23 +51,37 @@ const PERIODS = [
 
 const ATTRIBUTION_NOTE = 'Each lead counts against the source & date of its latest marketing touch - its creation, or its newest re-enquiry, whichever is later.';
 
-// ── What the outcome columns actually count ─────────────────────────────────
-// Every column on this page is an ACQUISITION COHORT: "of the leads this period's
-// spend bought, how many went on to X" - X can have happened at any time, before or
-// after the period. That is the only shape that makes a cost-per figure valid, since
-// it divides this period's money by what this period's money bought.
+// ── What the outcome columns actually count: TWO CLOCKS ─────────────────────
+// Leads, Qualified, Bookings and Sq Ft are an ACQUISITION COHORT: "of the leads this
+// period's spend bought, how many went on to X" - X may have happened at any time, before
+// or after the period.
 //
-// It is emphatically NOT "how many site visits happened this period". Marketing ›
-// Reports answers that question, anchored on the visit date, and the two numbers
-// routinely differ by a lot - on July 2026 this page read 74 site visits for Social
-// Media where the visit-anchored report read 94, with only 42 leads common to both.
-// Users kept reading one number and quoting the other, so both the rule and the
-// pointer to the other report are stated on screen.
-const COHORT_NOTE = 'Leads, Qualified, Site Visits and Bookings are all counted for the leads ACQUIRED in this period - the visit or booking itself may have happened before or after it. That is what makes the cost-per figures valid.';
+// SITE VISITS ARE NOT. They are the visits that HAPPENED in this period, whoever bought
+// the lead and whenever. Requested 2026-08-21: the business reconciles site visits
+// against how many people actually walked the site that month, and a cohort figure could
+// never match that - June 2026 / Facebook Forms read 35 on the cohort rule against 19
+// visits that genuinely happened in June, because 9 of those leads had visited in 2024-25
+// (re-enquiries) and 9 more had not visited yet.
+//
+// The consequence is deliberate and visible: a row can show more visits than leads
+// (Walk-In, July 2026: 36 leads, 37 visits), and Cost per Site Visit divides this
+// period's money by visits some of which came from leads bought earlier. Both facts are
+// stated on screen rather than smoothed over.
+//
+// Two further rules, both server-side (utils/leadMetricSql, SALES_VISITS_CTE):
+//   • The visit must be recorded by SALES. A telecaller's "SV Done" stamps a Completed
+//     site_visits row at HAND-OFF, before anyone has seen the customer on site.
+//   • A lead's FIRST sales-recorded visit is the one that counts, so a revisit never adds
+//     a second visit in a later month - "multiple site visits also count as one".
+//
+// Marketing › Reports › Source-wise Site Visits is also visit-anchored but counts the
+// hand-off row too and counts a revisit in the month it happened, so it still reads
+// higher. That is why the definition ships next to the number, in the tips below.
+const COHORT_NOTE = 'Leads, Qualified, Bookings and Sq Ft are counted for the leads ACQUIRED in this period - the booking itself may have happened before or after it. SITE VISITS are the exception: they are the visits that HAPPENED in this period, whenever the lead was acquired, so a row can show more visits than leads.';
 
-const SV_TIP = 'Leads acquired in this period (new or re-enquiry) that have completed a site visit - whenever that visit happened. Counted once per lead, so a revisit never adds a second. This is NOT "visits that happened in this period": for that, use Marketing › Reports › Source-wise Site Visits, which is anchored on the visit date and will normally show a different, usually higher, number.';
+const SV_TIP = 'Site visits that HAPPENED in this period, credited to the source that last brought the lead in - the lead itself may have been acquired months earlier, which is why this can exceed the lead count. Counted once per lead, on their FIRST visit, so a revisit never adds a second. A telecaller marking SV Done is a hand-off, not a visit: it counts only once Sales records the visit details. Marketing › Reports › Source-wise Site Visits is anchored on the same date but counts the hand-off row and counts a revisit again in the month it happened, so it normally reads higher.';
 
-const COST_SV_TIP = 'Budget for this period ÷ the site visits above. Because both sides belong to the same acquisition cohort, this is what a site visit from this period’s spend actually cost.';
+const COST_SV_TIP = 'Budget for this period ÷ the site visits that happened in it. Unlike Cost per Lead, the two sides are on different clocks: some of those visitors were bought in an earlier period, so read this as "what this period\'s spend cost per visit it saw", not "what it cost to buy a visit".';
 
 const QUALIFIED_TIP = 'Leads acquired in this period that ever reached a working stage (Follow Up / SV Scheduled / SV Done) - a lead that later went RNR or Lost still counts, because the spend did buy a qualified lead.';
 
@@ -305,7 +319,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             </ChartCard>
           </div>
 
-          <Card title="Spend & Volume by Source" sub={`Ranked by site visits · outcome columns count the leads this spend BOUGHT, whenever they later visited or booked${best ? ` · cheapest lead: ${best.source_name}` : ''}`}>
+          <Card title="Spend & Volume by Source" sub={`Ranked by site visits · Leads / Qualified / Bookings count what this spend BOUGHT; Site Visits count the visits that HAPPENED in the period${best ? ` · cheapest lead: ${best.source_name}` : ''}`}>
             <Table head={['Source', ...VOLUME_HEAD]} colSpan={8} empty={bySource.length === 0}>
               {bySvDesc(bySource).map((r) => (
                 <VolumeRow key={r.source_id} r={r} totalBudget={totalBudget} nameCell={<Td bold>{r.source_name}</Td>} />
@@ -368,7 +382,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             <SimpleBar data={chart} xKey="name" bars={[{ key: 'cost_per_lead', name: 'Cost / Lead', color: COLORS.primary }]} valueFormat={money} tickFormat={axisMoney} />
           </ChartCard>
 
-          <Card title="Spend & Volume by Sub Source" sub="Ranked by site visits · same acquisition-cohort rule as the source view · spend booked against a whole source shows as “Not specified”, alongside the leads that carry no sub-source">
+          <Card title="Spend & Volume by Sub Source" sub="Ranked by site visits · same rules as the source view, Site Visits on the visit date and everything else on acquisition · spend booked against a whole source shows as “Not specified”, alongside the leads that carry no sub-source">
             <Table head={['Sub Source', ...VOLUME_HEAD]} colSpan={8} empty={ranked.length === 0}>
               {bySvDesc(ranked).map((r) => (
                 <VolumeRow key={`${r.source_id}-${r.sub_source_id}`} r={r} totalBudget={totalBudget} nameCell={nameCell(r)} />
@@ -495,7 +509,7 @@ const Panel = ({ rkey, d, registerRef }) => {
             </Table>
           </Card>
 
-          <Card title="Conversion Funnel by Source" sub="How far the leads each source bought actually travelled - ranked by site visits">
+          <Card title="Conversion Funnel by Source" sub="How far the leads each source bought actually travelled - ranked by site visits, which are the ones that happened in the period, so SV % can exceed 100%">
             <Table
               head={[
                 'Source', 'Leads',
@@ -680,9 +694,11 @@ const MarketingMetrixPage = () => {
             <br />
             {COHORT_NOTE}
             {' '}
-            So <em>Site Visits</em> here means “leads bought this period that have visited”, not “visits that
-            happened this period” - for that, open <strong>Marketing › Reports › Source-wise Site Visits</strong>,
-            which anchors on the visit date. The two are both correct and will normally differ.
+            A visit counts once per lead, on their first one, and only once <strong>Sales</strong> has recorded
+            the visit details - a telecaller marking SV Done is a hand-off, not a visit.
+            {' '}
+            <strong>Marketing › Reports › Source-wise Site Visits</strong> anchors on the same date but counts
+            the hand-off too, and counts a revisit again in the month it happened, so it normally reads higher.
           </NoteBar>
         </div>
       )}
