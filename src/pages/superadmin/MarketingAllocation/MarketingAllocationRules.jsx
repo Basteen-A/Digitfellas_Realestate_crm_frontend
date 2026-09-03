@@ -72,6 +72,18 @@ const MarketingAllocationRules = () => {
     return m;
   }, [telecallers]);
 
+  // A rule outlives the people in it. Once a selected telecaller is deactivated,
+  // deleted or moved to another role they drop out of the picker below, so their id
+  // sits in the rule with no checkbox to untick - and every save used to be refused
+  // ("One or more selected users are not active telecallers") with no way out. They
+  // are surfaced here and dropped on save; allocation already skips them anyway.
+  const staleTcIds = useMemo(() => {
+    if (telecallers.length === 0) return [];   // list not loaded yet - assume nothing is stale
+    return form.telecaller_ids.map(String).filter((id) => !tcById[id]);
+  }, [form.telecaller_ids, tcById, telecallers.length]);
+
+  const activeSelectedCount = form.telecaller_ids.length - staleTcIds.length;
+
   const filteredTelecallers = useMemo(() => {
     const q = tcSearch.trim().toLowerCase();
     if (!q) return telecallers;
@@ -141,7 +153,10 @@ const MarketingAllocationRules = () => {
   const save = async () => {
     if (!form.rule_name.trim()) { toast.error('Rule name is required'); return; }
     if (!form.lead_source_id) { toast.error('Select a lead source'); return; }
-    if (!form.assign_all_telecallers && form.telecaller_ids.length === 0) {
+    // Only ever send ids that are still active telecallers - the server refuses the
+    // rest, and they are unreachable from the picker.
+    const liveTcIds = form.telecaller_ids.map(String).filter((id) => !staleTcIds.includes(id));
+    if (!form.assign_all_telecallers && liveTcIds.length === 0) {
       toast.error('Select at least one telecaller, or enable "All telecallers"');
       return;
     }
@@ -152,7 +167,7 @@ const MarketingAllocationRules = () => {
         lead_source_id: form.lead_source_id,
         lead_sub_source_id: form.lead_sub_source_id || null,
         assign_all_telecallers: form.assign_all_telecallers,
-        telecaller_ids: form.assign_all_telecallers ? [] : form.telecaller_ids,
+        telecaller_ids: form.assign_all_telecallers ? [] : liveTcIds,
         is_active: form.is_active,
       };
       if (form.id) {
@@ -210,14 +225,23 @@ const MarketingAllocationRules = () => {
     if (rule.assign_all_telecallers) {
       return <span style={{ fontWeight: 600, color: '#16A34A' }}>All telecallers</span>;
     }
-    const ids = Array.isArray(rule.telecaller_ids) ? rule.telecaller_ids : [];
+    const ids = (Array.isArray(rule.telecaller_ids) ? rule.telecaller_ids : []).map(String);
     if (ids.length === 0) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-    const names = ids.map((id) => userName(tcById[id]) || 'Unknown');
+    // Ids whose user is no longer an active telecaller get no leads - count them
+    // separately rather than listing them as "Unknown".
+    const liveIds = telecallers.length === 0 ? ids : ids.filter((id) => tcById[id]);
+    const staleCount = ids.length - liveIds.length;
+    const names = liveIds.map((id) => userName(tcById[id]));
     const shown = names.slice(0, 3).join(', ');
     return (
       <span>
-        <span style={{ fontWeight: 600 }}>{ids.length}</span> selected
+        <span style={{ fontWeight: 600 }}>{liveIds.length}</span> selected
         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{shown}{names.length > 3 ? `, +${names.length - 3} more` : ''}</div>
+        {staleCount > 0 && (
+          <div style={{ fontSize: 11, color: '#B45309' }} title="These users are no longer active telecallers and receive no leads. Edit the rule to clear them.">
+            +{staleCount} no longer active
+          </div>
+        )}
       </span>
     );
   };
@@ -404,6 +428,14 @@ const MarketingAllocationRules = () => {
               {!form.assign_all_telecallers && (
                 <div>
                   <label style={labelStyle}>Select Telecallers</label>
+                  {staleTcIds.length > 0 && (
+                    <div style={{ marginBottom: 8, padding: '9px 11px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB', fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                      <strong>{staleTcIds.length}</strong> telecaller{staleTcIds.length === 1 ? '' : 's'} on this rule
+                      {staleTcIds.length === 1 ? ' is' : ' are'} no longer active (deactivated, deleted or moved to another role),
+                      so {staleTcIds.length === 1 ? 'it does' : 'they do'} not appear below.
+                      {' '}{staleTcIds.length === 1 ? 'It' : 'They'} already receive no leads and will be removed from the rule when you save.
+                    </div>
+                  )}
                   <div style={{ position: 'relative', marginBottom: 8 }}>
                     <MagnifyingGlassIcon style={{ width: 15, height: 15, position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
                     <input
@@ -418,7 +450,7 @@ const MarketingAllocationRules = () => {
                     <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--border-primary)', cursor: 'pointer', background: 'var(--bg-secondary)', position: 'sticky', top: 0 }}>
                       <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAllFiltered} style={{ width: 16, height: 16 }} />
                       <span style={{ fontWeight: 700, fontSize: 13 }}>
-                        Select all{tcSearch ? ' (filtered)' : ''} · {form.telecaller_ids.length} selected
+                        Select all{tcSearch ? ' (filtered)' : ''} · {activeSelectedCount} selected
                       </span>
                     </label>
                     {filteredTelecallers.length === 0 && (

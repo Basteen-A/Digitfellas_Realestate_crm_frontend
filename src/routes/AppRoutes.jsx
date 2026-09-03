@@ -61,6 +61,7 @@ import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
 import FinanceRevenue from '../pages/superadmin/Finance/FinanceRevenue';
 import FinanceCollections from '../pages/superadmin/Finance/FinanceCollections';
+import PaymentVerification from '../pages/superadmin/Finance/PaymentVerification';
 import SiteSettings from '../pages/superadmin/SiteSettings';
 import TermsAndConditions from '../pages/superadmin/TermsAndConditions';
 import ReallotmentRules from '../pages/superadmin/ReallotmentRules';
@@ -287,6 +288,11 @@ const AppRoutes = () => {
               <Route path="/super-admin/lead-management" element={<AdminLeadManagement />} />
               <Route path="/super-admin/finance/revenue" element={<FinanceRevenue />} />
               <Route path="/super-admin/finance/collections" element={<FinanceCollections />} />
+              {/* Deliberately NOT in routeModules.js: giving the second signature is
+                  restricted to SA / ADM on the server (ADMIN_VERIFIER_ROLES), so the
+                  screen stays on the fail-closed SA/ADM default rather than opening
+                  to any role holding a finance module it could not act on. */}
+              <Route path="/super-admin/payment-verification" element={<PaymentVerification />} />
               <Route path="/super-admin/payment-types" element={<PaymentTypes />} />
               <Route path="/super-admin/payment-plans" element={<PaymentPlans />} />
               <Route path="/super-admin/payment-modes" element={<PaymentModes />} />

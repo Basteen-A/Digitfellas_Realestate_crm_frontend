@@ -33,7 +33,7 @@ import {
   NavHome, NavUsers, NavSettings, NavLayoutGrid, NavClipboardList, NavCalendar,
   NavFileText, NavBuildingWarehouse, NavBuilding, NavMapPin, NavWallet,
   NavCreditCard, NavChartBar, NavTrophy, NavSpeakerphone, NavPhone,
-  NavArrowsExchange, NavRefresh, NavShield, NavAdjustments, NavRoute,
+  NavArrowsExchange, NavRefresh, NavShield, NavCircleCheck, NavAdjustments, NavRoute,
   NavHistory, NavBolt, NavPlug, NavDots,
 } from './navIcons';
 import { canViewAllReports, canAccessBookingApprovals, hasTaskPortalAccess } from '../../../utils/permissions';
@@ -222,6 +222,11 @@ const adminSidebar = [
   { section: 'PAYMENTS' },
   { label: 'Payments Received', path: '/super-admin/finance/revenue', icon: NavWallet },
   { label: 'Dues & Collections', path: '/super-admin/finance/collections', icon: NavCreditCard },
+  // The Admin half of the dual signature on Other Registration Expenses. It lives
+  // here rather than inside a booking because it is a queue, and because the only
+  // other place that button exists (Bookings › a booking's payments) is closed to
+  // Admins entirely.
+  { label: 'Payment Verification', path: '/super-admin/payment-verification', icon: NavCircleCheck },
   // Org-wide twin of the Collection Manager portal's own "Collection Report" screen.
   { label: 'Payment Reports', path: '/super-admin/collection-reports', icon: NavFileText },
 

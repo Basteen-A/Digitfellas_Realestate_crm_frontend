@@ -177,6 +177,15 @@ export const NavShield = (props) => (
   </Svg>
 );
 
+// Payment Verification. A tick in a circle rather than another shield - NavShield
+// already stands for Team & Access, and the two sit in different groups.
+export const NavCircleCheck = (props) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8.5 12.2l2.4 2.4 4.6-4.9" />
+  </Svg>
+);
+
 export const NavAdjustments = (props) => (
   <Svg {...props}>
     <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M20 18h0" />

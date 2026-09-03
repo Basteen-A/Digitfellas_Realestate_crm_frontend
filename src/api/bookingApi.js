@@ -77,6 +77,11 @@ const bookingApi = {
   // Accounts - all payments queue (filterable)
   getAllPayments: (params = {}) => api.get('/bookings/payments/all', { params }),
 
+  // Admin / Super Admin - the org-wide "Other Registration Expenses" verification
+  // queue, verified and pending alike. Params: page, limit, stage, search,
+  // payment_mode, project_id. Server-paginated; meta carries the queue-wide summary.
+  getPaymentVerifications: (params = {}) => api.get('/bookings/payments/verification', { params }),
+
   // Payment form master data
   getPaymentFormMasters: () => api.get('/bookings/payments/form-masters'),
 
