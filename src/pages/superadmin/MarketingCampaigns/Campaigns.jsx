@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   MegaphoneIcon, PlusIcon, ArrowPathIcon, UsersIcon, ArrowLeftIcon,
-  ExclamationTriangleIcon, ChatBubbleLeftRightIcon,
+  ExclamationTriangleIcon, ChatBubbleLeftRightIcon, ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import leadStatusApi from '../../../api/leadStatusApi';
@@ -25,7 +25,9 @@ const selectStyle = { ...inputStyle, cursor: 'pointer' };
 const STATUS_COLORS = {
   QUEUED: { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE' },
   SENDING: { bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA' },
+  PAUSED: { bg: '#FEFCE8', fg: '#854D0E', border: '#FEF08A' },
   COMPLETED: { bg: '#F0FDF4', fg: '#166534', border: '#BBF7D0' },
+  CANCELLED: { bg: '#F3F4F6', fg: '#4B5563', border: '#E5E7EB' },
   FAILED: { bg: '#FFF1F2', fg: '#9F1239', border: '#FECDD3' },
 };
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
@@ -90,6 +92,10 @@ const Campaigns = () => {
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
 
+  // Why Delivered / Read / Replied might be empty across every campaign. This
+  // is provider configuration, not per-campaign data, so it is fetched once.
+  const [health, setHealth] = useState(null);
+
   const pollRef = useRef(null);
 
   const loadCampaigns = useCallback(async () => {
@@ -125,6 +131,24 @@ const Campaigns = () => {
   }, []);
 
   useEffect(() => { loadCampaigns(); loadOptions(); }, [loadCampaigns, loadOptions]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await whatsappCampaignApi.getWebhookHealth();
+        setHealth(resp.data);
+      } catch {
+        /* the banner simply does not render */
+      }
+    })();
+  }, []);
+
+  const copyCallbackUrl = () => {
+    if (!health?.callback_url) return;
+    navigator.clipboard?.writeText(health.callback_url)
+      .then(() => toast.success('Callback URL copied'))
+      .catch(() => toast.error('Could not copy - select and copy it manually'));
+  };
 
   // Poll while any campaign is in flight.
   useEffect(() => {
@@ -232,6 +256,15 @@ const Campaigns = () => {
   };
 
   const pct = (c) => (c.total_recipients ? Math.round(((c.sent_count + c.failed_count) / c.total_recipients) * 100) : 0);
+
+  // A campaign left on SENDING by a restart looks identical to one that is
+  // actively working. The give-away is that the row has not been written to in
+  // a while - the processor touches it every batch. Flagging it here is what
+  // stopped a July blast from sitting half-sent for eight weeks unnoticed.
+  const STALE_MS = 15 * 60 * 1000;
+  const looksStalled = (c) => ['QUEUED', 'SENDING'].includes(c.status)
+    && c.updated_at
+    && Date.now() - new Date(c.updated_at).getTime() > STALE_MS;
 
   // One editable variable row: {{n}} → lead field OR custom text for this campaign.
   const renderParamRow = (group, label, p, i) => (
@@ -435,6 +468,28 @@ const Campaigns = () => {
         </div>
       </div>
 
+      {/* Delivered / Read / Replied come ONLY from the provider callback. When
+          it is not wired up, every one of those columns reads zero - which is
+          indistinguishable from "nobody opened it" unless we say so here. */}
+      {health && health.verdict !== 'OK' && (
+        <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: '#FEFCE8', border: '1px solid #FEF08A', display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: '#854D0E', flexShrink: 0, marginTop: 1 }} />
+          <div style={{ flex: 1, minWidth: 240, fontSize: 13, color: '#713F12' }}>
+            <strong>Delivered / Read / Replied cannot fill in.</strong> {health.detail}
+            {health.callback_url && (
+              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '3px 7px', borderRadius: 6, wordBreak: 'break-all' }}>
+                  {health.callback_url}
+                </code>
+                <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={copyCallbackUrl}>
+                  <ClipboardDocumentIcon style={{ width: 14, height: 14 }} /> Copy
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="crm-card">
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
@@ -475,7 +530,17 @@ const Campaigns = () => {
                         <div style={{ width: `${pct(c)}%`, height: '100%', background: '#16A34A', borderRadius: 99, transition: 'width 0.4s' }} />
                       </div>
                     </td>
-                    <td style={td}><span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span></td>
+                    <td style={td}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span>
+                      {looksStalled(c) && (
+                        <span
+                          title="Nothing has worked on this campaign for a while - open it to resume the remaining recipients."
+                          style={{ display: 'block', fontSize: 11, color: '#C2410C', marginTop: 4 }}
+                        >
+                          <ExclamationTriangleIcon style={{ width: 12, height: 12, verticalAlign: 'text-bottom' }} /> stalled
+                        </span>
+                      )}
+                    </td>
                     <td style={td}>{fmtDateTime(c.created_at)}</td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
