@@ -7,8 +7,14 @@
 //
 // The audience choices are not invented here - they come from the server
 // (GET /campaigns/followups/meta), which derives them from the same SQL the
-// scheduler runs. That is deliberate: a dropdown that drifts from the engine is
+// scheduler runs. That is deliberate: a picker that drifts from the engine is
 // how a marketing tool ends up messaging the wrong people.
+//
+// The audience is a MULTI-select, and that is not a convenience. The groups are
+// mutually exclusive by construction - the instant someone replies they leave
+// every "never replied" group permanently - so a rule pinned to one group is
+// regularly aimed at nobody, and looks broken while behaving exactly as asked.
+// Each row carries its own live size so an empty pick explains itself.
 //
 // When a rule fires it materialises an ORDINARY campaign, so the "Sent so far"
 // figures below link straight into a normal campaign report.
@@ -22,13 +28,14 @@ import {
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import TemplateMessageFields, { EMPTY_PARAMS, templateMessageError } from './TemplateMessageFields';
-import WhatsappPreview from './WhatsappPreview';
+import { EMPTY_PARAMS } from './TemplateMessageFields';
+// The rule form itself is shared with the campaign builder, which offers the
+// same scheduler while the blast is still being written - see FollowupRuleFields.
+import FollowupRuleFields, {
+  EMPTY_RULE, FALLBACK_AUDIENCES, fmtDelay, followupRuleError, followupRulePayload,
+} from './FollowupRuleFields';
 import '../../portals/collection/CollectionWorkspace.css';
 
-const labelStyle = { fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
-const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
-const selectStyle = { ...inputStyle, cursor: 'pointer' };
 // Colour lives only inside badges, per the app-wide convention - these are the
 // badge-system classes the rest of the product uses.
 const STATUS_BADGE = {
@@ -42,48 +49,6 @@ const STATUS_BADGE = {
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
 
-// "1 day" / "6 hours" / "45 minutes" - read back the stored minutes in the
-// largest unit that divides cleanly, which is how the admin typed it.
-const fmtDelay = (minutes) => {
-  const m = Number(minutes) || 0;
-  if (m === 0) return 'immediately';
-  if (m % 1440 === 0) { const d = m / 1440; return `${d} day${d === 1 ? '' : 's'}`; }
-  if (m % 60 === 0) { const h = m / 60; return `${h} hour${h === 1 ? '' : 's'}`; }
-  return `${m} minute${m === 1 ? '' : 's'}`;
-};
-
-// Quick picks for the delay. Hours and minutes were always accepted - they
-// just sat inside a collapsed <select> that read "days", so the shorter delays
-// were invisible unless you thought to open it. Chips put the whole range on
-// screen; the Custom row underneath still takes any value.
-const DELAY_PRESETS = [
-  { label: '30 minutes', value: 30, unit: 'minutes' },
-  { label: '1 hour', value: 1, unit: 'hours' },
-  { label: '3 hours', value: 3, unit: 'hours' },
-  { label: '6 hours', value: 6, unit: 'hours' },
-  { label: '12 hours', value: 12, unit: 'hours' },
-  { label: '1 day', value: 1, unit: 'days' },
-  { label: '2 days', value: 2, unit: 'days' },
-  { label: '3 days', value: 3, unit: 'days' },
-  { label: '1 week', value: 7, unit: 'days' },
-];
-
-const UNIT_MINUTES = { minutes: 1, hours: 60, days: 1440 };
-
-// Whatever the form currently adds up to, in minutes - the one number the
-// server actually stores, and what decides which chip is lit.
-const formMinutes = (form) => (Number(form.delay_value) || 0) * (UNIT_MINUTES[form.delay_unit] || 1);
-
-const EMPTY_FORM = {
-  name: '',
-  template_id: '',
-  audience: 'DELIVERED_NO_REPLY',
-  anchor: 'RECIPIENT',
-  delay_value: 1,
-  delay_unit: 'days',
-  header_image_url: '',
-};
-
 const CampaignFollowups = ({ campaign, templates = [] }) => {
   const navigate = useNavigate();
   const campaignId = campaign?.id;
@@ -92,7 +57,7 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(EMPTY_RULE);
   // The template's {{n}} values for THIS follow-up only (param_overrides on the
   // server). Held beside the form because the shared fields component owns the
   // editing UI but not the submit.
@@ -129,74 +94,51 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
 
   // Memoised so the `|| []` fallback does not mint a new array every render
   // and re-run everything downstream that depends on it.
-  const audiences = useMemo(() => meta?.audiences || [], [meta]);
+  const audiences = useMemo(() => (meta?.audiences?.length ? meta.audiences : FALLBACK_AUDIENCES), [meta]);
   const anchors = useMemo(() => meta?.anchors || [], [meta]);
-  const anchorHint = useMemo(
-    () => anchors.find((a) => a.value === form.anchor)?.hint || '',
-    [anchors, form.anchor]
-  );
+  // The selection as a stable dependency - an array literal would re-fire this
+  // on every render.
+  const audienceKey = form.audiences.join(',');
 
-  // Approved and active only: a pending or rejected template would be refused
-  // by WhatsApp hours later, when nobody is watching the rule fire.
-  const sendableTemplates = useMemo(
-    () => templates.filter((t) => t.is_active !== false && t.status === 'APPROVED'),
-    [templates]
-  );
-
-  const selectedTemplate = useMemo(
-    () => sendableTemplates.find((t) => t.id === form.template_id) || null,
-    [sendableTemplates, form.template_id]
-  );
-
-  // Refresh the audience count whenever the slice changes - "who is this
-  // actually going to?" answered before the rule is saved, not after.
+  // Refresh the counts whenever the selection changes - "who is this actually
+  // going to?" answered before the rule is saved, not after. The response also
+  // carries the size of EVERY slice (by_audience), which is what lets each row
+  // below show its own number: when the slice you picked is empty, the next
+  // question is always where those people went instead.
   useEffect(() => {
-    if (!showForm || !campaignId || !form.audience) { setPreview(null); return undefined; }
+    if (!showForm || !campaignId || !form.audiences.length) { setPreview(null); return undefined; }
     let cancelled = false;
     (async () => {
       try {
-        const resp = await whatsappCampaignApi.previewFollowup(campaignId, { audience: form.audience });
+        const resp = await whatsappCampaignApi.previewFollowup(campaignId, { audiences: form.audiences });
         if (!cancelled) setPreview(resp.data);
       } catch {
         if (!cancelled) setPreview(null);
       }
     })();
     return () => { cancelled = true; };
-  }, [showForm, campaignId, form.audience]);
-
-  // Drives both the lit chip and the plain-language read-back below the form.
-  const currentMinutes = formMinutes(form);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm, campaignId, audienceKey]);
 
   const openForm = () => {
-    setForm({ ...EMPTY_FORM, name: `${campaign?.name || 'Campaign'} - follow-up` });
+    setForm({ ...EMPTY_RULE, name: `${campaign?.name || 'Campaign'} - follow-up` });
     setParams(EMPTY_PARAMS);
     setShowForm(true);
   };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) { toast.error('Give the follow-up a name.'); return; }
-
-    // Everything the message itself needs: a template, its header media, and a
-    // resolved value for every {{n}}. Caught here so the problem is a sentence
-    // on screen now, rather than a provider rejection a day from now when the
-    // rule fires and nobody is watching.
-    const msgError = templateMessageError(selectedTemplate, form.header_image_url, params);
-    if (msgError) { toast.error(msgError); return; }
+    // Name, audience and everything the message itself needs - a template, its
+    // header media, a resolved value for every {{n}}. Shared with the campaign
+    // builder so both screens refuse exactly the same rules, and caught here so
+    // the problem is a sentence on screen now rather than a provider rejection a
+    // day from now when the rule fires and nobody is watching.
+    const err = followupRuleError(form, templates, params);
+    if (err) { toast.error(err); return; }
 
     setSaving(true);
     try {
-      const resp = await whatsappCampaignApi.createFollowup(campaignId, {
-        name: form.name.trim(),
-        template_id: form.template_id,
-        audience: form.audience,
-        anchor: form.anchor,
-        delay_value: Number(form.delay_value) || 0,
-        delay_unit: form.delay_unit,
-        header_image_url: form.header_image_url || null,
-        ...(params.header_params?.length ? { header_params: params.header_params } : {}),
-        ...(params.body_params?.length ? { body_params: params.body_params } : {}),
-      });
+      const resp = await whatsappCampaignApi.createFollowup(campaignId, followupRulePayload(form, params));
       toast.success(resp.message || 'Follow-up scheduled');
       setShowForm(false);
       load();
@@ -240,140 +182,19 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
       {/* ── Builder ── */}
       {showForm && (
         <form onSubmit={submit} style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border-primary)', paddingTop: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Follow-up Name *</label>
-              <input
-                style={inputStyle}
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Silver Divyam - second touch"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Send it to</label>
-              <select style={selectStyle} value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}>
-                {audiences.length === 0 && <option value="DELIVERED_NO_REPLY">Delivered to the phone, but never replied</option>}
-                {audiences.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-              </select>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, minHeight: 16 }}>
-                {preview
-                  ? <span><strong style={{ color: 'var(--text-primary)' }}>{preview.total}</strong> recipient(s) match right now</span>
-                  : 'Counting…'}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-            <div>
-              <label style={labelStyle}>Wait how long</label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {DELAY_PRESETS.map((d) => {
-                  const active = currentMinutes === d.value * UNIT_MINUTES[d.unit];
-                  return (
-                    <button
-                      key={d.label}
-                      type="button"
-                      className={`crm-btn crm-btn-sm ${active ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
-                      onClick={() => setForm((f) => ({ ...f, delay_value: d.value, delay_unit: d.unit }))}
-                    >
-                      {d.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>or</span>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Custom delay amount"
-                  style={{ ...inputStyle, width: 80 }}
-                  value={form.delay_value}
-                  onChange={(e) => setForm((f) => ({ ...f, delay_value: e.target.value }))}
-                />
-                <select
-                  aria-label="Custom delay unit"
-                  style={{ ...selectStyle, width: 110 }}
-                  value={form.delay_unit}
-                  onChange={(e) => setForm((f) => ({ ...f, delay_unit: e.target.value }))}
-                >
-                  <option value="minutes">minutes</option>
-                  <option value="hours">hours</option>
-                  <option value="days">days</option>
-                </select>
-              </div>
-
-              <label style={{ ...labelStyle, marginTop: 12 }}>Counted from</label>
-              <select style={selectStyle} value={form.anchor} onChange={(e) => setForm((f) => ({ ...f, anchor: e.target.value }))}>
-                {anchors.length === 0 && <option value="RECIPIENT">after each person receives it</option>}
-                {anchors.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-              </select>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, minHeight: 16 }}>{anchorHint}</div>
-            </div>
-          </div>
-
-          {/* ── The message itself ──
-              Picking a template by name is not enough to know what a recipient
-              gets: the header media, the {{n}} values and the buttons all decide
-              whether Meta accepts the send. This section is that, side by side
-              with a live preview of the result. */}
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>The message</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
-              What this follow-up actually sends. Variables are filled per lead at send time.
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }} className="wa-builder-grid">
-              <div>
-                <TemplateMessageFields
-                  templates={sendableTemplates}
-                  templateId={form.template_id}
-                  onTemplateChange={(id) => setForm((f) => ({ ...f, template_id: id }))}
-                  headerImageUrl={form.header_image_url}
-                  onHeaderImageChange={(url) => setForm((f) => ({ ...f, header_image_url: url }))}
-                  params={params}
-                  onParamsChange={setParams}
-                  showPreview={false}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Message Preview</div>
-                {selectedTemplate ? (
-                  <>
-                    <WhatsappPreview
-                      template={{
-                        ...selectedTemplate,
-                        header_params: params.header_params?.length ? params.header_params : selectedTemplate.header_params,
-                        body_params: params.body_params?.length ? params.body_params : selectedTemplate.body_params,
-                      }}
-                      headerMediaUrl={form.header_image_url}
-                    />
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-                      {Array.isArray(selectedTemplate.buttons) && selectedTemplate.buttons.length > 0
-                        ? 'The buttons above are part of the approved template - WhatsApp bakes them in at approval time, so they cannot be added or changed per follow-up. Edit them on the template in WA Templates.'
-                        : 'This template has no buttons. Buttons are approved as part of a template, so add them in WA Templates rather than here.'}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '24px 8px', textAlign: 'center', border: '1px dashed var(--border-primary)', borderRadius: 10 }}>
-                    Select a template to see the message.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Plain-language read-back of the rule. A scheduler people can't
-              restate in a sentence is a scheduler they switch off. */}
-          <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: 'var(--bg-secondary)', fontSize: 13 }}>
-            <strong>{fmtDelay(currentMinutes)}</strong>
-            {form.anchor === 'RECIPIENT' ? ' after each person receives ' : ' after '}
-            <strong>{campaign?.name || 'this campaign'}</strong>
-            {form.anchor === 'CAMPAIGN' ? ' finishes' : ''}, send{' '}
-            <strong>{selectedTemplate?.name || 'the chosen template'}</strong> to everyone who{' '}
-            <strong>{(audiences.find((a) => a.value === form.audience)?.label || form.audience).toLowerCase()}</strong>.
-          </div>
+          <FollowupRuleFields
+            rule={form}
+            onChange={setForm}
+            params={params}
+            onParamsChange={setParams}
+            templates={templates}
+            audiences={audiences}
+            anchors={anchors}
+            counts={preview?.by_audience}
+            matchCount={preview ? preview.total : null}
+            countsHint="Counting…"
+            subjectName={campaign?.name || 'this campaign'}
+          />
 
           <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'flex-end' }}>
             <button type="button" className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button>
@@ -415,7 +236,9 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
                     <div className="col-cell-primary">{f.name}</div>
                     <div className="col-cell-secondary">{f.template_name || '-'}</div>
                   </td>
-                  <td>{f.audience_label || f.audience}</td>
+                  {/* Several ticked groups read as "A or B or C", so this cell
+                      has to wrap rather than stretch the table. */}
+                  <td style={{ whiteSpace: 'normal', maxWidth: 260 }}>{f.audience_label || f.audience}</td>
                   <td>
                     {fmtDelay(f.delay_minutes)}
                     <div className="col-cell-secondary">
@@ -508,8 +331,9 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
       </div>
 
       <div style={{ padding: '10px 16px', fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border-primary)' }}>
-        Follow-ups are checked every 5 minutes. "Delivered" and "Read" audiences depend on the provider webhook - without it,
-        only "Reached them, but never replied" can ever match.
+        Follow-ups are checked every 5 minutes. The groups are exclusive - the moment someone writes back they leave every
+        "never replied" group for good, which is why a rule can sit at 0 waiting: tick more than one group to widen it.
+        "Delivered" and "Read" also depend on the provider webhook - without it, only "Reached them, but never replied" can ever match.
       </div>
     </div>
   );

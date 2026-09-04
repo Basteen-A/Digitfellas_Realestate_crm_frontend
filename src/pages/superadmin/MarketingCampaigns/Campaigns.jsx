@@ -14,6 +14,10 @@ import leadSourceApi from '../../../api/leadSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import HeaderMediaInput from './HeaderMediaInput';
 import WhatsappPreview from './WhatsappPreview';
+import { EMPTY_PARAMS } from './TemplateMessageFields';
+// The automatic-follow-up form is shared verbatim with the campaign report's
+// own scheduler, so the two can never ask for the rule differently.
+import FollowupRuleFields, { EMPTY_RULE, followupRuleError, followupRulePayload } from './FollowupRuleFields';
 import '../../portals/collection/CollectionWorkspace.css';
 
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
@@ -90,6 +94,14 @@ const Campaigns = () => {
   const [paramValues, setParamValues] = useState({ header_params: [], body_params: [] });
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [preview, setPreview] = useState(null); // { total, sample }
+
+  // The automatic second touch, set up in the same breath as the blast. Off by
+  // default - it sends real messages a day later, so it is always a decision
+  // somebody made, never one they inherited from a default.
+  const [followupOn, setFollowupOn] = useState(false);
+  const [followupRule, setFollowupRule] = useState(EMPTY_RULE);
+  const [followupParams, setFollowupParams] = useState(EMPTY_PARAMS);
+  const [followupMeta, setFollowupMeta] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -119,6 +131,9 @@ const Campaigns = () => {
         whatsappCampaignApi.getTemplates({ limit: 100, is_active: 'true' }),
         whatsappCampaignApi.getTemplateMeta(),
       ]);
+      // The follow-up audience list is served by the engine that runs the rule -
+      // never hardcoded here. A failure just leaves the picker on its defaults.
+      whatsappCampaignApi.getFollowupMeta().then((r) => setFollowupMeta(r.data)).catch(() => {});
       setStatuses((st.data || []).map((x) => ({ value: x.id, label: x.status_name })));
       setProjects((pr.data || []).map((x) => ({ value: x.id, label: x.project_name })));
       setLocations((lo.data || []).map((x) => ({ value: x.id, label: x.location_name })));
@@ -170,6 +185,7 @@ const Campaigns = () => {
 
   const openBuilder = () => {
     setName(''); setTemplateId(''); setHeaderImageUrl(''); setFilters(EMPTY_FILTERS); setPreview(null);
+    setFollowupOn(false); setFollowupRule(EMPTY_RULE); setFollowupParams(EMPTY_PARAMS);
     setView('form');
   };
   const backToList = () => setView('list');
@@ -234,8 +250,16 @@ const Campaigns = () => {
     if (!templateId) { toast.error('Select a template'); return; }
     const pErr = paramError();
     if (pErr) { toast.error(pErr); return; }
+    // The follow-up is refused on the same screen it was written on. The server
+    // checks it again before queueing anyone, so a rule can never be half-saved
+    // behind a blast that already went out.
+    if (followupOn) {
+      const fErr = followupRuleError(followupRule, templates, followupParams, { requireName: false });
+      if (fErr) { toast.error(fErr); return; }
+    }
     const count = preview?.total;
-    if (!window.confirm(`Send this campaign${count != null ? ` to ${count} matching lead(s)` : ''}? Real WhatsApp messages will be dispatched.`)) return;
+    const chase = followupOn ? ' A follow-up will be scheduled at the same time.' : '';
+    if (!window.confirm(`Send this campaign${count != null ? ` to ${count} matching lead(s)` : ''}? Real WhatsApp messages will be dispatched.${chase}`)) return;
     setSending(true);
     try {
       const resp = await whatsappCampaignApi.createCampaign({
@@ -245,6 +269,7 @@ const Campaigns = () => {
         ...(paramValues.header_params.length ? { header_params: paramValues.header_params } : {}),
         ...(paramValues.body_params.length ? { body_params: paramValues.body_params } : {}),
         filters,
+        ...(followupOn ? { followup: { enabled: true, ...followupRulePayload(followupRule, followupParams) } } : {}),
       });
       toast.success(resp.message || 'Campaign queued');
       backToList();
@@ -421,6 +446,54 @@ const Campaigns = () => {
               {filters.engagement === 'REPLIED' && (
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
                   Tip: people who replied are inside the 24-hour window, so you can also just answer them directly from the WhatsApp Inbox.
+                </div>
+              )}
+            </div>
+
+            {/* ── Automatic follow-up ──
+                Deliberately sits right under Follow-up Targeting, because the
+                two are opposite directions in time and are otherwise easy to
+                confuse: the block above narrows THIS audience by how people
+                reacted to an EARLIER blast; this one schedules the chase on
+                THIS blast, before it has gone out. Setting it up here is the
+                point - the moment an admin is actually thinking about the
+                second touch is while they are writing the first. */}
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={followupOn}
+                  onChange={(e) => setFollowupOn(e.target.checked)}
+                  style={{ width: 15, height: 15, marginTop: 2, flexShrink: 0, cursor: 'pointer' }}
+                />
+                <span>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>Schedule an automatic follow-up <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></span>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Chase the people this blast reaches but who never write back - automatically, a set time after they got it.
+                    It runs by itself; you do not have to come back to the report.
+                  </span>
+                </span>
+              </label>
+
+              {followupOn && (
+                <div style={{ marginTop: 14 }}>
+                  <FollowupRuleFields
+                    rule={followupRule}
+                    onChange={setFollowupRule}
+                    params={followupParams}
+                    onParamsChange={setFollowupParams}
+                    templates={templates}
+                    audiences={followupMeta?.audiences || []}
+                    anchors={followupMeta?.anchors || []}
+                    showName={false}
+                    stackMessage
+                    subjectName={name.trim() || 'this campaign'}
+                    countsHint="Group sizes appear on the campaign report once the blast has been sent."
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+                    The follow-up waits for this campaign to finish sending before it counts anybody - it will never chase a
+                    half-delivered blast. You can pause, re-run or delete it from this campaign's report at any time.
+                  </div>
                 </div>
               )}
             </div>
