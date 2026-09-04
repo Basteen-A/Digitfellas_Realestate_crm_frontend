@@ -22,7 +22,8 @@ import {
 } from '@heroicons/react/24/outline';
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
-import HeaderMediaInput from './HeaderMediaInput';
+import TemplateMessageFields, { EMPTY_PARAMS, templateMessageError } from './TemplateMessageFields';
+import WhatsappPreview from './WhatsappPreview';
 import '../../portals/collection/CollectionWorkspace.css';
 
 const labelStyle = { fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
@@ -92,6 +93,10 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  // The template's {{n}} values for THIS follow-up only (param_overrides on the
+  // server). Held beside the form because the shared fields component owns the
+  // editing UI but not the submit.
+  const [params, setParams] = useState(EMPTY_PARAMS);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -131,11 +136,16 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
     [anchors, form.anchor]
   );
 
-  // Approved templates only: a pending or rejected one would be refused by
-  // WhatsApp hours later, when nobody is watching the rule fire.
+  // Approved and active only: a pending or rejected template would be refused
+  // by WhatsApp hours later, when nobody is watching the rule fire.
   const sendableTemplates = useMemo(
-    () => templates.filter((t) => t.is_active !== false && (!t.status || t.status === 'APPROVED')),
+    () => templates.filter((t) => t.is_active !== false && t.status === 'APPROVED'),
     [templates]
+  );
+
+  const selectedTemplate = useMemo(
+    () => sendableTemplates.find((t) => t.id === form.template_id) || null,
+    [sendableTemplates, form.template_id]
   );
 
   // Refresh the audience count whenever the slice changes - "who is this
@@ -159,13 +169,20 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
 
   const openForm = () => {
     setForm({ ...EMPTY_FORM, name: `${campaign?.name || 'Campaign'} - follow-up` });
+    setParams(EMPTY_PARAMS);
     setShowForm(true);
   };
 
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Give the follow-up a name.'); return; }
-    if (!form.template_id) { toast.error('Pick the template to send.'); return; }
+
+    // Everything the message itself needs: a template, its header media, and a
+    // resolved value for every {{n}}. Caught here so the problem is a sentence
+    // on screen now, rather than a provider rejection a day from now when the
+    // rule fires and nobody is watching.
+    const msgError = templateMessageError(selectedTemplate, form.header_image_url, params);
+    if (msgError) { toast.error(msgError); return; }
 
     setSaving(true);
     try {
@@ -177,6 +194,8 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
         delay_value: Number(form.delay_value) || 0,
         delay_unit: form.delay_unit,
         header_image_url: form.header_image_url || null,
+        ...(params.header_params?.length ? { header_params: params.header_params } : {}),
+        ...(params.body_params?.length ? { body_params: params.body_params } : {}),
       });
       toast.success(resp.message || 'Follow-up scheduled');
       setShowForm(false);
@@ -232,16 +251,6 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
               />
             </div>
             <div>
-              <label style={labelStyle}>Template *</label>
-              <select style={selectStyle} value={form.template_id} onChange={(e) => setForm((f) => ({ ...f, template_id: e.target.value }))}>
-                <option value="">Select a template…</option>
-                {sendableTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-            <div>
               <label style={labelStyle}>Send it to</label>
               <select style={selectStyle} value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}>
                 {audiences.length === 0 && <option value="DELIVERED_NO_REPLY">Delivered to the phone, but never replied</option>}
@@ -253,6 +262,9 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
                   : 'Counting…'}
               </div>
             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
             <div>
               <label style={labelStyle}>Wait how long</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -302,12 +314,54 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
             </div>
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <label style={labelStyle}>Header Image <span style={{ fontWeight: 400 }}>(optional - overrides the template default)</span></label>
-            <HeaderMediaInput
-              value={form.header_image_url}
-              onChange={(url) => setForm((f) => ({ ...f, header_image_url: url }))}
-            />
+          {/* ── The message itself ──
+              Picking a template by name is not enough to know what a recipient
+              gets: the header media, the {{n}} values and the buttons all decide
+              whether Meta accepts the send. This section is that, side by side
+              with a live preview of the result. */}
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>The message</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+              What this follow-up actually sends. Variables are filled per lead at send time.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }} className="wa-builder-grid">
+              <div>
+                <TemplateMessageFields
+                  templates={sendableTemplates}
+                  templateId={form.template_id}
+                  onTemplateChange={(id) => setForm((f) => ({ ...f, template_id: id }))}
+                  headerImageUrl={form.header_image_url}
+                  onHeaderImageChange={(url) => setForm((f) => ({ ...f, header_image_url: url }))}
+                  params={params}
+                  onParamsChange={setParams}
+                  showPreview={false}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Message Preview</div>
+                {selectedTemplate ? (
+                  <>
+                    <WhatsappPreview
+                      template={{
+                        ...selectedTemplate,
+                        header_params: params.header_params?.length ? params.header_params : selectedTemplate.header_params,
+                        body_params: params.body_params?.length ? params.body_params : selectedTemplate.body_params,
+                      }}
+                      headerMediaUrl={form.header_image_url}
+                    />
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                      {Array.isArray(selectedTemplate.buttons) && selectedTemplate.buttons.length > 0
+                        ? 'The buttons above are part of the approved template - WhatsApp bakes them in at approval time, so they cannot be added or changed per follow-up. Edit them on the template in WA Templates.'
+                        : 'This template has no buttons. Buttons are approved as part of a template, so add them in WA Templates rather than here.'}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '24px 8px', textAlign: 'center', border: '1px dashed var(--border-primary)', borderRadius: 10 }}>
+                    Select a template to see the message.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Plain-language read-back of the rule. A scheduler people can't
@@ -317,7 +371,7 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
             {form.anchor === 'RECIPIENT' ? ' after each person receives ' : ' after '}
             <strong>{campaign?.name || 'this campaign'}</strong>
             {form.anchor === 'CAMPAIGN' ? ' finishes' : ''}, send{' '}
-            <strong>{sendableTemplates.find((t) => t.id === form.template_id)?.name || 'the chosen template'}</strong> to everyone who{' '}
+            <strong>{selectedTemplate?.name || 'the chosen template'}</strong> to everyone who{' '}
             <strong>{(audiences.find((a) => a.value === form.audience)?.label || form.audience).toLowerCase()}</strong>.
           </div>
 
