@@ -76,8 +76,11 @@ const whatsappCampaignApi = {
     const { data } = await api.get(`${BASE}/campaigns/${id}`, { params: { _t: Date.now() } });
     return data;
   },
-  // params: { page, limit, search, status } - status also accepts the two
-  // reply pseudo-filters REPLIED / NO_REPLY.
+  // params: { limit, search, status, mode, cursor }
+  //   status also accepts the two reply pseudo-filters REPLIED / NO_REPLY.
+  //   mode:'cursor' + cursor  = keyset pagination (flat cost at any depth);
+  //   the response carries meta.next_cursor / meta.has_more. Passing `page`
+  //   instead still works and falls back to OFFSET, for the mobile app.
   getRecipients: async (id, params = {}) => {
     const { data } = await api.get(`${BASE}/campaigns/${id}/recipients`, { params: { ...params, _t: Date.now() } });
     return data;

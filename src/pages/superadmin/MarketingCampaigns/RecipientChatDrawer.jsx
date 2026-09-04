@@ -146,7 +146,7 @@ const RecipientChatDrawer = ({ recipient, templates = [], onClose, onOpenFullInb
         {/* ── Header ── */}
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {recipient.lead_name || conversation?.contact_name || 'Unknown lead'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>

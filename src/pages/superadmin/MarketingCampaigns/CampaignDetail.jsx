@@ -4,17 +4,21 @@
 // The full account of one send-out: who it went to, what happened to each
 // message, what each person said back, and what happens next.
 //
-// Four things live here:
+// Five things live here:
 //   1. the counter strip (recounted server-side off the recipient rows, so it
 //      is right even when a webhook was missed and the cached columns drifted)
 //   2. send controls - pause / resume / cancel, and the resume that rescues a
 //      campaign stranded on SENDING by a mid-blast restart
-//   3. the recipient table, with each person's reply and a chat drawer
-//   4. scheduled follow-ups: the automatic second touch for whoever went quiet
+//   3. WHY messages failed, grouped - because "Delivered 0" on its own reads as
+//      "nobody opened it" when the real cause is usually one fixable thing
+//   4. the recipient table, with each person's reply and a chat drawer
+//   5. scheduled follow-ups: the automatic second touch for whoever went quiet
 //
-// Delivered / Read / Replied can ONLY come from the provider webhook, so when
-// those columns are empty the banner at the top says which of the three
-// possible causes it is rather than leaving the reader to guess.
+// Styling follows the .col-stat-card-new / .col-table-new system the rest of
+// the product uses: monochrome values, colour only inside badges.
+//
+// The recipient table is CURSOR paginated - a 10,000-recipient campaign is
+// exactly the case where OFFSET starts re-walking the whole table per page.
 // ============================================================
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -29,23 +33,28 @@ import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import CampaignFollowups from './CampaignFollowups';
 import RecipientChatDrawer from './RecipientChatDrawer';
-
-const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
-const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
+import '../../portals/collection/CollectionWorkspace.css';
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
 
-const RECIPIENT_STATUS_COLORS = {
-  SENT: '#2563eb', DELIVERED: '#166534', READ: '#7c3aed', FAILED: '#991b1b', PENDING: '#a16207', SKIPPED: '#6b7280',
+// Status is the one place colour is allowed: it is a badge, and these are the
+// app-wide badge triples from badge-system.html.
+const RECIPIENT_BADGE = {
+  SENT: 'col-badge-new-status',
+  DELIVERED: 'col-badge-verified',
+  READ: 'col-badge-verified',
+  FAILED: 'col-badge-rejected',
+  PENDING: 'col-badge-pending',
+  SKIPPED: 'col-badge-neutral',
 };
 
-const CAMPAIGN_STATUS_COLORS = {
-  QUEUED: { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE' },
-  SENDING: { bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA' },
-  PAUSED: { bg: '#FEFCE8', fg: '#854D0E', border: '#FEF08A' },
-  COMPLETED: { bg: '#F0FDF4', fg: '#166534', border: '#BBF7D0' },
-  CANCELLED: { bg: '#F3F4F6', fg: '#4B5563', border: '#E5E7EB' },
-  FAILED: { bg: '#FFF1F2', fg: '#9F1239', border: '#FECDD3' },
+const CAMPAIGN_BADGE = {
+  QUEUED: 'col-badge-new-status',
+  SENDING: 'col-badge-unverified',
+  PAUSED: 'col-badge-pending',
+  COMPLETED: 'col-badge-verified',
+  CANCELLED: 'col-badge-neutral',
+  FAILED: 'col-badge-rejected',
 };
 
 // Filter chips. The last two are NOT delivery statuses - they slice the same
@@ -66,27 +75,34 @@ const PAGE_SIZE = 50;
 
 // Poll fast while the blast is moving, slowly once it has settled, and not at
 // all while the tab is hidden. A 10,000-row campaign report left open on a
-// second monitor should not be re-counting the recipients table every 8
+// second monitor should not be re-counting the recipients table every few
 // seconds for the rest of the afternoon.
 const POLL_ACTIVE_MS = 4000;
 const POLL_IDLE_MS = 20000;
 
-// One counter in the header strip.
-const Stat = ({ label, value, sub, tone, onClick, active }) => (
+const fmtNumber = (n) => (n === null || n === undefined || n === '-' ? '-' : Number(n).toLocaleString('en-IN'));
+
+// One counter in the header strip. Monochrome by design: no value anywhere else
+// in the product is coloured, and a red "Failed" number here would be the only
+// one that was.
+const Stat = ({ label, value, sub, icon, onClick, active }) => (
   <div
+    className="col-stat-card-new"
     onClick={onClick}
     role={onClick ? 'button' : undefined}
     tabIndex={onClick ? 0 : undefined}
     onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
     style={{
-      padding: '12px 16px', borderRadius: 10, background: 'var(--bg-secondary)',
-      border: `1px solid ${active ? 'var(--primary, #2563eb)' : 'var(--border-primary)'}`,
-      minWidth: 110, cursor: onClick ? 'pointer' : 'default',
+      minWidth: 132,
+      flex: '1 1 132px',
+      cursor: onClick ? 'pointer' : 'default',
+      borderColor: active ? 'var(--text-primary, #111827)' : undefined,
     }}
   >
-    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>{label}</div>
-    <div style={{ fontSize: 22, fontWeight: 700, marginTop: 2, color: tone || 'var(--text-primary)' }}>{value}</div>
-    {sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>}
+    <div className="col-stat-label-new" style={{ minHeight: 'auto', marginBottom: 6 }}>{label}</div>
+    <div className="col-stat-value-new">{fmtNumber(value)}</div>
+    {sub && <div className="col-stat-sub-new">{sub}</div>}
+    {icon && <div className="col-stat-icon-new">{icon}</div>}
   </div>
 );
 
@@ -97,10 +113,9 @@ const CampaignDetail = () => {
   const [campaign, setCampaign] = useState(null);
   const [stats, setStats] = useState(null);
   const [recipients, setRecipients] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
+  const [meta, setMeta] = useState({ total: 0, hasMore: false, nextCursor: null });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [chatRecipient, setChatRecipient] = useState(null);
@@ -108,6 +123,12 @@ const CampaignDetail = () => {
   const [health, setHealth] = useState(null);
   const [acting, setActing] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // Keyset pagination. `cursor` is the row to start AFTER; `history` is the
+  // stack of cursors already visited, which is what makes Previous work without
+  // falling back to page numbers.
+  const [cursor, setCursor] = useState(null);
+  const [history, setHistory] = useState([]);
 
   const pollRef = useRef(null);
 
@@ -128,16 +149,24 @@ const CampaignDetail = () => {
     if (!silent) setLoading(true);
     try {
       const resp = await whatsappCampaignApi.getRecipients(id, {
-        page, limit: PAGE_SIZE, status: statusFilter || undefined, search: searchTerm || undefined,
+        mode: 'cursor',
+        cursor: cursor || undefined,
+        limit: PAGE_SIZE,
+        status: statusFilter || undefined,
+        search: searchTerm || undefined,
       });
       setRecipients(resp.data || []);
-      setMeta(resp.meta || { total: 0, page: 1, totalPages: 1 });
+      setMeta({
+        total: resp.meta?.total ?? 0,
+        hasMore: Boolean(resp.meta?.has_more),
+        nextCursor: resp.meta?.next_cursor || null,
+      });
     } catch (err) {
       if (!silent) toast.error(getErrorMessage(err, 'Failed to load recipients'));
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [id, page, statusFilter, searchTerm]);
+  }, [id, cursor, statusFilter, searchTerm]);
 
   useEffect(() => { loadHeader(); }, [loadHeader]);
   useEffect(() => { loadRecipients(); }, [loadRecipients]);
@@ -182,9 +211,24 @@ const CampaignDetail = () => {
     return () => clearInterval(pollRef.current);
   }, [loadHeader, loadRecipients, isLive]);
 
-  // Filter / search changes always restart at page 1.
-  const applyFilter = (value) => { setStatusFilter(value); setPage(1); };
-  const applySearch = (e) => { e.preventDefault(); setSearchTerm(search.trim()); setPage(1); };
+  // Any change to what is being listed restarts the cursor walk.
+  const resetPaging = () => { setCursor(null); setHistory([]); };
+  const applyFilter = (value) => { setStatusFilter(value); resetPaging(); };
+  const applySearch = (e) => { e.preventDefault(); setSearchTerm(search.trim()); resetPaging(); };
+
+  const goNext = () => {
+    if (!meta.nextCursor) return;
+    setHistory((h) => [...h, cursor]);
+    setCursor(meta.nextCursor);
+  };
+  const goPrev = () => {
+    setHistory((h) => {
+      const next = [...h];
+      const prev = next.pop() ?? null;
+      setCursor(prev);
+      return next;
+    });
+  };
 
   // ── Send controls ──
   const runAction = async (fn, confirmText) => {
@@ -207,6 +251,7 @@ const CampaignDetail = () => {
     try {
       const blob = await whatsappCampaignApi.exportRecipients(id, {
         status: statusFilter || undefined,
+        search: searchTerm || undefined,
       });
       // The export streams through the authenticated axios instance, so it
       // arrives as a blob and is saved client-side - a plain link would lose
@@ -243,15 +288,37 @@ const CampaignDetail = () => {
     return r.error || '-';
   };
 
-  const statusChip = CAMPAIGN_STATUS_COLORS[campaign?.status] || CAMPAIGN_STATUS_COLORS.QUEUED;
-
   // A campaign sitting on SENDING that no worker is actually walking is the
   // failure mode this page previously had no way to show. Say it outright.
   const looksStalled = campaign?.status === 'SENDING'
     && !campaign?.is_sending_now
     && (campaign?.pending_count || 0) > 0;
 
+  // How long it has been untouched. The background sweep auto-resumes anything
+  // under a week and CLOSES OFF anything older rather than firing a stale
+  // promotion at people; a human resuming an old one by hand is asked to
+  // confirm, because the offer inside the message may have expired.
+  const idleDays = campaign?.updated_at
+    ? Math.floor((Date.now() - new Date(campaign.updated_at).getTime()) / 86400000)
+    : 0;
+  const isStaleSend = looksStalled && idleDays >= 7;
+
+  const confirmResume = isStaleSend
+    ? `This campaign has been untouched for ${idleDays} days. Resuming sends the original message to ${campaign?.pending_count} people now - check the offer inside it is still valid. Continue?`
+    : null;
+
   const showWebhookWarning = health && health.verdict !== 'OK';
+  // Memoised so the fallback array is not freshly allocated on every render.
+  const failureReasons = useMemo(() => stats?.failure_reasons || [], [stats]);
+
+  // When almost every failure shares one cause it is a campaign-level fault (a
+  // dead header image, a blocked number) rather than bad luck spread across
+  // recipients - and it deserves to be stated, not buried in a table column.
+  const dominantFailure = useMemo(() => {
+    if (!failureReasons.length || !stats?.failed) return null;
+    const top = failureReasons[0];
+    return top.count / stats.failed >= 0.6 ? top : null;
+  }, [failureReasons, stats]);
 
   const filterChips = useMemo(() => FILTERS, []);
 
@@ -267,7 +334,7 @@ const CampaignDetail = () => {
               <MegaphoneIcon style={{ width: 20, height: 20, marginRight: 6, verticalAlign: 'text-bottom' }} />
               {campaign?.name || 'Campaign'}
               {campaign?.status && (
-                <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 10, color: statusChip.fg, background: statusChip.bg, border: `1px solid ${statusChip.border}`, borderRadius: 999, padding: '3px 9px', verticalAlign: 'middle' }}>
+                <span className={`col-badge-new ${CAMPAIGN_BADGE[campaign.status] || 'col-badge-neutral'}`} style={{ marginLeft: 10, verticalAlign: 'middle' }}>
                   {campaign.status}
                 </span>
               )}
@@ -281,7 +348,7 @@ const CampaignDetail = () => {
                   {' · follow-up of '}
                   <button
                     type="button"
-                    className="view-link"
+                    className="col-viewall-link"
                     onClick={() => navigate(`/super-admin/marketing-campaigns/${campaign.parent.id}`)}
                   >
                     {campaign.parent.name}
@@ -305,14 +372,13 @@ const CampaignDetail = () => {
             </button>
           )}
           {['PAUSED', 'SENDING', 'QUEUED', 'FAILED'].includes(campaign?.status) && (campaign?.pending_count || 0) > 0 && (
-            <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => runAction(whatsappCampaignApi.resumeCampaign)} disabled={acting}>
+            <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => runAction(whatsappCampaignApi.resumeCampaign, confirmResume)} disabled={acting}>
               <PlayIcon style={{ width: 15, height: 15 }} /> Resume
             </button>
           )}
           {!['COMPLETED', 'CANCELLED'].includes(campaign?.status) && (
             <button
               className="crm-btn crm-btn-ghost crm-btn-sm"
-              style={{ color: '#991b1b' }}
               onClick={() => runAction(whatsappCampaignApi.cancelCampaign, 'Cancel this campaign? Messages already sent cannot be recalled.')}
               disabled={acting}
             >
@@ -325,20 +391,43 @@ const CampaignDetail = () => {
         </div>
       </div>
 
+      {/* ── One dominant failure cause ──
+          The single most useful line on the page when a send goes wrong: it
+          turns "Delivered 0, Failed 1,061" from a mystery into an instruction. */}
+      {dominantFailure && (
+        <div className="col-card-new" style={{ marginBottom: 14, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1, color: 'var(--text-muted)' }} />
+          <div style={{ fontSize: 13 }}>
+            <strong style={{ fontWeight: 500 }}>{fmtNumber(dominantFailure.count)} of {fmtNumber(stats.failed)} failures share one cause.</strong>
+            <div style={{ color: 'var(--text-muted)', marginTop: 3 }}>{dominantFailure.reason}</div>
+            {/^#131053|Media upload error/i.test(dominantFailure.reason) && (
+              <div style={{ marginTop: 6 }}>
+                WhatsApp could not download this campaign’s header image, so no message could be delivered.
+                Re-upload the image (the Upload button now returns a permanent link, not one that expires) and
+                send a fresh campaign to the people who failed.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Stalled-send banner ──
           The processor stops only from inside itself, so a deploy mid-blast
           leaves a campaign here with recipients still queued and no worker on
-          it. The background sweep picks this up within 10 minutes; the button
-          is for people who would rather not wait. */}
+          it. The background sweep picks this up; the button is for people who
+          would rather not wait. */}
       {looksStalled && (
-        <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: '#FFF7ED', border: '1px solid #FED7AA', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: '#C2410C', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 220, fontSize: 13, color: '#7C2D12' }}>
+        <div className="col-card-new" style={{ marginBottom: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0, color: 'var(--text-muted)' }} />
+          <div style={{ flex: 1, minWidth: 220, fontSize: 13 }}>
             This campaign says it is sending, but nothing is working on it right now -{' '}
-            <strong>{campaign.pending_count}</strong> recipient(s) have never been sent to. A restart during the
-            send usually causes this. It will be picked up automatically within 10 minutes.
+            <strong style={{ fontWeight: 500 }}>{fmtNumber(campaign.pending_count)}</strong> recipient(s) have never been sent to.
+            A restart during the send usually causes this.
+            {isStaleSend
+              ? ` It has been untouched for ${idleDays} days, so it will be closed off automatically rather than sending a stale message. Resume it only if the offer inside is still valid.`
+              : ' It will be picked up automatically within 10 minutes.'}
           </div>
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => runAction(whatsappCampaignApi.resumeCampaign)} disabled={acting}>
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => runAction(whatsappCampaignApi.resumeCampaign, confirmResume)} disabled={acting}>
             <PlayIcon style={{ width: 15, height: 15 }} /> Resume now
           </button>
         </div>
@@ -349,13 +438,14 @@ const CampaignDetail = () => {
           it is not wired up, saying so is far more useful than a column of
           zeroes that looks like nobody opened the message. */}
       {showWebhookWarning && (
-        <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: '#FEFCE8', border: '1px solid #FEF08A', display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
-          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: '#854D0E', flexShrink: 0, marginTop: 1 }} />
-          <div style={{ flex: 1, minWidth: 240, fontSize: 13, color: '#713F12' }}>
-            <strong>Delivery receipts are not arriving.</strong> {health.detail}
+        <div className="col-card-new" style={{ marginBottom: 14, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1, color: 'var(--text-muted)' }} />
+          <div style={{ flex: 1, minWidth: 240, fontSize: 13 }}>
+            <strong style={{ fontWeight: 500 }}>Delivery receipts are not arriving.</strong>{' '}
+            <span style={{ color: 'var(--text-muted)' }}>{health.detail}</span>
             {health.callback_url && (
               <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '3px 7px', borderRadius: 6, wordBreak: 'break-all' }}>
+                <code style={{ fontSize: 12, background: 'var(--bg-secondary)', padding: '3px 7px', borderRadius: 6, wordBreak: 'break-all' }}>
                   {health.callback_url}
                 </code>
                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={copyCallbackUrl}>
@@ -371,19 +461,37 @@ const CampaignDetail = () => {
           right even if a webhook was missed and the cached columns drifted.
           Each one is also a filter: the number and the list behind it agree. */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <Stat label="Recipients" value={stats?.total ?? campaign?.total_recipients ?? '-'} onClick={() => applyFilter('')} active={statusFilter === ''} />
-        <Stat label="Sent" value={stats?.sent ?? '-'} sub="accepted by WhatsApp" tone="#166534" onClick={() => applyFilter('SENT')} active={statusFilter === 'SENT'} />
-        <Stat label="Delivered" value={stats?.delivered ?? '-'} tone="#166534" onClick={() => applyFilter('DELIVERED')} active={statusFilter === 'DELIVERED'} />
-        <Stat label="Read" value={stats?.read ?? '-'} tone="#7c3aed" onClick={() => applyFilter('READ')} active={statusFilter === 'READ'} />
-        <Stat label="Replied" value={stats?.replied ?? '-'} sub={stats ? `${stats.reply_rate}% of sent` : ''} tone="#0f766e" onClick={() => applyFilter('REPLIED')} active={statusFilter === 'REPLIED'} />
-        <Stat label="No reply" value={stats?.no_reply ?? '-'} onClick={() => applyFilter('NO_REPLY')} active={statusFilter === 'NO_REPLY'} />
-        <Stat label="Failed" value={stats?.failed ?? '-'} tone={stats?.failed ? '#991b1b' : undefined} onClick={() => applyFilter('FAILED')} active={statusFilter === 'FAILED'} />
+        <Stat label="Recipients" value={stats?.total ?? campaign?.total_recipients ?? '-'} icon="👥" onClick={() => applyFilter('')} active={statusFilter === ''} />
+        <Stat label="Sent" value={stats?.sent ?? '-'} sub="accepted by WhatsApp" icon="📤" onClick={() => applyFilter('SENT')} active={statusFilter === 'SENT'} />
+        <Stat label="Delivered" value={stats?.delivered ?? '-'} icon="📬" onClick={() => applyFilter('DELIVERED')} active={statusFilter === 'DELIVERED'} />
+        <Stat label="Read" value={stats?.read ?? '-'} icon="👀" onClick={() => applyFilter('READ')} active={statusFilter === 'READ'} />
+        <Stat label="Replied" value={stats?.replied ?? '-'} sub={stats ? `${stats.reply_rate}% of sent` : ''} icon="💬" onClick={() => applyFilter('REPLIED')} active={statusFilter === 'REPLIED'} />
+        <Stat label="No reply" value={stats?.no_reply ?? '-'} icon="🔕" onClick={() => applyFilter('NO_REPLY')} active={statusFilter === 'NO_REPLY'} />
+        <Stat label="Failed" value={stats?.failed ?? '-'} icon="⚠️" onClick={() => applyFilter('FAILED')} active={statusFilter === 'FAILED'} />
         {(stats?.pending ?? 0) > 0 && (
-          <Stat label="Pending" value={stats.pending} sub="not sent yet" tone="#a16207" onClick={() => applyFilter('PENDING')} active={statusFilter === 'PENDING'} />
+          <Stat label="Pending" value={stats.pending} sub="not sent yet" icon="⏳" onClick={() => applyFilter('PENDING')} active={statusFilter === 'PENDING'} />
+        )}
+        {(stats?.skipped ?? 0) > 0 && (
+          <Stat label="Skipped" value={stats.skipped} sub="stopped by cancel" icon="⏭️" onClick={() => applyFilter('SKIPPED')} active={statusFilter === 'SKIPPED'} />
         )}
       </div>
 
-      <div className="crm-card">
+      {/* ── Failure breakdown ── */}
+      {failureReasons.length > 0 && (
+        <div className="col-card-new" style={{ marginBottom: 16 }}>
+          <div className="col-card-header-new" style={{ fontSize: 13, fontWeight: 500 }}>Why messages failed</div>
+          <div style={{ padding: '4px 0 8px' }}>
+            {failureReasons.map((f) => (
+              <div key={f.reason} style={{ display: 'flex', gap: 12, padding: '7px 16px', fontSize: 12, alignItems: 'baseline' }}>
+                <span style={{ fontWeight: 500, minWidth: 60 }}>{fmtNumber(f.count)}</span>
+                <span style={{ color: 'var(--text-muted)' }}>{f.reason}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="col-card-new">
         <div style={{ padding: '12px 16px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {filterChips.map((f) => (
@@ -415,51 +523,51 @@ const CampaignDetail = () => {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
+          <table className="col-table-new" style={{ minWidth: 980 }}>
             <thead>
               <tr>
-                <th style={th}>Lead</th>
-                <th style={th}>Phone</th>
-                <th style={th}>Status</th>
-                <th style={th}>Reply</th>
-                <th style={th}>What they said</th>
-                <th style={th}>Detail</th>
-                <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                <th>Lead</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Reply</th>
+                <th>What they said</th>
+                <th>Detail</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>Loading…</td></tr>}
+              {loading && <tr><td style={{ textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>Loading…</td></tr>}
               {!loading && recipients.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>No recipients match this filter.</td></tr>
+                <tr><td style={{ textAlign: 'center', color: 'var(--text-muted)' }} colSpan={7}>No recipients match this filter.</td></tr>
               )}
               {!loading && recipients.map((r) => (
                 <tr key={r.id}>
-                  <td style={td}>{r.lead_name || '-'}</td>
-                  <td style={td}>{r.phone}</td>
-                  <td style={td}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: RECIPIENT_STATUS_COLORS[r.status] || 'var(--text-muted)' }}>{r.status}</span>
+                  <td className="col-cell-primary">{r.lead_name || '-'}</td>
+                  <td>{r.phone}</td>
+                  <td>
+                    <span className={`col-badge-new ${RECIPIENT_BADGE[r.status] || 'col-badge-neutral'}`}>{r.status}</span>
                   </td>
-                  <td style={td}>
+                  <td>
                     {r.replied_at ? (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#0f766e' }}>
+                      <span>
                         {r.reply_count > 1 ? `${r.reply_count} replies` : 'Replied'}
-                        <span style={{ display: 'block', fontWeight: 400, color: 'var(--text-muted)' }}>{fmtDateTime(r.replied_at)}</span>
+                        <span className="col-cell-secondary" style={{ display: 'block' }}>{fmtDateTime(r.replied_at)}</span>
                       </span>
-                    ) : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>-</span>}
+                    ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                   </td>
                   {/* The actual words. A "Replied" flag with no content is the
                       point at which people leave the report to go hunting. */}
-                  <td style={{ ...td, fontSize: 12, maxWidth: 260, whiteSpace: 'normal' }}>
+                  <td style={{ maxWidth: 260, whiteSpace: 'normal' }}>
                     {r.last_reply_text
                       ? <span style={{ fontStyle: 'italic' }}>“{r.last_reply_text}”</span>
                       : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                   </td>
-                  <td style={{ ...td, color: 'var(--text-muted)', fontSize: 12, maxWidth: 260, whiteSpace: 'normal' }}>{detailFor(r)}</td>
-                  <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <button type="button" className="view-link" onClick={() => setChatRecipient(r)}>
+                  <td className="col-cell-secondary" style={{ maxWidth: 260, whiteSpace: 'normal' }}>{detailFor(r)}</td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <button type="button" className="col-viewall-link" onClick={() => setChatRecipient(r)}>
                       Chat
                       {r.conversation_unread > 0 && (
-                        <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 700, background: '#dc2626', color: '#fff', borderRadius: 999, padding: '1px 6px' }}>
+                        <span className="col-badge-new col-badge-rejected" style={{ marginLeft: 5 }}>
                           {r.conversation_unread}
                         </span>
                       )}
@@ -471,14 +579,18 @@ const CampaignDetail = () => {
           </table>
         </div>
 
-        {meta.totalPages > 1 && (
+        {/* Cursor paging: no page numbers, because with a keyset walk there is
+            no cheap way to jump to "page 137" - and on a live campaign the row
+            sitting at that offset shifts underneath you anyway. */}
+        {(meta.hasMore || history.length > 0) && (
           <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-primary)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {meta.total} recipient(s) · page {meta.page} of {meta.totalPages}
+              {fmtNumber(meta.total)} recipient(s)
+              {recipients.length > 0 && ` · showing ${fmtNumber(history.length * PAGE_SIZE + 1)}-${fmtNumber(history.length * PAGE_SIZE + recipients.length)}`}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-              <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={page >= meta.totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={history.length === 0} onClick={goPrev}>Previous</button>
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" disabled={!meta.hasMore} onClick={goNext}>Next</button>
             </div>
           </div>
         )}

@@ -14,21 +14,22 @@ import leadSourceApi from '../../../api/leadSourceApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import HeaderMediaInput from './HeaderMediaInput';
 import WhatsappPreview from './WhatsappPreview';
+import '../../portals/collection/CollectionWorkspace.css';
 
-const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
-const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
+const labelStyle = { fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
 // Canonical badge-system triples (badge-system.html / utils/badgeColors.js).
-const STATUS_COLORS = {
-  QUEUED: { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE' },
-  SENDING: { bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA' },
-  PAUSED: { bg: '#FEFCE8', fg: '#854D0E', border: '#FEF08A' },
-  COMPLETED: { bg: '#F0FDF4', fg: '#166534', border: '#BBF7D0' },
-  CANCELLED: { bg: '#F3F4F6', fg: '#4B5563', border: '#E5E7EB' },
-  FAILED: { bg: '#FFF1F2', fg: '#9F1239', border: '#FECDD3' },
+// Colour lives only inside badges, per the app-wide convention.
+const STATUS_BADGE = {
+  QUEUED: 'col-badge-new-status',
+  SENDING: 'col-badge-unverified',
+  PAUSED: 'col-badge-pending',
+  COMPLETED: 'col-badge-verified',
+  CANCELLED: 'col-badge-neutral',
+  FAILED: 'col-badge-rejected',
 };
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
 
@@ -269,7 +270,7 @@ const Campaigns = () => {
   // One editable variable row: {{n}} → lead field OR custom text for this campaign.
   const renderParamRow = (group, label, p, i) => (
     <div key={`${group}-${i}`} style={{ display: 'grid', gridTemplateColumns: '70px 130px 1fr', gap: 8, alignItems: 'center', marginTop: 8 }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>{label}</span>
       <select style={selectStyle} value={p.source === 'lead_field' ? 'lead_field' : 'static'} onChange={(e) => updateParamValue(group, i, 'source', e.target.value)}>
         <option value="lead_field">Lead field</option>
         <option value="static">Custom text</option>
@@ -330,12 +331,12 @@ const Campaigns = () => {
             <div style={{ marginTop: 12 }}>
               <label style={labelStyle}>
                 Header {selectedTemplate?.header_type || 'Image'} {needsHeaderMedia
-                  ? <span style={{ fontWeight: 800, color: '#dc2626' }}>* REQUIRED</span>
+                  ? <span style={{ fontWeight: 500, color: '#dc2626' }}>* REQUIRED</span>
                   : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional - overrides template/default)</span>}
               </label>
               <HeaderMediaInput value={headerImageUrl} onChange={setHeaderImageUrl} />
               {needsHeaderMedia && (
-                <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <ExclamationTriangleIcon style={{ width: 18, height: 18, flexShrink: 0 }} />
                   <span>
                     This template has a <strong>{selectedTemplate.header_type}</strong> header - you <strong>must upload a file</strong> above
@@ -344,7 +345,7 @@ const Campaigns = () => {
                 </div>
               )}
               {/x-amz-(signature|expires|credential)/i.test(headerImageUrl || '') && !String(headerImageUrl || '').includes('sujatha-crm-uploads') && (
-                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#B45309', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 500, color: '#B45309', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                   <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }} />
                   This is a temporary presigned link that expires within days - use the Upload button for a permanent URL.
                 </div>
@@ -353,7 +354,7 @@ const Campaigns = () => {
 
             {(paramValues.header_params.length > 0 || paramValues.body_params.length > 0) && (
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>Template Variables</div>
+                <div style={{ fontSize: 13, fontWeight: 500 }}>Template Variables</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, marginBottom: 4 }}>
                   Pre-filled from the template - change the values for this campaign only. The saved template is not modified.
                 </div>
@@ -363,7 +364,7 @@ const Campaigns = () => {
             )}
 
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Target Leads</div>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Target Leads</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
                 <MultiCheck label="Status" options={statuses} selected={filters.statusIds} onToggle={toggleFilter('statusIds')} />
                 <MultiCheck label="Project" options={projects} selected={filters.projectIds} onToggle={toggleFilter('projectIds')} />
@@ -388,7 +389,7 @@ const Campaigns = () => {
                 earlier blast. Reply data only exists once the provider webhook
                 is configured, which is what the hint below is warning about. */}
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 2 }}>Follow-up Targeting <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></div>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>Follow-up Targeting <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
                 Narrow the audience above to how leads reacted to an earlier WhatsApp campaign - e.g. chase everyone who
                 received the last blast but never wrote back.
@@ -439,7 +440,7 @@ const Campaigns = () => {
 
           {/* Live preview */}
           <div className="crm-card" style={{ padding: 0, position: 'sticky', top: 16, overflow: 'hidden' }}>
-            <div style={{ background: '#075e54', color: '#fff', padding: '12px 16px', fontWeight: 800, fontSize: 14 }}>Message Preview</div>
+            <div style={{ background: '#075e54', color: '#fff', padding: '12px 16px', fontWeight: 500, fontSize: 14 }}>Message Preview</div>
             <div style={{ padding: 12 }}>
               {previewTemplate
                 ? <WhatsappPreview template={previewTemplate} headerMediaUrl={headerImageUrl} />
@@ -472,13 +473,14 @@ const Campaigns = () => {
           it is not wired up, every one of those columns reads zero - which is
           indistinguishable from "nobody opened it" unless we say so here. */}
       {health && health.verdict !== 'OK' && (
-        <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: '#FEFCE8', border: '1px solid #FEF08A', display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
-          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: '#854D0E', flexShrink: 0, marginTop: 1 }} />
-          <div style={{ flex: 1, minWidth: 240, fontSize: 13, color: '#713F12' }}>
-            <strong>Delivered / Read / Replied cannot fill in.</strong> {health.detail}
+        <div className="col-card-new" style={{ marginBottom: 14, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+          <ExclamationTriangleIcon style={{ width: 18, height: 18, color: 'var(--text-muted)', flexShrink: 0, marginTop: 1 }} />
+          <div style={{ flex: 1, minWidth: 240, fontSize: 13 }}>
+            <strong style={{ fontWeight: 500 }}>Delivered / Read / Replied cannot fill in.</strong>{' '}
+            <span style={{ color: 'var(--text-muted)' }}>{health.detail}</span>
             {health.callback_url && (
               <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '3px 7px', borderRadius: 6, wordBreak: 'break-all' }}>
+                <code style={{ fontSize: 12, background: 'var(--bg-secondary)', padding: '3px 7px', borderRadius: 6, wordBreak: 'break-all' }}>
                   {health.callback_url}
                 </code>
                 <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={copyCallbackUrl}>
@@ -490,59 +492,60 @@ const Campaigns = () => {
         </div>
       )}
 
-      <div className="crm-card">
+      <div className="col-card-new">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+          <table className="col-table-new" style={{ minWidth: 900 }}>
             <thead>
               <tr>
-                <th style={th}>Campaign</th>
-                <th style={th}>Template</th>
-                <th style={th}>Recipients</th>
-                <th style={th}>Sent</th>
-                <th style={th} title="Confirmed on the phone (via provider webhook); read count in brackets">Delivered</th>
-                <th style={th} title="Recipients who wrote back at least once (provider webhook)">Replied</th>
-                <th style={th}>Failed</th>
-                <th style={th}>Progress</th>
-                <th style={th}>Status</th>
-                <th style={th}>Created</th>
-                <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                <th>Campaign</th>
+                <th>Template</th>
+                <th>Recipients</th>
+                <th>Sent</th>
+                <th title="Confirmed on the phone (via provider webhook); read count in brackets">Delivered</th>
+                <th title="Recipients who wrote back at least once (provider webhook)">Replied</th>
+                <th>Failed</th>
+                <th>Progress</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {campaigns.length === 0 && (
-                <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={11}>No campaigns yet. Create your first send-out.</td></tr>
+                <tr><td style={{ textAlign: 'center', color: 'var(--text-muted)' }} colSpan={11}>No campaigns yet. Create your first send-out.</td></tr>
               )}
               {campaigns.map((c) => {
-                const sc = STATUS_COLORS[c.status] || STATUS_COLORS.QUEUED;
+                const badge = STATUS_BADGE[c.status] || 'col-badge-neutral';
                 return (
                   <tr key={c.id}>
-                    <td style={td}><span style={{ fontWeight: 600 }}>{c.name}</span></td>
-                    <td style={td}>{c.template_name || c.template?.name || '-'}</td>
-                    <td style={td}><UsersIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: 'var(--text-muted)' }} /> {c.total_recipients}</td>
-                    <td style={{ ...td, color: '#166534', fontWeight: 700 }}>{c.sent_count}</td>
-                    <td style={{ ...td, color: c.delivered_count ? '#166534' : 'var(--text-muted)', fontWeight: c.delivered_count ? 700 : 400 }}>
+                    <td className="col-cell-primary">{c.name}</td>
+                    <td>{c.template_name || c.template?.name || '-'}</td>
+                    <td><UsersIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: 'var(--text-muted)' }} /> {c.total_recipients}</td>
+                    <td className="col-cell-primary">{c.sent_count}</td>
+                    <td className={c.delivered_count ? 'col-cell-primary' : undefined} style={c.delivered_count ? undefined : { color: 'var(--text-muted)' }}>
                       {c.delivered_count ?? 0}{c.read_count ? ` (${c.read_count} read)` : ''}
                     </td>
-                    <td style={{ ...td, color: c.replied_count ? '#0f766e' : 'var(--text-muted)', fontWeight: c.replied_count ? 700 : 400 }}>{c.replied_count ?? 0}</td>
-                    <td style={{ ...td, color: c.failed_count ? '#991b1b' : 'var(--text-muted)', fontWeight: c.failed_count ? 700 : 400 }}>{c.failed_count}</td>
-                    <td style={td}>
+                    <td className={c.replied_count ? 'col-cell-primary' : undefined} style={c.replied_count ? undefined : { color: 'var(--text-muted)' }}>{c.replied_count ?? 0}</td>
+                    <td className={c.failed_count ? 'col-cell-primary' : undefined} style={c.failed_count ? undefined : { color: 'var(--text-muted)' }}>{c.failed_count}</td>
+                    <td>
                       <div style={{ width: 90, height: 6, background: 'var(--bg-secondary)', borderRadius: 99 }}>
-                        <div style={{ width: `${pct(c)}%`, height: '100%', background: '#16A34A', borderRadius: 99, transition: 'width 0.4s' }} />
+                        <div style={{ width: `${pct(c)}%`, height: '100%', background: 'var(--text-primary, #111827)', borderRadius: 99, transition: 'width 0.4s' }} />
                       </div>
                     </td>
                     <td style={td}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>{c.status}</span>
+                      <span className={`col-badge-new ${badge}`}>{c.status}</span>
                       {looksStalled(c) && (
                         <span
+                          className="col-cell-secondary"
                           title="Nothing has worked on this campaign for a while - open it to resume the remaining recipients."
-                          style={{ display: 'block', fontSize: 11, color: '#C2410C', marginTop: 4 }}
+                          style={{ display: 'block', marginTop: 4 }}
                         >
                           <ExclamationTriangleIcon style={{ width: 12, height: 12, verticalAlign: 'text-bottom' }} /> stalled
                         </span>
                       )}
                     </td>
-                    <td style={td}>{fmtDateTime(c.created_at)}</td>
-                    <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td>{fmtDateTime(c.created_at)}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
                         type="button"
                         className="view-link"

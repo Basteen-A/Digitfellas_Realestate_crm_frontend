@@ -23,19 +23,20 @@ import {
 import whatsappCampaignApi from '../../../api/whatsappCampaignApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import HeaderMediaInput from './HeaderMediaInput';
+import '../../portals/collection/CollectionWorkspace.css';
 
-const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
+const labelStyle = { fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' };
 const selectStyle = { ...inputStyle, cursor: 'pointer' };
-const th = { padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', textAlign: 'left', whiteSpace: 'nowrap' };
-const td = { padding: '12px', fontSize: 13, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', verticalAlign: 'middle' };
-
-const STATUS_COLORS = {
-  SCHEDULED: { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE' },
-  RUNNING: { bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA' },
-  SENT: { bg: '#F0FDF4', fg: '#166534', border: '#BBF7D0' },
-  CANCELLED: { bg: '#F3F4F6', fg: '#4B5563', border: '#E5E7EB' },
-  FAILED: { bg: '#FFF1F2', fg: '#9F1239', border: '#FECDD3' },
+// Colour lives only inside badges, per the app-wide convention - these are the
+// badge-system classes the rest of the product uses.
+const STATUS_BADGE = {
+  SCHEDULED: 'col-badge-new-status',
+  RUNNING: 'col-badge-unverified',
+  SENT: 'col-badge-verified',
+  CANCELLED: 'col-badge-neutral',
+  FAILED: 'col-badge-rejected',
+  PAUSED: 'col-badge-pending',
 };
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
@@ -49,6 +50,28 @@ const fmtDelay = (minutes) => {
   if (m % 60 === 0) { const h = m / 60; return `${h} hour${h === 1 ? '' : 's'}`; }
   return `${m} minute${m === 1 ? '' : 's'}`;
 };
+
+// Quick picks for the delay. Hours and minutes were always accepted - they
+// just sat inside a collapsed <select> that read "days", so the shorter delays
+// were invisible unless you thought to open it. Chips put the whole range on
+// screen; the Custom row underneath still takes any value.
+const DELAY_PRESETS = [
+  { label: '30 minutes', value: 30, unit: 'minutes' },
+  { label: '1 hour', value: 1, unit: 'hours' },
+  { label: '3 hours', value: 3, unit: 'hours' },
+  { label: '6 hours', value: 6, unit: 'hours' },
+  { label: '12 hours', value: 12, unit: 'hours' },
+  { label: '1 day', value: 1, unit: 'days' },
+  { label: '2 days', value: 2, unit: 'days' },
+  { label: '3 days', value: 3, unit: 'days' },
+  { label: '1 week', value: 7, unit: 'days' },
+];
+
+const UNIT_MINUTES = { minutes: 1, hours: 60, days: 1440 };
+
+// Whatever the form currently adds up to, in minutes - the one number the
+// server actually stores, and what decides which chip is lit.
+const formMinutes = (form) => (Number(form.delay_value) || 0) * (UNIT_MINUTES[form.delay_unit] || 1);
 
 const EMPTY_FORM = {
   name: '',
@@ -131,6 +154,9 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
     return () => { cancelled = true; };
   }, [showForm, campaignId, form.audience]);
 
+  // Drives both the lit chip and the plain-language read-back below the form.
+  const currentMinutes = formMinutes(form);
+
   const openForm = () => {
     setForm({ ...EMPTY_FORM, name: `${campaign?.name || 'Campaign'} - follow-up` });
     setShowForm(true);
@@ -177,10 +203,10 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
   };
 
   return (
-    <div className="crm-card" style={{ marginTop: 16 }}>
+    <div className="col-card-new" style={{ marginTop: 16 }}>
       <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
             <ClockIcon style={{ width: 16, height: 16 }} /> Scheduled Follow-ups
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -228,25 +254,50 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
               </div>
             </div>
             <div>
-              <label style={labelStyle}>When</label>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <label style={labelStyle}>Wait how long</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {DELAY_PRESETS.map((d) => {
+                  const active = currentMinutes === d.value * UNIT_MINUTES[d.unit];
+                  return (
+                    <button
+                      key={d.label}
+                      type="button"
+                      className={`crm-btn crm-btn-sm ${active ? 'crm-btn-primary' : 'crm-btn-ghost'}`}
+                      onClick={() => setForm((f) => ({ ...f, delay_value: d.value, delay_unit: d.unit }))}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>or</span>
                 <input
                   type="number"
                   min="0"
-                  style={{ ...inputStyle, width: 90 }}
+                  aria-label="Custom delay amount"
+                  style={{ ...inputStyle, width: 80 }}
                   value={form.delay_value}
                   onChange={(e) => setForm((f) => ({ ...f, delay_value: e.target.value }))}
                 />
-                <select style={{ ...selectStyle, width: 120 }} value={form.delay_unit} onChange={(e) => setForm((f) => ({ ...f, delay_unit: e.target.value }))}>
+                <select
+                  aria-label="Custom delay unit"
+                  style={{ ...selectStyle, width: 110 }}
+                  value={form.delay_unit}
+                  onChange={(e) => setForm((f) => ({ ...f, delay_unit: e.target.value }))}
+                >
                   <option value="minutes">minutes</option>
                   <option value="hours">hours</option>
                   <option value="days">days</option>
                 </select>
-                <select style={selectStyle} value={form.anchor} onChange={(e) => setForm((f) => ({ ...f, anchor: e.target.value }))}>
-                  {anchors.length === 0 && <option value="RECIPIENT">after each person receives it</option>}
-                  {anchors.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-                </select>
               </div>
+
+              <label style={{ ...labelStyle, marginTop: 12 }}>Counted from</label>
+              <select style={selectStyle} value={form.anchor} onChange={(e) => setForm((f) => ({ ...f, anchor: e.target.value }))}>
+                {anchors.length === 0 && <option value="RECIPIENT">after each person receives it</option>}
+                {anchors.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+              </select>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, minHeight: 16 }}>{anchorHint}</div>
             </div>
           </div>
@@ -262,7 +313,7 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
           {/* Plain-language read-back of the rule. A scheduler people can't
               restate in a sentence is a scheduler they switch off. */}
           <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: 'var(--bg-secondary)', fontSize: 13 }}>
-            <strong>{fmtDelay((Number(form.delay_value) || 0) * (form.delay_unit === 'days' ? 1440 : form.delay_unit === 'hours' ? 60 : 1))}</strong>
+            <strong>{fmtDelay(currentMinutes)}</strong>
             {form.anchor === 'RECIPIENT' ? ' after each person receives ' : ' after '}
             <strong>{campaign?.name || 'this campaign'}</strong>
             {form.anchor === 'CAMPAIGN' ? ' finishes' : ''}, send{' '}
@@ -281,70 +332,68 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
 
       {/* ── Existing rules ── */}
       <div style={{ overflowX: 'auto', borderTop: '1px solid var(--border-primary)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+        <table className="col-table-new" style={{ minWidth: 900 }}>
           <thead>
             <tr>
-              <th style={th}>Follow-up</th>
-              <th style={th}>Audience</th>
-              <th style={th}>Timing</th>
-              <th style={th}>Waiting</th>
-              <th style={th}>Sent so far</th>
-              <th style={th}>Status</th>
-              <th style={th}>Next / Last run</th>
-              <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+              <th>Follow-up</th>
+              <th>Audience</th>
+              <th>Timing</th>
+              <th>Waiting</th>
+              <th>Sent so far</th>
+              <th>Status</th>
+              <th>Next / Last run</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>Loading…</td></tr>}
+            {loading && <tr><td style={{ textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>Loading…</td></tr>}
             {!loading && followups.length === 0 && (
-              <tr><td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>
+              <tr><td style={{ textAlign: 'center', color: 'var(--text-muted)' }} colSpan={8}>
                 No follow-ups scheduled. Add one to chase the people who never replied.
               </td></tr>
             )}
             {!loading && followups.map((f) => {
-              const sc = STATUS_COLORS[f.status] || STATUS_COLORS.SCHEDULED;
               const child = f.childCampaign;
+              const badge = f.is_active ? (STATUS_BADGE[f.status] || 'col-badge-neutral') : STATUS_BADGE.PAUSED;
               return (
                 <tr key={f.id} style={{ opacity: f.is_active ? 1 : 0.6 }}>
-                  <td style={td}>
-                    <div style={{ fontWeight: 600 }}>{f.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.template_name || '-'}</div>
+                  <td>
+                    <div className="col-cell-primary">{f.name}</div>
+                    <div className="col-cell-secondary">{f.template_name || '-'}</div>
                   </td>
-                  <td style={{ ...td, fontSize: 12 }}>{f.audience_label || f.audience}</td>
-                  <td style={{ ...td, fontSize: 12 }}>
+                  <td>{f.audience_label || f.audience}</td>
+                  <td>
                     {fmtDelay(f.delay_minutes)}
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <div className="col-cell-secondary">
                       {f.anchor === 'RECIPIENT' ? 'after each receipt' : 'after the blast'}
                     </div>
                   </td>
                   {/* Live audience size, not a snapshot: people move between
                       audiences as delivery and read receipts land. */}
-                  <td style={td}>{f.audience_size ?? '-'}</td>
-                  <td style={td}>
+                  <td>{f.audience_size ?? '-'}</td>
+                  <td>
                     {child ? (
                       <span>
-                        <strong>{child.sent_count}</strong>
+                        <span className="col-cell-primary">{child.sent_count}</span>
                         <span style={{ color: 'var(--text-muted)' }}> / {child.total_recipients}</span>
                         {child.replied_count > 0 && (
-                          <span style={{ display: 'block', fontSize: 11, color: '#0f766e' }}>{child.replied_count} replied</span>
+                          <span className="col-cell-secondary" style={{ display: 'block' }}>{child.replied_count} replied</span>
                         )}
                       </span>
                     ) : <span style={{ color: 'var(--text-muted)' }}>not yet</span>}
                   </td>
-                  <td style={td}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 999, padding: '3px 9px' }}>
-                      {f.is_active ? f.status : 'PAUSED'}
-                    </span>
-                    {f.last_error && <div style={{ fontSize: 11, color: '#991b1b', marginTop: 4, maxWidth: 220, whiteSpace: 'normal' }}>{f.last_error}</div>}
+                  <td>
+                    <span className={`col-badge-new ${badge}`}>{f.is_active ? f.status : 'PAUSED'}</span>
+                    {f.last_error && <div className="col-cell-secondary" style={{ marginTop: 4, maxWidth: 220, whiteSpace: 'normal' }}>{f.last_error}</div>}
                   </td>
-                  <td style={{ ...td, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <td className="col-cell-secondary">
                     {f.last_run_at ? `ran ${fmtDateTime(f.last_run_at)}` : `due ${fmtDateTime(f.due_at)}`}
                   </td>
-                  <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {child && (
                       <button
                         type="button"
-                        className="view-link"
+                        className="col-viewall-link"
                         title="Open the campaign this follow-up created"
                         onClick={() => navigate(`/super-admin/marketing-campaigns/${child.id}`)}
                         style={{ marginRight: 10 }}
@@ -356,7 +405,7 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
                       <>
                         <button
                           type="button"
-                          className="view-link"
+                          className="col-viewall-link"
                           disabled={busyId === f.id}
                           title={f.is_active ? 'Pause this rule' : 'Resume this rule'}
                           onClick={() => act(f.id, whatsappCampaignApi.toggleFollowup)}
@@ -368,7 +417,7 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
                         </button>
                         <button
                           type="button"
-                          className="view-link"
+                          className="col-viewall-link"
                           disabled={busyId === f.id}
                           title="Send it now, ignoring the delay"
                           onClick={() => act(
@@ -384,9 +433,8 @@ const CampaignFollowups = ({ campaign, templates = [] }) => {
                     )}
                     <button
                       type="button"
-                      className="view-link"
+                      className="col-viewall-link"
                       disabled={busyId === f.id}
-                      style={{ color: '#991b1b' }}
                       onClick={() => act(
                         f.id,
                         whatsappCampaignApi.cancelFollowup,
