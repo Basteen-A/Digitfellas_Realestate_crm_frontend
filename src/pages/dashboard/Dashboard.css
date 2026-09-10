@@ -391,6 +391,14 @@
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  /* Super Admin / Admin render these as <button> (they open a "view as" picker
+     rather than navigating), so neutralise the UA button styling and keep the
+     card identical to the <a> variant every other role sees. */
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .admin-workspace-card::before {

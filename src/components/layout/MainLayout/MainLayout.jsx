@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Sidebar from '../Sidebar/Sidebar';
 import Header from '../Header/Header';
+import ViewAsBanner from '../../common/ViewAsBanner';
 import './MainLayout.css';
 
 const MOBILE_BREAKPOINT = 768;
@@ -26,6 +27,7 @@ const MainLayout = () => {
       />
 
       <div className="main-layout__right">
+        <ViewAsBanner />
         <Header onMenuClick={isMobile ? () => setIsMobileSidebarOpen(true) : undefined} />
         <main className="main-layout__content">
           <Outlet />

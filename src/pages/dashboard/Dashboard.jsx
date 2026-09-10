@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import dashboardApi from '../../api/dashboardApi';
 import TaskDashboardWidget from '../tasks/TaskDashboardWidget';
 import { getRoleCode, hasTaskPortalAccess } from '../../utils/permissions';
+import ViewAsPicker from '../../components/common/ViewAsPicker';
 import { formatCurrency } from '../../utils/formatters';
 import {
   UsersIcon,
@@ -25,6 +26,10 @@ import {
   UserGroupIcon,
   BuildingStorefrontIcon,
   AdjustmentsHorizontalIcon,
+  CalculatorIcon,
+  ArchiveBoxIcon,
+  ShieldCheckIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import '../portals/collection/CollectionWorkspace.css';
 import './Dashboard.css';
@@ -42,6 +47,9 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [adminStats, setAdminStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Which Role Workspaces card was clicked - drives the "view as" picker.
+  // Declared with the other hooks: the loading guard below is an early return.
+  const [viewAsTarget, setViewAsTarget] = useState(null);
   const user = useSelector((state) => state.auth.user);
   const roleCode = getRoleCode(user);
   const navigate = useNavigate();
@@ -119,12 +127,22 @@ const Dashboard = () => {
     },
   ];
 
+  // `role` is what a Super Admin / Admin opens a person's portal AS. Every entry
+  // here has a matching RoleRoute in AppRoutes that already admits SA/ADM.
   const workspaceLinks = [
-    { label: 'Telecaller Workspace', path: '/telecaller/leads', icon: <PhoneIcon style={ICON_SM} />, desc: 'Manage telecaller leads', allowed: ['TC', 'SA', 'ADM'] },
-    { label: 'Sales Manager Workspace', path: '/sales-manager/leads', icon: <BuildingOfficeIcon style={ICON_SM} />, desc: 'Site visits & leads', allowed: ['SM', 'SH', 'SA', 'ADM'] },
-    { label: 'Sales Head Workspace', path: '/sales-head/leads', icon: <BriefcaseIcon style={ICON_SM} />, desc: 'Negotiations & bookings', allowed: ['SH', 'SA', 'ADM'] },
-    { label: 'Collection Workspace', path: '/collection/leads', icon: <CurrencyRupeeIcon style={ICON_SM} />, desc: 'Payment tracking', allowed: ['COL', 'SA', 'ADM'] },
+    { label: 'Telecaller Workspace', role: 'TC', roleName: 'Telecaller', path: '/telecaller/leads', icon: <PhoneIcon style={ICON_SM} />, desc: 'Manage telecaller leads', allowed: ['TC', 'SA', 'ADM'] },
+    { label: 'Sales Manager Workspace', role: 'SM', roleName: 'Sales Manager', path: '/sales-manager/leads', icon: <BuildingOfficeIcon style={ICON_SM} />, desc: 'Site visits & leads', allowed: ['SM', 'SH', 'SA', 'ADM'] },
+    { label: 'Sales Head Workspace', role: 'SH', roleName: 'Sales Head', path: '/sales-head/leads', icon: <BriefcaseIcon style={ICON_SM} />, desc: 'Negotiations & bookings', allowed: ['SH', 'SA', 'ADM'] },
+    { label: 'Collection Workspace', role: 'COL', roleName: 'Collection', path: '/collection/leads', icon: <CurrencyRupeeIcon style={ICON_SM} />, desc: 'Payment tracking', allowed: ['COL', 'SA', 'ADM'] },
+    { label: 'Accounts Workspace', role: 'ACCT', roleName: 'Accounts Executive', path: '/accounts/dashboard', icon: <CalculatorIcon style={ICON_SM} />, desc: 'Payment verification', allowed: ['ACCT', 'SA', 'ADM'] },
+    { label: 'Accounts Manager Workspace', role: 'AM', roleName: 'Accounts Manager', path: '/accounts-manager/verify', icon: <ShieldCheckIcon style={ICON_SM} />, desc: 'Cash verification', allowed: ['AM', 'SA', 'ADM'] },
+    { label: 'Collection Exec Workspace', role: 'CE', roleName: 'Collection Executive', path: '/collection-exec/bookings', icon: <CreditCardIcon style={ICON_SM} />, desc: 'Assigned bookings', allowed: ['CE', 'SA', 'ADM'] },
+    { label: 'Record Manager Workspace', role: 'RM', roleName: 'Record Manager', path: '/record-manager/bookings', icon: <ArchiveBoxIcon style={ICON_SM} />, desc: 'Registered bookings', allowed: ['RM', 'SA', 'ADM'] },
   ].filter((item) => item.allowed.includes(roleCode));
+
+  // SA/ADM pick a person first and land in that person's portal read-only.
+  // Everyone else keeps the plain link straight into their own workspace.
+  const canViewAs = ['SA', 'ADM'].includes(roleCode);
 
   const quickLinks = [
     { label: 'Users', path: '/super-admin/users', icon: <UsersIcon style={ICON_SM} /> },
@@ -216,13 +234,29 @@ const Dashboard = () => {
               <BriefcaseIcon style={{ width: 20, height: 20, color: 'var(--accent-blue)' }} />
               <div>
                 <div className="col-card-title-new">Role Workspaces</div>
-                <div className="col-card-subtitle-new">Jump into a team's pipeline</div>
+                <div className="col-card-subtitle-new">
+                  {canViewAs ? "Open a team member's portal, read-only" : "Jump into a team's pipeline"}
+                </div>
               </div>
             </div>
           </div>
           <div className="col-card-body-new">
             <div className="crm-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {workspaceLinks.map((link) => (
+              {workspaceLinks.map((link) => (canViewAs ? (
+                <button
+                  key={link.path}
+                  type="button"
+                  className="admin-workspace-card"
+                  onClick={() => setViewAsTarget(link)}
+                >
+                  <span className="admin-workspace-card__icon">{link.icon}</span>
+                  <div>
+                    <div className="admin-workspace-card__name">{link.label}</div>
+                    <div className="admin-workspace-card__desc">{link.desc}</div>
+                  </div>
+                  <span className="admin-workspace-card__arrow">→</span>
+                </button>
+              ) : (
                 <Link key={link.path} to={link.path} className="admin-workspace-card">
                   <span className="admin-workspace-card__icon">{link.icon}</span>
                   <div>
@@ -231,7 +265,7 @@ const Dashboard = () => {
                   </div>
                   <span className="admin-workspace-card__arrow">→</span>
                 </Link>
-              ))}
+              )))}
             </div>
           </div>
         </div>
@@ -361,6 +395,14 @@ const Dashboard = () => {
       {hasTaskPortalAccess(user) && (
         <TaskDashboardWidget onOpenTasks={() => navigate('/super-admin/tasks')} />
       )}
+
+      <ViewAsPicker
+        open={Boolean(viewAsTarget)}
+        roleCode={viewAsTarget?.role}
+        roleName={viewAsTarget?.roleName}
+        landingPath={viewAsTarget?.path}
+        onClose={() => setViewAsTarget(null)}
+      />
     </div>
   );
 };

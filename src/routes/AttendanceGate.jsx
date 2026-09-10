@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import attendanceApi from '../api/attendanceApi';
+import { isViewingAs } from '../utils/viewAs';
 
 // Attendance gate: enforced-role users (telecallers by default) must check in
 // once per day before entering any private page. Positive results are cached
@@ -51,11 +52,15 @@ const SkipBanner = () => {
 
 const AttendanceGate = () => {
   const user = useSelector((state) => state.auth.user);
+  // A Super Admin viewing someone's workspace is only reading. Gating them on
+  // THAT person's check-in would strand the view on /check-in, which it could
+  // never clear: checking in is a POST, and a workspace view refuses writes.
+  const viewingAs = isViewingAs();
   const cached = user?.id && passCache.userId === user.id && passCache.date === todayKey();
   const [state, setState] = useState(cached ? 'pass' : (isSkipped(user?.id) ? 'skipped' : 'loading'));
 
   useEffect(() => {
-    if (cached) return;
+    if (cached || viewingAs) return;
     let alive = true;
     (async () => {
       try {
@@ -78,7 +83,10 @@ const AttendanceGate = () => {
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, viewingAs]);
+
+  // Placed after the hooks so hook order stays stable across renders.
+  if (viewingAs) return <Outlet />;
 
   if (state === 'loading') {
     return (

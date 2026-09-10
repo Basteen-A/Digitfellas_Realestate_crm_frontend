@@ -4,6 +4,8 @@
 // ============================================================
 
 import axios from 'axios';
+import toast from 'react-hot-toast';
+import { getViewAs, isSessionPath, READ_METHODS } from '../utils/viewAs';
 
 // Build API URL dynamically so mobile devices (accessing via network IP) reach
 // the backend on port 5000 of the same host, instead of failing on "localhost".
@@ -58,6 +60,31 @@ api.interceptors.request.use(
     // as "Network error", hiding the fact that it was simply still uploading.
     if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
       config.timeout = UPLOAD_TIMEOUT;
+    }
+
+    // ── Role Workspaces "view as" ──
+    // Tell the server whose workspace to render. The server enforces read-only
+    // independently; this second check just fails the call early so a stray
+    // action button gives an instant, clear message instead of a round-trip.
+    const viewAs = getViewAs();
+    const url = config.url || '';
+    if (viewAs?.id && !isSessionPath(url)) {
+      const method = (config.method || 'get').toUpperCase();
+      if (!READ_METHODS.includes(method)) {
+        const message = `Read-only view of ${viewAs.name || 'this workspace'}. Exit to make changes.`;
+        // Fixed id so repeated clicks (and any toast the calling page also
+        // raises) collapse into one message rather than stacking.
+        toast.error(message, { id: 'view-as-readonly' });
+        const blocked = new Error('Read-only view');
+        blocked.isViewAsBlocked = true;
+        blocked.config = config;
+        blocked.response = {
+          status: 403,
+          data: { success: false, message, code: 'VIEW_AS_READ_ONLY' },
+        };
+        return Promise.reject(blocked);
+      }
+      config.headers['X-View-As-User'] = viewAs.id;
     }
 
     // Add request timestamp for performance tracking

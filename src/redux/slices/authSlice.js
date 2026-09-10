@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import authApi from '../../api/authApi';
 import { clearAuth } from '../../api/axiosInstance';
+import { isViewingAs } from '../../utils/viewAs';
 
 const TOKEN_KEY = process.env.REACT_APP_TOKEN_KEY || 'recrm_access_token';
 const USER_KEY = process.env.REACT_APP_USER_KEY || 'recrm_user';
@@ -63,7 +64,10 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
   try {
     const response = await authApi.getProfile();
     const user = normalizeUser(response.data);
-    writeCachedUser(user);
+    // While viewing another user's workspace /auth/me returns THAT user, so it
+    // must not overwrite the cached profile - otherwise a reopened tab would
+    // restore the admin's session wearing the viewed user's identity.
+    if (!isViewingAs()) writeCachedUser(user);
     return { user, isAuthenticated: true, staleSession: false };
   } catch (error) {
     const status = error.response?.status;
