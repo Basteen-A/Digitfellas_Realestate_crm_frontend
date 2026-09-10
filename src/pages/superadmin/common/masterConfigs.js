@@ -474,11 +474,19 @@ export const masterConfigs = {
     columns: [
       { header: 'Name', path: 'name' },
       { header: 'Description', path: 'description' },
+      { header: 'SA/ADM Only', path: 'is_admin_only', type: 'boolean' },
       { header: 'Active', path: 'is_active', type: 'boolean' },
     ],
     fields: [
       { name: 'name', label: 'Department Name', required: true },
       { name: 'description', label: 'Description', type: 'textarea' },
+      {
+        name: 'is_admin_only',
+        label: 'SA/ADM Only',
+        type: 'checkbox',
+        defaultValue: false,
+        helpText: 'Confidential: this department, its sub-departments and every task filed under it are visible to Super Admin and Admin only. Everyone else - including users with full Task access - will not see them at all.',
+      },
       { name: 'is_active', label: 'Active', type: 'checkbox', defaultValue: true },
     ],
   },
