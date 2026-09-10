@@ -196,6 +196,10 @@ const buildOrganizationHeadSidebar = (user) => {
 const adminSidebar = [
   { section: 'HOME' },
   { label: 'Dashboard', path: '/dashboard', icon: NavLayoutGrid },
+  // Sits directly under Dashboard: it answers "how is one person doing / where are
+  // they signing in from", which is the natural follow-on from the org overview.
+  // SA and ADM only - the route itself is guarded, this just hides the entry.
+  { label: 'User Activity', path: '/super-admin/user-activity', icon: NavHistory },
 
   { section: 'SALES' },
   { label: 'Leads', path: '/super-admin/lead-management', icon: NavUsers },

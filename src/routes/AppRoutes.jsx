@@ -59,6 +59,7 @@ import PaymentStatuses from '../pages/superadmin/PaymentStatuses';
 import { InventoryDashboard, InventoryUnitList } from '../pages/superadmin/Inventory';
 import { AdminLeadManagement } from '../pages/superadmin/LeadManagement';
 import Reports from '../pages/superadmin/Reports';
+import UserActivity from '../pages/superadmin/UserActivity';
 import FinanceRevenue from '../pages/superadmin/Finance/FinanceRevenue';
 import FinanceCollections from '../pages/superadmin/Finance/FinanceCollections';
 import PaymentVerification from '../pages/superadmin/Finance/PaymentVerification';
@@ -252,6 +253,14 @@ const AppRoutes = () => {
             <Route path="/tasks" element={<Navigate to="/task-portal/tasks" replace />} />
             <Route path="/tasks/departments" element={<Navigate to="/task-portal/departments" replace />} />
             <Route path="/tasks/sub-departments" element={<Navigate to="/task-portal/sub-departments" replace />} />
+
+            {/* User Activity is a hard RoleRoute, NOT a ModuleRoute: it exposes another
+              person's IPs, devices and sign-in history. ModuleRoute would also admit a
+              custom role holding the mapped module, which is wider than intended and
+              would not match the server's adminOnly guard on /users/:id/activity. */}
+            <Route element={<RoleRoute allowedRoles={['SA', 'ADM']} />}>
+              <Route path="/super-admin/user-activity" element={<UserActivity />} />
+            </Route>
 
             {/* Admin screens. SA / ADM pass on role; any other role passes when its
               permission matrix grants the module that path maps to (routeModules.js),

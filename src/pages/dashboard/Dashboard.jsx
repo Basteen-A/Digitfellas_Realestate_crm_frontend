@@ -22,8 +22,6 @@ import {
   Cog6ToothIcon,
   ArrowPathIcon,
   ArrowDownTrayIcon,
-  DocumentTextIcon,
-  UserGroupIcon,
   BuildingStorefrontIcon,
   AdjustmentsHorizontalIcon,
   CalculatorIcon,
@@ -84,7 +82,6 @@ const Dashboard = () => {
   }
 
   const userDistribution = stats?.userDistribution || [];
-  const recentActivity = stats?.recentActivity || [];
   const sourceStats = adminStats?.sourceStats || [];
   const maxSourceLeads = Math.max(...sourceStats.map((s) => parseInt(s.total_leads, 10) || 0), 1);
   const sourceColors = ['#ea580c', '#2563eb', '#d97706', '#16a34a', '#7c3aed', '#0891b2', '#db2777'];
@@ -295,101 +292,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
-      {/* ── User Distribution + Recent Activity ── */}
-      <div className="col-two-col-new">
-        <div className="col-card-new">
-          <div className="col-card-header-new">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <UserGroupIcon style={{ width: 20, height: 20, color: 'var(--accent-purple)' }} />
-              <div>
-                <div className="col-card-title-new">User Distribution</div>
-                <div className="col-card-subtitle-new">Team members by role</div>
-              </div>
-            </div>
-          </div>
-          <div className="col-card-body-flush-new">
-            {userDistribution.length === 0 ? (
-              <div className="col-empty-mini">
-                <UserGroupIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
-                <span>No users found</span>
-              </div>
-            ) : (
-              <table className="col-table-new">
-                <thead>
-                  <tr>
-                    <th>Role</th>
-                    <th style={{ textAlign: 'right' }}>Users</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userDistribution.map((item) => (
-                    <tr key={item.short_code}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div className="crm-avatar crm-avatar-sm crm-avatar-blue">{item.short_code}</div>
-                          <span className="col-cell-primary">{item.type_name}</span>
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="col-badge-new col-badge-pending">{item.count}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        <div className="col-card-new">
-          <div className="col-card-header-new">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <DocumentTextIcon style={{ width: 20, height: 20, color: 'var(--accent-green)' }} />
-              <div>
-                <div className="col-card-title-new">Recent Activity</div>
-                <div className="col-card-subtitle-new">Latest system events</div>
-              </div>
-            </div>
-          </div>
-          <div className="col-card-body-flush-new">
-            {recentActivity.length === 0 ? (
-              <div className="col-empty-mini">
-                <DocumentTextIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
-                <span>No recent activity</span>
-              </div>
-            ) : (
-              <div className="col-table-scroll-y">
-                <table className="col-table-new">
-                  <thead>
-                    <tr>
-                      <th>Action</th>
-                      <th>Module</th>
-                      <th>By</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentActivity.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div className="crm-avatar crm-avatar-sm crm-avatar-purple">
-                              {(item.action || '').substring(0, 2).toUpperCase()}
-                            </div>
-                            <span className="col-cell-primary">{item.action}</span>
-                          </div>
-                        </td>
-                        <td><span className="col-cell-secondary">{item.table_name || '-'}</span></td>
-                        <td>{item.user?.first_name || 'System'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* ── Tasks (task-portal users) ── */}
       {hasTaskPortalAccess(user) && (
