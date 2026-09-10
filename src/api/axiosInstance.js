@@ -4,7 +4,6 @@
 // ============================================================
 
 import axios from 'axios';
-import toast from 'react-hot-toast';
 import { getViewAs, isSessionPath, READ_METHODS } from '../utils/viewAs';
 
 // Build API URL dynamically so mobile devices (accessing via network IP) reach
@@ -63,18 +62,23 @@ api.interceptors.request.use(
     }
 
     // ── Role Workspaces "view as" ──
-    // Tell the server whose workspace to render. The server enforces read-only
-    // independently; this second check just fails the call early so a stray
-    // action button gives an instant, clear message instead of a round-trip.
+    // Tell the server whose workspace to render. The server is what actually
+    // enforces read-only; failing the write here as well just saves a pointless
+    // round-trip and gives the calling screen the same message the server would
+    // have returned.
     const viewAs = getViewAs();
     const url = config.url || '';
     if (viewAs?.id && !isSessionPath(url)) {
       const method = (config.method || 'get').toUpperCase();
       if (!READ_METHODS.includes(method)) {
         const message = `Read-only view of ${viewAs.name || 'this workspace'}. Exit to make changes.`;
-        // Fixed id so repeated clicks (and any toast the calling page also
-        // raises) collapse into one message rather than stacking.
-        toast.error(message, { id: 'view-as-readonly' });
+        // Deliberately NOT toasted from here. Pages fire background writes on
+        // mount (notification housekeeping and the like) and swallow their
+        // failures on purpose - toasting globally turned those into a spurious
+        // "error" the moment a workspace opened. Rejecting with a normal-shaped
+        // axios error is enough: screens that report errors already surface
+        // this message, and the ones that stay quiet were meant to.
+        console.warn('[view-as] blocked write', method, url);
         const blocked = new Error('Read-only view');
         blocked.isViewAsBlocked = true;
         blocked.config = config;
