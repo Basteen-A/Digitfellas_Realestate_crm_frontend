@@ -12,6 +12,15 @@
 // sees when they open their own Missed tab - this page can never quote a different
 // number for the same word.
 //
+// ── Styling ─────────────────────────────────────────────────────────────────
+// Built from the .col-* family (col-stat-card-new / col-card-new / col-table-new) -
+// the same components as the admin Dashboard this page sits directly under, NOT the
+// Reports KpiCard, which paints a coloured top rule and a coloured icon on every
+// card. Stat cards here are monochrome with a 12%-opacity watermark icon. The only
+// colour on the page is a status badge (the app's one sanctioned exception) and the
+// two chart series, where green/red carries the same success/failure meaning it does
+// on call logs and badges everywhere else.
+//
 // ── What is deliberately NOT shown ──────────────────────────────────────────
 // The refresh token stored alongside each device is stripped on the server and never
 // reaches this page. A device row identifies a session; it can never be used to
@@ -23,7 +32,7 @@ import {
   ArrowPathIcon, UserCircleIcon, FireIcon, CalendarDaysIcon, ExclamationTriangleIcon,
   ComputerDesktopIcon, DevicePhoneMobileIcon, GlobeAltIcon, ShieldCheckIcon,
   ArrowRightOnRectangleIcon, ArrowLeftOnRectangleIcon, LockClosedIcon, KeyIcon,
-  SignalIcon, ClockIcon, InboxStackIcon,
+  SignalIcon, ClockIcon, InboxStackIcon, InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -33,15 +42,12 @@ import toast from 'react-hot-toast';
 import userTypeApi from '../../../api/userTypeApi';
 import userApi from '../../../api/userApi';
 import userActivityApi from '../../../api/userActivityApi';
-import { KpiCard, KpiRow, Card, Table, Tr, Td, Pill, NoteBar } from '../Reports/analytics/ui';
-import { COLORS } from '../Reports/analytics/palette';
 import { formatDateTime, formatNumber } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
 import './UserActivity.css';
 
 const num = (v) => Number(v) || 0;
 const cnt = (v) => formatNumber(num(v));
-
 const fmtWhen = (v) => (v ? formatDateTime(v) : '-');
 
 // "3 hours ago" style relative age - the fastest way to read a device list.
@@ -63,12 +69,44 @@ const platformIcon = (platform) => (
   String(platform).toLowerCase() === 'mobile' ? DevicePhoneMobileIcon : ComputerDesktopIcon
 );
 
-const OUTCOME_TONE = {
-  SUCCESS: 'green',
-  FAILED: 'red',
-  LOGOUT: 'gray',
-  PENDING: 'amber',
+// Status badges are the one place colour is allowed, per the app's badge system.
+const OUTCOME_BADGE = {
+  SUCCESS: 'col-badge-verified',
+  FAILED: 'col-badge-rejected',
+  LOGOUT: 'col-badge-neutral',
+  PENDING: 'col-badge-pending',
 };
+
+// ── Monochrome stat card, identical markup to the admin Dashboard's ──
+const StatCard = ({ label, value, sub, icon: Icon }) => (
+  <div className="col-stat-card-new">
+    <div className="col-stat-label-new">{label}</div>
+    <div className="col-stat-value-new">{value}</div>
+    <div className="col-stat-sub-new">{sub}</div>
+    <div className="col-stat-icon-new">
+      <Icon style={{ width: 24, height: 24 }} />
+    </div>
+  </div>
+);
+
+const Panel = ({ title, subtitle, children, flush }) => (
+  <div className="col-card-new">
+    <div className="col-card-header-new">
+      <div>
+        <div className="col-card-title-new">{title}</div>
+        {subtitle && <div className="col-card-subtitle-new">{subtitle}</div>}
+      </div>
+    </div>
+    <div className={flush ? 'col-card-body-flush-new' : 'col-card-body-new'}>{children}</div>
+  </div>
+);
+
+const Note = ({ children }) => (
+  <div className="ua-note">
+    <InformationCircleIcon style={{ width: 17, height: 17, flexShrink: 0, marginTop: 1 }} />
+    <div>{children}</div>
+  </div>
+);
 
 const UserActivityPage = () => {
   const [roles, setRoles] = useState([]);
@@ -197,7 +235,7 @@ const UserActivityPage = () => {
         <div className="ua-filter-actions">
           <button
             type="button"
-            className="crm-btn crm-btn-ghost"
+            className="col-btn col-btn-ghost"
             onClick={() => load()}
             disabled={!userId || loading}
           >
@@ -208,21 +246,21 @@ const UserActivityPage = () => {
 
       {/* ── Empty / loading ── */}
       {!userId && (
-        <div className="crm-card ua-empty">
-          <UserCircleIcon style={{ width: 44, height: 44, opacity: 0.25, margin: '0 auto 12px' }} />
+        <div className="col-card-new ua-empty">
+          <UserCircleIcon style={{ width: 44, height: 44, opacity: 0.2, margin: '0 auto 12px' }} />
           <div>Select a role and a user to view their activity.</div>
         </div>
       )}
 
       {userId && loading && !data && (
-        <div className="crm-card ua-empty">Loading activity…</div>
+        <div className="col-card-new ua-empty">Loading activity…</div>
       )}
 
       {data && (
         <>
           {/* ── Identity strip ── */}
           <div className="ua-identity">
-            <div className="crm-avatar crm-avatar-blue" style={{ width: 46, height: 46, fontSize: 16 }}>
+            <div className="ua-identity__avatar">
               {(data.user.name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
             </div>
             <div style={{ minWidth: 180 }}>
@@ -238,46 +276,46 @@ const UserActivityPage = () => {
               {data.user.username && <span>Login ID: {data.user.username}</span>}
             </div>
             <div className="ua-identity__badges">
-              <Pill tone={data.user.isActive ? 'green' : 'red'}>{data.user.isActive ? 'Active' : 'Inactive'}</Pill>
-              {access?.isLocked && <Pill tone="red">Locked</Pill>}
-              {sessions?.active > 0 && <Pill tone="blue">{sessions.active} live session{sessions.active === 1 ? '' : 's'}</Pill>}
+              <span className={`col-badge-new ${data.user.isActive ? 'col-badge-verified' : 'col-badge-rejected'}`}>
+                {data.user.isActive ? 'Active' : 'Inactive'}
+              </span>
+              {access.isLocked && <span className="col-badge-new col-badge-rejected">Locked</span>}
+              {sessions.active > 0 && (
+                <span className="col-badge-new col-badge-new-status">
+                  {sessions.active} live session{sessions.active === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
           </div>
 
           {/* ── Workload ── */}
-          <NoteBar>
+          <Note>
             Workload figures use the same rules as this user&apos;s own workspace tabs, including your
             timezone for the day boundary — <strong>Hot</strong> is flag-based (new and re-enquired leads
             awaiting their first touch), <strong>Today</strong> and <strong>Missed</strong> count open
             leads only, and Missed excludes the Reallot pool.
-          </NoteBar>
+          </Note>
 
-          <KpiRow>
-            <KpiCard label="Hot Leads" value={cnt(leads.hot)} icon={FireIcon} color="#f97316"
-              sub="awaiting first touch" />
-            <KpiCard label="Today's Follow Ups" value={cnt(leads.todayFollowUps)} icon={CalendarDaysIcon} color={COLORS.primary}
-              sub="due today" />
-            <KpiCard label="Missed Follow Ups" value={cnt(leads.missedFollowUps)} icon={ExclamationTriangleIcon} color={COLORS.unanswered}
-              sub="overdue" />
-            <KpiCard label="Open Leads" value={cnt(leads.openLeads)} icon={InboxStackIcon} color={COLORS.leads}
-              sub={`${cnt(leads.totalAssigned)} assigned all-time`} />
-            <KpiCard label="Active Sessions" value={cnt(sessions.active)} icon={SignalIcon} color={COLORS.answered}
-              sub={`${cnt(sessions.total)} device${sessions.total === 1 ? '' : 's'} on record`} />
-            <KpiCard label="Distinct IPs" value={cnt(sessions.uniqueIps)} icon={GlobeAltIcon} color="#a855f7"
-              sub={`${cnt(win.distinctIps)} in last ${win.days}d`} />
-          </KpiRow>
+          <div className="col-stat-grid-new">
+            <StatCard label="Hot Leads" value={cnt(leads.hot)} sub="awaiting first touch" icon={FireIcon} />
+            <StatCard label="Today's Follow Ups" value={cnt(leads.todayFollowUps)} sub="due today" icon={CalendarDaysIcon} />
+            <StatCard label="Missed Follow Ups" value={cnt(leads.missedFollowUps)} sub="overdue" icon={ExclamationTriangleIcon} />
+            <StatCard label="Open Leads" value={cnt(leads.openLeads)} sub={`${cnt(leads.totalAssigned)} assigned all-time`} icon={InboxStackIcon} />
+            <StatCard label="Active Sessions" value={cnt(sessions.active)} sub={`${cnt(sessions.total)} device${sessions.total === 1 ? '' : 's'} on record`} icon={SignalIcon} />
+            <StatCard label="Distinct IPs" value={cnt(sessions.uniqueIps)} sub={`${cnt(win.distinctIps)} in last ${win.days}d`} icon={GlobeAltIcon} />
+          </div>
 
           {leads.noFollowUpDate > 0 && (
-            <NoteBar tone="#f59e0b">
+            <Note>
               <strong>{cnt(leads.noFollowUpDate)}</strong> open lead{leads.noFollowUpDate === 1 ? ' has' : 's have'} no
               follow-up date at all. Those are invisible in every follow-up tab — they are neither due nor overdue —
               so they will not appear in the counts above.
-            </NoteBar>
+            </Note>
           )}
 
           {/* ── Access + trend ── */}
           <div className="ua-two-col">
-            <Card title="Access & Security" sub="Credentials and sign-in state">
+            <Panel title="Access & Security" subtitle="Credentials and sign-in state" flush>
               <div className="ua-kv">
                 <span className="ua-kv__label"><ArrowRightOnRectangleIcon style={{ width: 15, height: 15 }} />Last login</span>
                 <span className="ua-kv__value">
@@ -302,7 +340,7 @@ const UserActivityPage = () => {
                 <span className="ua-kv__label"><LockClosedIcon style={{ width: 15, height: 15 }} />Failed attempts</span>
                 <span className="ua-kv__value">
                   {num(access.failedLoginCount) > 0
-                    ? <Pill tone="red">{cnt(access.failedLoginCount)} since last success</Pill>
+                    ? <span className="col-badge-new col-badge-rejected">{cnt(access.failedLoginCount)} since last success</span>
                     : 'None'}
                 </span>
               </div>
@@ -313,18 +351,23 @@ const UserActivityPage = () => {
               <div className="ua-kv">
                 <span className="ua-kv__label"><DevicePhoneMobileIcon style={{ width: 15, height: 15 }} />Push notifications</span>
                 <span className="ua-kv__value">
-                  <Pill tone={access.pushEnabled ? 'green' : 'gray'}>{access.pushEnabled ? 'Registered' : 'Not registered'}</Pill>
+                  <span className={`col-badge-new ${access.pushEnabled ? 'col-badge-verified' : 'col-badge-neutral'}`}>
+                    {access.pushEnabled ? 'Registered' : 'Not registered'}
+                  </span>
                 </span>
               </div>
               <div className="ua-kv">
                 <span className="ua-kv__label"><GlobeAltIcon style={{ width: 15, height: 15 }} />Account created</span>
                 <span className="ua-kv__value">{fmtWhen(data.user.createdAt)}</span>
               </div>
-            </Card>
+            </Panel>
 
-            <Card title="Sign-in Activity" sub={`Last ${win.days} days · ${cnt(win.successfulLogins)} logins, ${cnt(win.failedLogins)} failed, ${cnt(win.logouts)} logouts`}>
+            <Panel
+              title="Sign-in Activity"
+              subtitle={`Last ${win.days} days · ${cnt(win.successfulLogins)} logins, ${cnt(win.failedLogins)} failed, ${cnt(win.logouts)} logouts`}
+            >
               {trend.length === 0 ? (
-                <div className="col-empty-mini" style={{ padding: 32 }}>
+                <div className="col-empty-mini">
                   <ClockIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
                   <span>No sign-ins in this window</span>
                 </div>
@@ -332,82 +375,123 @@ const UserActivityPage = () => {
                 <div className="ua-chart">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={trend} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color, #e5e7eb)" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-primary, #e5e7eb)" />
                       <XAxis dataKey="day" tick={{ fontSize: 10.5 }} interval="preserveStartEnd" tickLine={false} axisLine={false} />
                       <YAxis tick={{ fontSize: 10.5 }} allowDecimals={false} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-                      <Bar dataKey="Logins" fill={COLORS.answered} radius={[3, 3, 0, 0]} maxBarSize={22} />
-                      <Bar dataKey="Failed" fill={COLORS.unanswered} radius={[3, 3, 0, 0]} maxBarSize={22} />
+                      {/* Green / red here is data encoding, not decoration - the same
+                          success/failure pairing badges and call logs already use. */}
+                      <Bar dataKey="Logins" fill="#16a34a" radius={[3, 3, 0, 0]} maxBarSize={22} />
+                      <Bar dataKey="Failed" fill="#ef4444" radius={[3, 3, 0, 0]} maxBarSize={22} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               )}
-            </Card>
+            </Panel>
           </div>
 
           {/* ── Devices ── */}
-          <Card
+          <Panel
             title="Devices & Sessions"
-            sub={`${cnt(sessions.active)} active · ${cnt(sessions.expired)} expired`}
+            subtitle={`${cnt(sessions.active)} active · ${cnt(sessions.expired)} expired`}
+            flush
           >
-            <Table
-              head={['Device', 'Platform', 'IP address', 'First seen', 'Last used', 'Status']}
-              colSpan={6}
-              empty={data.devices.length === 0}
-              emptyLabel="No devices on record - this user has not signed in since device tracking began."
-            >
-              {data.devices.map((d, i) => {
-                const Icon = platformIcon(d.platform);
-                return (
-                  <Tr key={d.deviceId || i}>
-                    <Td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Icon style={{ width: 18, height: 18, color: 'var(--text-muted)', flexShrink: 0 }} />
-                        <div>
-                          <div className="col-cell-primary">{d.browser}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.os}</div>
-                        </div>
-                      </div>
-                    </Td>
-                    <Td><span className="col-cell-secondary" style={{ textTransform: 'capitalize' }}>{d.platform}</span></Td>
-                    <Td><span className="ua-mono">{d.ip || '-'}</span></Td>
-                    <Td><span className="col-cell-secondary">{fmtWhen(d.createdAt)}</span></Td>
-                    <Td>
-                      <div className="col-cell-primary">{relative(d.lastUsedAt)}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtWhen(d.lastUsedAt)}</div>
-                    </Td>
-                    <Td>
-                      <Pill tone={d.isActive ? 'green' : 'gray'}>{d.isActive ? 'Active' : 'Expired'}</Pill>
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </Table>
-          </Card>
+            {data.devices.length === 0 ? (
+              <div className="col-empty-mini">
+                <ComputerDesktopIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No devices on record for this user.</span>
+              </div>
+            ) : (
+              <div className="ua-table-scroll">
+                <table className="col-table-new">
+                  <thead>
+                    <tr>
+                      <th>Device</th>
+                      <th>Platform</th>
+                      <th>IP address</th>
+                      <th>First seen</th>
+                      <th>Last used</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.devices.map((d, i) => {
+                      const Icon = platformIcon(d.platform);
+                      return (
+                        <tr key={d.deviceId || i}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <Icon style={{ width: 18, height: 18, color: 'var(--text-muted)', flexShrink: 0 }} />
+                              <div>
+                                <div className="col-cell-primary">{d.browser}</div>
+                                <div className="col-cell-secondary">{d.os}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td><span style={{ textTransform: 'capitalize' }}>{d.platform}</span></td>
+                          <td><span className="ua-mono">{d.ip || '-'}</span></td>
+                          <td>{fmtWhen(d.createdAt)}</td>
+                          <td>
+                            <div className="col-cell-primary">{relative(d.lastUsedAt)}</div>
+                            <div className="col-cell-secondary">{fmtWhen(d.lastUsedAt)}</div>
+                          </td>
+                          <td>
+                            <span className={`col-badge-new ${d.isActive ? 'col-badge-verified' : 'col-badge-neutral'}`}>
+                              {d.isActive ? 'Active' : 'Expired'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
 
           {/* ── Login history ── */}
-          <Card title="Sign-in History" sub={`Most recent ${data.history.length} events`}>
-            <Table
-              head={['When', 'Event', 'Result', 'Channel', 'IP address', 'Device']}
-              colSpan={6}
-              empty={data.history.length === 0}
-              emptyLabel="No sign-in history recorded for this user."
-            >
-              {data.history.map((h) => (
-                <Tr key={h.id}>
-                  <Td>
-                    <div className="col-cell-primary">{fmtWhen(h.at)}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{relative(h.at)}</div>
-                  </Td>
-                  <Td><span className="col-cell-secondary">{h.action.replace('_', ' ')}</span></Td>
-                  <Td><Pill tone={OUTCOME_TONE[h.outcome] || 'gray'}>{h.outcome}</Pill></Td>
-                  <Td><span className="col-cell-secondary">{h.channel || '-'}</span></Td>
-                  <Td><span className="ua-mono">{h.ip || '-'}</span></Td>
-                  <Td><span className="col-cell-secondary">{h.browser} / {h.os}</span></Td>
-                </Tr>
-              ))}
-            </Table>
-          </Card>
+          <Panel title="Sign-in History" subtitle={`Most recent ${data.history.length} events`} flush>
+            {data.history.length === 0 ? (
+              <div className="col-empty-mini">
+                <ClockIcon style={{ width: 32, height: 32, opacity: 0.3 }} />
+                <span>No sign-in history recorded for this user.</span>
+              </div>
+            ) : (
+              <div className="ua-table-scroll ua-table-scroll--tall">
+                <table className="col-table-new">
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Event</th>
+                      <th>Result</th>
+                      <th>Channel</th>
+                      <th>IP address</th>
+                      <th>Device</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.history.map((h) => (
+                      <tr key={h.id}>
+                        <td>
+                          <div className="col-cell-primary">{fmtWhen(h.at)}</div>
+                          <div className="col-cell-secondary">{relative(h.at)}</div>
+                        </td>
+                        <td>{h.action.replace('_', ' ')}</td>
+                        <td>
+                          <span className={`col-badge-new ${OUTCOME_BADGE[h.outcome] || 'col-badge-neutral'}`}>
+                            {h.outcome}
+                          </span>
+                        </td>
+                        <td>{h.channel || '-'}</td>
+                        <td><span className="ua-mono">{h.ip || '-'}</span></td>
+                        <td><span className="col-cell-secondary">{h.browser} / {h.os}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
         </>
       )}
     </div>
