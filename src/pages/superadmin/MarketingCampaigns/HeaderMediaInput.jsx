@@ -11,6 +11,18 @@ const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border
 
 const looksLikeImage = (url) => /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url || '');
 
+// Refuse an oversized file here rather than letting it go up and fail.
+// The server caps header media at 16MB (whatsappRoutes -> /marketing-campaigns/media)
+// and the proxy in front of the API has a ceiling of its own. Either way the
+// rejection lands mid-upload, and a proxy 413 carries no CORS header, so the
+// browser blocks the response and the real reason never reaches this screen -
+// it surfaces as a bare "the connection was closed" network error.
+const MAX_UPLOAD_BYTES = 16 * 1024 * 1024;
+// WhatsApp's own header ceiling for images, applied after we hand the URL over.
+// Bigger still uploads fine here; it is the send that would fail.
+const META_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const fmtSize = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
 const HeaderMediaInput = ({
   value,
   onChange,
@@ -27,6 +39,15 @@ const HeaderMediaInput = ({
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-selecting the same file
     if (!file) return;
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error(`${file.name} is ${fmtSize(file.size)} - the maximum is 16 MB. Compress it and try again.`);
+      return;
+    }
+    if ((file.type || '').startsWith('image/') && file.size > META_IMAGE_MAX_BYTES) {
+      toast(`This image is ${fmtSize(file.size)}. WhatsApp rejects header images over 5 MB, so the send may fail.`, { icon: '⚠️' });
+    }
+
     setUploading(true);
     try {
       const resp = await whatsappCampaignApi.uploadHeaderMedia(file);
