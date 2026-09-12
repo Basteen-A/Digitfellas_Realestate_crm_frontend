@@ -606,7 +606,7 @@ const Templates = () => {
                     ))}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    Image: jpeg, png; Video: mp4; Document: .pdf, Maximum file size should be 5MB
+                    Image: jpeg, png; Video: mp4; Document: .pdf, Maximum file size should be 16MB
                   </div>
 
                   <label style={labelStyle}>Media URL :</label>
