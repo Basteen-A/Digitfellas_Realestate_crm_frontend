@@ -39,7 +39,11 @@ const LOGO_FIELDS = [
 const SiteSettings = () => {
   const { refresh } = useSiteSettings();
 
-  const [form, setForm] = useState({ site_name: '', logo_full: '', logo_mark: '', favicon: '', mobile_password_login: false, web_login_identifier: 'email' });
+  const [form, setForm] = useState({
+    site_name: '', logo_full: '', logo_mark: '', favicon: '',
+    mobile_password_login: false, web_login_identifier: 'email',
+    mobile_latest_version: '', mobile_min_version: '', mobile_apk_url: '', mobile_update_notes: '',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const fileInputs = useRef({});
@@ -56,6 +60,10 @@ const SiteSettings = () => {
         favicon: s.favicon || '',
         mobile_password_login: s.mobile_password_login === true,
         web_login_identifier: s.web_login_identifier || 'email',
+        mobile_latest_version: s.mobile_latest_version || '',
+        mobile_min_version: s.mobile_min_version || '',
+        mobile_apk_url: s.mobile_apk_url || '',
+        mobile_update_notes: s.mobile_update_notes || '',
       });
     } catch (err) {
       toast.error('Failed to load site settings');
@@ -103,6 +111,10 @@ const SiteSettings = () => {
         favicon: form.favicon || '',
         mobile_password_login: form.mobile_password_login === true,
         web_login_identifier: form.web_login_identifier || 'email',
+        mobile_latest_version: (form.mobile_latest_version || '').trim(),
+        mobile_min_version: (form.mobile_min_version || '').trim(),
+        mobile_apk_url: (form.mobile_apk_url || '').trim(),
+        mobile_update_notes: (form.mobile_update_notes || '').trim(),
       });
       toast.success('Site settings saved');
       await refresh(); // re-brands sidebars / topbar / login instantly
@@ -201,6 +213,69 @@ const SiteSettings = () => {
             The app signs users in with a WhatsApp OTP sent to their registered phone (Login ID like
             ramesh.TC). Turn this on only if OTPs cannot be delivered - it adds a "Login with password"
             option on the app's login screen.
+          </div>
+        </div>
+
+        {/* Mobile app update prompt */}
+        <div className="site-settings__card">
+          <div className="site-settings__label">Mobile app update</div>
+          <div className="site-settings__hint" style={{ marginTop: 0, marginBottom: 10 }}>
+            The app has no store to update from, so it checks these on launch and tells people itself.
+            Leave both versions blank and it never prompts.
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 140px' }}>
+              <label className="site-settings__label" htmlFor="mobile-latest" style={{ fontSize: 13 }}>Latest version</label>
+              <input
+                id="mobile-latest"
+                type="text"
+                className="site-settings__input"
+                placeholder="0.4"
+                value={form.mobile_latest_version}
+                onChange={(e) => setForm((p) => ({ ...p, mobile_latest_version: e.target.value }))}
+              />
+              <div className="site-settings__hint">Shows a prompt people can dismiss.</div>
+            </div>
+
+            <div style={{ flex: '1 1 140px' }}>
+              <label className="site-settings__label" htmlFor="mobile-min" style={{ fontSize: 13 }}>Minimum version</label>
+              <input
+                id="mobile-min"
+                type="text"
+                className="site-settings__input"
+                placeholder="blank = no block"
+                value={form.mobile_min_version}
+                onChange={(e) => setForm((p) => ({ ...p, mobile_min_version: e.target.value }))}
+              />
+              <div className="site-settings__hint">Anything older is BLOCKED out of the app.</div>
+            </div>
+          </div>
+
+          <label className="site-settings__label" htmlFor="mobile-apk" style={{ fontSize: 13, marginTop: 12, display: 'block' }}>APK link</label>
+          <input
+            id="mobile-apk"
+            type="url"
+            className="site-settings__input"
+            placeholder="https://..."
+            value={form.mobile_apk_url}
+            onChange={(e) => setForm((p) => ({ ...p, mobile_apk_url: e.target.value }))}
+          />
+          <div className="site-settings__hint">Where the Update button sends them - the EAS build link, or your own hosted APK.</div>
+
+          <label className="site-settings__label" htmlFor="mobile-notes" style={{ fontSize: 13, marginTop: 12, display: 'block' }}>What&apos;s new <span style={{ fontWeight: 400, color: 'var(--text-muted, #6b7280)' }}>(optional)</span></label>
+          <input
+            id="mobile-notes"
+            type="text"
+            className="site-settings__input"
+            maxLength={500}
+            placeholder="Faster reports, call recording fixes"
+            value={form.mobile_update_notes}
+            onChange={(e) => setForm((p) => ({ ...p, mobile_update_notes: e.target.value }))}
+          />
+          <div className="site-settings__hint">
+            Set the minimum only when an old build genuinely must stop working - it locks those users
+            out until they install the new APK.
           </div>
         </div>
 
