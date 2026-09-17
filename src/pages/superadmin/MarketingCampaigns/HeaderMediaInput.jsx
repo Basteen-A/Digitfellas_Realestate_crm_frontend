@@ -12,22 +12,33 @@ const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: 8, border
 const looksLikeImage = (url) => /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url || '');
 
 // Refuse an oversized file here rather than letting it go up and fail.
-// The server caps header media at 16MB (whatsappRoutes -> /marketing-campaigns/media)
-// and the proxy in front of the API has a ceiling of its own. Either way the
-// rejection lands mid-upload, and a proxy 413 carries no CORS header, so the
-// browser blocks the response and the real reason never reaches this screen -
-// it surfaces as a bare "the connection was closed" network error.
-const MAX_UPLOAD_BYTES = 16 * 1024 * 1024;
-// WhatsApp's own header ceiling for images, applied after we hand the URL over.
-// Bigger still uploads fine here; it is the send that would fail.
-const META_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+// The server caps header media at WA_MAX_HEADER_UPLOAD_MB (64MB by default,
+// whatsappRoutes -> /marketing-campaigns/media) and the proxy in front of the
+// API has a ceiling of its own. Either way the rejection lands mid-upload, and
+// a proxy 413 carries no CORS header, so the browser blocks the response and
+// the real reason never reaches this screen - it surfaces as a bare "the
+// connection was closed" network error.
+//
+// This is deliberately far above WhatsApp's own 16MB media limit: the server
+// re-encodes what it receives down to something WhatsApp will play, so a big
+// phone recording is a file to convert, not a file to refuse.
+const MAX_UPLOAD_BYTES = 64 * 1024 * 1024;
 const fmtSize = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+// What the server can actually convert. Kept in step with HEADER_MEDIA_TYPES in
+// whatsappRoutes.js - notably .mov, because that is what phones record, and
+// NOT .heic, which the server's ffmpeg build cannot decode.
+const ACCEPT_DEFAULT = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf',
+  'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/3gpp', 'video/x-msvideo',
+].join(',');
 
 const HeaderMediaInput = ({
   value,
   onChange,
   placeholder = 'https://yourdomain.com/image.jpg',
-  accept = 'image/*,application/pdf,video/mp4',
+  accept = ACCEPT_DEFAULT,
 }) => {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -41,21 +52,36 @@ const HeaderMediaInput = ({
     if (!file) return;
 
     if (file.size > MAX_UPLOAD_BYTES) {
-      toast.error(`${file.name} is ${fmtSize(file.size)} - the maximum is 16 MB. Compress it and try again.`);
+      toast.error(`${file.name} is ${fmtSize(file.size)} - the maximum is 64 MB. Compress it and try again.`);
       return;
     }
-    if ((file.type || '').startsWith('image/') && file.size > META_IMAGE_MAX_BYTES) {
-      toast(`This image is ${fmtSize(file.size)}. WhatsApp rejects header images over 5 MB, so the send may fail.`, { icon: '⚠️' });
-    }
 
+    // No pre-emptive "this may fail" warning any more: the server now converts
+    // whatever it is handed and reports back what it had to change, so guessing
+    // here would either cry wolf or contradict the actual result.
     setUploading(true);
     try {
       const resp = await whatsappCampaignApi.uploadHeaderMedia(file);
-      const url = resp?.data?.url || resp?.url;
+      const payload = resp?.data || resp || {};
+      const url = payload.url;
       if (!url) throw new Error('Upload did not return a URL.');
       setPreviewError(false);
       onChange(url);
-      toast.success('Media uploaded');
+
+      // Tell the admin their file was changed, and why. Silently handing back a
+      // different file than the one they picked is how you get a bug report six
+      // weeks later about the video "looking wrong".
+      if (payload.normalized) {
+        const why = (payload.normalization_reasons || [])[0];
+        toast.success(
+          why
+            ? `Media uploaded and converted for WhatsApp (${why.replace(/,.*$/, '')})`
+            : 'Media uploaded and converted for WhatsApp',
+          { duration: 6000 }
+        );
+      } else {
+        toast.success('Media uploaded');
+      }
     } catch (err) {
       toast.error(getErrorMessage(err, 'Upload failed'));
     } finally {
