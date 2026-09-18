@@ -2209,7 +2209,7 @@ const LeadDetailsPage = () => {
                   <p className="lead-details-empty">Loading enquiries…</p>
                 ) : (
                   <>
-                    {(enquiries.reEnquiries || []).map((enq) => (
+                    {(enquiries.reEnquiries || []).map((enq, idx) => (
                       <div key={enq.id} className="lead-details-timeline-item">
                         <div className="lead-details-timeline-icon" style={{ background: '#FFF7ED', color: '#C2410C' }}>
                           <span style={{ fontSize: 10 }}>↻</span>
@@ -2224,6 +2224,15 @@ const LeadDetailsPage = () => {
                               }}>
                                 2nd+ enquiry
                               </span>
+                              {/* Newest touch = what the lead carries now. Everything below it is history. */}
+                              {idx === 0 && (
+                                <span style={{
+                                  marginLeft: 6, padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 700,
+                                  background: '#ECFDF5', border: '1px solid #6EE7B7', color: '#047857',
+                                }}>
+                                  Current source
+                                </span>
+                              )}
                             </span>
                             <span className="lead-details-timeline-date">{formatDateTime(enq.enquiredAt)}</span>
                           </div>
@@ -2232,7 +2241,18 @@ const LeadDetailsPage = () => {
                             {enq.subSource ? ` › ${enq.subSource}` : ''}
                             {enq.campaignName ? ` · Campaign: ${enq.campaignName}` : ''}
                           </p>
-                          <span className="lead-details-timeline-by">Via marketing API</span>
+                          {/* The source this touch replaced. Absent on touches recorded before
+                              the history columns existed, so the line is simply not rendered. */}
+                          {enq.previousSource && (
+                            <p className="lead-details-timeline-desc" style={{ color: '#64748B', fontSize: 11 }}>
+                              Replaced: {enq.previousSource}
+                              {enq.previousSubSource ? ` › ${enq.previousSubSource}` : ''}
+                              {' → '}
+                              {enq.source || '-'}
+                              {enq.subSource ? ` › ${enq.subSource}` : ''}
+                            </p>
+                          )}
+                          <span className="lead-details-timeline-by">{enq.channelLabel || 'Via marketing API'}</span>
                         </div>
                       </div>
                     ))}
