@@ -285,6 +285,9 @@ const adminSidebar = [
     ],
   },
   { label: 'Attendance', path: '/super-admin/attendance', icon: NavCalendar },
+  // Distinct from 'Attendance' above: that is the telecaller check-in gate that
+  // controls lead allocation, this is field-staff punch in/out + GPS timeline.
+  { label: 'Field Tracking', path: '/super-admin/field-tracking', icon: NavMapPin },
   {
     label: 'Lead Settings',
     icon: NavAdjustments,

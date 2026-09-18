@@ -85,6 +85,7 @@ import TelephonyCallAllocationHistory from '../pages/superadmin/Telephony/CallAl
 import TelephonyCallAnalysisSettings from '../pages/superadmin/Telephony/CallAnalysisSettings';
 import AdminRecordManager from '../pages/superadmin/RecordManager/AdminRecordManager';
 import AttendancePage from '../pages/superadmin/Attendance/AttendancePage';
+import FieldTrackingPage from '../pages/superadmin/FieldTracking/FieldTrackingPage';
 import {
   TaskWorkspace,
   TaskListPage,
@@ -329,6 +330,7 @@ const AppRoutes = () => {
               <Route path="/super-admin/telephony/allocation-history" element={<TelephonyCallAllocationHistory />} />
               <Route path="/super-admin/telephony/ai-analysis" element={<TelephonyCallAnalysisSettings />} />
               <Route path="/super-admin/attendance" element={<AttendancePage />} />
+              <Route path="/super-admin/field-tracking" element={<FieldTrackingPage />} />
               <Route path="/super-admin/record-manager" element={<AdminRecordManager />} />
             </Route>
 

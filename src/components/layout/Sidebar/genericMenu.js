@@ -147,6 +147,15 @@ const MODULE_LINKS = {
       { label: 'Attendance', path: '/super-admin/attendance', icon: FingerPrintIcon, level: 'write' },
     ]
   },
+  // Distinct module from `attendance` above. That one is the telecaller check-in
+  // gate that controls lead allocation; this is the field-staff punch in/out and
+  // GPS timeline. `read` is enough to reach the screen - the tabs that write,
+  // and Settings (which holds the Google keys), gate themselves inside.
+  field_tracking: {
+    section: 'CONFIGURATION', items: [
+      { label: 'Field Tracking', path: '/super-admin/field-tracking', icon: MapPinIcon },
+    ]
+  },
   lead_masters: {
     section: 'CONFIGURATION', items: [
       {

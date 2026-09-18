@@ -76,6 +76,9 @@ const ROUTE_MODULES = [
   ['/super-admin/user-types', 'roles', 'read'],
   ['/super-admin/site-settings', 'org_settings', 'write'],
   ['/super-admin/attendance', 'attendance', 'write'],
+  // Read is enough to REACH the screen - the tabs that write, and the Settings
+  // tab that holds the Google keys, gate themselves on write/full inside.
+  ['/super-admin/field-tracking', 'field_tracking', 'read'],
 
   // ── Data masters (split three ways so a role can hold one set and not another) ──
   ['/super-admin/departments', 'tasks', 'full'],

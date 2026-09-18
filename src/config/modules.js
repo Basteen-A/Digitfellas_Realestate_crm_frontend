@@ -75,6 +75,13 @@ export const MODULES = [
   { key: 'roles', label: 'Roles & Permissions', group: 'Configuration', levels: ALL, description: 'This screen - create roles and set their module access' },
   { key: 'org_settings', label: 'Org Settings', group: 'Configuration', levels: ALL, description: 'Branding, site settings and terms' },
   { key: 'attendance', label: 'Attendance', group: 'Configuration', levels: ALL, description: 'Check-in records and attendance settings' },
+  // Separate from `attendance` above on purpose. That module is the telecaller
+  // check-in gate that gives or withholds leads; this one is the field-staff
+  // punch-in + GPS timeline. Granting one must never grant the other.
+  // read = view timelines, maps and reports · write = + locations, policies,
+  // per-user/per-role config, manual punch corrections · full = + module settings
+  // (master switch, Google keys, retention) and deletion.
+  { key: 'field_tracking', label: 'Attendance & Field Tracking', group: 'Configuration', levels: ALL, description: 'Punch in/out records, GPS route timeline, halts, locations, shift policies and tracking reports' },
   // Master data is split by the sidebar's own grouping so a role can be given, say,
   // Booking & Finance masters without also handing over every Lead master.
   { key: 'lead_masters', label: 'Lead Masters', group: 'Configuration', levels: ALL, description: 'Lead types, sources, sub-sources, stages, statuses, remarks, motivations, closed-lost reasons, score master' },
