@@ -53,6 +53,25 @@ const fieldTrackingApi = {
     return data;
   },
 
+  // ── Admin: dashboard, grid, analytics, beat plan ──
+  getDashboard: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/dashboard`, noCache(params));
+    return data;
+  },
+  getAttendanceGrid: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/attendance-grid`, noCache(params));
+    return data;
+  },
+  getVisitAnalytics: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/reports/analytics`, noCache(params));
+    return data;
+  },
+  // The sales pipeline's scheduled site visits, read as a field beat plan.
+  getPlans: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/plans`, noCache(params));
+    return data;
+  },
+
   // ── Admin: monitoring ──
   getConfig: async () => {
     const { data } = await api.get(`${BASE}/config`, noCache());

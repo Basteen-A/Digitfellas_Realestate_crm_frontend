@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   ArrowDownTrayIcon, ChartBarIcon, ArrowPathIcon, MapPinIcon,
+  UsersIcon, BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 import { useSelector } from 'react-redux';
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
@@ -9,6 +10,7 @@ import { getErrorMessage } from '../../../../utils/helpers';
 import { exportFieldTrackingReport } from '../exportExcel';
 import {
   th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
+  BarRow, ReportCard, NEGATIVE_REASON_LABEL,
   fmtTime, todayStr, daysAgoStr,
 } from '../ui';
 
@@ -20,6 +22,124 @@ import {
 // aggregated. No report here walks the raw GPS table.
 // ============================================================
 
+/**
+ * The five breakdowns, as bar cards.
+ *
+ * Each card scales its bars against its OWN top row, not a global maximum:
+ * "who did the most visits" and "who drove the furthest" are different
+ * questions and sharing a scale would flatten one of them into nothing.
+ *
+ * Capped at eight rows per card. This is a glance, not a ledger - the full
+ * detail lives one tab over on Customer Visits, and in the Excel download.
+ */
+const TOP_N = 8;
+
+const AnalyticsPanel = ({ data, loading }) => {
+  if (loading && !data) return <Spinner label="Running analytics..." />;
+
+  const t = data?.totals;
+  const perUser = (data?.perUser || []).slice(0, TOP_N);
+  const perProject = (data?.perProject || []).slice(0, TOP_N);
+  const reasons = (data?.negativeReasons || []).slice(0, TOP_N);
+  const distance = (data?.distanceLeaderboard || []).slice(0, TOP_N);
+  // Conversion is ranked separately from volume - the busiest rep is rarely
+  // the one who converts best, and that gap is the point of the card.
+  const conversion = [...(data?.perUser || [])]
+    .filter((r) => r.visits > 0)
+    .sort((a, b) => b.conversionPct - a.conversionPct)
+    .slice(0, TOP_N);
+
+  if (!t || !t.visits) {
+    return (
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 12 }}>
+        <EmptyState
+          icon={ChartBarIcon}
+          title="No completed visits in this range"
+          hint="Analytics counts COMPLETED visits only - an open visit has no outcome to report yet."
+        />
+      </div>
+    );
+  }
+
+  const pct = (n) => (t.visits ? Math.round((n / t.visits) * 100) : 0);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <StatCard label="Total Visits" value={t.visits} accent="#1D4ED8" />
+        <StatCard label="Positive" value={t.positive} sub={`${pct(t.positive)}%`} accent="#16a34a" />
+        <StatCard label="Negative" value={t.negative} sub={`${pct(t.negative)}%`} accent="#dc2626" />
+        <StatCard label="Revisit" value={t.revisit} accent="#d97706" />
+        <StatCard label="Booked" value={t.booked} sub={`${t.conversionPct}% of visits`} accent="#065F46" />
+        <StatCard label="Nobody There" value={t.notAvailable} />
+        <StatCard label="Total Distance" value={t.distanceLabel} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+        <ReportCard icon={UsersIcon} title="Visits per agent">
+          {perUser.map((r) => (
+            <BarRow key={r.userId} label={r.name} value={r.visits} max={perUser[0]?.visits || 0} />
+          ))}
+        </ReportCard>
+
+        <ReportCard
+          icon={ChartBarIcon}
+          title="Conversion per agent"
+          hint="Booked visits as a share of that agent's completed visits."
+        >
+          {conversion.map((r) => (
+            <BarRow
+              key={r.userId}
+              label={r.name}
+              value={r.conversionPct}
+              suffix="%"
+              max={conversion[0]?.conversionPct || 0}
+              color="#16a34a"
+            />
+          ))}
+        </ReportCard>
+
+        <ReportCard
+          icon={ChartBarIcon}
+          title="Negative visit reasons"
+          hint="Only set on a NEGATIVE outcome - the reason is cleared whenever the outcome changes."
+        >
+          {!reasons.length ? (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No negative visits in this range.</div>
+          ) : reasons.map((r) => (
+            <BarRow
+              key={r.reason}
+              label={NEGATIVE_REASON_LABEL[r.reason] || r.reason}
+              value={r.visits}
+              max={reasons[0]?.visits || 0}
+              color="#dc2626"
+            />
+          ))}
+        </ReportCard>
+
+        <ReportCard icon={BuildingOffice2Icon} title="Visits per project">
+          {perProject.map((r) => (
+            <BarRow key={r.projectId || 'none'} label={r.name} value={r.visits} max={perProject[0]?.visits || 0} />
+          ))}
+        </ReportCard>
+
+        <ReportCard icon={MapPinIcon} title="Distance leaderboard">
+          {distance.map((r) => (
+            <BarRow
+              key={r.userId}
+              label={r.name}
+              value={r.distanceLabel}
+              amount={r.distanceM}
+              max={distance[0]?.distanceM || 0}
+              color="#625afa"
+            />
+          ))}
+        </ReportCard>
+      </div>
+    </div>
+  );
+};
+
 const ReportsTab = ({ config }) => {
   const { user } = useSelector((state) => state.auth);
   const [from, setFrom] = useState(daysAgoStr(29));
@@ -28,6 +148,7 @@ const ReportsTab = ({ config }) => {
   const [view, setView] = useState('summary');
   const [summary, setSummary] = useState(null);
   const [halts, setHalts] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -38,6 +159,9 @@ const ReportsTab = ({ config }) => {
       if (view === 'summary') {
         const resp = await fieldTrackingApi.getSummaryReport(params);
         setSummary(resp.data || null);
+      } else if (view === 'analytics') {
+        const resp = await fieldTrackingApi.getVisitAnalytics(params);
+        setAnalytics(resp.data || null);
       } else {
         const resp = await fieldTrackingApi.getHaltReport({ ...params, min_minutes: 10 });
         setHalts(resp.data || null);
@@ -104,6 +228,7 @@ const ReportsTab = ({ config }) => {
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 700 }}>REPORT</div>
           <select value={view} onChange={(e) => setView(e.target.value)} style={{ ...inputStyle, width: 190 }}>
             <option value="summary">Attendance &amp; distance</option>
+            <option value="analytics">Visit analytics</option>
             <option value="halts">Stops detail</option>
           </select>
         </div>
@@ -131,8 +256,18 @@ const ReportsTab = ({ config }) => {
         </div>
       ) : null}
 
+      {/* -- Visit analytics -- */}
+      {view === 'analytics' ? (
+        <AnalyticsPanel data={analytics} loading={loading} />
+      ) : null}
+
       {/* ── Table ── */}
-      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{
+        background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+        borderRadius: 12, overflow: 'hidden',
+        display: view === 'analytics' ? 'none' : undefined,
+      }}
+      >
         {loading ? <Spinner label="Running report…" /> : null}
 
         {!loading && view === 'summary' ? (

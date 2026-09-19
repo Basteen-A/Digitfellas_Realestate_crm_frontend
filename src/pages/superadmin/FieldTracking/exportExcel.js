@@ -64,9 +64,20 @@ const VISIT_TYPE_LABEL = {
   CLIENT: 'Client', SITE: 'Site', VENDOR: 'Vendor',
   FOLLOW_UP: 'Follow-up', COLLECTION: 'Collection', OTHER: 'Other',
 };
+// Keep in step with ui.jsx VISIT_OUTCOME_STYLE and the server's
+// TrackVisit.VISIT_OUTCOMES - three mirrors of one list.
 const VISIT_OUTCOME_LABEL = {
-  INTERESTED: 'Interested', NOT_INTERESTED: 'Not interested', FOLLOW_UP: 'Follow-up',
-  CLOSED: 'Closed', NOT_AVAILABLE: 'Not available', OTHER: 'Other',
+  POSITIVE: 'Positive', NEGATIVE: 'Negative', REVISIT: 'Revisit',
+  BOOKED: 'Booked', NOT_AVAILABLE: 'Nobody there', OTHER: 'Other',
+};
+const NEGATIVE_REASON_LABEL = {
+  PRICE_TOO_HIGH: 'Price too high',
+  LOCATION_NOT_SUITABLE: 'Location not suitable',
+  NOT_SERIOUS_BUYER: 'Not a serious buyer',
+  BOUGHT_ELSEWHERE: 'Already bought elsewhere',
+  NEEDS_FAMILY_APPROVAL: 'Needs family approval',
+  LOAN_ISSUE: 'Loan / finance issue',
+  OTHER: 'Other',
 };
 
 // Shared, so the Visits sheet is identical whether it comes from the combined
@@ -78,6 +89,7 @@ const VISIT_COLUMNS = [
   { header: 'Customer', key: 'customer' },
   { header: 'Phone', key: 'phone' },
   { header: 'Lead', key: 'lead' },
+  { header: 'Project', key: 'project' },
   { header: 'Type', key: 'type' },
   { header: 'Purpose', key: 'purpose' },
   { header: 'Arrived', key: 'inAt' },
@@ -85,6 +97,10 @@ const VISIT_COLUMNS = [
   { header: 'Duration', key: 'duration' },
   { header: 'Minutes', key: 'minutes' },
   { header: 'Outcome', key: 'outcome' },
+  // Blank for anything that did not go negative - see the server, which clears
+  // the reason whenever the outcome moves off NEGATIVE.
+  { header: 'Negative Reason', key: 'negativeReason' },
+  { header: 'Photos', key: 'photos' },
   { header: 'Status', key: 'status' },
   // The column that makes this sheet worth exporting.
   { header: 'GPS Confirmed', key: 'gps' },
@@ -101,6 +117,7 @@ const visitRow = (v) => ({
   customer: v.customerName,
   phone: v.customerPhone || '',
   lead: v.leadNumber || '',
+  project: v.projectName || '',
   type: VISIT_TYPE_LABEL[v.visitType] || v.visitType,
   purpose: v.purpose || '',
   inAt: fmtTime(v.checkedInAt),
@@ -110,6 +127,8 @@ const visitRow = (v) => ({
     : '',
   minutes: v.durationMinutes ?? '',
   outcome: v.outcome ? (VISIT_OUTCOME_LABEL[v.outcome] || v.outcome) : '',
+  negativeReason: v.negativeReason ? (NEGATIVE_REASON_LABEL[v.negativeReason] || v.negativeReason) : '',
+  photos: (v.photos || []).length || '',
   status: v.status,
   gps: v.status === 'IN_PROGRESS'
     ? 'In progress'

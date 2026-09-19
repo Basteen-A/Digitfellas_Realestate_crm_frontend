@@ -123,13 +123,27 @@ export const VISIT_TYPE_LABEL = {
   OTHER: 'Other',
 };
 
+// Mirrors TrackVisit.VISIT_OUTCOMES on the server. The old generic vocabulary
+// (INTERESTED / NOT_INTERESTED / FOLLOW_UP / CLOSED) was re-cut to what the
+// sales floor actually says; add-field-visit-upgrade.js maps existing rows.
 export const VISIT_OUTCOME_STYLE = {
-  INTERESTED: { bg: 'rgba(22,163,74,0.12)', fg: '#16a34a', label: 'Interested' },
-  FOLLOW_UP: { bg: 'rgba(37,99,235,0.12)', fg: '#2563eb', label: 'Follow-up' },
-  CLOSED: { bg: 'rgba(98,90,250,0.12)', fg: '#625afa', label: 'Closed' },
-  NOT_INTERESTED: { bg: 'rgba(220,38,38,0.12)', fg: '#dc2626', label: 'Not interested' },
-  NOT_AVAILABLE: { bg: 'rgba(217,119,6,0.12)', fg: '#d97706', label: 'Not available' },
+  POSITIVE: { bg: 'rgba(22,163,74,0.12)', fg: '#16a34a', label: 'Positive' },
+  NEGATIVE: { bg: 'rgba(220,38,38,0.12)', fg: '#dc2626', label: 'Negative' },
+  REVISIT: { bg: 'rgba(37,99,235,0.12)', fg: '#2563eb', label: 'Revisit' },
+  BOOKED: { bg: 'rgba(98,90,250,0.12)', fg: '#625afa', label: 'Booked' },
+  NOT_AVAILABLE: { bg: 'rgba(217,119,6,0.12)', fg: '#d97706', label: 'Nobody there' },
   OTHER: { bg: 'rgba(100,116,139,0.14)', fg: '#64748b', label: 'Other' },
+};
+
+// Mirrors TrackVisit.NEGATIVE_REASONS. Only ever set on a NEGATIVE outcome.
+export const NEGATIVE_REASON_LABEL = {
+  PRICE_TOO_HIGH: 'Price too high',
+  LOCATION_NOT_SUITABLE: 'Location not suitable',
+  NOT_SERIOUS_BUYER: 'Not a serious buyer',
+  BOUGHT_ELSEWHERE: 'Already bought elsewhere',
+  NEEDS_FAMILY_APPROVAL: 'Needs family approval',
+  LOAN_ISSUE: 'Loan / finance issue',
+  OTHER: 'Other',
 };
 
 export const VISIT_STATUS_STYLE = {
@@ -178,6 +192,124 @@ export const StatCard = ({ label, value, sub = null, accent = 'var(--text-primar
     {sub ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div> : null}
   </div>
 );
+
+// Live state on the dashboard. Deliberately six values, not three:
+// OFFLINE ("the phone stopped reporting") and IDLE ("the person stopped
+// moving") are different problems, and an admin chasing the second should not
+// be sent after the first. DONE is not idle - the day is closed.
+export const LIVE_STATE_STYLE = {
+  ON_VISIT: { bg: 'rgba(29,78,216,0.12)', fg: '#1D4ED8', dot: '#1D4ED8', label: 'On visit' },
+  ACTIVE: { bg: 'rgba(22,163,74,0.12)', fg: '#166534', dot: '#166534', label: 'Active' },
+  IDLE: { bg: 'rgba(245,158,11,0.14)', fg: '#92400E', dot: '#F59E0B', label: 'Idle' },
+  OFFLINE: { bg: 'rgba(100,116,139,0.14)', fg: '#64748B', dot: '#94A3B8', label: 'No signal' },
+  DONE: { bg: 'rgba(100,116,139,0.14)', fg: '#475569', dot: '#64748B', label: 'Day done' },
+  NOT_IN: { bg: 'rgba(220,38,38,0.10)', fg: '#9F1239', dot: '#B71C1C', label: 'Not in' },
+};
+
+export const LiveStateChip = ({ state, minutes = null }) => {
+  const st = LIVE_STATE_STYLE[state] || LIVE_STATE_STYLE.NOT_IN;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '2px 9px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+      background: st.bg, color: st.fg, whiteSpace: 'nowrap',
+    }}
+    >
+      <span style={{ width: 7, height: 7, borderRadius: 999, background: st.dot }} />
+      {st.label}{minutes ? ` ${minutes}m` : ''}
+    </span>
+  );
+};
+
+// One letter per day, the same alphabet the mobile week strip uses.
+// A null status is UNKNOWN, not absent - the worker only writes a verdict for
+// a day it processed, and a grid that invents absences is worse than no grid.
+export const GRID_CELL_STYLE = {
+  PRESENT: { mark: 'P', bg: '#F0FDF4', fg: '#166534', bd: '#BBF7D0', label: 'Present' },
+  HALF_DAY: { mark: '\u00BD', bg: '#FAF5FF', fg: '#6B21A8', bd: '#E9D5FF', label: 'Half day' },
+  ABSENT: { mark: 'A', bg: '#FFF1F2', fg: '#9F1239', bd: '#FECDD3', label: 'Absent' },
+  WEEK_OFF: { mark: 'W', bg: '#F1F5F9', fg: '#64748B', bd: '#CBD5E1', label: 'Week off' },
+  HOLIDAY: { mark: 'H', bg: '#F1F5F9', fg: '#64748B', bd: '#CBD5E1', label: 'Holiday' },
+  LEAVE: { mark: 'L', bg: '#EFF6FF', fg: '#1D4ED8', bd: '#BFDBFE', label: 'Leave' },
+  UNKNOWN: { mark: '\u00B7', bg: 'transparent', fg: 'var(--text-muted)', bd: 'var(--border-primary)', label: 'Not tracked' },
+};
+
+/**
+ * One row of a report bar chart.
+ *
+ * `max` is passed in rather than derived per row, so every bar in a card is
+ * measured against the same scale - deriving it per row would make every bar
+ * full width and say nothing.
+ */
+export const BarRow = ({
+  label, value, max, amount = null, suffix = '', color = 'var(--accent-primary, #625afa)',
+}) => {
+  // `amount` exists for the rows whose DISPLAY is already formatted ("812 km"):
+  // Number('812 km') is NaN, which would silently draw every bar at zero.
+  const scale = amount != null ? Number(amount) : Number(value);
+  const pct = max > 0 && Number.isFinite(scale)
+    ? Math.max(2, Math.round((scale / max) * 100))
+    : 0;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+      <div style={{
+        width: 110, fontSize: 12, color: 'var(--text-secondary)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}
+      >
+        {label}
+      </div>
+      <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'var(--bg-tertiary, rgba(100,116,139,0.12))', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, borderRadius: 999, background: color }} />
+      </div>
+      <div style={{ width: 58, textAlign: 'right', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+        {value}{suffix}
+      </div>
+    </div>
+  );
+};
+
+/** A titled card for the report grid. */
+export const ReportCard = ({ icon: Icon, title, hint = null, children }) => (
+  <div style={{
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border-primary)',
+    borderRadius: 12,
+    padding: '14px 16px 12px',
+  }}
+  >
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12,
+      fontSize: 13, fontWeight: 700, color: 'var(--text-primary)',
+    }}
+    >
+      {Icon ? <Icon style={{ width: 15, height: 15 }} /> : null}
+      {title}
+    </div>
+    {children}
+    {hint ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>{hint}</div> : null}
+  </div>
+);
+
+/** Plan status, shared by the beat-plan grid and its summary table. */
+export const PLAN_STATUS_STYLE = {
+  COMPLETED: { bg: 'rgba(22,163,74,0.12)', fg: '#166534', label: 'Done' },
+  PLANNED: { bg: 'rgba(29,78,216,0.12)', fg: '#1D4ED8', label: 'Pending' },
+  MISSED: { bg: 'rgba(220,38,38,0.10)', fg: '#9F1239', label: 'Missed' },
+};
+
+export const PlanStatusChip = ({ status }) => {
+  const st = PLAN_STATUS_STYLE[status] || PLAN_STATUS_STYLE.PLANNED;
+  return (
+    <span style={{
+      display: 'inline-block', padding: '1px 7px', borderRadius: 10,
+      fontSize: 10, fontWeight: 700, background: st.bg, color: st.fg, whiteSpace: 'nowrap',
+    }}
+    >
+      {st.label}
+    </span>
+  );
+};
 
 export const EmptyState = ({ icon: Icon, title, hint }) => (
   <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>

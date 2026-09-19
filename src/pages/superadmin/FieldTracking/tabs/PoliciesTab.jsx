@@ -33,6 +33,8 @@ const emptyForm = {
   halt_min_minutes: 10,
   halt_radius_m: 100,
   punch_mode: 'ANY',
+  require_punch_selfie: false,
+  require_visit_photo: false,
   default_radius_m: 150,
   enforce_punch_out_location: false,
   block_mock_location: true,
@@ -278,6 +280,28 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
           </div>
         </Section>
 
+        <Section title="Photo evidence">
+          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Toggle
+              label="Require a selfie to punch in"
+              hint="The phone opens the camera before the punch. Punch-OUT never requires one - a policy that can refuse to let somebody end their day over a camera permission traps them at work."
+              checked={form.require_punch_selfie}
+              onChange={(v) => setForm({ ...form, require_punch_selfie: v })}
+            />
+            <Toggle
+              label="Require a photo to close a visit"
+              hint="Checked when the visit is CLOSED, not when it starts - the rep photographs the customer or the plot while they are there."
+              checked={form.require_visit_photo}
+              onChange={(v) => setForm({ ...form, require_visit_photo: v })}
+            />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Both need an app build that ships camera capture. On an older build
+              the rep is asked for a picture from their gallery instead, so the
+              punch still works.
+            </div>
+          </div>
+        </Section>
+
         <Section title="Status">
           <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Toggle
@@ -361,6 +385,8 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
                     </td>
                     <td style={td}>
                       <Chip>{r.punch_mode === 'LOCATIONS' ? 'GEOFENCED' : 'ANYWHERE'}</Chip>
+                      {r.require_punch_selfie ? <Chip bg="rgba(98,90,250,0.12)" fg="#625afa">SELFIE</Chip> : null}
+                      {r.require_visit_photo ? <Chip bg="rgba(98,90,250,0.12)" fg="#625afa">VISIT PHOTO</Chip> : null}
                     </td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {canWrite ? (

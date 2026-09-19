@@ -4,12 +4,16 @@ import toast from 'react-hot-toast';
 import {
   CalendarDaysIcon, SignalIcon, MapIcon, MapPinIcon, ClockIcon,
   UserGroupIcon, ChartBarIcon, Cog6ToothIcon, SunIcon, UserPlusIcon,
+  Squares2X2Icon, TableCellsIcon, ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import fieldTrackingApi from '../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../utils/helpers';
 import { hasModule } from '../../../utils/modulePermissions';
 import { Spinner } from './ui';
+import DashboardTab from './tabs/DashboardTab';
 import DayViewTab from './tabs/DayViewTab';
+import AttendanceGridTab from './tabs/AttendanceGridTab';
+import PlansTab from './tabs/PlansTab';
 import LiveTab from './tabs/LiveTab';
 import TimelineTab from './tabs/TimelineTab';
 import LocationsTab from './tabs/LocationsTab';
@@ -29,10 +33,15 @@ import SettingsTab from './tabs/SettingsTab';
 // ============================================================
 
 const TABS = [
+  // Dashboard first: it is the screen that answers "how is today going", and
+  // the other monitoring tabs are the drill-downs behind it.
+  { key: 'dashboard', label: 'Dashboard', icon: Squares2X2Icon, level: 'read' },
   { key: 'day', label: 'Day View', icon: CalendarDaysIcon, level: 'read' },
+  { key: 'grid', label: 'Attendance Grid', icon: TableCellsIcon, level: 'read' },
   { key: 'live', label: 'Live Map', icon: SignalIcon, level: 'read' },
   { key: 'timeline', label: 'Route Timeline', icon: MapIcon, level: 'read' },
   { key: 'visits', label: 'Customer Visits', icon: UserPlusIcon, level: 'read' },
+  { key: 'plan', label: 'Beat Plan', icon: ClipboardDocumentListIcon, level: 'read' },
   { key: 'reports', label: 'Reports', icon: ChartBarIcon, level: 'read' },
   { key: 'locations', label: 'Locations', icon: MapPinIcon, level: 'read' },
   { key: 'policies', label: 'Shift Policies', icon: ClockIcon, level: 'read' },
@@ -43,7 +52,7 @@ const TABS = [
 
 const FieldTrackingPage = () => {
   const { user } = useSelector((state) => state.auth);
-  const [tab, setTab] = useState('day');
+  const [tab, setTab] = useState('dashboard');
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   // Handed from Day View / Live to the Timeline tab when Route is clicked.
@@ -158,7 +167,10 @@ const FieldTrackingPage = () => {
       </div>
 
       {/* ── Panels ── */}
+      {tab === 'dashboard' ? <DashboardTab config={config} onOpenTimeline={openTimeline} /> : null}
       {tab === 'day' ? <DayViewTab config={config} onOpenTimeline={openTimeline} /> : null}
+      {tab === 'grid' ? <AttendanceGridTab config={config} /> : null}
+      {tab === 'plan' ? <PlansTab config={config} /> : null}
       {tab === 'live' ? <LiveTab config={config} onOpenTimeline={openTimeline} /> : null}
       {tab === 'timeline' ? <TimelineTab config={config} selected={selected} onClearSelection={() => setSelected(null)} /> : null}
       {tab === 'visits' ? <VisitsTab config={config} onOpenTimeline={openTimeline} /> : null}

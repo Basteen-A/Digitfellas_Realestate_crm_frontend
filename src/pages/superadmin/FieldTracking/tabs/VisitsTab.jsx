@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  ArrowPathIcon, UserPlusIcon, ExclamationTriangleIcon, ArrowDownTrayIcon, MapIcon,
+  ArrowPathIcon, UserPlusIcon, ExclamationTriangleIcon, ArrowDownTrayIcon, MapIcon, PhotoIcon,
 } from '@heroicons/react/24/outline';
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
+import { openAuthedFile } from '../../../../utils/authedFile';
 import { exportVisits } from '../exportExcel';
 import {
   th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
   fmtTime, fmtDuration, todayStr, daysAgoStr,
-  VISIT_TYPE_LABEL, VISIT_OUTCOME_STYLE, VisitStatusChip,
+  VISIT_TYPE_LABEL, VISIT_OUTCOME_STYLE, NEGATIVE_REASON_LABEL, VisitStatusChip,
 } from '../ui';
 
 // ============================================================
@@ -191,6 +192,7 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                   <th style={th}>Duration</th>
                   <th style={th}>Outcome</th>
                   <th style={th}>GPS</th>
+                  <th style={th}>Photos</th>
                   <th style={{ ...th, textAlign: 'right' }}>Route</th>
                 </tr>
               </thead>
@@ -216,7 +218,13 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                     </td>
                     <td style={td}>
                       <Chip>{VISIT_TYPE_LABEL[v.visitType] || v.visitType}</Chip>
+                      {v.projectName ? <div style={{ fontSize: 11, marginTop: 3 }}>{v.projectName}</div> : null}
                       {v.locationName ? <div style={{ fontSize: 10, color: '#16a34a', marginTop: 3 }}>{v.locationName}</div> : null}
+                      {v.siteVisitNumber ? (
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                          closed {v.siteVisitNumber}
+                        </div>
+                      ) : null}
                     </td>
                     <td style={td}>
                       {fmtTime(v.checkedInAt)}
@@ -237,6 +245,15 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                           {VISIT_OUTCOME_STYLE[v.outcome]?.label || v.outcome}
                         </Chip>
                       ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      {v.negativeReason ? (
+                        <div style={{
+                          fontSize: 10, color: '#9F1239', background: 'rgba(220,38,38,0.08)',
+                          borderRadius: 4, padding: '1px 6px', marginTop: 4, display: 'inline-block',
+                        }}
+                        >
+                          {NEGATIVE_REASON_LABEL[v.negativeReason] || v.negativeReason}
+                        </div>
+                      ) : null}
                       <div style={{ marginTop: 4 }}><VisitStatusChip status={v.status} /></div>
                       {v.notes ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, maxWidth: 220 }}>{v.notes}</div> : null}
                     </td>
@@ -260,6 +277,30 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, fontFamily: 'ui-monospace, monospace' }}>
                         {v.latitude.toFixed(5)}, {v.longitude.toFixed(5)}
                       </div>
+                    </td>
+                    <td style={td}>
+                      {/* Opened one at a time rather than rendered inline: each
+                          photo is an authenticated fetch, and a 500-row report
+                          would otherwise pull hundreds of images nobody looks at. */}
+                      {(v.photos || []).length ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+                          {v.photos.map((ph, i) => (
+                            <button
+                              key={ph.id || ph.url}
+                              type="button"
+                              onClick={() => openAuthedFile(ph.url).catch(() => toast.error('Could not open that photo'))}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none',
+                                background: 'none', padding: 0, cursor: 'pointer',
+                                color: 'var(--accent-primary, #625afa)', fontSize: 11,
+                              }}
+                            >
+                              <PhotoIcon style={{ width: 12, height: 12 }} />
+                              Photo {i + 1}
+                            </button>
+                          ))}
+                        </div>
+                      ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       {v.user?.id ? (
