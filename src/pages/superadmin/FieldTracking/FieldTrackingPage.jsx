@@ -134,9 +134,13 @@ const FieldTrackingPage = () => {
       ) : null}
 
       {/* ── Tabs ── */}
+      {/* WRAPS rather than scrolls. There are thirteen of these now, and a
+          horizontally scrolling strip hid the last four off the right edge -
+          Locations and Who's Tracked, the two an admin needs first, were the
+          ones nobody could find. */}
       <div style={{
-        display: 'flex', gap: 2, marginTop: 18, marginBottom: 20,
-        borderBottom: '1px solid var(--border-primary)', overflowX: 'auto',
+        display: 'flex', gap: 2, marginTop: 18, marginBottom: 20, flexWrap: 'wrap',
+        borderBottom: '1px solid var(--border-primary)',
       }}
       >
         {visibleTabs.map((t) => {

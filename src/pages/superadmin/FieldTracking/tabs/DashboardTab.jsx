@@ -7,7 +7,7 @@ import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
 import {
-  th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   LIVE_STATE_STYLE, LiveStateChip, StatusChip,
   fmtTime, fmtDistance, todayStr,
 } from '../ui';
@@ -161,29 +161,26 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
       </div>
 
       {/* ── KPIs ── */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+      <div style={{ ...statRow, marginBottom: 18 }}>
         <StatCard label="Tracked" value={t.users ?? 0} sub="field team" />
-        <StatCard label="Checked In" value={t.checkedIn ?? 0} sub={`${t.presentPct ?? 0}% present`} accent="#16a34a" />
-        <StatCard label="On Visit" value={t.onVisit ?? 0} sub="right now" accent="#1D4ED8" />
+        <StatCard label="Checked In" value={t.checkedIn ?? 0} sub={`${t.presentPct ?? 0}% present`} />
+        <StatCard label="On Visit" value={t.onVisit ?? 0} sub="right now" />
         <StatCard
           label={`Idle >${idleMins}min`}
           value={t.idle ?? 0}
           sub="not moving"
-          accent={t.idle ? '#d97706' : undefined}
         />
         <StatCard
           label="No Signal"
           value={t.offline ?? 0}
           sub="no fix 15min+"
-          accent={t.offline ? '#64748b' : undefined}
         />
         <StatCard
           label="Not Started"
           value={t.notStarted ?? 0}
           sub="no punch-in"
-          accent={t.notStarted ? '#dc2626' : undefined}
         />
-        <StatCard label="Visits" value={t.visitsDone ?? 0} sub={`of ${t.visitsPlanned ?? 0} planned`} accent="#1D4ED8" />
+        <StatCard label="Visits" value={t.visitsDone ?? 0} sub={`of ${t.visitsPlanned ?? 0} planned`} />
         <StatCard label="Distance" value={t.totalDistanceLabel || '0 m'} sub="all users" />
       </div>
 

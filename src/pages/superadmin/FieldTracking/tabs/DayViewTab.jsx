@@ -6,7 +6,7 @@ import {
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import {
-  th, td, inputStyle, btn, StatCard, StatusChip, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, StatusChip, Chip, EmptyState, Spinner,
   fmtTime, fmtDuration, fmtDistance, todayStr, DAY_STATUS_STYLE,
 } from '../ui';
 
@@ -121,13 +121,13 @@ const DayViewTab = ({ config, onOpenTimeline }) => {
 
       {/* ── Totals ── */}
       {t ? (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ ...statRow, marginBottom: 16 }}>
           <StatCard label="Tracked" value={t.users} sub="users" />
-          <StatCard label="Present" value={t.present} accent={DAY_STATUS_STYLE.PRESENT.fg} />
-          <StatCard label="Half Day" value={t.halfDay} accent={DAY_STATUS_STYLE.HALF_DAY.fg} />
-          <StatCard label="Absent" value={t.absent} accent={DAY_STATUS_STYLE.ABSENT.fg} />
-          <StatCard label="Week Off" value={t.weekOff} accent={DAY_STATUS_STYLE.WEEK_OFF.fg} />
-          <StatCard label="Late" value={t.late} accent="#d97706" />
+          <StatCard label="Present" value={t.present} />
+          <StatCard label="Half Day" value={t.halfDay} />
+          <StatCard label="Absent" value={t.absent} />
+          <StatCard label="Week Off" value={t.weekOff} />
+          <StatCard label="Late" value={t.late} />
           <StatCard label="Still Out" value={t.punchedIn} sub="not punched out" />
           <StatCard label="Distance" value={t.totalDistanceLabel} sub="all users" />
         </div>

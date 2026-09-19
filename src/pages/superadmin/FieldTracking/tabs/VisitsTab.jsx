@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../../utils/helpers';
 import { openAuthedFile } from '../../../../utils/authedFile';
 import { exportVisits } from '../exportExcel';
 import {
-  th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   fmtTime, fmtDuration, todayStr, daysAgoStr,
   VISIT_TYPE_LABEL, VISIT_OUTCOME_STYLE, NEGATIVE_REASON_LABEL, VisitStatusChip,
 } from '../ui';
@@ -129,10 +129,10 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
 
       {/* ── Totals ── */}
       {t ? (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ ...statRow, marginBottom: 16 }}>
           <StatCard label="Visits" value={t.visits} sub={`by ${t.uniqueUsers} people`} />
-          <StatCard label="Completed" value={t.completed} accent="#16a34a" />
-          <StatCard label="In Progress" value={t.inProgress} accent={t.inProgress ? '#d97706' : undefined} />
+          <StatCard label="Completed" value={t.completed} />
+          <StatCard label="In Progress" value={t.inProgress} />
           <StatCard label="Cancelled" value={t.cancelled} />
           <StatCard label="Time At Customers" value={fmtDuration(t.totalMinutes)} />
           <StatCard label="Linked To A Lead" value={`${t.withLead}/${t.visits}`} sub="rest are new contacts" />
@@ -140,7 +140,6 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
             label="Not GPS-Confirmed"
             value={t.unverified}
             sub="no matching stop"
-            accent={t.unverified ? '#dc2626' : undefined}
           />
         </div>
       ) : null}

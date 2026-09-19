@@ -4,7 +4,7 @@ import { ArrowPathIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import {
-  th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   GRID_CELL_STYLE, todayStr, daysAgoStr,
 } from '../ui';
 
@@ -104,13 +104,13 @@ const AttendanceGridTab = ({ config }) => {
       </div>
 
       {/* ── Totals ── */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+      <div style={{ ...statRow, marginBottom: 18 }}>
         <StatCard label="People" value={t.users ?? 0} />
         <StatCard label="Days Shown" value={t.workingDays ?? 0} sub={`${data?.from || ''} → ${data?.to || ''}`} />
-        <StatCard label="Avg Present" value={t.avgPresent ?? 0} sub="days per person" accent="#16a34a" />
-        <StatCard label="Total Late" value={t.late ?? 0} accent={t.late ? '#d97706' : undefined} />
-        <StatCard label="Leaves" value={t.leave ?? 0} accent="#1D4ED8" />
-        <StatCard label="Absent Days" value={t.absent ?? 0} accent={t.absent ? '#dc2626' : undefined} />
+        <StatCard label="Avg Present" value={t.avgPresent ?? 0} sub="days per person" />
+        <StatCard label="Total Late" value={t.late ?? 0} />
+        <StatCard label="Leaves" value={t.leave ?? 0} />
+        <StatCard label="Absent Days" value={t.absent ?? 0} />
         <StatCard label="Payable Days" value={t.payableDays ?? 0} sub="present + ½ × half" />
       </div>
 

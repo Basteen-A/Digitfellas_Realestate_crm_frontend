@@ -7,7 +7,7 @@ import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import RouteMap from '../RouteMap';
 import {
-  th, td, inputStyle, btn, StatCard, StatusChip, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, StatusChip, Chip, EmptyState, Spinner,
   fmtTime, fmtDuration, fmtDistance, todayStr,
   VISIT_TYPE_LABEL, VISIT_OUTCOME_STYLE, VisitStatusChip,
 } from '../ui';
@@ -144,9 +144,9 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
       {s ? (
         <>
           {/* ── Day summary ── */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ ...statRow, marginBottom: 16 }}>
             <StatCard label="Status" value={<StatusChip status={s.dayStatus} />} sub={data.user.name} />
-            <StatCard label="Punch In" value={fmtTime(s.punchInAt)} sub={s.isLate ? 'late' : (s.punchInLocation?.name || '-')} accent={s.isLate ? '#d97706' : undefined} />
+            <StatCard label="Punch In" value={fmtTime(s.punchInAt)} sub={s.isLate ? 'late' : (s.punchInLocation?.name || '-')} />
             <StatCard label="Punch Out" value={s.punchOutAt ? fmtTime(s.punchOutAt) : 'Still out'} sub={s.punchOutMode === 'AUTO' ? 'auto-closed' : (s.punchOutLocation?.name || '-')} />
             <StatCard label="Worked" value={fmtDuration(s.workedMinutes)} />
             <StatCard label="Travel" value={fmtDuration(s.travelMinutes)} sub="moving between stops" />

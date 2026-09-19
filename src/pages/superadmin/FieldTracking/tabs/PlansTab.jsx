@@ -4,7 +4,7 @@ import { ArrowPathIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import {
-  th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   PlanStatusChip, VISIT_OUTCOME_STYLE, fmtTime, todayStr,
 } from '../ui';
 
@@ -121,11 +121,11 @@ const PlansTab = ({ config }) => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+      <div style={{ ...statRow, marginBottom: 18 }}>
         <StatCard label="Planned" value={t.planned ?? 0} sub="this week" />
-        <StatCard label="Completed" value={t.completed ?? 0} accent="#16a34a" />
-        <StatCard label="Pending" value={t.pending ?? 0} accent={t.pending ? '#1D4ED8' : undefined} />
-        <StatCard label="Missed" value={t.missed ?? 0} accent={t.missed ? '#dc2626' : undefined} />
+        <StatCard label="Completed" value={t.completed ?? 0} />
+        <StatCard label="Pending" value={t.pending ?? 0} />
+        <StatCard label="Missed" value={t.missed ?? 0} />
         <StatCard label="Completion" value={`${t.completionPct ?? 0}%`} />
       </div>
 

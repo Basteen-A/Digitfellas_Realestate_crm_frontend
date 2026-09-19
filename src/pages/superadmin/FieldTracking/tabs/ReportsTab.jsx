@@ -9,7 +9,7 @@ import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import { exportFieldTrackingReport } from '../exportExcel';
 import {
-  th, td, inputStyle, btn, StatCard, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   BarRow, ReportCard, NEGATIVE_REASON_LABEL,
   fmtTime, todayStr, daysAgoStr,
 } from '../ui';
@@ -65,12 +65,12 @@ const AnalyticsPanel = ({ data, loading }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <StatCard label="Total Visits" value={t.visits} accent="#1D4ED8" />
-        <StatCard label="Positive" value={t.positive} sub={`${pct(t.positive)}%`} accent="#16a34a" />
-        <StatCard label="Negative" value={t.negative} sub={`${pct(t.negative)}%`} accent="#dc2626" />
-        <StatCard label="Revisit" value={t.revisit} accent="#d97706" />
-        <StatCard label="Booked" value={t.booked} sub={`${t.conversionPct}% of visits`} accent="#065F46" />
+      <div style={{ ...statRow, marginBottom: 16 }}>
+        <StatCard label="Total Visits" value={t.visits} />
+        <StatCard label="Positive" value={t.positive} sub={`${pct(t.positive)}%`} />
+        <StatCard label="Negative" value={t.negative} sub={`${pct(t.negative)}%`} />
+        <StatCard label="Revisit" value={t.revisit} />
+        <StatCard label="Booked" value={t.booked} sub={`${t.conversionPct}% of visits`} />
         <StatCard label="Nobody There" value={t.notAvailable} />
         <StatCard label="Total Distance" value={t.distanceLabel} />
       </div>
@@ -244,11 +244,11 @@ const ReportsTab = ({ config }) => {
 
       {/* ── Totals ── */}
       {view === 'summary' && t ? (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ ...statRow, marginBottom: 16 }}>
           <StatCard label="Users" value={t.users} />
-          <StatCard label="Present Days" value={t.present} accent="#16a34a" />
-          <StatCard label="Half Days" value={t.halfDay} accent="#d97706" />
-          <StatCard label="Absent Days" value={t.absent} accent="#dc2626" />
+          <StatCard label="Present Days" value={t.present} />
+          <StatCard label="Half Days" value={t.halfDay} />
+          <StatCard label="Absent Days" value={t.absent} />
           <StatCard label="Payable Days" value={t.payableDays} sub="present + ½ × half" />
           <StatCard label="Total Worked" value={t.totalWorkedLabel} />
           <StatCard label="Travel Time" value={t.totalTravelLabel} />

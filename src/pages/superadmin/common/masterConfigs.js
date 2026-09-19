@@ -24,6 +24,7 @@ import departmentApi from '../../../api/departmentApi';
 import subDepartmentApi from '../../../api/subDepartmentApi';
 import reallotmentRuleApi from '../../../api/reallotmentRuleApi';
 import termsAndConditionsApi from '../../../api/termsAndConditionsApi';
+import fieldTrackingApi from '../../../api/fieldTrackingApi';
 import api from '../../../api/axiosInstance';
 
 const asOptions = (items, labelBuilder, valueKey = 'id') =>
@@ -46,6 +47,40 @@ const loadProjectTypeOptions = async () => {
 const loadLeadSourceOptions = async () => {
   const response = await leadSourceApi.getDropdown();
   return asOptions(response.data, (item) => item.source_name);
+};
+
+// Punch locations and shift policies, for the per-user Field Tracking override
+// on the Users form. Both endpoints need `field_tracking` read, which SA and
+// ADM hold; for anyone else these come back empty and the selects simply have
+// nothing to offer rather than erroring the whole form.
+const loadTrackLocationOptions = async () => {
+  try {
+    const response = await fieldTrackingApi.listLocations();
+    return asOptions(
+      (response.data || []).filter((l) => l.is_active),
+      (item) => {
+        const ends = [
+          item.allow_punch_in !== false ? 'in' : null,
+          item.allow_punch_out !== false ? 'out' : null,
+        ].filter(Boolean).join(' + ');
+        return `${item.location_name}${ends ? ` (${ends})` : ' (neither)'}`;
+      }
+    );
+  } catch (e) {
+    return [];
+  }
+};
+
+const loadTrackPolicyOptions = async () => {
+  try {
+    const response = await fieldTrackingApi.listPolicies();
+    return asOptions(
+      (response.data || []).filter((pol) => pol.is_active),
+      (item) => `${item.policy_name}${item.is_default ? ' (default)' : ''}`
+    );
+  } catch (e) {
+    return [];
+  }
 };
 
 const loadUserTypeOptions = async () => {
@@ -397,6 +432,58 @@ export const masterConfigs = {
           )];
         },
       },
+
+      // ── Field Tracking, for this one person ──────────────────────────
+      // The same track_assignments row the Who's Tracked tab edits, reached
+      // from the other direction so an admin setting somebody up does not have
+      // to go and find them again on a second screen.
+      //
+      // "Inherit" ('') is a real third state, NOT the same as Off: inherit
+      // follows whatever the role says now and later, Off pins the person off
+      // forever. Every one of these defaults to inherit.
+      {
+        name: 'track_tracking_enabled',
+        label: 'GPS Tracking',
+        type: 'select',
+        placeholder: 'Inherit from role',
+        options: [
+          { value: 'true', label: 'On - record their route' },
+          { value: 'false', label: 'Off - no route recording' },
+        ],
+        helpText: 'Background route recording between punches. Separate from punching itself.',
+      },
+      {
+        name: 'track_punch_mode',
+        label: 'Punch From',
+        type: 'select',
+        placeholder: 'Inherit from role',
+        options: [
+          { value: 'ANY', label: 'Anywhere - no location needed' },
+          { value: 'LOCATIONS', label: 'Only mapped punch locations' },
+        ],
+        helpText: 'Set Anywhere to let this one person punch in without being inside a geofence, whatever their role requires.',
+      },
+      {
+        name: 'track_location_ids',
+        label: 'Punch Locations',
+        type: 'multiselect',
+        loadOptions: loadTrackLocationOptions,
+        // Only worth filling in when this person is actually geofenced.
+        showWhen: (formValues) => formValues?.track_punch_mode === 'LOCATIONS',
+        helpText: 'Which places this person may punch from. Leave empty to use whatever their role allows.',
+        getInitialValue: (row) => (Array.isArray(row?.track_location_ids)
+          ? row.track_location_ids.filter(Boolean).map((id) => String(id))
+          : []),
+      },
+      {
+        name: 'track_policy_id',
+        label: 'Shift Policy',
+        type: 'select',
+        loadOptions: loadTrackPolicyOptions,
+        placeholder: 'Inherit from role',
+        helpText: 'Working hours, half-day rule and week-offs for this person.',
+      },
+
       {
         name: 'gender',
         label: 'Gender',

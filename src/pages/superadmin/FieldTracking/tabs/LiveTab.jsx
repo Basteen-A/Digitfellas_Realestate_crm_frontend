@@ -5,7 +5,7 @@ import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
 import {
-  th, td, btn, inputStyle, StatCard, Chip, EmptyState, Spinner,
+  th, td, btn, inputStyle, StatCard, statRow, Chip, EmptyState, Spinner,
   fmtTime, fmtDistance,
 } from '../ui';
 
@@ -130,10 +130,10 @@ const LiveTab = ({ config, onOpenTimeline }) => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <StatCard label="Out now" value={rows.length} sub="punched in" accent="#16a34a" />
+      <div style={{ ...statRow, marginBottom: 16 }}>
+        <StatCard label="Out now" value={rows.length} sub="punched in" />
         <StatCard label="Reporting" value={rows.length - stale} sub="fix under 15 min old" />
-        <StatCard label="Stale" value={stale} sub="no fix for 15+ min" accent={stale ? '#d97706' : undefined} />
+        <StatCard label="Stale" value={stale} sub="no fix for 15+ min" />
         <StatCard label="Distance today" value={fmtDistance(rows.reduce((s, r) => s + (r.totalDistanceM || 0), 0))} />
       </div>
 

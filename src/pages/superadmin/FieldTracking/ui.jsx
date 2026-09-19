@@ -175,20 +175,54 @@ export const Chip = ({ children, bg = 'var(--bg-tertiary, rgba(100,116,139,0.14)
   </span>
 );
 
-export const StatCard = ({ label, value, sub = null, accent = 'var(--text-primary)' }) => (
+/**
+ * The row a set of StatCards sits in.
+ *
+ * A GRID, not a wrapping flex row: `flex: 1 1 130px` lets a card grow past its
+ * basis, so eight cards on a wide screen stretch instead of wrapping and push
+ * the page into a horizontal scrollbar. auto-fit + minmax fits as many columns
+ * as the width allows and wraps the rest, with no overflow at any width.
+ */
+export const statRow = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  gap: 10,
+  marginBottom: 18,
+};
+
+export const StatRow = ({ children, style = null }) => (
+  <div style={style ? { ...statRow, ...style } : statRow}>{children}</div>
+);
+
+/**
+ * One number on a dashboard.
+ *
+ * The value is ALWAYS text-primary. Colour in this product lives in badges and
+ * chips, never in content text - a screen of eight differently-coloured numbers
+ * reads as eight warnings, and the eye stops being able to find the one that
+ * actually matters. If a number needs emphasis it gets a chip beside it, not a
+ * different colour.
+ */
+export const StatCard = ({ label, value, sub = null }) => (
   <div style={{
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border-primary)',
     borderRadius: 12,
     padding: '14px 16px',
-    minWidth: 130,
-    flex: '1 1 130px',
+    minWidth: 0,
   }}
   >
     <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
       {label}
     </div>
-    <div style={{ fontSize: 22, fontWeight: 700, color: accent, marginTop: 4, lineHeight: 1.1 }}>{value}</div>
+    <div style={{
+      fontSize: 22, fontWeight: 700, color: 'var(--text-primary)',
+      marginTop: 4, lineHeight: 1.1,
+      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    }}
+    >
+      {value}
+    </div>
     {sub ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div> : null}
   </div>
 );

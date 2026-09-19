@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { MapPinIcon, PlusIcon, TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import MapPicker from '../MapPicker';
+import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
 import {
   th, td, inputStyle, labelStyle, btn, Chip, EmptyState, Spinner,
 } from '../ui';
@@ -13,6 +14,18 @@ import {
 //
 // Separate from the Locations master under Inventory: that one is "an area
 // where we sell property", this one is "a place somebody may punch from".
+// Nothing here touches that master, and the two never share a row.
+//
+// A location carries its end of the day: allow_punch_in / allow_punch_out.
+// Both default on, because a place is normally where you both start and
+// finish. Turning punch-out off models the common case directly - staff report
+// to a site in the morning but are not expected to drive back to it at 7pm
+// just to close the day.
+//
+// The map at the top of the list is the whole point of the screen: a geofence
+// you cannot see is a geofence nobody can sanity-check. Every pin is drawn with
+// its real radius circle, so an admin sees the actual punch area rather than
+// guessing what "150 m" covers.
 // ============================================================
 
 const TYPES = [
@@ -27,7 +40,147 @@ const emptyForm = {
   location_name: '', address: '', city: '',
   latitude: null, longitude: null, radius_m: 150,
   location_type: 'OFFICE', description: '', sort_order: 0, is_active: true,
+  allow_punch_in: true, allow_punch_out: true,
 };
+
+/**
+ * All the punch locations on one map, with their real geofence circles.
+ *
+ * Read-only: clicking a pin selects the row rather than moving it. Editing a
+ * position belongs in the form, where the radius is on screen next to it -
+ * dragging a pin on an overview map is how somebody moves an office by 400 m
+ * and does not notice.
+ */
+const OverviewMap = ({ apiKey, rows, selectedId, onSelect }) => {
+  const { maps, error } = useGoogleMaps(apiKey);
+  const divRef = useRef(null);
+  const mapRef = useRef(null);
+  const shapesRef = useRef([]);
+
+  useEffect(() => {
+    if (!maps || !divRef.current) return;
+    if (!mapRef.current) {
+      mapRef.current = new maps.Map(divRef.current, {
+        center: { lat: 12.9716, lng: 77.5946 },
+        zoom: 11,
+        streetViewControl: false,
+        clickableIcons: false,
+        mapTypeControl: true,
+      });
+    }
+    const map = mapRef.current;
+    shapesRef.current.forEach((x) => x.setMap?.(null));
+    shapesRef.current = [];
+
+    const bounds = new maps.LatLngBounds();
+    let any = false;
+
+    rows.forEach((r) => {
+      const lat = Number(r.latitude);
+      const lng = Number(r.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const pos = { lat, lng };
+      const on = selectedId === r.id;
+      // Inactive places stay on the map but read grey - an admin needs to see
+      // that the office they are looking for exists and is switched off, not
+      // conclude it was never created.
+      const tint = !r.is_active ? '#94a3b8' : (on ? '#dc2626' : '#625afa');
+
+      const marker = new maps.Marker({
+        map,
+        position: pos,
+        title: r.location_name,
+        zIndex: on ? 999 : 1,
+        icon: {
+          path: maps.SymbolPath.CIRCLE,
+          scale: on ? 9 : 6,
+          fillColor: tint,
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        },
+      });
+      marker.addListener('click', () => onSelect(on ? null : r.id));
+
+      const circle = new maps.Circle({
+        map,
+        center: pos,
+        radius: Number(r.radius_m || 150),
+        strokeColor: tint,
+        strokeOpacity: 0.8,
+        strokeWeight: on ? 2 : 1,
+        fillColor: tint,
+        fillOpacity: on ? 0.16 : 0.08,
+      });
+
+      shapesRef.current.push(marker, circle);
+      bounds.extend(pos);
+      any = true;
+    });
+
+    if (any) {
+      const chosen = rows.find((r) => r.id === selectedId);
+      if (chosen && Number.isFinite(Number(chosen.latitude))) {
+        map.panTo({ lat: Number(chosen.latitude), lng: Number(chosen.longitude) });
+        if (map.getZoom() < 15) map.setZoom(15);
+      } else {
+        map.fitBounds(bounds, 60);
+        const once = maps.event.addListenerOnce(map, 'idle', () => {
+          if (map.getZoom() > 16) map.setZoom(16);
+        });
+        shapesRef.current.push({ setMap: () => maps.event.removeListener(once) });
+      }
+    }
+  }, [maps, rows, selectedId, onSelect]);
+
+  useEffect(() => () => {
+    shapesRef.current.forEach((x) => x.setMap?.(null));
+    shapesRef.current = [];
+  }, []);
+
+  if (!apiKey || error) {
+    return (
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 12 }}>
+        <EmptyState icon={MapPinIcon} title="Map unavailable" hint={mapsErrorMessage(error || 'NO_KEY')} />
+      </div>
+    );
+  }
+  return (
+    <div
+      ref={divRef}
+      style={{
+        height: 300, borderRadius: 12, border: '1px solid var(--border-primary)',
+        background: 'var(--bg-secondary)', marginBottom: 14,
+      }}
+    />
+  );
+};
+
+/** The two end-of-day switches, as one control so they read as a pair. */
+const PunchToggles = ({ inOn, outOn, onChange }) => (
+  <div style={{ display: 'flex', gap: 8 }}>
+    {[
+      { key: 'allow_punch_in', on: inOn, label: 'Punch in here' },
+      { key: 'allow_punch_out', on: outOn, label: 'Punch out here' },
+    ].map((o) => (
+      <button
+        key={o.key}
+        type="button"
+        onClick={() => onChange(o.key, !o.on)}
+        style={{
+          flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+          border: `1px solid ${o.on ? 'var(--accent-primary, #625afa)' : 'var(--border-primary)'}`,
+          background: o.on ? 'rgba(98,90,250,0.08)' : 'var(--bg-secondary)',
+          color: o.on ? 'var(--text-primary)' : 'var(--text-muted)',
+          fontSize: 13, fontWeight: o.on ? 700 : 500,
+        }}
+      >
+        <span style={{ marginRight: 7 }}>{o.on ? '\u2713' : '\u00d7'}</span>
+        {o.label}
+      </button>
+    ))}
+  </div>
+);
 
 const LocationsTab = ({ config, canWrite, canDelete }) => {
   const [rows, setRows] = useState([]);
@@ -35,6 +188,8 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
   const [form, setForm] = useState(null); // null = list view
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  // Which pin/row is highlighted. Purely a focus aid - it filters nothing.
+  const [selectedId, setSelectedId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,6 +226,8 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
         location_type: form.location_type,
         description: form.description || null,
         sort_order: Number(form.sort_order) || 0,
+        allow_punch_in: Boolean(form.allow_punch_in),
+        allow_punch_out: Boolean(form.allow_punch_out),
         is_active: Boolean(form.is_active),
       };
       if (form.id) await fieldTrackingApi.updateLocation(form.id, payload);
@@ -173,6 +330,25 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
             </div>
 
             <div>
+              <div style={labelStyle}>Valid for</div>
+              <PunchToggles
+                inOn={Boolean(form.allow_punch_in)}
+                outOn={Boolean(form.allow_punch_out)}
+                onChange={(key, val) => setForm({ ...form, [key]: val })}
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+                Only matters for people whose punch mode is &quot;Only mapped
+                locations&quot;. Turn punch-out off for a site staff report to in
+                the morning but are not expected back at to close the day.
+              </div>
+              {!form.allow_punch_in && !form.allow_punch_out ? (
+                <div style={{ fontSize: 11, color: '#dc2626', marginTop: 5, fontWeight: 600 }}>
+                  With both off this location cannot be punched from at all.
+                </div>
+              ) : null}
+            </div>
+
+            <div>
               <div style={labelStyle}>Address</div>
               <input value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} style={inputStyle} />
             </div>
@@ -220,6 +396,15 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
   // ── List view ──
   return (
     <div>
+      {rows.length ? (
+        <OverviewMap
+          apiKey={config?.mapsBrowserKey}
+          rows={rows}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+      ) : null}
+
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 240px', minWidth: 200 }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 700 }}>SEARCH</div>
@@ -252,13 +437,21 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                   <th style={th}>Type</th>
                   <th style={th}>Coordinates</th>
                   <th style={th}>Radius</th>
+                  <th style={th}>Punch</th>
                   <th style={th}>Status</th>
                   <th style={{ ...th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr
+                    key={r.id}
+                    onClick={() => setSelectedId(selectedId === r.id ? null : r.id)}
+                    style={{
+                      cursor: 'pointer',
+                      background: selectedId === r.id ? 'rgba(98,90,250,0.07)' : undefined,
+                    }}
+                  >
                     <td style={td}>
                       <div style={{ fontWeight: 600 }}>{r.location_name}</div>
                       {r.address ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{r.address}</div> : null}
@@ -268,6 +461,16 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                       {Number(r.latitude).toFixed(5)}, {Number(r.longitude).toFixed(5)}
                     </td>
                     <td style={td}>{r.radius_m ? `${r.radius_m} m` : <span style={{ color: 'var(--text-muted)' }}>policy default</span>}</td>
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                      {r.allow_punch_in === false && r.allow_punch_out === false ? (
+                        <Chip bg="rgba(220,38,38,0.12)" fg="#dc2626">NEITHER</Chip>
+                      ) : (
+                        <span style={{ display: 'inline-flex', gap: 4 }}>
+                          {r.allow_punch_in !== false ? <Chip>IN</Chip> : null}
+                          {r.allow_punch_out !== false ? <Chip>OUT</Chip> : null}
+                        </span>
+                      )}
+                    </td>
                     <td style={td}>
                       {r.is_active
                         ? <Chip bg="rgba(22,163,74,0.12)" fg="#16a34a">ACTIVE</Chip>
@@ -275,12 +478,12 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                     </td>
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {canWrite ? (
-                        <button type="button" style={btn('ghost')} onClick={() => setForm({ ...r })}>
+                        <button type="button" style={btn('ghost')} onClick={(e) => { e.stopPropagation(); setForm({ ...r }); }}>
                           <PencilSquareIcon style={{ width: 15, height: 15, display: 'inline', verticalAlign: '-3px' }} />
                         </button>
                       ) : null}
                       {canDelete ? (
-                        <button type="button" style={{ ...btn('ghost'), color: '#dc2626' }} onClick={() => remove(r)}>
+                        <button type="button" style={{ ...btn('ghost'), color: '#dc2626' }} onClick={(e) => { e.stopPropagation(); remove(r); }}>
                           <TrashIcon style={{ width: 15, height: 15, display: 'inline', verticalAlign: '-3px' }} />
                         </button>
                       ) : null}
