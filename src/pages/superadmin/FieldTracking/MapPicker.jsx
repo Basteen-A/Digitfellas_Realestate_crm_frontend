@@ -156,7 +156,7 @@ const MapPicker = ({
       />
       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
         {hasPin
-          ? `Pin at ${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)} — drag it to adjust. The shaded circle is the ${Number(radiusM) || 150} m punch area.`
+          ? `Pin at ${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)} - drag it to adjust. The shaded circle is the ${Number(radiusM) || 150} m punch area.`
           : 'Click anywhere on the map to drop the pin.'}
         {ready ? '' : ' '}
       </div>

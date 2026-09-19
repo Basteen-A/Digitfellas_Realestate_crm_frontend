@@ -127,8 +127,8 @@ const FieldTrackingPage = () => {
           borderRadius: 10, padding: '12px 16px', margin: '16px 0', fontSize: 12, color: 'var(--text-muted)',
         }}
         >
-          No Google Maps key is configured, so maps will not render. Everything else — punching,
-          distance, halts and reports — works without one.
+          No Google Maps key is configured, so maps will not render. Everything else - punching,
+          distance, halts and reports - works without one.
           {canSettings ? ' Add a browser key under Settings.' : ''}
         </div>
       ) : null}

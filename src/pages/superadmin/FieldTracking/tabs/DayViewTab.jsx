@@ -195,13 +195,13 @@ const DayViewTab = ({ config, onOpenTimeline }) => {
                         {s?.punchOutMode === 'AUTO' ? <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>auto</div> : null}
                         {s?.punchOutMode === 'ADMIN' ? <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>by admin</div> : null}
                       </td>
-                      <td style={td}>{s ? fmtDuration(s.workedMinutes) : '—'}</td>
-                      <td style={td}>{s ? fmtDuration(s.travelMinutes) : '—'}</td>
+                      <td style={td}>{s ? fmtDuration(s.workedMinutes) : '-'}</td>
+                      <td style={td}>{s ? fmtDuration(s.travelMinutes) : '-'}</td>
                       <td style={td}>
-                        {s?.haltCount ? `${s.haltCount} · ${fmtDuration(s.haltMinutes)}` : '—'}
+                        {s?.haltCount ? `${s.haltCount} · ${fmtDuration(s.haltMinutes)}` : '-'}
                       </td>
-                      <td style={td}>{s?.visitCount ? s.visitCount : '—'}</td>
-                      <td style={td}>{s ? fmtDistance(s.totalDistanceM) : '—'}</td>
+                      <td style={td}>{s?.visitCount ? s.visitCount : '-'}</td>
+                      <td style={td}>{s ? fmtDistance(s.totalDistanceM) : '-'}</td>
                       <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {s?.punchInAt ? (
                           <button type="button" style={{ ...btn('ghost'), color: 'var(--accent-primary, #625afa)' }} onClick={() => onOpenTimeline(r.user, date)}>

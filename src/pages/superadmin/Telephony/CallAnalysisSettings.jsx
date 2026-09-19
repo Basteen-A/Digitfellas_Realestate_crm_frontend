@@ -422,7 +422,7 @@ const CallAnalysisSettings = () => {
       setModelCache(resp.data?.model_cache || {});
       setForm((f) => ({ ...f, api_key: '', transcribe_api_key: '' }));
       toast.success('Call analysis settings saved');
-      callAnalysisApi.getStats().then((r) => setStats(r.data)).catch(() => {});
+      callAnalysisApi.getStats().then((r) => setStats(r.data)).catch(() => { });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to save settings'));
     } finally {
@@ -596,8 +596,8 @@ const CallAnalysisSettings = () => {
       <div className="crm-card" style={{ padding: 18, marginBottom: 16 }}>
         <div style={{ fontWeight: 700, marginBottom: 10 }}>Status</div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <StatTile label="Qualifying calls" value={stats?.qualifying_calls ?? '—'} />
-          <StatTile label="Analysed" value={stats?.analysed_calls ?? '—'} />
+          <StatTile label="Qualifying calls" value={stats?.qualifying_calls ?? '-'} />
+          <StatTile label="Analysed" value={stats?.analysed_calls ?? '-'} />
           <StatTile label="Pending" value={stats?.by_status?.PENDING ?? 0} />
           <StatTile label="Failed" value={stats?.by_status?.FAILED ?? 0} />
         </div>
@@ -797,7 +797,7 @@ const CallAnalysisSettings = () => {
         />
         <div style={hintStyle}>
           Calls of this length <strong>or longer</strong> are analysed. Currently{' '}
-          <strong>{stats?.qualifying_calls ?? '—'}</strong> recorded calls meet the saved threshold.
+          <strong>{stats?.qualifying_calls ?? '-'}</strong> recorded calls meet the saved threshold.
         </div>
 
         <label style={labelStyle}>Recordings per pass</label>

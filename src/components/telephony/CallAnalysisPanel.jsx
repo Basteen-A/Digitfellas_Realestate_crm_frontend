@@ -43,7 +43,7 @@ const fmtDuration = (secs) => {
   return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
 };
 
-const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : '—');
+const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : '-');
 
 const isEmpty = (v) => {
   if (v === null || v === undefined || v === '') return true;
@@ -464,8 +464,8 @@ const CallAnalysisPanel = ({ leadId, callLogs = null, canAnalyze = false }) => {
               <span style={{ fontWeight: 600, fontSize: 14 }}>
                 {a?.status === 'PROCESSING' ? 'Analysis in progress…'
                   : a?.status === 'PENDING' ? 'Queued for analysis'
-                  : a?.status === 'FAILED' ? 'Analysis failed'
-                  : 'This call has not been analysed'}
+                    : a?.status === 'FAILED' ? 'Analysis failed'
+                      : 'This call has not been analysed'}
               </span>
             </div>
             {a?.error_message && (
@@ -490,17 +490,17 @@ const CallAnalysisPanel = ({ leadId, callLogs = null, canAnalyze = false }) => {
                   label="Lead score"
                   value={a.lead_score_label
                     ? <Pill colors={SCORE_COLORS[a.lead_score_label]}>{a.lead_score_label}</Pill>
-                    : '—'}
+                    : '-'}
                   sub={a.lead_score != null ? `${a.lead_score}/10` : null}
                 />
-                <Metric label="QA score" value={a.qa_score != null ? `${a.qa_score}%` : '—'} />
+                <Metric label="QA score" value={a.qa_score != null ? `${a.qa_score}%` : '-'} />
                 <Metric
                   label="Talk / listen"
-                  value={a.talk_ratio_agent != null ? `${a.talk_ratio_agent}% / ${a.talk_ratio_customer ?? 100 - a.talk_ratio_agent}%` : '—'}
+                  value={a.talk_ratio_agent != null ? `${a.talk_ratio_agent}% / ${a.talk_ratio_customer ?? 100 - a.talk_ratio_agent}%` : '-'}
                   sub="Agent / Customer"
                 />
                 <Metric label="Duration" value={fmtDuration(a.duration_seconds)} />
-                <Metric label="Language" value={a.language_detected || '—'} />
+                <Metric label="Language" value={a.language_detected || '-'} />
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
                 <RecordingCell callId={selected.callId} hasRecording />

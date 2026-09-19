@@ -192,8 +192,8 @@ const AttendanceGridTab = ({ config }) => {
                       const st = GRID_CELL_STYLE[c.dayStatus] || GRID_CELL_STYLE.UNKNOWN;
                       const tip = c.dayStatus
                         ? `${c.date} · ${st.label}${c.isLate ? ' (late)' : ''}`
-                          + `${c.workedLabel ? ` · ${c.workedLabel}` : ''}`
-                          + `${c.visitCount ? ` · ${c.visitCount} visits` : ''}`
+                        + `${c.workedLabel ? ` · ${c.workedLabel}` : ''}`
+                        + `${c.visitCount ? ` · ${c.visitCount} visits` : ''}`
                         : `${c.date} · not tracked`;
                       return (
                         <td key={c.date} style={{ padding: 2, textAlign: 'center' }} title={tip}>
@@ -222,7 +222,7 @@ const AttendanceGridTab = ({ config }) => {
 
                     <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: '#166534' }}>{r.totals.present}</td>
                     <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: r.totals.absent ? '#B71C1C' : 'var(--text-muted)' }}>
-                      {r.totals.absent || '—'}
+                      {r.totals.absent || '-'}
                     </td>
                     <td style={{ ...td, textAlign: 'center', fontWeight: 700 }}>{r.totals.payableDays}</td>
                   </tr>
@@ -263,7 +263,7 @@ const AttendanceGridTab = ({ config }) => {
       ) : null}
 
       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
-        A faint dot means the day was never tracked for that person — not that they
+        A faint dot means the day was never tracked for that person - not that they
         were absent. Hover any cell for the hours and visits behind it.
         {t.workingDays >= 62 ? ' The range is capped at 62 days.' : ''}
       </div>

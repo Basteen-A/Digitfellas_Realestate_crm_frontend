@@ -92,7 +92,7 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
       const marker = new maps.Marker({
         map,
         position: pos,
-        title: `${r.user.name} — ${style.label}`,
+        title: `${r.user.name} - ${style.label}`,
         zIndex: selected === r.user.id ? 999 : 1,
         icon: {
           path: maps.SymbolPath.CIRCLE,
@@ -251,7 +251,7 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
                   </span>
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: r.session?.totalDistanceM ? 'var(--accent-primary, #625afa)' : 'var(--text-muted)' }}>
-                  {r.session?.totalDistanceM ? fmtDistance(r.session.totalDistanceM) : '—'}
+                  {r.session?.totalDistanceM ? fmtDistance(r.session.totalDistanceM) : '-'}
                 </span>
               </button>
             );
@@ -314,7 +314,7 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
                         </td>
                         <td style={td}><StatusChip status={r.dayStatus} small /></td>
                         <td style={{ ...td, whiteSpace: 'nowrap' }}>
-                          {r.session?.punchInAt ? fmtTime(r.session.punchInAt) : '—'}
+                          {r.session?.punchInAt ? fmtTime(r.session.punchInAt) : '-'}
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                             {r.session?.punchOutAt ? fmtTime(r.session.punchOutAt) : 'ongoing'}
                           </div>
@@ -329,15 +329,15 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
                           ) : null}
                         </td>
                         <td style={{ ...td, color: r.visits.positive ? '#166534' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {r.visits.positive || '—'}
+                          {r.visits.positive || '-'}
                         </td>
                         <td style={{ ...td, color: r.visits.negative ? '#B71C1C' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {r.visits.negative || '—'}
+                          {r.visits.negative || '-'}
                         </td>
                         <td style={{ ...td, color: r.visits.booked ? '#065F46' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {r.visits.booked || '—'}
+                          {r.visits.booked || '-'}
                         </td>
-                        <td style={td}>{r.session?.totalDistanceM ? fmtDistance(r.session.totalDistanceM) : '—'}</td>
+                        <td style={td}>{r.session?.totalDistanceM ? fmtDistance(r.session.totalDistanceM) : '-'}</td>
                         <td style={td}><LiveStateChip state={r.liveState} minutes={r.idleMinutes} /></td>
                         <td style={{ ...td, textAlign: 'right' }}>
                           {r.session?.punchInAt ? (
@@ -348,7 +348,7 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
                             >
                               Route
                             </button>
-                          ) : <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>}
+                          ) : <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>-</span>}
                         </td>
                       </tr>
                     ))}

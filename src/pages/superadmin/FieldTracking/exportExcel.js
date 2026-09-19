@@ -243,7 +243,7 @@ export const exportFieldTrackingReport = async (summary, halts, meta = {}, visit
   headerStyle(info.getRow(1));
   const t = summary?.totals || {};
   [
-    ['Report', 'Field Tracking — attendance and movement'],
+    ['Report', 'Field Tracking - attendance and movement'],
     ['Date range', `${meta.from || summary?.from} to ${meta.to || summary?.to}`],
     ['Role filter', meta.role || 'All tracked roles'],
     ['Generated at', new Date().toLocaleString('en-IN')],
@@ -261,7 +261,7 @@ export const exportFieldTrackingReport = async (summary, halts, meta = {}, visit
     ['How distance is measured', 'Straight-line (great-circle) between consecutive GPS points, summed over the day. It reads slightly under a vehicle odometer because it does not follow road curvature.'],
     ['How travel time is measured', 'Time punched in, minus time spent stationary at a detected stop.'],
     ['What counts as a stop', 'Consecutive GPS points staying inside the policy radius for at least the policy minimum, both configurable per shift policy.'],
-    ['Present / Half day', 'Decided by the worked minutes thresholds on the shift policy in force ON THAT DAY — changing a policy later does not re-grade past days.'],
+    ['Present / Half day', 'Decided by the worked minutes thresholds on the shift policy in force ON THAT DAY - changing a policy later does not re-grade past days.'],
     ['Payable days', 'Present days plus half of the half days.'],
     ['GPS Confirmed (visits)', 'A logged visit is CONFIRMED when its coordinates and time fall inside a stop the phone actually recorded. NOT CONFIRMED means no such stop exists - usually the visit was logged from elsewhere, or the rep left before the stop threshold. It is a prompt to look, not proof of anything by itself.'],
   ].forEach(([k, v]) => info.addRow({ k, v }));

@@ -133,7 +133,7 @@ const RouteMap = ({
         position: pos,
         icon: svgPin(maps, color),
         label: { text: String(i + 1), color: '#fff', fontSize: '11px', fontWeight: '700' },
-        title: `${h.label} — ${h.durationLabel || fmtDuration(h.durationMinutes)}`,
+        title: `${h.label} - ${h.durationLabel || fmtDuration(h.durationMinutes)}`,
         zIndex: 100 + i,
       });
       marker.addListener('click', () => {
@@ -168,7 +168,7 @@ const RouteMap = ({
           strokeColor: '#fff',
           strokeWeight: 2,
         },
-        title: `${v.customerName} — ${v.durationMinutes != null ? fmtDuration(v.durationMinutes) : 'in progress'}`,
+        title: `${v.customerName} - ${v.durationMinutes != null ? fmtDuration(v.durationMinutes) : 'in progress'}`,
         zIndex: 500,
       });
       marker.addListener('click', () => {

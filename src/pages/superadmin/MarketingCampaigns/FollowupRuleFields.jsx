@@ -332,7 +332,7 @@ const FollowupRuleFields = ({
           {rule.audiences.length
             ? rule.audiences
               .map((v) => (options.find((a) => a.value === v)?.label || v).toLowerCase())
-              .join(' — or — ')
+              .join(' - or - ')
             : 'matches the groups you tick above'}
         </strong>.
       </div>

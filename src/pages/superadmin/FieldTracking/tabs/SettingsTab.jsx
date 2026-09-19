@@ -105,7 +105,7 @@ const SettingsTab = ({ config, onSaved }) => {
 
       <Section
         title="Which roles are tracked"
-        hint="Only the roles selected here get the punch screen and GPS tracking. Super Admin and Admin are deliberately absent — they operate this module rather than being subjects of it, and cannot be added."
+        hint="Only the roles selected here get the punch screen and GPS tracking. Super Admin and Admin are deliberately absent - they operate this module rather than being subjects of it, and cannot be added."
       >
         <div style={{ gridColumn: '1 / -1' }}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -123,7 +123,7 @@ const SettingsTab = ({ config, onSaved }) => {
 
       <Section
         title="Google Maps"
-        hint="Two separate keys. Restrict both in the Google Cloud console — the browser key by HTTP referrer, the server key by IP."
+        hint="Two separate keys. Restrict both in the Google Cloud console - the browser key by HTTP referrer, the server key by IP."
       >
         <div style={{ gridColumn: '1 / -1' }}>
           <div style={labelStyle}>Browser key (maps on these screens)</div>
@@ -137,7 +137,7 @@ const SettingsTab = ({ config, onSaved }) => {
           <div style={{ fontSize: 11, color: '#d97706', marginTop: 5, lineHeight: 1.5, display: 'flex', gap: 6 }}>
             <ExclamationTriangleIcon style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }} />
             <span>
-              This key is sent to the browser and is visible to anyone who opens this page — that is
+              This key is sent to the browser and is visible to anyone who opens this page - that is
               how all web maps keys work. Restrict it by HTTP referrer so it cannot be used elsewhere.
               Changing it needs a page reload to take effect.
             </span>
@@ -195,7 +195,7 @@ const SettingsTab = ({ config, onSaved }) => {
             style={inputStyle}
           />
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
-            0 keeps everything. Only the raw dots are purged — the daily attendance rows, distances
+            0 keeps everything. Only the raw dots are purged - the daily attendance rows, distances
             and halts are kept permanently, so old reports never change.
           </div>
         </div>
@@ -221,7 +221,7 @@ const SettingsTab = ({ config, onSaved }) => {
           />
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
             {Math.round((Number(settings.max_speed_mps) || 0) * 3.6)} km/h. Points implying more are
-            kept but excluded from distance — that is what stops one bad cell-tower fix adding
+            kept but excluded from distance - that is what stops one bad cell-tower fix adding
             kilometres to somebody&apos;s day.
           </div>
         </div>

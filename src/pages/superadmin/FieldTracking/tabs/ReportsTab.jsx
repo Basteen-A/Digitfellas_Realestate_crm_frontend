@@ -376,7 +376,7 @@ const ReportsTab = ({ config }) => {
         <b style={{ color: 'var(--text-secondary)' }}>Reading these numbers:</b> distance is straight-line
         between GPS points, so it reads slightly under a vehicle odometer. Travel time is the punched-in
         day minus time spent stationary at a stop. Present / half day is decided by the shift policy that
-        was in force <b>on that day</b> — editing a policy now does not re-grade past days.
+        was in force <b>on that day</b> - editing a policy now does not re-grade past days.
       </div>
     </div>
   );

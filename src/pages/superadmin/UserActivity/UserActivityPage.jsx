@@ -291,7 +291,7 @@ const UserActivityPage = () => {
           {/* ── Workload ── */}
           <Note>
             Workload figures use the same rules as this user&apos;s own workspace tabs, including your
-            timezone for the day boundary — <strong>Hot</strong> is flag-based (new and re-enquired leads
+            timezone for the day boundary - <strong>Hot</strong> is flag-based (new and re-enquired leads
             awaiting their first touch), <strong>Today</strong> and <strong>Missed</strong> count open
             leads only, and Missed excludes the Reallot pool.
           </Note>
@@ -308,7 +308,7 @@ const UserActivityPage = () => {
           {leads.noFollowUpDate > 0 && (
             <Note>
               <strong>{cnt(leads.noFollowUpDate)}</strong> open lead{leads.noFollowUpDate === 1 ? ' has' : 's have'} no
-              follow-up date at all. Those are invisible in every follow-up tab — they are neither due nor overdue —
+              follow-up date at all. Those are invisible in every follow-up tab - they are neither due nor overdue -
               so they will not appear in the counts above.
             </Note>
           )}

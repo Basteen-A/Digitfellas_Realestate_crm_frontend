@@ -2097,7 +2097,7 @@
 .bkd-info-item {}
 .bkd-info-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--col-text-secondary,#9ca3af); margin-bottom:4px; }
 .bkd-info-value { font-size:14px; font-weight:600; color:var(--col-text,#111827); }
-/* Reference numbers stay in the app font — same call as .col-cell-mono. */
+/* Reference numbers stay in the app font - same call as .col-cell-mono. */
 .bkd-info-value.mono { font-family:inherit; font-size:inherit; font-weight:500; }
 .bkd-divider { border:none; border-top:1px solid var(--col-border,#e5e7eb); margin:16px 0; }
 

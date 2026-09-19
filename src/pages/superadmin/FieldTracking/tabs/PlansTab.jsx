@@ -161,7 +161,7 @@ const PlansTab = ({ config }) => {
               >
                 <span>{dd ? `${DAY_NAMES[dd.getDay()]} ${dd.getDate()}` : d}</span>
                 <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>
-                  {rows.length ? `${done}/${rows.length}` : '—'}
+                  {rows.length ? `${done}/${rows.length}` : '-'}
                 </span>
               </div>
 
@@ -217,7 +217,7 @@ const PlansTab = ({ config }) => {
       {/* ── Per-agent summary ── */}
       <div style={{ marginTop: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10 }}>
-          This week — all agents
+          This week - all agents
         </div>
         <div style={{
           background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
@@ -255,7 +255,7 @@ const PlansTab = ({ config }) => {
                       <td style={td}>{r.planned}</td>
                       <td style={{ ...td, color: '#166534', fontWeight: 600 }}>{r.completed}</td>
                       <td style={{ ...td, color: r.missed ? '#B71C1C' : 'var(--text-muted)', fontWeight: 600 }}>
-                        {r.missed || '—'}
+                        {r.missed || '-'}
                       </td>
                       <td style={td}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -273,9 +273,9 @@ const PlansTab = ({ config }) => {
                           {r.completionPct}%
                         </div>
                       </td>
-                      <td style={{ ...td, color: r.positive ? '#166534' : 'var(--text-muted)', fontWeight: 600 }}>{r.positive || '—'}</td>
-                      <td style={{ ...td, color: r.negative ? '#B71C1C' : 'var(--text-muted)', fontWeight: 600 }}>{r.negative || '—'}</td>
-                      <td style={{ ...td, color: r.booked ? '#065F46' : 'var(--text-muted)', fontWeight: 600 }}>{r.booked || '—'}</td>
+                      <td style={{ ...td, color: r.positive ? '#166534' : 'var(--text-muted)', fontWeight: 600 }}>{r.positive || '-'}</td>
+                      <td style={{ ...td, color: r.negative ? '#B71C1C' : 'var(--text-muted)', fontWeight: 600 }}>{r.negative || '-'}</td>
+                      <td style={{ ...td, color: r.booked ? '#065F46' : 'var(--text-muted)', fontWeight: 600 }}>{r.booked || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -288,7 +288,7 @@ const PlansTab = ({ config }) => {
       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
         Planned visits are the sales team&apos;s scheduled site visits. A plan is marked
         done when a field visit is logged against it on the phone, or when the desk
-        closes the site visit itself — this screen never writes back to the pipeline.
+        closes the site visit itself - this screen never writes back to the pipeline.
       </div>
     </div>
   );

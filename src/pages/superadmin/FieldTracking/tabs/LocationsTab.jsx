@@ -120,7 +120,7 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                 required
                 value={form.location_name}
                 onChange={(e) => setForm({ ...form, location_name: e.target.value })}
-                placeholder="e.g. Head Office — Jayanagar"
+                placeholder="e.g. Head Office - Jayanagar"
                 style={inputStyle}
               />
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>

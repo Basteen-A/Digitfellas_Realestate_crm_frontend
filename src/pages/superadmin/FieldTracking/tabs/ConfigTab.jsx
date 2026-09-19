@@ -197,12 +197,12 @@ const ConfigTab = ({ config, canWrite }) => {
                 <select required value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} style={inputStyle}>
                   <option value="">Select a user…</option>
                   {unconfiguredUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}{u.employeeCode ? ` (${u.employeeCode})` : ''} — {u.role}</option>
+                    <option key={u.id} value={u.id}>{u.name}{u.employeeCode ? ` (${u.employeeCode})` : ''} - {u.role}</option>
                   ))}
                 </select>
               )}
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                Super Admin and Admin are deliberately not listed — they run this module rather than being tracked by it.
+                Super Admin and Admin are deliberately not listed - they run this module rather than being tracked by it.
               </div>
             </div>
           ) : null}
@@ -227,7 +227,7 @@ const ConfigTab = ({ config, canWrite }) => {
               label="GPS tracking"
               value={form.tracking_enabled}
               onChange={(v) => setForm({ ...form, tracking_enabled: v })}
-              hint="Inherit follows the policy. Off means punch in/out only — no route, no distance."
+              hint="Inherit follows the policy. Off means punch in/out only - no route, no distance."
             />
             <TriState
               label="Punch from"
@@ -245,7 +245,7 @@ const ConfigTab = ({ config, canWrite }) => {
               Field tracking applies to {form.scope === 'ROLE' ? 'this role' : 'this person'}
             </label>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, marginLeft: 22 }}>
-              Unchecked switches the module off for them entirely — no punch screen, no tracking, no
+              Unchecked switches the module off for them entirely - no punch screen, no tracking, no
               attendance rows. Use it to exempt one person from an otherwise tracked role.
             </div>
           </div>
@@ -280,7 +280,7 @@ const ConfigTab = ({ config, canWrite }) => {
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.45 }}>
                   Only used when Punch from is <b>Mapped only</b>. Select none to inherit
-                  {form.scope === 'USER' ? " the role's list" : ' — falling back to every active location'}.
+                  {form.scope === 'USER' ? " the role's list" : ' - falling back to every active location'}.
                 </div>
               </>
             )}

@@ -74,7 +74,7 @@ const LiveTab = ({ config, onOpenTimeline }) => {
       const marker = new maps.Marker({
         map,
         position: pos,
-        title: `${r.user.name} — last seen ${r.minutesSinceLastPoint ?? '?'}m ago`,
+        title: `${r.user.name} - last seen ${r.minutesSinceLastPoint ?? '?'}m ago`,
         icon: {
           path: maps.SymbolPath.CIRCLE,
           scale: 8,
@@ -125,7 +125,7 @@ const LiveTab = ({ config, onOpenTimeline }) => {
         </button>
         <div style={{ flex: 1 }} />
         <div style={{ fontSize: 11, color: 'var(--text-muted)', maxWidth: 380, lineHeight: 1.5 }}>
-          Positions update when each device uploads its next batch — about every 5 minutes.
+          Positions update when each device uploads its next batch - about every 5 minutes.
           This is not a live feed; every row shows how old its fix is.
         </div>
       </div>
@@ -192,7 +192,7 @@ const LiveTab = ({ config, onOpenTimeline }) => {
                       {r.isStale ? <div style={{ fontSize: 10, color: '#d97706', marginTop: 2 }}>device offline?</div> : null}
                     </td>
                     <td style={{ ...td, fontSize: 12, fontFamily: 'ui-monospace, monospace' }}>
-                      {r.latitude != null ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}` : '—'}
+                      {r.latitude != null ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}` : '-'}
                     </td>
                     <td style={td}>{fmtDistance(r.totalDistanceM)}</td>
                     <td style={{ ...td, textAlign: 'right' }}>

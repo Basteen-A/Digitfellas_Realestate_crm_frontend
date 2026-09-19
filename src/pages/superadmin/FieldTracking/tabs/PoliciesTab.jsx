@@ -154,7 +154,7 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
 
         <Section title="Identity">
           <Field label="Policy name *">
-            <input required value={form.policy_name} onChange={(e) => setForm({ ...form, policy_name: e.target.value })} placeholder="e.g. Field Sales — 9:30 to 6:30" style={inputStyle} />
+            <input required value={form.policy_name} onChange={(e) => setForm({ ...form, policy_name: e.target.value })} placeholder="e.g. Field Sales - 9:30 to 6:30" style={inputStyle} />
           </Field>
           <Field label="Description">
             <input value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} style={inputStyle} />
@@ -173,7 +173,7 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
           </Field>
           <Field
             label="Auto punch-out at"
-            hint="Anyone still punched in at this time is closed automatically — but stamped at the DAY END time above, not at this one, so a forgotten punch-out never credits extra hours. Clear it to never auto-close."
+            hint="Anyone still punched in at this time is closed automatically - but stamped at the DAY END time above, not at this one, so a forgotten punch-out never credits extra hours. Clear it to never auto-close."
           >
             <input type="time" value={form.auto_punch_out_time || ''} onChange={(e) => setForm({ ...form, auto_punch_out_time: e.target.value })} style={inputStyle} />
           </Field>
@@ -224,7 +224,7 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
           <div style={{ gridColumn: '1 / -1' }}>
             <Toggle
               label="Track location during the working day"
-              hint="Off means punch in/out only — no route, no distance, no halts."
+              hint="Off means punch in/out only - no route, no distance, no halts."
               checked={form.tracking_enabled}
               onChange={(v) => setForm({ ...form, tracking_enabled: v })}
             />
@@ -246,7 +246,7 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
         </Section>
 
         <Section title="Halt detection">
-          <Field label="A stop counts after (minutes)" hint="Shorter pauses — traffic lights, a quick call — stay part of the journey.">
+          <Field label="A stop counts after (minutes)" hint="Shorter pauses - traffic lights, a quick call - stay part of the journey.">
             <input type="number" min={1} max={600} value={form.halt_min_minutes} onChange={(e) => setForm({ ...form, halt_min_minutes: Number(e.target.value) })} style={inputStyle} />
           </Field>
           <Field label="Within a radius of (metres)" hint="Indoor GPS drifts 20–40 m, so anything under ~50 m will split one visit into several stops.">

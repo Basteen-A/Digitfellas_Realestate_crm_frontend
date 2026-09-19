@@ -327,15 +327,15 @@ export const Spinner = ({ label = 'Loading...' }) => (
 
 export const fmtTime = (d) => (d
   ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-  : '—');
+  : '-');
 
 export const fmtDateTime = (d) => (d
   ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })
-  : '—');
+  : '-');
 
 export const fmtDate = (d) => (d
   ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  : '—');
+  : '-');
 
 export const todayStr = () => {
   const d = new Date();

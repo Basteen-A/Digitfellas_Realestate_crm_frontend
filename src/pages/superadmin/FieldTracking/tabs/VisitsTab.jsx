@@ -158,7 +158,7 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
             <b>Show only the {t.unverified} visits the GPS did not confirm.</b>{' '}
             A visit is confirmed when its coordinates fall inside a stop the phone actually recorded.
             An unconfirmed one usually means the rep logged it from elsewhere, or left before the
-            stop threshold — worth a look, not proof of anything on its own.
+            stop threshold - worth a look, not proof of anything on its own.
           </span>
         </label>
       ) : null}
@@ -201,7 +201,7 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                   <tr key={v.id}>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{v.workDate}</td>
                     <td style={td}>
-                      <div style={{ fontWeight: 600 }}>{v.user?.name || '—'}</div>
+                      <div style={{ fontWeight: 600 }}>{v.user?.name || '-'}</div>
                       {v.user?.role ? <div style={{ marginTop: 3 }}><Chip>{v.user.role}</Chip></div> : null}
                     </td>
                     <td style={td}>
@@ -229,12 +229,12 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                     <td style={td}>
                       {fmtTime(v.checkedInAt)}
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        {v.checkedOutAt ? fmtTime(v.checkedOutAt) : '—'}
+                        {v.checkedOutAt ? fmtTime(v.checkedOutAt) : '-'}
                       </div>
                       {v.autoClosed ? <div style={{ fontSize: 10, color: '#d97706', marginTop: 2 }}>auto-closed</div> : null}
                     </td>
                     <td style={td}>
-                      {v.durationMinutes != null ? fmtDuration(v.durationMinutes) : '—'}
+                      {v.durationMinutes != null ? fmtDuration(v.durationMinutes) : '-'}
                     </td>
                     <td style={td}>
                       {v.outcome ? (
@@ -244,7 +244,7 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                         >
                           {VISIT_OUTCOME_STYLE[v.outcome]?.label || v.outcome}
                         </Chip>
-                      ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                       {v.negativeReason ? (
                         <div style={{
                           fontSize: 10, color: '#9F1239', background: 'rgba(220,38,38,0.08)',
@@ -300,7 +300,7 @@ const VisitsTab = ({ config, onOpenTimeline }) => {
                             </button>
                           ))}
                         </div>
-                      ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       {v.user?.id ? (

@@ -102,7 +102,7 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
             <option value="">Select a user…</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name}{u.employeeCode ? ` (${u.employeeCode})` : ''} — {u.role}
+                {u.name}{u.employeeCode ? ` (${u.employeeCode})` : ''} - {u.role}
               </option>
             ))}
             {/* The handed-over user may not be in today's list (an older date). */}
@@ -146,8 +146,8 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
           {/* ── Day summary ── */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
             <StatCard label="Status" value={<StatusChip status={s.dayStatus} />} sub={data.user.name} />
-            <StatCard label="Punch In" value={fmtTime(s.punchInAt)} sub={s.isLate ? 'late' : (s.punchInLocation?.name || '—')} accent={s.isLate ? '#d97706' : undefined} />
-            <StatCard label="Punch Out" value={s.punchOutAt ? fmtTime(s.punchOutAt) : 'Still out'} sub={s.punchOutMode === 'AUTO' ? 'auto-closed' : (s.punchOutLocation?.name || '—')} />
+            <StatCard label="Punch In" value={fmtTime(s.punchInAt)} sub={s.isLate ? 'late' : (s.punchInLocation?.name || '-')} accent={s.isLate ? '#d97706' : undefined} />
+            <StatCard label="Punch Out" value={s.punchOutAt ? fmtTime(s.punchOutAt) : 'Still out'} sub={s.punchOutMode === 'AUTO' ? 'auto-closed' : (s.punchOutLocation?.name || '-')} />
             <StatCard label="Worked" value={fmtDuration(s.workedMinutes)} />
             <StatCard label="Travel" value={fmtDuration(s.travelMinutes)} sub="moving between stops" />
             <StatCard label="At Stops" value={fmtDuration(s.haltMinutes)} sub={`${s.haltCount} halts`} />
@@ -216,10 +216,10 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
                         <td style={td}><Chip>{VISIT_TYPE_LABEL[v.visitType] || v.visitType}</Chip></td>
                         <td style={td}>
                           {fmtTime(v.checkedInAt)}
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{v.checkedOutAt ? fmtTime(v.checkedOutAt) : '—'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{v.checkedOutAt ? fmtTime(v.checkedOutAt) : '-'}</div>
                         </td>
                         <td style={{ ...td, fontWeight: 600 }}>
-                          {v.durationMinutes != null ? fmtDuration(v.durationMinutes) : '—'}
+                          {v.durationMinutes != null ? fmtDuration(v.durationMinutes) : '-'}
                           {v.autoClosed ? <div style={{ fontSize: 10, color: '#d97706', fontWeight: 400 }}>auto-closed</div> : null}
                         </td>
                         <td style={td}>
@@ -227,7 +227,7 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
                             <Chip bg={VISIT_OUTCOME_STYLE[v.outcome]?.bg} fg={VISIT_OUTCOME_STYLE[v.outcome]?.fg}>
                               {VISIT_OUTCOME_STYLE[v.outcome]?.label || v.outcome}
                             </Chip>
-                          ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                          ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                           <div style={{ marginTop: 4 }}><VisitStatusChip status={v.status} /></div>
                           {v.notes ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, maxWidth: 240 }}>{v.notes}</div> : null}
                         </td>

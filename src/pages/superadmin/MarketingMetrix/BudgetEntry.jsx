@@ -533,7 +533,7 @@ const BudgetEntry = ({ sources, from, to, sourceId, subSourceId, onChanged }) =>
                     if (loadingCampaigns) return 'Loading campaigns…';
                     if (knownCampaign) {
                       return knownCampaign.lead_count > 0
-                        ? `Matched — ${knownCampaign.lead_count} lead${knownCampaign.lead_count === 1 ? '' : 's'} already carry this campaign for this source.`
+                        ? `Matched - ${knownCampaign.lead_count} lead${knownCampaign.lead_count === 1 ? '' : 's'} already carry this campaign for this source.`
                         : 'Matched a campaign from an earlier budget line. No leads carry it yet.';
                     }
                     if (typedCampaign) return 'New campaign name. It will only report leads whose campaign matches it exactly (case and spacing are ignored).';
