@@ -183,7 +183,7 @@ const FieldTrackingPage = () => {
       {tab === 'policies' ? <PoliciesTab canWrite={canWrite} canDelete={canDelete} /> : null}
       {tab === 'config' ? <ConfigTab config={config} canWrite={canWrite} /> : null}
       {tab === 'holidays' ? <HolidaysTab config={config} canWrite={canWrite} canDelete={canDelete} /> : null}
-      {tab === 'settings' && canSettings ? <SettingsTab config={config} onSaved={loadConfig} /> : null}
+      {tab === 'settings' && canSettings ? <SettingsTab config={config} onSaved={loadConfig} onGoToTab={setTab} /> : null}
     </div>
   );
 };

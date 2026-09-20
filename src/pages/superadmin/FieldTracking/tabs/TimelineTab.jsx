@@ -152,7 +152,13 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
             <StatCard label="Travel" value={fmtDuration(s.travelMinutes)} sub="moving between stops" />
             <StatCard label="At Stops" value={fmtDuration(s.haltMinutes)} sub={`${s.haltCount} halts`} />
             <StatCard label="Visits" value={(data.visits || []).filter((v) => v.status !== 'CANCELLED').length} sub="customers logged" />
-            <StatCard label="Distance" value={fmtDistance(s.totalDistanceM)} sub={`${s.pointsCount} GPS points`} />
+            <StatCard
+              label="Distance"
+              value={fmtDistance(data.routeDistanceM ?? s.totalDistanceM)}
+              sub={data.routeDistanceM != null
+                ? 'road-matched'
+                : `${s.pointsCount} GPS points, straight-line`}
+            />
           </div>
 
           {s.mockLocationFlagged ? (
@@ -172,15 +178,29 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
               session={s}
               halts={data.halts}
               points={data.points}
+              route={data.route || []}
+              routeSource={data.routeSource || 'RAW'}
               locations={data.locations}
               visits={data.visits || []}
               height={460}
             />
-            {data.downsampled ? (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                Showing a sample of {data.points.length} of {data.totalPoints} GPS points for readability. Distance and halts are computed from all of them.
-              </div>
-            ) : null}
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
+              {data.routeSource === 'SNAPPED' ? (
+                <>The solid line is the road-matched route, and the distance above is measured along it.</>
+              ) : (
+                <>
+                  <b>The dashed line is a straight line between GPS fixes, not a driven route.</b>{' '}
+                  It cuts corners and reads short against an odometer. Turn on road
+                  matching under Settings to snap it to the road network
+                  {s.pointsCount != null && s.pointsCount < 40
+                    ? `, and note this day has only ${s.pointsCount} fixes — background location has to be running on the phone for a route to exist at all`
+                    : ''}.
+                </>
+              )}
+              {data.downsampled
+                ? ` Showing a sample of ${data.points.length} of ${data.totalPoints} GPS points for readability; distance and halts use all of them.`
+                : ''}
+            </div>
           </div>
 
           {/* ── Logged visits ── */}

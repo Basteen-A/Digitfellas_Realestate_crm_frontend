@@ -23,7 +23,17 @@ const Section = ({ title, hint, children }) => (
   </div>
 );
 
-const SettingsTab = ({ config, onSaved }) => {
+// The index for the hub below. Kept next to the component rather than in ui.jsx
+// because these are THIS screen's tab keys, and a stale entry here is a dead
+// button - it should break where it is read.
+const SETTING_LINKS = [
+  { tab: 'locations', label: 'Punch Locations', hint: 'Where staff may punch from, each with its own radius and whether it is valid for punch-in, punch-out or both.' },
+  { tab: 'policies', label: 'Shift Policies', hint: 'Hours, late grace, half-day rule, week-offs, punch mode, mock-location blocking and photo evidence.' },
+  { tab: 'config', label: "Who's Tracked", hint: 'Which roles and which individual people are tracked, and the locations each may use.' },
+  { tab: 'holidays', label: 'Holidays', hint: 'Company holidays, so a closed day is not counted as an absence.' },
+];
+
+const SettingsTab = ({ config, onSaved, onGoToTab }) => {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,6 +59,8 @@ const SettingsTab = ({ config, onSaved }) => {
         is_enabled: settings.is_enabled,
         enabled_roles: settings.enabled_roles || [],
         maps_browser_key: settings.maps_browser_key || null,
+        road_matching_enabled: Boolean(settings.road_matching_enabled),
+        road_snap_max_per_run: Number(settings.road_snap_max_per_run) || 0,
         geocoding_server_key: settings.geocoding_server_key || null,
         geocoding_enabled: settings.geocoding_enabled,
         geocode_max_per_run: Number(settings.geocode_max_per_run) || 50,
@@ -181,6 +193,91 @@ const SettingsTab = ({ config, onSaved }) => {
           />
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
             Ceiling per 30-minute pass, so a backlog cannot become a surprise bill in one sweep.
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Road matching (route accuracy)">
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={Boolean(settings.road_matching_enabled)}
+              onChange={(e) => setSettings({ ...settings, road_matching_enabled: e.target.checked })}
+            />
+            Snap routes to the road network
+          </label>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, marginLeft: 22, lineHeight: 1.6 }}>
+            Without this, a route is drawn as straight lines between GPS fixes. That
+            cuts corners, crosses buildings, and <b>always reads short against a car
+            odometer</b>. With it on, the fixes are sent to Google&apos;s Roads API and
+            come back snapped onto the road centreline with the gaps filled in, and the
+            distance is measured along that line instead.
+            <br />
+            Uses the same <b>server key</b> as geocoding above &mdash; the Roads API
+            just has to be enabled on it. Billed per request, which is why it is off by
+            default.
+          </div>
+          {settings.road_matching_enabled && !settings.geocoding_server_key ? (
+            <div style={{
+              fontSize: 11, color: '#b45309', background: 'rgba(217,119,6,0.08)',
+              border: '1px solid rgba(217,119,6,0.3)', borderRadius: 8,
+              padding: '8px 11px', marginTop: 8, marginLeft: 22,
+            }}
+            >
+              No server key is set, so nothing will be snapped. Routes will keep drawing
+              as straight lines until you add one above.
+            </div>
+          ) : null}
+        </div>
+
+        <div>
+          <div style={labelStyle}>Max snap calls per run</div>
+          <input
+            type="number" min={0} max={500}
+            value={settings.road_snap_max_per_run ?? 20}
+            onChange={(e) => setSettings({ ...settings, road_snap_max_per_run: e.target.value })}
+            style={inputStyle}
+          />
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+            Shared across every session in one worker pass, not per person. A day needs
+            roughly one call per 100 GPS fixes. Days not reached are snapped on a later
+            pass, so a low number slows matching down rather than losing it.
+          </div>
+        </div>
+      </Section>
+
+      {/* Everything that configures this module, in one place. The tabs are
+          where the work happens; this is the index, because an admin setting the
+          module up for the first time has no way to know that "Who's Tracked"
+          is where per-person rules live. */}
+      <Section title="All field tracking settings">
+        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+          {SETTING_LINKS.map((l) => (
+            <button
+              key={l.tab}
+              type="button"
+              onClick={() => onGoToTab?.(l.tab)}
+              style={{
+                textAlign: 'left', cursor: 'pointer', padding: '12px 14px',
+                borderRadius: 10, border: '1px solid var(--border-primary)',
+                background: 'var(--bg-secondary)',
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{l.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>{l.hint}</div>
+            </button>
+          ))}
+          <div style={{
+            padding: '12px 14px', borderRadius: 10,
+            border: '1px dashed var(--border-primary)', background: 'transparent',
+          }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Per-user overrides</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>
+              Also editable on each person directly, under Admin &rsaquo; Users &mdash;
+              the same setting, reached from whichever screen you are already on.
+            </div>
           </div>
         </div>
       </Section>

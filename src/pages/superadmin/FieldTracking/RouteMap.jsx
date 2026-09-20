@@ -47,6 +47,11 @@ const RouteMap = ({
   session,
   halts = [],
   points = [],
+  // The line to DRAW. When road matching is on this is the snapped road
+  // geometry; otherwise it is the cleaned fixes with jitter thinned out.
+  // Falls back to `points` so an un-summarised day still shows something.
+  route = [],
+  routeSource = 'RAW',
   locations = [],
   visits = [],
   height = 460,
@@ -97,7 +102,12 @@ const RouteMap = ({
     });
 
     // -- The route polyline --
-    const path = points
+    // Prefer the built route. Drawing straight through raw fixes is what makes
+    // a sparse day look like a triangle of chords across buildings: the line
+    // has to be the road geometry, not the sample points.
+    const source = (route && route.length > 1) ? route : points;
+    const snapped = routeSource === 'SNAPPED' && route && route.length > 1;
+    const path = source
       .filter((p) => p.latitude != null && p.longitude != null)
       .map((p) => ({ lat: p.latitude, lng: p.longitude }));
 
@@ -106,15 +116,28 @@ const RouteMap = ({
         map,
         path,
         strokeColor: '#2563eb',
-        strokeOpacity: 0.75,
-        strokeWeight: 4,
+        strokeOpacity: snapped ? 0.85 : 0.6,
+        strokeWeight: snapped ? 5 : 4,
+        // A road-matched line is drawn solid; an unmatched one is dashed,
+        // because it is an approximation and should not be read as a path
+        // somebody actually drove.
+        ...(snapped ? {} : {
+          strokeOpacity: 0,
+          icons: [{
+            icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.7, strokeWeight: 3, scale: 3 },
+            offset: '0',
+            repeat: '14px',
+          }],
+        }),
         // Arrowheads along the line so the direction of travel is readable
         // without clicking anything.
-        icons: [{
-          icon: { path: maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.4, strokeColor: '#2563eb' },
-          offset: '0',
-          repeat: '120px',
-        }],
+        ...(snapped ? {
+          icons: [{
+            icon: { path: maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.4, strokeColor: '#2563eb' },
+            offset: '0',
+            repeat: '120px',
+          }],
+        } : {}),
       });
       overlaysRef.current.push(line);
       path.forEach((p) => bounds.extend(p));
@@ -223,7 +246,7 @@ const RouteMap = ({
     }
 
     return undefined;
-  }, [maps, session, halts, points, locations, visits]);
+  }, [maps, session, halts, points, route, routeSource, locations, visits]);
 
   // Detach every overlay on unmount.
   useEffect(() => () => {
