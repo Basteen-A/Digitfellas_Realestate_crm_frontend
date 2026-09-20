@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../../utils/helpers';
 import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
 import {
   th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
-  LIVE_STATE_STYLE, LiveStateChip, StatusChip,
+  LIVE_STATE_STYLE, LiveStateChip, StatusChip, TrackingModeChip,
   fmtTime, fmtDistance, todayStr,
 } from '../ui';
 
@@ -308,6 +308,9 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
                         <td style={td}>
                           <div style={{ fontWeight: 600 }}>{r.user.name}</div>
                           {r.user.role ? <div style={{ marginTop: 3 }}><Chip>{r.user.role}</Chip></div> : null}
+                          <div style={{ marginTop: 3 }}>
+                            <TrackingModeChip trackingEnabled={r.user.trackingEnabled} coverage={r.user.coverage} />
+                          </div>
                         </td>
                         <td style={td}><StatusChip status={r.dayStatus} small /></td>
                         <td style={{ ...td, whiteSpace: 'nowrap' }}>

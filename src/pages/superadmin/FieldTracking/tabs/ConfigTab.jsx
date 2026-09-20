@@ -59,6 +59,9 @@ const TriState = ({ label, hint, value, onChange, onLabel = 'On', offLabel = 'Of
 );
 
 const ConfigTab = ({ config, canWrite }) => {
+  // Bumped after every save so the coverage summary re-reads rather than
+  // showing what was true before the change the admin just made.
+  const [reloadKey, setReloadKey] = useState(0);
   const [scope, setScope] = useState('ROLE');
   const [assignments, setAssignments] = useState([]);
   const [policies, setPolicies] = useState([]);
@@ -89,6 +92,19 @@ const ConfigTab = ({ config, canWrite }) => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Who the module actually covers right now, straight from the same endpoint
+  // the reports use. This is the answer to "who has punch in/out only" - a
+  // question you could previously only answer by reading two screens and doing
+  // the precedence in your head.
+  const [covered, setCovered] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    fieldTrackingApi.getDayView({ date: new Date().toISOString().slice(0, 10) })
+      .then((resp) => { if (alive) setCovered((resp.data?.rows || []).map((r) => r.user)); })
+      .catch(() => { /* the editor below still works without the summary */ });
+    return () => { alive = false; };
+  }, [reloadKey]);
 
   const rows = useMemo(() => assignments.filter((a) => a.scope === scope), [assignments, scope]);
   const defaultPolicy = useMemo(() => policies.find((p) => p.is_default), [policies]);
@@ -125,6 +141,7 @@ const ConfigTab = ({ config, canWrite }) => {
       toast.success('Tracking configuration saved');
       setForm(null);
       load();
+      setReloadKey((k) => k + 1);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to save'));
     } finally {
@@ -140,6 +157,7 @@ const ConfigTab = ({ config, canWrite }) => {
       await fieldTrackingApi.deleteAssignment(row.id);
       toast.success('Configuration removed');
       load();
+      setReloadKey((k) => k + 1);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to remove'));
     }
@@ -296,8 +314,56 @@ const ConfigTab = ({ config, canWrite }) => {
   }
 
   // ── List ──
+  const punchOnly = covered.filter((u) => u?.trackingEnabled === false);
+  const individual = covered.filter((u) => u?.coverage === 'USER');
+
   return (
     <div>
+      {/* ── Who this module covers, right now ── */}
+      <div style={{
+        background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+        borderRadius: 12, padding: '14px 16px', marginBottom: 16,
+      }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+          Currently covered: {covered.length} {covered.length === 1 ? 'person' : 'people'}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: covered.length ? 10 : 0 }}>
+          {covered.length - punchOnly.length} with GPS tracking, <b>{punchOnly.length} punch-only</b>
+          {individual.length ? <> · {individual.length} covered individually rather than by their role</> : null}.
+          A person is covered when their role is switched on under Settings, <b>or</b> when they
+          have a setting of their own on the By person tab — which is how somebody appears whose
+          role is off.
+        </div>
+
+        {punchOnly.length ? (
+          <div style={{ marginTop: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>
+              PUNCH IN / PUNCH OUT ONLY — no route recorded
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {punchOnly.map((u) => (
+                <span
+                  key={u.id}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 999, fontSize: 12,
+                    background: 'var(--bg-tertiary, rgba(100,116,139,0.10))',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {u.name}
+                  <Chip>{u.role}</Chip>
+                  {u.coverage === 'USER' ? (
+                    <Chip bg="rgba(98,90,250,0.12)" fg="#625afa">INDIVIDUAL</Chip>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 4, background: 'var(--bg-tertiary, rgba(100,116,139,0.08))', padding: 4, borderRadius: 10 }}>
           {[

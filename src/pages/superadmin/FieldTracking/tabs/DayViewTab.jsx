@@ -6,7 +6,7 @@ import {
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import {
-  th, td, inputStyle, btn, StatCard, statRow, StatusChip, Chip, EmptyState, Spinner,
+  th, td, inputStyle, btn, StatCard, statRow, StatusChip, Chip, TrackingModeChip, EmptyState, Spinner,
   fmtTime, fmtDuration, fmtDistance, todayStr, DAY_STATUS_STYLE,
 } from '../ui';
 
@@ -176,6 +176,12 @@ const DayViewTab = ({ config, onOpenTimeline }) => {
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
                           <Chip>{r.user.role}</Chip>
                           {r.user.employeeCode ? <span>{r.user.employeeCode}</span> : null}
+                        </div>
+                        <div style={{ marginTop: 3 }}>
+                          <TrackingModeChip
+                            trackingEnabled={r.user.trackingEnabled}
+                            coverage={r.user.coverage}
+                          />
                         </div>
                       </td>
                       <td style={td}>

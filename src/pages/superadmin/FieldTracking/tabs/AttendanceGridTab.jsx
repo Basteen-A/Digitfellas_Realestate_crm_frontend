@@ -5,7 +5,7 @@ import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import {
   th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
-  GRID_CELL_STYLE, todayStr, daysAgoStr,
+  GRID_CELL_STYLE, TrackingModeChip, todayStr, daysAgoStr,
 } from '../ui';
 
 // ============================================================
@@ -112,6 +112,11 @@ const AttendanceGridTab = ({ config }) => {
         <StatCard label="Leaves" value={t.leave ?? 0} />
         <StatCard label="Absent Days" value={t.absent ?? 0} />
         <StatCard label="Payable Days" value={t.payableDays ?? 0} sub="present + ½ × half" />
+        <StatCard
+          label="Punch Only"
+          value={rows.filter((r) => r.user.trackingEnabled === false).length}
+          sub="attendance, no GPS"
+        />
       </div>
 
       {loading && !rows.length ? <Spinner /> : null}
@@ -164,6 +169,7 @@ const AttendanceGridTab = ({ config }) => {
                       </th>
                     );
                   })}
+                  <th style={{ ...th, minWidth: 110 }}>Mode</th>
                   <th style={{ ...th, textAlign: 'center', minWidth: 60 }}>P</th>
                   <th style={{ ...th, textAlign: 'center', minWidth: 60 }}>A</th>
                   <th style={{ ...th, textAlign: 'center', minWidth: 70 }}>Payable</th>
@@ -220,6 +226,12 @@ const AttendanceGridTab = ({ config }) => {
                       );
                     })}
 
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                      <TrackingModeChip
+                        trackingEnabled={r.user.trackingEnabled}
+                        coverage={r.user.coverage}
+                      />
+                    </td>
                     <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: '#166534' }}>{r.totals.present}</td>
                     <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: r.totals.absent ? '#B71C1C' : 'var(--text-muted)' }}>
                       {r.totals.absent || '-'}
@@ -265,6 +277,10 @@ const AttendanceGridTab = ({ config }) => {
       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
         A faint dot means the day was never tracked for that person - not that they
         were absent. Hover any cell for the hours and visits behind it.
+        {' '}People marked <b>PUNCH ONLY</b> record attendance with no route, so their
+        distance is always zero by design. <b>INDIVIDUAL</b> means they are covered by
+        a per-person setting rather than by their role, which is how somebody appears
+        here whose role is not switched on.
         {t.workingDays >= 62 ? ' The range is capped at 62 days.' : ''}
       </div>
     </div>

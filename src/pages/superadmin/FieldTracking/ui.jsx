@@ -345,6 +345,49 @@ export const PlanStatusChip = ({ status }) => {
   );
 };
 
+/**
+ * GPS-tracked vs punch-only.
+ *
+ * Worth saying out loud on every screen that shows a distance: a punch-only
+ * person records attendance and nothing else, so their 0 km is correct rather
+ * than a broken tracker, and an admin who cannot tell the two apart will keep
+ * reporting it as a bug.
+ */
+export const TrackingModeChip = ({ trackingEnabled, coverage }) => {
+  const punchOnly = trackingEnabled === false;
+  return (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span
+        title={punchOnly
+          ? 'Punch in / punch out only. No route is recorded for this person.'
+          : 'Punches and records a GPS route.'}
+        style={{
+          display: 'inline-block', padding: '1px 8px', borderRadius: 10,
+          fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap',
+          background: punchOnly ? 'rgba(100,116,139,0.14)' : 'rgba(29,78,216,0.12)',
+          color: punchOnly ? '#475569' : '#1D4ED8',
+        }}
+      >
+        {punchOnly ? 'PUNCH ONLY' : 'GPS'}
+      </span>
+      {/* Only shown for the exception. Somebody covered by their role is the
+          normal case and needs no explanation. */}
+      {coverage === 'USER' ? (
+        <span
+          title="Covered by an individual setting, not by their role."
+          style={{
+            display: 'inline-block', padding: '1px 8px', borderRadius: 10,
+            fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap',
+            background: 'rgba(98,90,250,0.12)', color: '#625afa',
+          }}
+        >
+          INDIVIDUAL
+        </span>
+      ) : null}
+    </span>
+  );
+};
+
 export const EmptyState = ({ icon: Icon, title, hint }) => (
   <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
     {Icon ? <Icon style={{ width: 40, height: 40, margin: '0 auto 12px', opacity: 0.4 }} /> : null}
