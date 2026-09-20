@@ -35,6 +35,8 @@ const emptyForm = {
   punch_mode: 'ANY',
   require_punch_selfie: false,
   require_visit_photo: false,
+  allow_visits: true,
+  allow_beat_plan: true,
   default_radius_m: 150,
   enforce_punch_out_location: false,
   block_mock_location: true,
@@ -280,6 +282,27 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
           </div>
         </Section>
 
+        <Section title="What this shift can do in the app">
+          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Toggle
+              label="Log customer visits"
+              hint="The Visits tab on the phone. Turn it off for shifts with no customers to log - a guard on a gate does not need it, and an empty tab makes the app look broken."
+              checked={form.allow_visits}
+              onChange={(v) => setForm({ ...form, allow_visits: v })}
+            />
+            <Toggle
+              label="Beat plan"
+              hint="The Plan tab: the scheduled site visits assigned to this person. Off for anyone who is not given site visits to work through."
+              checked={form.allow_beat_plan}
+              onChange={(v) => setForm({ ...form, allow_beat_plan: v })}
+            />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Both are enforced on the server too, not just hidden — an older app
+              build cannot log a visit for a shift that does not allow one.
+            </div>
+          </div>
+        </Section>
+
         <Section title="Photo evidence">
           <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Toggle
@@ -385,6 +408,8 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
                     </td>
                     <td style={td}>
                       <Chip>{r.punch_mode === 'LOCATIONS' ? 'GEOFENCED' : 'ANYWHERE'}</Chip>
+                      {r.allow_visits === false ? <Chip>NO VISITS</Chip> : null}
+                      {r.allow_beat_plan === false ? <Chip>NO PLAN</Chip> : null}
                       {r.require_punch_selfie ? <Chip bg="rgba(98,90,250,0.12)" fg="#625afa">SELFIE</Chip> : null}
                       {r.require_visit_photo ? <Chip bg="rgba(98,90,250,0.12)" fg="#625afa">VISIT PHOTO</Chip> : null}
                     </td>
