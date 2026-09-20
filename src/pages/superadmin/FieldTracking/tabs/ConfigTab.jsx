@@ -109,6 +109,16 @@ const ConfigTab = ({ config, canWrite }) => {
   const rows = useMemo(() => assignments.filter((a) => a.scope === scope), [assignments, scope]);
   const defaultPolicy = useMemo(() => policies.find((p) => p.is_default), [policies]);
 
+  // What this row will ACTUALLY run on. An explicit pick wins; a ROLE row with
+  // nothing picked falls to the org default. A USER row with nothing picked
+  // inherits from their role, which we cannot resolve from here - so it shows
+  // nothing rather than guessing at the default and being wrong.
+  const effectivePolicy = useMemo(() => {
+    if (form?.policy_id) return policies.find((p) => p.id === form.policy_id) || null;
+    if (form?.scope === 'ROLE') return defaultPolicy || null;
+    return null;
+  }, [form?.policy_id, form?.scope, policies, defaultPolicy]);
+
   // Roles that have no row yet - what the "add" picker offers.
   const unconfiguredRoles = useMemo(() => {
     const taken = new Set(assignments.filter((a) => a.scope === 'ROLE').map((a) => a.user_type_id));
@@ -236,8 +246,43 @@ const ConfigTab = ({ config, canWrite }) => {
               ))}
             </select>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-              Decides the working hours, what counts as a full day, week-offs and the GPS cadence.
+              Decides the working hours, what counts as a full day, week-offs, the GPS
+              cadence, <b>and which app modules this role gets</b>.
             </div>
+
+            {/* What the chosen policy actually grants.
+                Visits and Beat Plan are policy settings, so "which modules does
+                this role have" is only answerable by opening the policy - which
+                is two screens away from the person deciding it. Showing the
+                effect here is what makes the indirection survivable. */}
+            {effectivePolicy ? (
+              <div style={{
+                marginTop: 8, padding: '9px 11px', borderRadius: 8,
+                background: 'var(--bg-tertiary, rgba(100,116,139,0.06))',
+                border: '1px solid var(--border-primary)',
+              }}
+              >
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>
+                  {effectivePolicy.policy_name.toUpperCase()} GIVES THIS {form.scope === 'USER' ? 'PERSON' : 'ROLE'}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  <Chip>{effectivePolicy.work_start_time}–{effectivePolicy.work_end_time}</Chip>
+                  <Chip>{effectivePolicy.punch_mode === 'LOCATIONS' ? 'Mapped locations only' : 'Punch anywhere'}</Chip>
+                  {effectivePolicy.allow_visits === false
+                    ? <Chip bg="rgba(220,38,38,0.10)" fg="#9F1239">No Visits tab</Chip>
+                    : <Chip bg="rgba(22,163,74,0.12)" fg="#166534">Visits tab</Chip>}
+                  {effectivePolicy.allow_beat_plan === false
+                    ? <Chip bg="rgba(220,38,38,0.10)" fg="#9F1239">No Plan tab</Chip>
+                    : <Chip bg="rgba(22,163,74,0.12)" fg="#166534">Plan tab</Chip>}
+                  {effectivePolicy.require_punch_selfie
+                    ? <Chip bg="rgba(98,90,250,0.12)" fg="#625afa">Selfie required</Chip> : null}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 7, lineHeight: 1.5 }}>
+                  Change these on the <b>Shift Policies</b> tab. They apply to everyone on
+                  this policy, so give a role its own policy if it needs a different mix.
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
@@ -450,6 +495,27 @@ const ConfigTab = ({ config, canWrite }) => {
                     </td>
                     <td style={td}>
                       {r.policy?.policy_name || <span style={{ color: 'var(--text-muted)' }}>inherit</span>}
+                      {/* The modules that policy grants, so the table answers
+                          "which roles have the Visits tab" by scanning rather
+                          than by opening every policy in turn. Only the OFF
+                          state is shown - having them is the default, and a
+                          green chip on every row would be noise. */}
+                      {(() => {
+                        const pol = r.policy || (r.policy_id ? null : defaultPolicy);
+                        if (!pol) return null;
+                        const off = [
+                          pol.allow_visits === false ? 'No Visits' : null,
+                          pol.allow_beat_plan === false ? 'No Plan' : null,
+                        ].filter(Boolean);
+                        if (!off.length) return null;
+                        return (
+                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                            {off.map((o) => (
+                              <Chip key={o} bg="rgba(220,38,38,0.10)" fg="#9F1239">{o}</Chip>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td style={td}>
                       {r.tracking_enabled === null || r.tracking_enabled === undefined
