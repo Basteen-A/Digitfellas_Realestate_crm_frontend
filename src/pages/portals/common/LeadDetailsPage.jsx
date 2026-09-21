@@ -415,6 +415,11 @@ const LeadDetailsPage = () => {
   const [actionCode, setActionCode] = useState('');
   const [actionForm, setActionForm] = useState(actionInitialState);
   const [assignableUsers, setAssignableUsers] = useState([]);
+  // Whether this lead already has a Sales Manager on record. A lead that reached the
+  // Sales Head without one has to be credited to an SM at booking time, or the
+  // booking counts under nobody. { mapped, salesManager, salesManagerOptions }
+  const [smMapping, setSmMapping] = useState(null);
+  const [salesManagerId, setSalesManagerId] = useState('');
   const [closureReasons, setClosureReasons] = useState([]);
   const [actionSaving, setActionSaving] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState('');
@@ -761,6 +766,17 @@ const LeadDetailsPage = () => {
       } catch {
         setUsers([]);
       }
+      // Does this lead already have a Sales Manager? Only when it does not does the
+      // booking form ask for one, and the answer carries its own option list.
+      if (action.code === 'SH_BOOKING' && lead?.id) {
+        setSalesManagerId('');
+        leadWorkflowApi.getSalesManagerMapping(lead.id)
+          .then((resp) => setSmMapping(resp.data || null))
+          // On failure fall back to "already mapped" so the form never blocks the SH
+          // on a field it could not load; the server still enforces the rule.
+          .catch(() => setSmMapping({ mapped: true, salesManager: null, salesManagerOptions: [] }));
+      }
+
       // Load inventory units for SH_BOOKING
       if (action.needsCustomerProfile || action.code === 'SH_BOOKING') {
         const projectIdForUnits = customerProfileForm.bookingProjectId || lead?.projectId;
@@ -801,7 +817,7 @@ const LeadDetailsPage = () => {
     } else {
       setReasons([]);
     }
-  }, [roleCode, lead?.projectId, customerProfileForm.bookingProjectId]);
+  }, [roleCode, lead?.id, lead?.projectId, customerProfileForm.bookingProjectId]);
 
   const closeQuickActionsModal = useCallback(() => {
     setQuickActionsOpen(false);
@@ -1123,6 +1139,10 @@ const LeadDetailsPage = () => {
         toast.error('Booking Date is required');
         return;
       }
+      if (quickSelectedAction.code === 'SH_BOOKING' && smMapping && !smMapping.mapped && !salesManagerId) {
+        toast.error('This lead has no Sales Manager on record. Please select the Sales Manager who handled it.');
+        return;
+      }
     }
 
     const payload = {
@@ -1193,6 +1213,10 @@ const LeadDetailsPage = () => {
       payload.bookingProjectId = pF.bookingProjectId || undefined;
       payload.location_id = pF.bookingLocationId || undefined;
       payload.project_id = pF.bookingProjectId || undefined;
+      // Only sent for a lead with no SM on record; the server ignores it otherwise.
+      if (quickSelectedAction.code === 'SH_BOOKING' && smMapping && !smMapping.mapped) {
+        payload.salesManagerId = salesManagerId || undefined;
+      }
     }
 
     if (quickSelectedAction.needsFollowUp) {
@@ -3000,6 +3024,37 @@ const LeadDetailsPage = () => {
                           <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.bookingDate || ''} onChange={(e) => setCustomerProfileForm(p => ({ ...p, bookingDate: e.target.value }))} required />
                         </div>
                       </div>
+                      {/* ── Sales Manager: only for a lead that has none on record ── */}
+                      {quickSelectedAction?.code === 'SH_BOOKING' && smMapping && !smMapping.mapped && (
+                        <>
+                          <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Sales Manager</div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label className="qa-drawer-field-label">Sales Manager who handled this lead *</label>
+                            <select
+                              className="qa-drawer-field-select"
+                              style={{ width: '100%' }}
+                              value={salesManagerId}
+                              onChange={(e) => setSalesManagerId(e.target.value)}
+                              required
+                            >
+                              <option value="">- Select Sales Manager -</option>
+                              {(smMapping.salesManagerOptions || []).map((sm) => (
+                                <option key={sm.id} value={sm.id}>{sm.fullName}</option>
+                              ))}
+                            </select>
+                            <div className="qa-drawer-field-label" style={{ marginTop: 4, opacity: 0.75 }}>
+                              This lead has no Sales Manager on record. The one you pick is credited
+                              with the booking and with the lead in all Sales Manager reports.
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {quickSelectedAction?.code === 'SH_BOOKING' && smMapping?.mapped && smMapping.salesManager && (
+                        <div className="qa-drawer-field-label" style={{ marginBottom: 12, opacity: 0.75 }}>
+                          Sales Manager: {smMapping.salesManager.fullName}
+                        </div>
+                      )}
+
                       {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>
                       <div className="qa-drawer-profile-grid">

@@ -26,6 +26,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    // Identifies the caller as this web app. The server uses it to apply rules that
+    // only newer clients can satisfy - currently the mandatory Sales Manager on an
+    // SH booking - without breaking mobile builds already in people's hands.
+    'X-Client': 'web',
   },
   withCredentials: true,
 });

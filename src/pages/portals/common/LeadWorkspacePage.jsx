@@ -1019,6 +1019,9 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
 
   // ── Customer Profile Modal (SH Close Won) ──
   const [customerProfileOpen, setCustomerProfileOpen] = useState(false);
+  // { mapped, salesManager, salesManagerOptions } for the lead being booked - see
+  // loadSalesManagerMapping below.
+  const [smMapping, setSmMapping] = useState(null);
   const [customerProfileForm, setCustomerProfileForm] = useState({
     buyer_name: '',
     relation_type: '',
@@ -1031,6 +1034,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     assignToUserId: '', note: '', inventoryUnitId: '', paymentPlanId: '',
     bookingProjectId: '', bookingLocationId: '', bookingPhaseId: '',
     bookingDate: new Date().toISOString().split('T')[0],
+    salesManagerId: '',
   });
   const [availableUnits, setAvailableUnits] = useState([]);
   const [availablePhases, setAvailablePhases] = useState([]);
@@ -1642,6 +1646,21 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
       // silently fail
     }
   }, [assignableUsers]);
+
+  // Whether the lead being booked already has a Sales Manager on record. A lead that
+  // reached the Sales Head without one has to be credited to an SM at booking time, or
+  // its booking counts under nobody. On failure we assume "mapped" so the form never
+  // blocks on a field it could not load - the server enforces the rule either way.
+  const loadSalesManagerMapping = useCallback(async (leadId) => {
+    if (!leadId) return;
+    setSmMapping(null);
+    try {
+      const resp = await leadWorkflowApi.getSalesManagerMapping(leadId);
+      setSmMapping(resp.data || null);
+    } catch {
+      setSmMapping({ mapped: true, salesManager: null, salesManagerOptions: [] });
+    }
+  }, []);
 
   // Pre-load assignable users for relevant handoff roles
   useEffect(() => {
@@ -2288,9 +2307,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         bookingLocationId: selectedLead.locationId || '',
         bookingPhaseId: '',
         bookingDate: new Date().toISOString().split('T')[0],
+        salesManagerId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
+      loadSalesManagerMapping(selectedLead.id);
       // Load phases for the lead's project, then units
       if (selectedLead?.projectId) {
         projectPhaseApi.dropdown(selectedLead.projectId).then(resp => {
@@ -2541,6 +2562,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     if (!f.current_address) { toast.error('Current Address is required'); return; }
     if (!f.occupation) { toast.error('Occupation is required'); return; }
     if (!f.assignToUserId) { toast.error('Please select a Collection Manager'); return; }
+    if (smMapping && !smMapping.mapped && !f.salesManagerId) {
+      toast.error('This lead has no Sales Manager on record. Please select the Sales Manager who handled it.');
+      return;
+    }
     if (!f.paymentPlanId) { toast.error('Please select a Payment Plan'); return; }
     if (!f.bookingDate) { toast.error('Booking Date is required'); return; }
 
@@ -2548,6 +2573,8 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
     try {
       await leadWorkflowApi.transitionLead(selectedLead.id, 'SH_BOOKING', {
         assignToUserId: f.assignToUserId,
+        // Only sent for a lead with no SM on record; the server ignores it otherwise.
+        salesManagerId: (smMapping && !smMapping.mapped && f.salesManagerId) || undefined,
         bookingDate: f.bookingDate,
         note: f.note?.trim() || 'Booking approved by Sales Head',
         inventoryUnitId: f.inventoryUnitId || undefined,
@@ -2655,9 +2682,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         bookingLocationId: selectedLead.locationId || '',
         bookingPhaseId: '',
         bookingDate: new Date().toISOString().split('T')[0],
+        salesManagerId: '',
       });
       setCustomerProfileOpen(true);
       loadAssignableUsers('COL');
+      loadSalesManagerMapping(selectedLead.id);
       // Load phases then units
       if (selectedLead?.projectId) {
         projectPhaseApi.dropdown(selectedLead.projectId).then(resp => {
@@ -2944,10 +2973,12 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
         bookingLocationId: quickActionLead?.locationId || '',
         bookingPhaseId: '',
         bookingDate: new Date().toISOString().split('T')[0],
+        salesManagerId: '',
       });
       setAvailableUnits([]);
       setAvailablePhases([]);
       loadAssignableUsers('COL');
+      loadSalesManagerMapping(quickActionLead?.id);
       // Load phases for the project, then units
       const projectIdForUnits = quickActionLead?.projectId;
       if (projectIdForUnits) {
@@ -3172,6 +3203,11 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
             setQuickActionLoading(false);
             return;
           }
+          if (smMapping && !smMapping.mapped && !cpF.salesManagerId) {
+            toast.error('This lead has no Sales Manager on record. Please select the Sales Manager who handled it.');
+            setQuickActionLoading(false);
+            return;
+          }
         }
 
         // Validation: Reason selection is mandatory for reason-based actions
@@ -3294,6 +3330,10 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
           payload.phase_id = pF.bookingPhaseId || undefined;
           payload.location_id = pF.bookingLocationId || undefined;
           payload.project_id = pF.bookingProjectId || undefined;
+          // Only sent for a lead with no SM on record; the server ignores it otherwise.
+          if (quickWorkflowAction.code === 'SH_BOOKING' && smMapping && !smMapping.mapped) {
+            payload.salesManagerId = pF.salesManagerId || undefined;
+          }
         }
 
         if (quickWorkflowAction.code === 'TC_REASSIGN') {
@@ -5818,6 +5858,29 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                 ))}
               </select>
 
+              {/* Sales Manager - asked for only when the lead has none on record, so the
+                  booking is credited to somebody instead of falling through the reports. */}
+              {smMapping && !smMapping.mapped && (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)', borderBottom: '1px solid var(--border-primary)', paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}><UserIcon style={{ width: 14, height: 14 }} />Sales Manager *</div>
+                  <select value={customerProfileForm.salesManagerId || ''} onChange={(e) => setCustomerProfileForm(p => ({ ...p, salesManagerId: e.target.value }))} style={{ width: '100%' }}>
+                    <option value="">Select the Sales Manager who handled this lead...</option>
+                    {(smMapping.salesManagerOptions || []).map((sm) => (
+                      <option key={sm.id} value={sm.id}>{sm.fullName}</option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -4 }}>
+                    This lead has no Sales Manager on record. The one you pick is credited with
+                    the booking and with the lead in all Sales Manager reports.
+                  </div>
+                </>
+              )}
+              {smMapping?.mapped && smMapping.salesManager && (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  Sales Manager: <strong>{smMapping.salesManager.fullName}</strong>
+                </div>
+              )}
+
               {/* Notes */}
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Notes
@@ -6456,6 +6519,37 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                           <input type="date" className="qa-drawer-field-input" style={{ width: '100%' }} value={customerProfileForm.bookingDate || ''} onChange={(e) => setCustomerProfileForm(p => ({ ...p, bookingDate: e.target.value }))} required />
                         </div>
                       </div>
+                      {/* ── Sales Manager: only for a lead that has none on record ── */}
+                      {quickWorkflowAction?.code === 'SH_BOOKING' && smMapping && !smMapping.mapped && (
+                        <>
+                          <div className="qa-drawer-profile-section"><UserIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Sales Manager</div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label className="qa-drawer-field-label">Sales Manager who handled this lead *</label>
+                            <select
+                              className="qa-drawer-field-select"
+                              style={{ width: '100%' }}
+                              value={customerProfileForm.salesManagerId || ''}
+                              onChange={(e) => setCustomerProfileForm(p => ({ ...p, salesManagerId: e.target.value }))}
+                              required
+                            >
+                              <option value="">- Select Sales Manager -</option>
+                              {(smMapping.salesManagerOptions || []).map((sm) => (
+                                <option key={sm.id} value={sm.id}>{sm.fullName}</option>
+                              ))}
+                            </select>
+                            <div className="qa-drawer-field-label" style={{ marginTop: 4, opacity: 0.75 }}>
+                              This lead has no Sales Manager on record. The one you pick is credited
+                              with the booking and with the lead in all Sales Manager reports.
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {quickWorkflowAction?.code === 'SH_BOOKING' && smMapping?.mapped && smMapping.salesManager && (
+                        <div className="qa-drawer-field-label" style={{ marginBottom: 12, opacity: 0.75 }}>
+                          Sales Manager: {smMapping.salesManager.fullName}
+                        </div>
+                      )}
+
                       {/* ── Project Selection for Booking ── */}
                       <div className="qa-drawer-profile-section"><MapPinIcon style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Select Project for Booking</div>
                       <div className="qa-drawer-profile-grid">
@@ -6978,6 +7072,7 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                   || (Boolean(quickWorkflowForm.nextFollowUpAt) && !isFollowUpAtLeastMinutesAhead(quickWorkflowForm.nextFollowUpAt))
                   || (quickWorkflowAction?.needsReason && !quickWorkflowForm.closureReasonId)
                   || ((quickWorkflowAction?.needsCustomerProfile || quickWorkflowAction?.code === 'SH_BOOKING') && !customerProfileForm.inventoryUnitId)
+                  || (quickWorkflowAction?.code === 'SH_BOOKING' && smMapping && !smMapping.mapped && !customerProfileForm.salesManagerId)
                 }
                 onClick={handleQuickWorkflowSubmit} style={{ backgroundColor: '#625afa' }}
               >

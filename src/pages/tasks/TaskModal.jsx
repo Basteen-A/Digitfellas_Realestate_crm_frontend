@@ -38,6 +38,42 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 // A follow-up date is required when moving a task into an active state.
 const needsFollowUp = (status) => status === 'open' || status === 'work_in_progress';
 
+// -- Quick date shortcuts --
+// Task dates are date-only (<input type="date">), so every shortcut resolves to
+// a plain YYYY-MM-DD string that drops straight into the input.
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayYMD = () => ymd(new Date());
+const daysFromTodayYMD = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); };
+// "This Week" = the end of the current week (the coming Sunday); on a Sunday it
+// rolls to the next one so the chip always pushes the date forward.
+const endOfWeekYMD = () => daysFromTodayYMD((7 - new Date().getDay()) || 7);
+
+const DATE_CHIPS = [
+  { label: 'Today', get: todayYMD },
+  { label: 'Tomorrow', get: () => daysFromTodayYMD(1) },
+  { label: 'This Week', get: endOfWeekYMD },
+];
+
+// Chip row rendered under a date input - one click fills the field.
+const DateChips = ({ value, onPick, disabled }) => (
+  <div className="tmq-date-chips">
+    {DATE_CHIPS.map((c) => {
+      const v = c.get();
+      return (
+        <button
+          key={c.label}
+          type="button"
+          disabled={disabled}
+          className={`tmq-date-chip${value === v ? ' is-active' : ''}`}
+          onClick={() => onPick(v)}
+        >
+          {c.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
 // Completed tasks auto-close 15 days after completion (server-side
 // taskAutoCloseService). Surface the remaining time so it isn't a surprise.
 // AUTO_CLOSE_DAYS must stay in sync with the server's CLOSE_AFTER_DAYS.
@@ -76,7 +112,8 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
   const currentUser = useSelector((state) => state.auth.user);
 
   const [task, setTask] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  // A new task opens with today's follow-up date already filled in.
+  const [form, setForm] = useState(() => (mode === 'create' ? { ...emptyForm, follow_up_date: todayYMD() } : emptyForm));
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [subDepartments, setSubDepartments] = useState([]);
@@ -102,7 +139,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
   const statusFileRef = useRef(null);
 
   // Status / remark form (Quick-Action style update)
-  const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: '', cancellation_reason: '' });
+  const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: todayYMD(), cancellation_reason: '' });
   // Task Details accordion (collapsed by default in the update/view popup)
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Activity / Attachments tab switcher (Activity is the default tab).
@@ -340,9 +377,10 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
   const availableToAdd = users.filter((u) => !form.assignee_ids.map(String).includes(String(u.id)) && !isCreatorId(u.id));
 
   // ── Save core (create / edit) ──
-  // On create, Title + Description + Department + Follow-up Date are required.
+  // On create, Title + Department + Follow-up Date are required. Description is
+  // optional (the server never required it either).
   const canSaveCore = isCreate
-    ? !!(form.title.trim() && form.description.trim() && form.department_id && form.follow_up_date)
+    ? !!(form.title.trim() && form.department_id && form.follow_up_date)
     : !!form.title.trim();
 
   // "Save Changes" is enabled only when an editable field actually differs from
@@ -354,12 +392,12 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
 
   const handleSaveCore = async () => {
     if (!canSaveCore) {
-      if (isCreate && form.title.trim() && form.description.trim() && !form.department_id) {
+      if (isCreate && form.title.trim() && !form.department_id) {
         toast.error('Department is required.');
-      } else if (isCreate && form.title.trim() && form.description.trim() && form.department_id && !form.follow_up_date) {
+      } else if (isCreate && form.title.trim() && form.department_id && !form.follow_up_date) {
         toast.error('Follow-up date is required.');
       } else {
-        toast.error(isCreate ? 'Title, description, department and follow-up date are required.' : 'Task title is required.');
+        toast.error(isCreate ? 'Title, department and follow-up date are required.' : 'Task title is required.');
       }
       return;
     }
@@ -525,7 +563,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
             onChange={(e) => setField('title', e.target.value)} placeholder="Task title…" />
         </div>
         <div style={{ marginBottom: 10 }}>
-          <label className="tmq-field-label">Description {isCreate && '*'}</label>
+          <label className="tmq-field-label">Description</label>
           <textarea className="tmq-textarea" value={form.description} disabled={disabled}
             onChange={(e) => setField('description', e.target.value)} placeholder="Add details…" />
         </div>
@@ -620,6 +658,7 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
               <label className="tmq-field-label">Start Date</label>
               <input type="date" className="tmq-input" value={form.start_date || ''} disabled={disabled}
                 onChange={(e) => setField('start_date', e.target.value)} />
+              <DateChips value={form.start_date || ''} disabled={disabled} onPick={(v) => setField('start_date', v)} />
             </div>
           )}
           {!isCreate && (
@@ -627,13 +666,17 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
               <label className="tmq-field-label">Expected Date</label>
               <input type="date" className="tmq-input" value={form.end_date || ''} disabled={disabled}
                 onChange={(e) => setField('end_date', e.target.value)} />
+              <DateChips value={form.end_date || ''} disabled={disabled} onPick={(v) => setField('end_date', v)} />
             </div>
           )}
           <div>
             <label className="tmq-field-label">Follow-up Date{isCreate ? ' *' : ''}</label>
             {isCreate ? (
-              <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled={disabled}
-                onChange={(e) => setField('follow_up_date', e.target.value)} />
+              <>
+                <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled={disabled}
+                  onChange={(e) => setField('follow_up_date', e.target.value)} />
+                <DateChips value={form.follow_up_date || ''} disabled={disabled} onPick={(v) => setField('follow_up_date', v)} />
+              </>
             ) : (
               /* On an existing task it's driven by status updates */
               <input type="date" className="tmq-input" value={form.follow_up_date || ''} disabled readOnly />
@@ -859,6 +902,10 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                         <label className="tmq-field-label">Follow-up Date *</label>
                         <input type="date" className="tmq-input" value={statusForm.follow_up_date || ''}
                           onChange={(e) => setStatusForm((p) => ({ ...p, follow_up_date: e.target.value }))} />
+                        <DateChips
+                          value={statusForm.follow_up_date || ''}
+                          onPick={(v) => setStatusForm((p) => ({ ...p, follow_up_date: v }))}
+                        />
                       </div>
                     )}
                   </div>

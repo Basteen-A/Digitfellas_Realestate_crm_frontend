@@ -113,6 +113,12 @@ const bookingApi = {
   // Collection Executive assignment (Collection Manager)
   getCollectionExecutives: () => api.get('/bookings/collection-executives'),
   assignCollectionExecutive: (id, data) => api.patch(`/bookings/${id}/assign-collection-executive`, data),
+  // Active Sales Managers, for the "map Sales Manager" picker on a booking whose lead
+  // has none on record.
+  getSalesManagers: () => api.get('/bookings/sales-managers'),
+  // Credits the chosen SM with the lead behind this booking. Rejected by the server if
+  // the booking already resolves to a Sales Manager (Super Admin excepted).
+  updateSalesManager: (id, salesManagerId) => api.patch(`/bookings/${id}/sales-manager`, { sales_manager_id: salesManagerId }),
 
   // Statement of Account (Super Admin / Admin). Rendered server-side and returned
   // as a PDF blob - it is never stored, so every open is freshly generated. The

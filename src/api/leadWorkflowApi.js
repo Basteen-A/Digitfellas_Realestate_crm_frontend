@@ -22,6 +22,16 @@ const leadWorkflowApi = {
   },
 
   /**
+   * GET /leads/:id/sales-manager-mapping
+   * Whether this lead already has a Sales Manager on record, and if not, the list to
+   * pick one from. `mapped: false` makes the SM picker mandatory on the booking form.
+   */
+  getSalesManagerMapping: async (leadId) => {
+    const { data } = await api.get(`/leads/${leadId}/sales-manager-mapping`);
+    return data;
+  },
+
+  /**
    * GET /leads
    */
   getLeads: async (params = {}) => {

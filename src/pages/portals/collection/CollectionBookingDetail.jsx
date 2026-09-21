@@ -290,6 +290,11 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   const [payStatusRegDate, setPayStatusRegDate] = useState('');
   const [payStatusSaving, setPayStatusSaving] = useState(false);
   const [smPointsValue, setSmPointsValue] = useState('');
+  // Mapping a Sales Manager onto a booking whose lead has none on record. The picker
+  // only appears while booking.canMapSalesManager is true.
+  const [smOptions, setSmOptions] = useState([]);
+  const [smPick, setSmPick] = useState('');
+  const [smMapping, setSmMapping] = useState(false);
   const [shPointsValue, setShPointsValue] = useState('');
   // Payment editing - reuses the rich Record-Payment modal, prefilled. Only
   // pending/unverified (and non-refund/non-bounced) payments are editable.
@@ -443,6 +448,13 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
   }, []);
 
   useEffect(() => { loadBooking(); }, [loadBooking]);
+  // Only fetch the Sales Manager list when this booking can actually be mapped.
+  useEffect(() => {
+    if (!booking?.canMapSalesManager) { setSmOptions([]); return; }
+    bookingApi.getSalesManagers()
+      .then((r) => setSmOptions(r.data?.data || r.data || []))
+      .catch(() => setSmOptions([]));
+  }, [booking?.canMapSalesManager]);
   useEffect(() => {
     bookingStatusApi.getDropdown().then(r => setStatusOptions(r.data?.data || r.data || [])).catch(() => { });
     termsAndConditionsApi.getDropdown().then(r => setTerms(r.data?.data || r.data || [])).catch(() => { });
@@ -1439,6 +1451,59 @@ const CollectionBookingDetail = ({ user, bookingId, onBack }) => {
                   ) : (
                     <div style={{ fontSize: 12, color: 'var(--col-text, #000000)', opacity: 0.7, textAlign: 'center', padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8 }}>
                       No Sales Manager assigned
+                    </div>
+                  )}
+
+                  {/* Map a Sales Manager - only while this booking's lead has none on
+                      record. Picking one records the lead as handled by that SM, so it
+                      starts counting in every Sales Manager report. */}
+                  {booking?.canMapSalesManager && (
+                    <div style={{ padding: 12, background: 'var(--bg-secondary, #F9FAFB)', borderRadius: 8, border: '1px dashed var(--col-border, #E5E7EB)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}>
+                        {booking?.salesManagerMapped ? 'Change Sales Manager' : 'Map Sales Manager'}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <select
+                          className="bkd-form-control"
+                          value={smPick}
+                          onChange={(e) => setSmPick(e.target.value)}
+                          style={{ flex: 1, fontSize: 13 }}
+                        >
+                          <option value="">Select the Sales Manager who handled this lead...</option>
+                          {smOptions.map((sm) => (
+                            <option key={sm.id} value={sm.id}>
+                              {`${sm.first_name || ''} ${sm.last_name || ''}`.trim()}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-sm"
+                          disabled={!smPick || smMapping}
+                          style={{ border: '1px solid var(--col-text, #000000)', background: 'var(--col-surface, #ffffff)', color: 'var(--col-text, #000000)', fontWeight: 600 }}
+                          onClick={async () => {
+                            setSmMapping(true);
+                            try {
+                              await bookingApi.updateSalesManager(bookingId, smPick);
+                              toast.success('Sales Manager mapped');
+                              setSmPick('');
+                              await loadBooking();
+                              loadActivities();
+                            } catch (err) {
+                              toast.error(getErrorMessage(err, 'Failed to map Sales Manager'));
+                            } finally {
+                              setSmMapping(false);
+                            }
+                          }}
+                        >
+                          {smMapping ? '...' : 'Map'}
+                        </button>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--col-text, #000000)', opacity: 0.7, marginTop: 6 }}>
+                        {booking?.salesManagerMapped
+                          ? 'This booking already has a Sales Manager. Only a Super Admin can change it.'
+                          : 'This lead has no Sales Manager on record. The one you pick is credited with the booking and with the lead in all Sales Manager reports.'}
+                      </div>
                     </div>
                   )}
 
