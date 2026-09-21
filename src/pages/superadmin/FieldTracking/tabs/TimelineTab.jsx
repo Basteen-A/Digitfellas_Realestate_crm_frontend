@@ -269,6 +269,9 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
           <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-primary)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
               Stops on this day
+              <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8, fontSize: 12 }}>
+                with the distance travelled between each one
+              </span>
             </div>
             {!data.halts.length ? (
               <EmptyState
@@ -286,6 +289,7 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
                     <tr>
                       <th style={{ ...th, width: 44 }}>#</th>
                       <th style={th}>Place</th>
+                      <th style={th}>Travelled here</th>
                       <th style={th}>From</th>
                       <th style={th}>To</th>
                       <th style={th}>Stopped</th>
@@ -304,6 +308,23 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
                           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
                             {h.latitude.toFixed(5)}, {h.longitude.toFixed(5)}
                           </div>
+                        </td>
+                        {/* The leg INTO this stop. A dash on the first row is
+                            correct - there is no previous stop to measure from,
+                            and "0 km" would read as "went nowhere". */}
+                        <td style={td}>
+                          {h.distanceFromPrevM != null ? (
+                            <>
+                              <div style={{ fontWeight: 600 }}>{fmtDistance(h.distanceFromPrevM)}</div>
+                              {h.travelMinutesFromPrev != null ? (
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                  {fmtDuration(h.travelMinutesFromPrev)} on the move
+                                </div>
+                              ) : null}
+                            </>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          )}
                         </td>
                         <td style={td}>{fmtTime(h.startedAt)}</td>
                         <td style={td}>{fmtTime(h.endedAt)}</td>

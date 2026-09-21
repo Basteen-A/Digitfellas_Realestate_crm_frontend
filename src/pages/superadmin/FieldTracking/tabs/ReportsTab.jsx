@@ -11,7 +11,7 @@ import { exportFieldTrackingReport } from '../exportExcel';
 import {
   th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   BarRow, ReportCard, NEGATIVE_REASON_LABEL,
-  fmtTime, todayStr, daysAgoStr,
+  fmtTime, fmtDistance, fmtDuration, todayStr, daysAgoStr,
 } from '../ui';
 
 // ============================================================
@@ -334,6 +334,7 @@ const ReportsTab = ({ config }) => {
                     <th style={th}>Date</th>
                     <th style={th}>Employee</th>
                     <th style={th}>Place</th>
+                    <th style={th}>Travelled here</th>
                     <th style={th}>From</th>
                     <th style={th}>To</th>
                     <th style={th}>Stopped</th>
@@ -353,6 +354,20 @@ const ReportsTab = ({ config }) => {
                         <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
                           {h.latitude.toFixed(5)}, {h.longitude.toFixed(5)}
                         </div>
+                      </td>
+                      {/* Distance from that person's PREVIOUS stop that day.
+                          Blank on their first stop of the day. */}
+                      <td style={td}>
+                        {h.distanceFromPrevM != null ? (
+                          <>
+                            <div style={{ fontWeight: 600 }}>{fmtDistance(h.distanceFromPrevM)}</div>
+                            {h.travelMinutesFromPrev != null ? (
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                {fmtDuration(h.travelMinutesFromPrev)} on the move
+                              </div>
+                            ) : null}
+                          </>
+                        ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                       </td>
                       <td style={td}>{fmtTime(h.startedAt)}</td>
                       <td style={td}>{fmtTime(h.endedAt)}</td>

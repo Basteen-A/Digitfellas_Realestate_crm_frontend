@@ -206,6 +206,11 @@ export const exportFieldTrackingReport = async (summary, halts, meta = {}, visit
         { header: 'Employee', key: 'name' },
         { header: 'Role', key: 'role' },
         { header: 'Place', key: 'place' },
+        // The leg INTO this stop. Kept in plain metres/minutes rather than a
+        // "3.4 km" label: this column exists to be summed and filtered in
+        // Excel, and a formatted string cannot be.
+        { header: 'Travelled From Prev (m)', key: 'legM' },
+        { header: 'Travel Mins', key: 'legMins' },
         { header: 'From', key: 'from' },
         { header: 'To', key: 'to' },
         { header: 'Duration', key: 'duration' },
@@ -219,6 +224,8 @@ export const exportFieldTrackingReport = async (summary, halts, meta = {}, visit
         name: h.user.name,
         role: h.user.role || '',
         place: h.label,
+        legM: h.distanceFromPrevM != null ? Math.round(h.distanceFromPrevM) : '',
+        legMins: h.travelMinutesFromPrev != null ? h.travelMinutesFromPrev : '',
         from: fmtTime(h.startedAt),
         to: fmtTime(h.endedAt),
         duration: h.durationLabel,

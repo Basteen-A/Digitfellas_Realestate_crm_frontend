@@ -28,6 +28,7 @@ const emptyForm = {
   count_travel_time: true,
   tracking_enabled: true,
   ping_interval_seconds: 300,
+  ping_distance_meters: 25,
   track_after_punch_out: false,
   max_accuracy_m: 100,
   halt_min_minutes: 10,
@@ -234,6 +235,12 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
           <Field label="Ping every (seconds)" hint="300 s (5 minutes) is the designed cadence. Shorter drains the battery fast and produces more data without a more useful route.">
             <input type="number" min={60} max={3600} step={30} value={form.ping_interval_seconds} onChange={(e) => setForm({ ...form, ping_interval_seconds: Number(e.target.value) })} style={inputStyle} />
           </Field>
+          <Field label="…and only after moving (metres)" hint="Both rules apply together: a fix is recorded once the interval has passed AND the phone has moved this far. 25 m is the default. Lower it for a finer route at the cost of battery; 0 removes the floor so the interval alone decides, which is what you want while diagnosing a device that seems to be reporting nothing.">
+            {/* ?? 25, so an older policy row loaded before the column existed
+                still renders a controlled input instead of switching the field
+                to uncontrolled halfway through an edit. */}
+            <input type="number" min={0} max={1000} step={5} value={form.ping_distance_meters ?? 25} onChange={(e) => setForm({ ...form, ping_distance_meters: Number(e.target.value) })} style={inputStyle} />
+          </Field>
           <Field label="Ignore fixes worse than (metres)" hint="A GPS reading with poor accuracy is stored but left out of distance, so one bad fix cannot add kilometres.">
             <input type="number" min={10} max={5000} value={form.max_accuracy_m} onChange={(e) => setForm({ ...form, max_accuracy_m: Number(e.target.value) })} style={inputStyle} />
           </Field>
@@ -405,6 +412,16 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
                       {r.tracking_enabled
                         ? <Chip bg="rgba(22,163,74,0.12)" fg="#16a34a">{`ON · ${Math.round(r.ping_interval_seconds / 60)}m`}</Chip>
                         : <Chip>OFF</Chip>}
+                      {/* Silent when the column is absent (pre-migration row) -
+                          printing "no distance floor" for a missing value would
+                          state the opposite of the 25 m the phone applies. */}
+                      {r.tracking_enabled && r.ping_distance_meters != null ? (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                          {Number(r.ping_distance_meters) > 0
+                            ? `after ${Math.round(r.ping_distance_meters)} m moved`
+                            : 'no distance floor'}
+                        </div>
+                      ) : null}
                     </td>
                     <td style={td}>
                       <Chip>{r.punch_mode === 'LOCATIONS' ? 'GEOFENCED' : 'ANYWHERE'}</Chip>

@@ -45,6 +45,23 @@ const fmtDuration = (secs) => {
 
 const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : '-');
 
+// Mirrors PROCESSING_LOCK_MS in server/src/services/callAnalysisService.js.
+const PROCESSING_LOCK_MS = 10 * 60 * 1000;
+
+/**
+ * A PROCESSING row nobody has touched inside the claim window. The analysis
+ * run behind it is gone - the server restarted, the provider hung, the process
+ * was killed - and the server will now let it be re-taken. Showing these as
+ * "Analysis in progress…" with no button is what let a call sit at PROCESSING
+ * for a month with no way out of it from the screen.
+ */
+const isStalled = (a) => Boolean(
+  a
+  && a.status === 'PROCESSING'
+  && a.updated_at
+  && Date.now() - new Date(a.updated_at).getTime() >= PROCESSING_LOCK_MS
+);
+
 const isEmpty = (v) => {
   if (v === null || v === undefined || v === '') return true;
   if (Array.isArray(v)) return v.length === 0;
@@ -386,6 +403,12 @@ const CallAnalysisPanel = ({ leadId, callLogs = null, canAnalyze = false }) => {
 
   const selected = entries?.find((e) => e.callId === selectedCallId) || null;
   const a = selected?.analysis || null;
+  // A PROCESSING row that has not been touched inside the server's claim
+  // window is a run that died, not one still working. Mirrors
+  // PROCESSING_LOCK_MS in server/src/services/callAnalysisService.js - keep
+  // the two in step, or the screen offers a retry the server refuses (or,
+  // worse, goes back to showing "in progress..." forever).
+  const stalled = isStalled(a);
 
   // Hide tabs whose section came back empty, and keep the active tab valid.
   const visibleTabs = useMemo(() => {
@@ -445,7 +468,12 @@ const CallAnalysisPanel = ({ leadId, callLogs = null, canAnalyze = false }) => {
                 </span>
                 {label
                   ? <Pill colors={SCORE_COLORS[label]}>{label}</Pill>
-                  : <Pill>{e.analysis ? e.analysis.status : 'Not analysed'}</Pill>}
+                  : (
+                    <Pill>
+                      {isStalled(e.analysis) ? 'STALLED'
+                        : e.analysis ? e.analysis.status : 'Not analysed'}
+                    </Pill>
+                  )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{fmtDateTime(e.at)}</div>
             </button>
@@ -458,26 +486,38 @@ const CallAnalysisPanel = ({ leadId, callLogs = null, canAnalyze = false }) => {
         {!selected ? null : !a || a.status !== 'COMPLETED' ? (
           <div style={{ padding: 18, borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-              {a?.status === 'FAILED'
+              {a?.status === 'FAILED' || stalled
                 ? <ExclamationTriangleIcon style={{ width: 18, height: 18, color: '#B45309' }} />
                 : <SparklesIcon style={{ width: 18, height: 18, color: 'var(--text-muted)' }} />}
               <span style={{ fontWeight: 600, fontSize: 14 }}>
-                {a?.status === 'PROCESSING' ? 'Analysis in progress…'
-                  : a?.status === 'PENDING' ? 'Queued for analysis'
-                    : a?.status === 'FAILED' ? 'Analysis failed'
-                      : 'This call has not been analysed'}
+                {stalled ? 'Analysis stalled'
+                  : a?.status === 'PROCESSING' ? 'Analysis in progress…'
+                    : a?.status === 'PENDING' ? 'Queued for analysis'
+                      : a?.status === 'FAILED' ? 'Analysis failed'
+                        : 'This call has not been analysed'}
               </span>
             </div>
+            {stalled && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 10px' }}>
+                This run never finished and is no longer active. Nothing was charged for it -
+                start it again below.
+              </p>
+            )}
             {a?.error_message && (
               <p style={{ fontSize: 12, color: '#B91C1C', margin: '0 0 10px' }}>{a.error_message}</p>
             )}
             <div style={{ marginBottom: 12 }}>
               <RecordingCell callId={selected.callId} hasRecording />
             </div>
-            {canAnalyze && a?.status !== 'PROCESSING' && (
+            {/* Hidden only while a claim is genuinely live. A stalled row gets
+                the button back, because it is the only way out of PROCESSING
+                when auto-analysis is off. */}
+            {canAnalyze && (a?.status !== 'PROCESSING' || stalled) && (
               <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => analyze(selected.callId)} disabled={analyzing === selected.callId}>
                 <SparklesIcon style={{ width: 15, height: 15 }} />
-                {analyzing === selected.callId ? 'Analysing…' : a ? 'Retry analysis' : 'Analyse this call'}
+                {analyzing === selected.callId ? 'Analysing…'
+                  : stalled ? 'Start analysis again'
+                    : a ? 'Retry analysis' : 'Analyse this call'}
               </button>
             )}
           </div>
