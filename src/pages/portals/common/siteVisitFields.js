@@ -21,6 +21,8 @@ export const TIMELINE_LABEL = TIMELINE_OPTIONS.reduce((m, o) => { m[o.value] = o
 export const EMPTY_VISIT_DETAILS = {
   secondaryContact: '',
   address: '',
+  pincode: '',
+  profession: '',
   budget: '',
   preferredFacing: '',
   paymentType: '',
@@ -51,6 +53,8 @@ export const pickVisitDetails = (src = {}) =>
 export const VISIT_DETAIL_LABELS = {
   secondaryContact: 'Secondary Contact',
   address: 'Address',
+  pincode: 'Pincode',
+  profession: 'Profession',
   budget: 'Budget',
   preferredFacing: 'Preferred Facing',
   paymentType: 'Payment Type',
@@ -64,6 +68,10 @@ const VISIT_DETAIL_ALIASES = {
   secondaryContact: 'secondaryContact',
   secondary_contact: 'secondaryContact',
   address: 'address',
+  pincode: 'pincode',
+  pin_code: 'pincode',
+  profession: 'profession',
+  occupation: 'profession',
   budget: 'budget',
   preferredFacing: 'preferredFacing',
   preferred_facing: 'preferredFacing',

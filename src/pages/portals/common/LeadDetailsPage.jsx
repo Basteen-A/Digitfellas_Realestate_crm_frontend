@@ -1946,6 +1946,29 @@ const LeadDetailsPage = () => {
                                 placeholder="Customer address"
                               />
                             </label>
+                            <div className="lead-actions-grid-2">
+                              <label className="lead-actions-label">
+                                Pincode *
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={10}
+                                  value={actionForm.pincode}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, pincode: e.target.value }))}
+                                  placeholder="600001"
+                                />
+                              </label>
+                              <label className="lead-actions-label">
+                                Profession *
+                                <input
+                                  type="text"
+                                  maxLength={120}
+                                  value={actionForm.profession}
+                                  onChange={(e) => setActionForm((p) => ({ ...p, profession: e.target.value }))}
+                                  placeholder="e.g. Software Engineer"
+                                />
+                              </label>
+                            </div>
                             <label className="lead-actions-label">
                               Specific Concerns *
                               <textarea
@@ -2963,6 +2986,32 @@ const LeadDetailsPage = () => {
                           value={quickActionForm.address}
                           onChange={(e) => setQuickActionForm((p) => ({ ...p, address: e.target.value }))}
                         />
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode *</label>
+                          <input
+                            className="qa-drawer-remark-ta"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={10}
+                            placeholder="600001"
+                            value={quickActionForm.pincode}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, pincode: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Profession *</label>
+                          <input
+                            className="qa-drawer-remark-ta"
+                            type="text"
+                            maxLength={120}
+                            placeholder="e.g. Software Engineer"
+                            value={quickActionForm.profession}
+                            onChange={(e) => setQuickActionForm((p) => ({ ...p, profession: e.target.value }))}
+                          />
+                        </div>
                       </div>
 
                       <div style={{ marginBottom: 10 }}>

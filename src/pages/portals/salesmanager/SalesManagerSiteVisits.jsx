@@ -8,7 +8,7 @@ import motivationApi from '../../../api/motivationApi';
 import {
   HomeModernIcon, MapPinIcon, ArrowPathIcon, CheckCircleIcon, CalendarDaysIcon,
   PhoneIcon, HandRaisedIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon,
-  UserIcon, BanknotesIcon,
+  UserIcon, BanknotesIcon, ShareIcon,
 } from '@heroicons/react/24/outline';
 import { getActionsForRole } from '../common/workflowConfig';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -22,6 +22,7 @@ import {
   isVisitDetailsComplete, pickVisitDetails, displayVisitDetailValue,
   parseVisitDetailsValue, hasVisitDetailsData,
 } from '../common/siteVisitFields';
+import { buildSiteVisitMessage, shareText, whatsappUrl } from '../common/shareTemplates';
 
 // Map a workflow action code to the drawer status-button icon + accent class
 // (shared visual language with the Incoming-accept and Quick Action drawers).
@@ -315,6 +316,37 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+
+  // Share a completed visit to WhatsApp / any installed app. On desktop there is
+  // no share sheet, so the text goes to the clipboard and we point the user at
+  // WhatsApp Web rather than silently doing nothing.
+  const handleShareVisit = async (v) => {
+    const msg = buildSiteVisitMessage(v);
+    if (!msg) { toast.error('Nothing to share for this visit'); return; }
+    const result = await shareText(msg, `Site Visit ${v.visit_number || ''}`.trim());
+    if (result === 'shared' || result === 'dismissed') return;
+    if (result === 'copied') {
+      toast.success(
+        (t) => (
+          <span>
+            Visit details copied.{' '}
+            <a
+              href={whatsappUrl(msg)}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: 'underline', fontWeight: 700 }}
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Open WhatsApp
+            </a>
+          </span>
+        ),
+        { duration: 6000 }
+      );
+      return;
+    }
+    toast.error('Could not share these visit details');
+  };
 
   const handleOpenVisitDetails = async (visit) => {
     setSelectedVisit(visit);
@@ -753,9 +785,21 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                                   <td>{timeSpent != null ? `${timeSpent} mins` : '-'}</td>
                                   <td>{getStatusBadge(v.status)}</td>
                                   <td>
-                                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => handleOpenVisitDetails(v)}>
-                                      Details
-                                    </button>
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                      <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => handleOpenVisitDetails(v)}>
+                                        Details
+                                      </button>
+                                      {v.status === 'Completed' && (
+                                        <button
+                                          className="crm-btn crm-btn-ghost crm-btn-sm"
+                                          title="Share this visit to WhatsApp or any other app"
+                                          aria-label="Share this site visit"
+                                          onClick={() => handleShareVisit(v)}
+                                        >
+                                          <ShareIcon style={{ width: 15, height: 15 }} />
+                                        </button>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                                 {(visitDetails || rawVisitDetails || v.requirement_details || v.remarks_long || v.feedback || v.remarks) && (

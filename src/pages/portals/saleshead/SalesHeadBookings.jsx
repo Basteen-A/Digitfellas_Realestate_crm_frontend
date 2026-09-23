@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import bookingApi from '../../../api/bookingApi';
 import { formatDate } from '../../../utils/formatters';
 import { getErrorMessage } from '../../../utils/helpers';
-import { ClipboardDocumentListIcon, LinkIcon, ArrowPathIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon, LinkIcon, ArrowPathIcon, LockClosedIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { buildBookingMessage, shareText, whatsappUrl } from '../common/shareTemplates';
 import Pagination from '../../../components/common/Pagination';
 import usePagination from '../../../hooks/usePagination';
 import '../collection/CollectionWorkspace.css';
@@ -78,6 +79,37 @@ const buildBookingSections = (b) => {
 };
 
 const SalesHeadBookings = ({ user }) => {
+  // "Booking Alert" share. Same desktop/mobile split as the SM site-visit share:
+  // a real share sheet where the browser has one, clipboard + a WhatsApp link
+  // where it does not.
+  const handleShareBooking = async (booking) => {
+    const msg = buildBookingMessage(booking);
+    if (!msg) { toast.error('Nothing to share for this booking'); return; }
+    const result = await shareText(msg, `Booking ${booking.booking_number || ''}`.trim());
+    if (result === 'shared' || result === 'dismissed') return;
+    if (result === 'copied') {
+      toast.success(
+        (t) => (
+          <span>
+            Booking alert copied.{' '}
+            <a
+              href={whatsappUrl(msg)}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: 'underline', fontWeight: 700 }}
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Open WhatsApp
+            </a>
+          </span>
+        ),
+        { duration: 6000 }
+      );
+      return;
+    }
+    toast.error('Could not share this booking');
+  };
+
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +239,17 @@ const SalesHeadBookings = ({ user }) => {
                       </td>
                       <td>{formatDate(booking.booking_date)}</td>
                       <td>
-                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>View</button>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={(e) => { e.stopPropagation(); openDetail(booking.id); }}>View</button>
+                          <button
+                            className="crm-btn crm-btn-ghost crm-btn-sm"
+                            title="Share this booking to WhatsApp or any other app"
+                            aria-label="Share this booking"
+                            onClick={(e) => { e.stopPropagation(); handleShareBooking(booking); }}
+                          >
+                            <ShareIcon style={{ width: 15, height: 15 }} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

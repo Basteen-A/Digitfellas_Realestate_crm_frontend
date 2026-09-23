@@ -6445,6 +6445,32 @@ const LeadWorkspacePage = ({ user, workspaceRole, autoOpenCreate = false, initia
                         />
                       </div>
 
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                        <div>
+                          <label className="qa-drawer-field-label">Pincode *</label>
+                          <input
+                            className="qa-drawer-remark-ta"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={10}
+                            placeholder="600001"
+                            value={quickWorkflowForm.pincode}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, pincode: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="qa-drawer-field-label">Profession *</label>
+                          <input
+                            className="qa-drawer-remark-ta"
+                            type="text"
+                            maxLength={120}
+                            placeholder="e.g. Software Engineer"
+                            value={quickWorkflowForm.profession}
+                            onChange={(e) => setQuickWorkflowForm((p) => ({ ...p, profession: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
                       <div style={{ marginBottom: 10 }}>
                         <label className="qa-drawer-field-label">Specific Concerns *</label>
                         <textarea
