@@ -58,6 +58,19 @@ const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-di
 // between reading a number and counting its zeroes.
 const fmtNum = (n) => (n === null || n === undefined ? '-' : Number(n).toLocaleString('en-IN'));
 
+// Campaign names repeat constantly - the same blast gets re-sent under the same
+// name week after week - so a bare name is ambiguous in every campaign picker.
+// Stamp each one with when it went out (started_at, falling back to created_at
+// for drafts that never ran) and include the year, since these lists go back
+// further than one season.
+const campaignStamp = (c) => {
+  const when = c.started_at || c.created_at;
+  if (!when) return '';
+  return new Date(when).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+};
+
 // Compact scrollable checkbox multi-select.
 const MultiCheck = ({ label, options, selected, onToggle }) => (
   <div>
@@ -501,7 +514,11 @@ const Campaigns = () => {
                     disabled={!filters.engagement}
                   >
                     <option value="">Any campaign</option>
-                    {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {campaigns.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {campaignStamp(c) ? `${c.name} - ${campaignStamp(c)}` : c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -529,7 +546,17 @@ const Campaigns = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <MultiCheck
                   label="Don't send to people from"
-                  options={campaigns.map((c) => ({ value: c.id, label: c.name }))}
+                  options={campaigns.map((c) => ({
+                    value: c.id,
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {campaignStamp(c)}
+                        </span>
+                      </span>
+                    ),
+                  }))}
                   selected={filters.excludeCampaignIds}
                   onToggle={toggleFilter('excludeCampaignIds')}
                 />
