@@ -53,6 +53,7 @@ const taskApi = {
       if (payload.voice_duration != null) fd.append('voice_duration', String(payload.voice_duration));
       if (payload.voiceBlob) fd.append('voice', payload.voiceBlob, payload.voiceName || 'voice-note.webm');
       docs.forEach((f) => fd.append('documents', f));
+      if (payload.mentioned_user_ids?.length) fd.append('mentioned_user_ids', payload.mentioned_user_ids.join(','));
       const { data } = await api.post(`${basePath}/${id}/remarks`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

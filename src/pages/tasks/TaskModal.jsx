@@ -140,6 +140,12 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
 
   // Status / remark form (Quick-Action style update)
   const [statusForm, setStatusForm] = useState({ new_status: '', content: '', follow_up_date: todayYMD(), cancellation_reason: '' });
+  // @mentions in the remark: people picked from the suggest list + the open
+  // suggest popup ({ query, start } where start = index of the '@').
+  const [mentions, setMentions] = useState([]); // [{ id, name }]
+  const [mentionQuery, setMentionQuery] = useState(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const remarkRef = useRef(null);
   // Task Details accordion (collapsed by default in the update/view popup)
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Activity / Attachments tab switcher (Activity is the default tab).
@@ -471,6 +477,61 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
     return true;
   }, [statusTarget, statusForm]);
 
+  // ── @mention suggest (task's assignees + creator, minus yourself) ──
+  const mentionMembers = useMemo(() => {
+    const seen = new Set();
+    return [task?.creator, ...(task?.assignees || [])]
+      .filter((u) => u && u.id != null && String(u.id) !== String(currentUser?.id))
+      .filter((u) => (seen.has(String(u.id)) ? false : seen.add(String(u.id))))
+      .map((u) => ({ id: u.id, name: fullName(u) }))
+      .filter((m) => m.name);
+  }, [task, currentUser]);
+
+  const mentionMatches = useMemo(() => {
+    if (mentionQuery == null) return [];
+    const q = mentionQuery.query.toLowerCase();
+    return mentionMembers.filter((m) => m.name.toLowerCase().includes(q));
+  }, [mentionQuery, mentionMembers]);
+
+  // Open the suggest list when the caret sits right after "@word" (the '@'
+  // must start the text or follow whitespace).
+  const handleRemarkChange = (e) => {
+    const value = e.target.value;
+    setStatusForm((p) => ({ ...p, content: value }));
+    const caret = e.target.selectionStart ?? value.length;
+    const m = /(^|\s)@([^\s@]*)$/.exec(value.slice(0, caret));
+    if (m && mentionMembers.length) {
+      setMentionQuery({ query: m[2], start: caret - m[2].length - 1 });
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const pickMention = (member) => {
+    if (!mentionQuery) return;
+    const value = statusForm.content;
+    const end = mentionQuery.start + 1 + mentionQuery.query.length;
+    const insert = `@${member.name} `;
+    const next = value.slice(0, mentionQuery.start) + insert + value.slice(end);
+    setStatusForm((p) => ({ ...p, content: next }));
+    setMentions((prev) => (prev.some((x) => String(x.id) === String(member.id)) ? prev : [...prev, member]));
+    setMentionQuery(null);
+    const caret = mentionQuery.start + insert.length;
+    requestAnimationFrame(() => {
+      const el = remarkRef.current;
+      if (el) { el.focus(); el.setSelectionRange(caret, caret); }
+    });
+  };
+
+  const handleRemarkKeyDown = (e) => {
+    if (!mentionQuery || mentionMatches.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex((i) => (i + 1) % mentionMatches.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex((i) => (i - 1 + mentionMatches.length) % mentionMatches.length); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMention(mentionMatches[mentionIndex] || mentionMatches[0]); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setMentionQuery(null); }
+  };
+
   const handleApplyStatus = async () => {
     const target = statusTarget;
     if (target === 'cancelled' && !statusForm.cancellation_reason.trim()) {
@@ -498,9 +559,15 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
         voice_duration: voiceBlob ? voiceDuration : undefined,
         // Optional documents - uploaded with the remark and linked to it.
         documents: statusFiles.length > 0 ? statusFiles : undefined,
+        // Only mentions whose "@Name" is still in the text (edits can remove them).
+        mentioned_user_ids: mentions
+          .filter((m) => statusForm.content.includes(`@${m.name}`))
+          .map((m) => m.id),
       });
       toast.success('Task updated');
       setStatusForm((p) => ({ ...p, content: '', cancellation_reason: '' }));
+      setMentions([]);
+      setMentionQuery(null);
       setStatusFiles([]);
       clearVoice();
       await loadTask();
@@ -806,9 +873,26 @@ const TaskModal = ({ mode = 'view', taskId = null, prefill = null, onClose, onSa
                   )}
                   <div className="tmq-block">
                     <label className="tmq-field-label">Remark *</label>
-                    <textarea className="tmq-textarea" value={statusForm.content}
-                      onChange={(e) => setStatusForm((p) => ({ ...p, content: e.target.value }))}
-                      placeholder="Add a remark…" />
+                    <div className="tmq-mention-wrap">
+                      <textarea ref={remarkRef} className="tmq-textarea" value={statusForm.content}
+                        onChange={handleRemarkChange}
+                        onKeyDown={handleRemarkKeyDown}
+                        onBlur={() => setTimeout(() => setMentionQuery(null), 150)}
+                        placeholder={mentionMembers.length ? 'Add a remark… type @ to mention someone' : 'Add a remark…'} />
+                      {mentionQuery && mentionMatches.length > 0 && (
+                        <ul className="tmq-mention-list" role="listbox">
+                          {mentionMatches.map((m, i) => (
+                            <li key={m.id} role="option" aria-selected={i === mentionIndex}
+                              className={`tmq-mention-item${i === mentionIndex ? ' is-active' : ''}`}
+                              onMouseDown={(e) => { e.preventDefault(); pickMention(m); }}
+                              onMouseEnter={() => setMentionIndex(i)}>
+                              <span className="tmq-mention-avatar">{m.name.charAt(0).toUpperCase()}</span>
+                              {m.name}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     {/* Voice note recorder - attaches an audio clip to this update. */}
                     <div className="tmq-voice">
                       {recording ? (
