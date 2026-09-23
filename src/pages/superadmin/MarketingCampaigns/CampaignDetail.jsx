@@ -49,12 +49,24 @@ const RECIPIENT_BADGE = {
 };
 
 const CAMPAIGN_BADGE = {
+  BUILDING: 'col-badge-new-status',
   QUEUED: 'col-badge-new-status',
   SENDING: 'col-badge-unverified',
+  // Part-sent, waiting on the daily quota or the next batch window. Styled
+  // like SENDING rather than PAUSED on purpose: the system will continue this
+  // one by itself, and PAUSED means it will not.
+  SCHEDULED: 'col-badge-unverified',
   PAUSED: 'col-badge-pending',
   COMPLETED: 'col-badge-verified',
   CANCELLED: 'col-badge-neutral',
   FAILED: 'col-badge-rejected',
+};
+
+const BATCH_BADGE = {
+  PENDING: 'col-badge-pending',
+  SENDING: 'col-badge-unverified',
+  COMPLETED: 'col-badge-verified',
+  CANCELLED: 'col-badge-neutral',
 };
 
 // Filter chips. The last two are NOT delivery statuses - they slice the same
@@ -199,7 +211,10 @@ const CampaignDetail = () => {
 
   // A campaign that is still moving needs a fast refresh; a finished one does
   // not, and a hidden tab needs none at all.
-  const isLive = campaign && ['QUEUED', 'SENDING'].includes(campaign.status);
+  // BUILDING changes second by second while the audience is assembled, so it
+  // polls fast too. SCHEDULED does not - it is waiting on a clock, and hammering
+  // the server for hours to watch a timestamp that moves once a day is waste.
+  const isLive = campaign && ['QUEUED', 'SENDING', 'BUILDING'].includes(campaign.status);
 
   useEffect(() => {
     const tick = () => {
@@ -290,6 +305,10 @@ const CampaignDetail = () => {
 
   // A campaign sitting on SENDING that no worker is actually walking is the
   // failure mode this page previously had no way to show. Say it outright.
+  //
+  // SCHEDULED is excluded deliberately: a campaign waiting for tomorrow's quota
+  // is untouched by design, and calling that stalled would push admins to
+  // resume - and re-send - something that was working correctly.
   const looksStalled = campaign?.status === 'SENDING'
     && !campaign?.is_sending_now
     && (campaign?.pending_count || 0) > 0;
@@ -366,14 +385,20 @@ const CampaignDetail = () => {
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={exportCsv} disabled={exporting}>
             <ArrowDownTrayIcon style={{ width: 15, height: 15 }} /> {exporting ? 'Exporting…' : 'Export CSV'}
           </button>
-          {['QUEUED', 'SENDING'].includes(campaign?.status) && (
+          {/* SCHEDULED and BUILDING are pausable: a campaign waiting for
+              tomorrow's quota is exactly the one somebody is most likely to
+              want to stop, and before batching there was no such state. */}
+          {['QUEUED', 'SENDING', 'SCHEDULED', 'BUILDING'].includes(campaign?.status) && (
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => runAction(whatsappCampaignApi.pauseCampaign)} disabled={acting}>
               <PauseIcon style={{ width: 15, height: 15 }} /> Pause
             </button>
           )}
-          {['PAUSED', 'SENDING', 'QUEUED', 'FAILED'].includes(campaign?.status) && (campaign?.pending_count || 0) > 0 && (
+          {/* Resume is offered on SCHEDULED too, but it only clears the batch
+              spacing - it cannot buy more daily quota, and the server says so
+              in the response rather than letting the button look broken. */}
+          {['PAUSED', 'SENDING', 'QUEUED', 'SCHEDULED', 'FAILED'].includes(campaign?.status) && (campaign?.pending_count || 0) > 0 && (
             <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => runAction(whatsappCampaignApi.resumeCampaign, confirmResume)} disabled={acting}>
-              <PlayIcon style={{ width: 15, height: 15 }} /> Resume
+              <PlayIcon style={{ width: 15, height: 15 }} /> {campaign?.status === 'SCHEDULED' ? 'Send next batch now' : 'Resume'}
             </button>
           )}
           {!['COMPLETED', 'CANCELLED'].includes(campaign?.status) && (
@@ -475,6 +500,112 @@ const CampaignDetail = () => {
           <Stat label="Skipped" value={stats.skipped} sub="stopped by cancel" icon="⏭️" onClick={() => applyFilter('SKIPPED')} active={statusFilter === 'SKIPPED'} />
         )}
       </div>
+
+      {/* ── Batch schedule ──
+          A campaign larger than one batch is a multi-day object, and on those
+          "which batch are we on, and when is the next one" IS the status. A
+          screen that shows SCHEDULED without this is telling the admin nothing
+          they can act on - which is how a half-sent blast gets sent twice. */}
+      {(campaign?.batches?.length || 0) > 1 && (
+        <div className="col-card-new" style={{ marginBottom: 16 }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>
+              Sending in {campaign.batches.length} batches of up to {fmtNumber(campaign.batch_size)}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {campaign.quota
+                ? `${fmtNumber(campaign.quota.used)} of ${fmtNumber(campaign.quota.limit)} messages used today`
+                : ''}
+            </div>
+          </div>
+
+          {campaign.status === 'SCHEDULED' && (
+            <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-primary)' }}>
+              {campaign.throttle_reason || 'Waiting for the next batch window.'}
+              {campaign.next_batch_at && ` Continues ${fmtDateTime(campaign.next_batch_at)} - automatically, with no action needed.`}
+            </div>
+          )}
+
+          <div style={{ overflowX: 'auto' }}>
+            <table className="col-table-new" style={{ minWidth: 640 }}>
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Size</th>
+                  <th>Sent</th>
+                  <th>Failed</th>
+                  <th>Pending</th>
+                  <th>Status</th>
+                  <th>Started</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaign.batches.map((b) => (
+                  <tr key={b.id}>
+                    <td className="col-cell-primary">#{b.batch_no}</td>
+                    <td>{fmtNumber(b.size)}</td>
+                    <td>{fmtNumber(b.sent_count)}</td>
+                    <td style={b.failed_count ? undefined : { color: 'var(--text-muted)' }}>{fmtNumber(b.failed_count)}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{fmtNumber(Math.max(0, b.size - b.sent_count - b.failed_count - b.skipped_count))}</td>
+                    <td>
+                      <span className={`col-badge-new ${BATCH_BADGE[b.status] || 'col-badge-neutral'}`}>{b.status}</span>
+                      {b.status === 'PENDING' && b.scheduled_for && (
+                        <span className="col-cell-secondary" style={{ display: 'block', marginTop: 4 }}>
+                          not before {fmtDateTime(b.scheduled_for)}
+                        </span>
+                      )}
+                      {b.last_error && (
+                        <span className="col-cell-secondary" style={{ display: 'block', marginTop: 4 }} title={b.last_error}>
+                          {String(b.last_error).slice(0, 60)}
+                        </span>
+                      )}
+                    </td>
+                    <td>{b.started_at ? fmtDateTime(b.started_at) : '-'}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {/* Jumps the queue for THIS batch. It cannot override the
+                          daily limit - that cap is WhatsApp's - and the server
+                          says so plainly when the limit is the real blocker,
+                          rather than letting the button appear to do nothing. */}
+                      {b.status !== 'COMPLETED' && !['COMPLETED', 'CANCELLED'].includes(campaign.status) && (
+                        <button
+                          type="button"
+                          className="view-link"
+                          disabled={acting}
+                          onClick={() => runAction(
+                            (id) => whatsappCampaignApi.sendBatchNow(id, b.batch_no),
+                            `Start batch ${b.batch_no} now? It still has to fit inside today's remaining daily limit.`
+                          )}
+                        >
+                          Send now
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Who the filters matched but the campaign did not reach ──
+          "42,000 matched" in the builder and 39,140 recipients here is the kind
+          of gap that gets read as a bug. It is not - these are the people the
+          audience build deliberately removed - but only if it is stated. */}
+      {campaign?.exclusion_summary && campaign.excluded_count > 0 && (
+        <div className="col-card-new" style={{ marginBottom: 16, padding: '12px 14px', fontSize: 13 }}>
+          <strong style={{ fontWeight: 500 }}>{fmtNumber(campaign.excluded_count)}</strong>
+          <span style={{ color: 'var(--text-muted)' }}> matching lead(s) were left out of this campaign: </span>
+          <span style={{ color: 'var(--text-muted)' }}>
+            {[
+              campaign.exclusion_summary.duplicate_number ? `${fmtNumber(campaign.exclusion_summary.duplicate_number)} duplicate number(s)` : '',
+              campaign.exclusion_summary.invalid_phone ? `${fmtNumber(campaign.exclusion_summary.invalid_phone)} unusable number(s)` : '',
+            ].filter(Boolean).join(', ')}
+            . Opted-out numbers and any campaign you excluded were already removed before this count.
+          </span>
+        </div>
+      )}
 
       {/* ── Failure breakdown ── */}
       {failureReasons.length > 0 && (

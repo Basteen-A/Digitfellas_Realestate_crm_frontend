@@ -269,7 +269,9 @@ const AdminLeadManagement = () => {
       setPage(1);
     }
   };
-  const [filterMode, setFilterMode] = useState('created'); // 'created' | 'assigned' | 'handoff'
+  const [filterMode, setFilterMode] = useState('created'); // 'created' | 'assigned' | 'handoff' | 'updated'
+  // Which timestamp the date range applies to: 'created' (default) or 'updated'.
+  const [dateField, setDateField] = useState('created');
   // Every dropdown below is multi-select: empty array = no filter ("All ...").
   // They go to the API as comma-separated lists (userIds, statusCodes, ...).
   const [selectedUserIds, setSelectedUserIds] = useState([]);
@@ -389,6 +391,7 @@ const AdminLeadManagement = () => {
       } else {
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
+        if ((dateFrom || dateTo) && dateField === 'updated') params.dateField = 'updated';
       }
       // Multi-selects go over as comma-separated lists; each is OR-ed inside its
       // own filter and AND-ed against the others. An empty array sends nothing.
@@ -412,6 +415,11 @@ const AdminLeadManagement = () => {
       } else if (filterMode === 'assigned') {
         if (userCsv) params.userIds = userCsv;
         else if (roleCsv) params.assignedRoles = roleCsv;
+      } else if (filterMode === 'updated') {
+        // Picked users → leads they last touched; roles → leads last touched by any
+        // user of those roles.
+        if (userCsv) params.updatedByIds = userCsv;
+        else if (roleCsv) params.updatedByRoles = roleCsv;
       } else if (filterMode === 'handoff') {
         // Picked users → leads they handed off; roles → leads handed off by any user
         // of those roles; neither → every handoff lead.
@@ -433,7 +441,7 @@ const AdminLeadManagement = () => {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, dateFrom, dateTo, searchTerm, isSearching, selectedUserIds, selectedRoles, filterMode, selectedStatuses, selectedBookingStatuses, selectedPaymentStatuses, selectedProjectIds, selectedLocationIds, selectedSourceIds, selectedSubSourceIds]);
+  }, [page, limit, dateFrom, dateTo, dateField, searchTerm, isSearching, selectedUserIds, selectedRoles, filterMode, selectedStatuses, selectedBookingStatuses, selectedPaymentStatuses, selectedProjectIds, selectedLocationIds, selectedSourceIds, selectedSubSourceIds]);
 
   useEffect(() => {
     fetchLeads();
@@ -475,6 +483,7 @@ const AdminLeadManagement = () => {
     setDatePreset('all');
     setDateFrom('');
     setDateTo('');
+    setDateField('created');
     setSearch('');
     setSearchInput('');
     setSelectedUserIds([]);
@@ -799,9 +808,13 @@ const AdminLeadManagement = () => {
     return capNames(names);
   }, []);
 
-  const modeLabel = filterMode === 'created'
-    ? 'Created by'
-    : (filterMode === 'handoff' ? 'Handed off by' : 'Assigned to');
+  const MODE_LABELS = {
+    created: 'Created by',
+    handoff: 'Handed off by',
+    updated: 'Last updated by',
+    assigned: 'Assigned to',
+  };
+  const modeLabel = MODE_LABELS[filterMode] || MODE_LABELS.assigned;
 
   const activeFilterCount = (
     selectedUserIds.length + selectedRoles.length + selectedLocationIds.length
@@ -875,6 +888,16 @@ const AdminLeadManagement = () => {
             <option value="week">Week to Date</option>
             <option value="month">Month to Date</option>
             <option value="custom">Custom Range</option>
+          </select>
+          <select
+            className="alm-select"
+            value={dateField}
+            disabled={isSearching}
+            title="Which date the range above filters on"
+            onChange={(e) => { setDateField(e.target.value); setPage(1); }}
+          >
+            <option value="created">by Created</option>
+            <option value="updated">by Last Updated</option>
           </select>
         </div>
 
@@ -972,6 +995,14 @@ const AdminLeadManagement = () => {
           >
             Handed Off By
           </button>
+          <button
+            type="button"
+            className={`alm-toggle-btn ${filterMode === 'updated' ? 'alm-toggle-btn--active' : ''}`}
+            onClick={() => { setFilterMode('updated'); setPage(1); }}
+            title="Leads the selected user touched most recently. Leads never edited since this was tracked have no last-updater and match nobody."
+          >
+            Last Updated By
+          </button>
         </div>
 
         {/* Lead Status Filter */}
@@ -1046,7 +1077,9 @@ const AdminLeadManagement = () => {
           <span className="alm-stat alm-stat--highlight">Searching all dates for “{searchTerm}”</span>
         )}
         {!isSearching && dateFrom === dateTo && dateFrom === today && (
-          <span className="alm-stat alm-stat--highlight">Showing today's leads</span>
+          <span className="alm-stat alm-stat--highlight">
+            {dateField === 'updated' ? "Showing leads updated today" : "Showing today's leads"}
+          </span>
         )}
         {filterMode === 'handoff' && selectedUserIds.length === 0 && selectedRoles.length === 0 && (
           <span className="alm-stat alm-stat--filter">Showing all handoff leads</span>

@@ -121,6 +121,41 @@ const whatsappCampaignApi = {
     return data;
   },
 
+  // ── Batches & the daily send limit ──
+  // A campaign larger than one batch is a multi-day object: these say which
+  // batch is running, which are waiting, and when the next one may start.
+  getBatches: async (id) => {
+    const { data } = await api.get(`${BASE}/campaigns/${id}/batches`, { params: { _t: Date.now() } });
+    return data;
+  },
+  // Drops the wait on one batch. It cannot override the DAILY limit - that cap
+  // is WhatsApp's - and the response says so when the limit is the real blocker.
+  sendBatchNow: async (id, batchNo) => {
+    const { data } = await api.post(`${BASE}/campaigns/${id}/batches/${batchNo}/send-now`);
+    return data;
+  },
+  // Today's allowance, the configured limits and the last two weeks.
+  getSendingLimits: async () => {
+    const { data } = await api.get(`${BASE}/campaigns/sending-limits`, { params: { _t: Date.now() } });
+    return data;
+  },
+
+  // ── Opt-outs (the suppression list) ──
+  // Applied to every audience, matched on the last ten digits so one entry
+  // covers every duplicate lead row carrying that number.
+  getOptOuts: async (params = {}) => {
+    const { data } = await api.get(`${BASE}/opt-outs`, { params: { ...params, _t: Date.now() } });
+    return data;
+  },
+  addOptOuts: async (payload) => {
+    const { data } = await api.post(`${BASE}/opt-outs`, payload);
+    return data;
+  },
+  removeOptOut: async (id) => {
+    const { data } = await api.delete(`${BASE}/opt-outs/${id}`);
+    return data;
+  },
+
   // ── Webhook health ──
   // Why Delivered / Read / Replied might be empty: no callback configured, a
   // payload shape we cannot parse, or receipts for somebody else's messages.

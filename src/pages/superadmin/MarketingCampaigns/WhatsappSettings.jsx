@@ -13,7 +13,16 @@ const WhatsappSettings = () => {
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ phone_id: '', api_key: '', base_url: '', waba_id: '', default_header_image_url: '', otp_template_id: '' });
+  const [form, setForm] = useState({
+    phone_id: '', api_key: '', base_url: '', waba_id: '', default_header_image_url: '', otp_template_id: '',
+    // Send throttling. Kept as strings so the inputs stay controlled while
+    // somebody is mid-edit; the server parses and range-checks them.
+    batch_size: '', daily_send_limit: '', batch_gap_minutes: '',
+    send_window_start: '', send_window_end: '', send_timezone: '',
+  });
+
+  // Today's ledger, shown beside the limit that produced it.
+  const [limits, setLimits] = useState(null);
 
   // Test message state
   const [templates, setTemplates] = useState([]);
@@ -49,8 +58,17 @@ const WhatsappSettings = () => {
         waba_id: c.waba_id || '',
         default_header_image_url: c.default_header_image_url || '',
         otp_template_id: c.otp_template_id || '',
+        batch_size: c.batch_size ?? 10000,
+        daily_send_limit: c.daily_send_limit ?? 100000,
+        batch_gap_minutes: c.batch_gap_minutes ?? 0,
+        // '' is the "no restriction" value on both ends of the window, which is
+        // also what an empty input produces - so the two agree without a cast.
+        send_window_start: c.send_window_start ?? '',
+        send_window_end: c.send_window_end ?? '',
+        send_timezone: c.send_timezone || 'Asia/Kolkata',
       });
       setTemplates(tplResp.data || []);
+      whatsappCampaignApi.getSendingLimits().then((r) => setLimits(r.data)).catch(() => {});
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load WhatsApp settings'));
     } finally {
@@ -67,9 +85,15 @@ const WhatsappSettings = () => {
     try {
       const payload = { ...form };
       if (!payload.api_key) delete payload.api_key; // keep existing secret
+      // An empty hour input means "no restriction", which the server stores as
+      // NULL. Sending '' would be read as the number 0 - i.e. midnight - and
+      // silently confine every campaign to a one-hour window.
+      payload.send_window_start = payload.send_window_start === '' ? null : Number(payload.send_window_start);
+      payload.send_window_end = payload.send_window_end === '' ? null : Number(payload.send_window_end);
       const resp = await whatsappCampaignApi.updateConfig(payload);
       setCfg(resp.data);
       setForm((f) => ({ ...f, api_key: '' }));
+      whatsappCampaignApi.getSendingLimits().then((r) => setLimits(r.data)).catch(() => {});
       toast.success('WhatsApp settings saved');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to save settings'));
@@ -158,6 +182,60 @@ const WhatsappSettings = () => {
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
             The approved AUTHENTICATION-category template that delivers the 6-digit login code
             (create &amp; get it approved in the pinbot panel, then sync it on the Templates page).
+          </div>
+
+          {/* ── Sending limits ──
+              These are WhatsApp's numbers, not ours, and they move as the
+              account's messaging tier moves - which is exactly why they are a
+              form field and not a constant in a deploy. A campaign bigger than
+              the batch size is split automatically and the remainder continues
+              on following days without anybody coming back to it. */}
+          <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--border-primary)' }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Sending Limits</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              How much may go out at once and in a day. Campaigns larger than a batch are split automatically and continue
+              on the following days - nobody has to come back and send the rest.
+              {limits && (
+                <> Today: <strong style={{ fontWeight: 600 }}>{Number(limits.used).toLocaleString('en-IN')}</strong> of {Number(limits.limit).toLocaleString('en-IN')} used.</>
+              )}
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Messages per batch</label>
+                <input type="number" min="1" style={inputStyle} value={form.batch_size} onChange={onChange('batch_size')} placeholder="10000" />
+              </div>
+              <div>
+                <label style={labelStyle}>Messages per day</label>
+                <input type="number" min="1" style={inputStyle} value={form.daily_send_limit} onChange={onChange('daily_send_limit')} placeholder="100000" />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Gap between batches (min)</label>
+                <input type="number" min="0" style={inputStyle} value={form.batch_gap_minutes} onChange={onChange('batch_gap_minutes')} placeholder="0" />
+              </div>
+              <div>
+                <label style={labelStyle}>Send from (hour)</label>
+                <input type="number" min="0" max="23" style={inputStyle} value={form.send_window_start} onChange={onChange('send_window_start')} placeholder="any" />
+              </div>
+              <div>
+                <label style={labelStyle}>Send until (hour)</label>
+                <input type="number" min="0" max="23" style={inputStyle} value={form.send_window_end} onChange={onChange('send_window_end')} placeholder="any" />
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              Leave both hours empty to send at any time. A campaign that spans days would otherwise happily fire at 03:00 -
+              set 9 and 21 to keep it to business hours.
+            </div>
+
+            <label style={labelStyle}>Timezone</label>
+            <input style={inputStyle} value={form.send_timezone} onChange={onChange('send_timezone')} placeholder="Asia/Kolkata" />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              Which midnight the daily limit resets on, and which clock the hours above are read against. The server's own
+              timezone is not the answer - the limit is a business day.
+            </div>
           </div>
 
           <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>

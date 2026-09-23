@@ -28,14 +28,35 @@ const selectStyle = { ...inputStyle, cursor: 'pointer' };
 // Canonical badge-system triples (badge-system.html / utils/badgeColors.js).
 // Colour lives only inside badges, per the app-wide convention.
 const STATUS_BADGE = {
+  BUILDING: 'col-badge-new-status',
   QUEUED: 'col-badge-new-status',
   SENDING: 'col-badge-unverified',
+  // Waiting for the next batch window or tomorrow's quota. Deliberately NOT
+  // styled like PAUSED: PAUSED means a person has to do something, SCHEDULED
+  // means the system will, and an admin who confuses the two waits forever.
+  SCHEDULED: 'col-badge-unverified',
   PAUSED: 'col-badge-pending',
   COMPLETED: 'col-badge-verified',
   CANCELLED: 'col-badge-neutral',
   FAILED: 'col-badge-rejected',
 };
+
+// What the status actually means, in the tooltip - the words alone do not
+// distinguish "waiting for quota" from "waiting for you".
+const STATUS_HINT = {
+  BUILDING: 'Working out who this campaign goes to. Sending starts automatically when it finishes.',
+  QUEUED: 'Waiting for a sender to pick it up - usually seconds.',
+  SENDING: 'Messages are going out right now.',
+  SCHEDULED: 'Part-sent. The rest goes out automatically when the daily limit resets or the next batch is due.',
+  PAUSED: 'Stopped by an administrator. It will not continue until somebody resumes it.',
+  COMPLETED: 'Every recipient has been sent to.',
+  CANCELLED: 'Stopped for good - unsent recipients were skipped.',
+  FAILED: 'Could not be sent. Check the reason on the campaign.',
+};
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
+// Audiences are five and six figures now, so grouped digits are the difference
+// between reading a number and counting its zeroes.
+const fmtNum = (n) => (n === null || n === undefined ? '-' : Number(n).toLocaleString('en-IN'));
 
 // Compact scrollable checkbox multi-select.
 const MultiCheck = ({ label, options, selected, onToggle }) => (
@@ -66,9 +87,20 @@ const ENGAGEMENT_OPTIONS = [
   { value: 'FAILED', label: 'Delivery failed' },
 ];
 
+// The mirror image of the engagement filter: leave OUT the people an earlier
+// campaign already reached. Mirrors EXCLUDE_CLAUSES in
+// server/src/utils/leadAudienceFilter.js - keep the values identical or the
+// server silently falls back to SENT.
+const EXCLUDE_MODE_OPTIONS = [
+  { value: 'SENT', label: 'Who actually received it', hint: 'Anyone WhatsApp accepted a message for. People whose message failed stay in - they never got anything.' },
+  { value: 'TARGETED', label: 'Anyone it was aimed at', hint: 'Everyone on that campaign’s list, including messages that failed and any still queued.' },
+];
+
 const EMPTY_FILTERS = {
   statusIds: [], projectIds: [], locationIds: [], stageIds: [], sourceIds: [],
   dateFrom: '', dateTo: '', engagement: '', engagementCampaignId: '',
+  // "Send to these leads EXCEPT the ones campaign X already reached."
+  excludeCampaignIds: [], excludeMode: 'SENT',
 };
 
 const Campaigns = () => {
@@ -108,6 +140,11 @@ const Campaigns = () => {
   // Why Delivered / Read / Replied might be empty across every campaign. This
   // is provider configuration, not per-campaign data, so it is fetched once.
   const [health, setHealth] = useState(null);
+
+  // Today's allowance against the configured daily limit. Shown BEFORE a blast
+  // is launched: discovering half way through a 40,000-recipient send that the
+  // day only had 12,000 left in it is a fact worth having up front.
+  const [limits, setLimits] = useState(null);
 
   const pollRef = useRef(null);
 
@@ -159,6 +196,16 @@ const Campaigns = () => {
     })();
   }, []);
 
+  const loadLimits = useCallback(async () => {
+    try {
+      const resp = await whatsappCampaignApi.getSendingLimits();
+      setLimits(resp.data);
+    } catch {
+      /* the quota strip simply does not render */
+    }
+  }, []);
+  useEffect(() => { loadLimits(); }, [loadLimits]);
+
   const copyCallbackUrl = () => {
     if (!health?.callback_url) return;
     navigator.clipboard?.writeText(health.callback_url)
@@ -168,14 +215,17 @@ const Campaigns = () => {
 
   // Poll while any campaign is in flight.
   useEffect(() => {
-    const inFlight = campaigns.some((c) => c.status === 'QUEUED' || c.status === 'SENDING');
+    // SCHEDULED and BUILDING are in flight as far as the screen is concerned:
+    // one is assembling its audience and the other is waiting on a clock, and
+    // both change without anybody touching them.
+    const inFlight = campaigns.some((c) => ['QUEUED', 'SENDING', 'BUILDING', 'SCHEDULED'].includes(c.status));
     if (inFlight && !pollRef.current) {
-      pollRef.current = setInterval(loadCampaigns, 4000);
+      pollRef.current = setInterval(() => { loadCampaigns(); loadLimits(); }, 4000);
     } else if (!inFlight && pollRef.current) {
       clearInterval(pollRef.current); pollRef.current = null;
     }
     return () => { if (pollRef.current && !inFlight) { clearInterval(pollRef.current); pollRef.current = null; } };
-  }, [campaigns, loadCampaigns]);
+  }, [campaigns, loadCampaigns, loadLimits]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const toggleFilter = (key) => (val) => setFilters((f) => ({
@@ -259,7 +309,14 @@ const Campaigns = () => {
     }
     const count = preview?.total;
     const chase = followupOn ? ' A follow-up will be scheduled at the same time.' : '';
-    if (!window.confirm(`Send this campaign${count != null ? ` to ${count} matching lead(s)` : ''}? Real WhatsApp messages will be dispatched.${chase}`)) return;
+    // Spell out the multi-day plan in the confirmation. Somebody who thinks
+    // they are sending one blast today should not discover on Thursday that it
+    // is still going out.
+    const plan = preview?.plan && preview.plan.batches > 1
+      ? ` It will go out in ${preview.plan.batches} batches of up to ${fmtNum(preview.plan.batch_size)}`
+        + (preview.plan.estimated_days > 1 ? ` over about ${preview.plan.estimated_days} days, continuing automatically.` : ', all today.')
+      : '';
+    if (!window.confirm(`Send this campaign${count != null ? ` to ${fmtNum(count)} matching lead(s)` : ''}? Real WhatsApp messages will be dispatched.${plan}${chase}`)) return;
     setSending(true);
     try {
       const resp = await whatsappCampaignApi.createCampaign({
@@ -274,6 +331,7 @@ const Campaigns = () => {
       toast.success(resp.message || 'Campaign queued');
       backToList();
       loadCampaigns();
+      loadLimits();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to create campaign'));
     } finally {
@@ -287,6 +345,10 @@ const Campaigns = () => {
   // actively working. The give-away is that the row has not been written to in
   // a while - the processor touches it every batch. Flagging it here is what
   // stopped a July blast from sitting half-sent for eight weeks unnoticed.
+  //
+  // SCHEDULED is deliberately absent: a campaign waiting for tomorrow's quota
+  // has not been touched for hours BY DESIGN, and flagging that as stalled
+  // would cry wolf on every multi-day campaign in the list.
   const STALE_MS = 15 * 60 * 1000;
   const looksStalled = (c) => ['QUEUED', 'SENDING'].includes(c.status)
     && c.updated_at
@@ -450,6 +512,50 @@ const Campaigns = () => {
               )}
             </div>
 
+            {/* ── Exclude an earlier campaign's audience ──
+                The complement of the block above, and the one that makes
+                repeat blasts safe: "everyone matching these filters EXCEPT the
+                people the last campaign already reached". Without it the only
+                way to avoid re-messaging somebody was to reconstruct a
+                mutually-exclusive filter by hand and hope it was right. */}
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>
+                Exclude People Already Messaged <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                Leave out anyone an earlier campaign already reached, so a repeat blast only goes to people who have not had it.
+                Opted-out numbers and duplicates are always removed, whether or not you pick anything here.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <MultiCheck
+                  label="Don't send to people from"
+                  options={campaigns.map((c) => ({ value: c.id, label: c.name }))}
+                  selected={filters.excludeCampaignIds}
+                  onToggle={toggleFilter('excludeCampaignIds')}
+                />
+                <div>
+                  <label style={labelStyle}>Count them as messaged if</label>
+                  <select
+                    style={selectStyle}
+                    value={filters.excludeMode}
+                    onChange={(e) => setFilters((f) => ({ ...f, excludeMode: e.target.value }))}
+                    disabled={!filters.excludeCampaignIds.length}
+                  >
+                    {EXCLUDE_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                    {EXCLUDE_MODE_OPTIONS.find((o) => o.value === filters.excludeMode)?.hint}
+                  </div>
+                </div>
+              </div>
+              {filters.excludeCampaignIds.length > 0 && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                  Excluding {filters.excludeCampaignIds.length} campaign{filters.excludeCampaignIds.length > 1 ? 's' : ''} -
+                  press Preview to see what the audience comes to.
+                </div>
+              )}
+            </div>
+
             {/* ── Automatic follow-up ──
                 Deliberately sits right under Follow-up Targeting, because the
                 two are opposite directions in time and are otherwise easy to
@@ -498,16 +604,50 @@ const Campaigns = () => {
               )}
             </div>
 
-            {/* Audience count */}
-            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 13 }}>
-                {preview ? (
-                  <span><strong style={{ fontSize: 18 }}>{preview.total}</strong> matching recipient(s)
-                    {preview.sample?.length > 0 && <span style={{ color: 'var(--text-muted)' }}> - e.g. {preview.sample.slice(0, 3).map((s) => s.name || s.phone).join(', ')}…</span>}
-                  </span>
-                ) : <span style={{ color: 'var(--text-muted)' }}>Preview the audience before sending.</span>}
+            {/* Audience count + how the send would be split.
+                The batch arithmetic comes from the SERVER, not from a
+                calculation here: it is the same arithmetic the sender uses, and
+                a second copy in the UI would eventually disagree with the thing
+                actually doing the work. */}
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 13 }}>
+                  {preview ? (
+                    <span><strong style={{ fontSize: 18 }}>{fmtNum(preview.total)}</strong> matching recipient(s)
+                      {preview.sample?.length > 0 && <span style={{ color: 'var(--text-muted)' }}> - e.g. {preview.sample.slice(0, 3).map((s) => s.name || s.phone).join(', ')}…</span>}
+                    </span>
+                  ) : <span style={{ color: 'var(--text-muted)' }}>Preview the audience before sending.</span>}
+                </div>
+                <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={runPreview} disabled={previewing}>{previewing ? 'Counting…' : 'Preview Recipients'}</button>
               </div>
-              <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={runPreview} disabled={previewing}>{previewing ? 'Counting…' : 'Preview Recipients'}</button>
+
+              {preview?.plan && preview.total > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-primary)', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {preview.plan.batches > 1 ? (
+                    <>
+                      <div style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                        Goes out in {preview.plan.batches} batches of up to {fmtNum(preview.plan.batch_size)}.
+                      </div>
+                      <div>
+                        {fmtNum(preview.plan.sends_today)} today ({fmtNum(preview.plan.remaining_today)} of the {fmtNum(preview.plan.daily_limit)} daily limit is still free),
+                        {preview.plan.estimated_days > 1
+                          ? ` the rest over the following ${preview.plan.estimated_days - 1} day(s) - automatically, with no action from you.`
+                          : ' all of it today.'}
+                      </div>
+                    </>
+                  ) : (
+                    <div>Fits in a single batch. {fmtNum(preview.plan.remaining_today)} of today's {fmtNum(preview.plan.daily_limit)} limit is still free.</div>
+                  )}
+                  {!preview.plan.window_open && (
+                    <div style={{ marginTop: 4, color: '#B45309' }}>
+                      Sending is outside the configured hours right now - the first batch starts at {fmtDateTime(preview.plan.next_send_at)}.
+                    </div>
+                  )}
+                  <div style={{ marginTop: 4, color: 'var(--text-muted)' }}>
+                    The final count is usually a little lower: opted-out numbers, duplicates and unusable numbers are dropped while the audience is built.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -565,6 +705,42 @@ const Campaigns = () => {
         </div>
       )}
 
+      {/* ── Today's sending allowance ──
+          WhatsApp caps how much can go out in a day, and that cap is shared by
+          every campaign. Showing it here turns "why has my campaign stopped?"
+          into something the screen already answered. */}
+      {limits && (
+        <div className="col-card-new" style={{ marginBottom: 14, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13 }}>
+              <strong style={{ fontWeight: 500 }}>{fmtNum(limits.used)}</strong>
+              <span style={{ color: 'var(--text-muted)' }}> of {fmtNum(limits.limit)} messages sent today</span>
+              {limits.queued_messages > 0 && (
+                <span style={{ color: 'var(--text-muted)' }}> · {fmtNum(limits.queued_messages)} still queued across live campaigns</span>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {limits.remaining <= 0
+                ? `Daily limit reached - sending resumes ${fmtDateTime(limits.resets_at)}`
+                : !limits.window_open
+                  ? `Outside the ${String(limits.window_start).padStart(2, '0')}:00-${String(limits.window_end).padStart(2, '0')}:00 sending window - resumes ${fmtDateTime(limits.next_send_at)}`
+                  : `${fmtNum(limits.remaining)} left · batches of up to ${fmtNum(limits.batch_size)}`}
+            </div>
+          </div>
+          <div style={{ marginTop: 8, height: 6, background: 'var(--bg-secondary)', borderRadius: 99, overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${Math.min(100, Math.round((limits.used / Math.max(1, limits.limit)) * 100))}%`,
+                height: '100%',
+                background: limits.remaining <= 0 ? '#B45309' : 'var(--text-primary, #111827)',
+                borderRadius: 99,
+                transition: 'width 0.4s',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="col-card-new">
         <div style={{ overflowX: 'auto' }}>
           <table className="col-table-new" style={{ minWidth: 900 }}>
@@ -593,8 +769,15 @@ const Campaigns = () => {
                   <tr key={c.id}>
                     <td className="col-cell-primary">{c.name}</td>
                     <td>{c.template_name || c.template?.name || '-'}</td>
-                    <td><UsersIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: 'var(--text-muted)' }} /> {c.total_recipients}</td>
-                    <td className="col-cell-primary">{c.sent_count}</td>
+                    <td>
+                      <UsersIcon style={{ width: 13, height: 13, verticalAlign: 'text-bottom', color: 'var(--text-muted)' }} /> {fmtNum(c.total_recipients)}
+                      {c.batch_count > 1 && (
+                        <span className="col-cell-secondary" style={{ display: 'block' }}>
+                          {c.batch_count} batches of {fmtNum(c.batch_size)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="col-cell-primary">{fmtNum(c.sent_count)}</td>
                     <td className={c.delivered_count ? 'col-cell-primary' : undefined} style={c.delivered_count ? undefined : { color: 'var(--text-muted)' }}>
                       {c.delivered_count ?? 0}{c.read_count ? ` (${c.read_count} read)` : ''}
                     </td>
@@ -606,7 +789,21 @@ const Campaigns = () => {
                       </div>
                     </td>
                     <td style={td}>
-                      <span className={`col-badge-new ${badge}`}>{c.status}</span>
+                      <span className={`col-badge-new ${badge}`} title={STATUS_HINT[c.status] || ''}>{c.status}</span>
+                      {/* A part-sent campaign has to say when it continues.
+                          "SCHEDULED" with no time on it reads as broken, and
+                          the first thing an admin does with a campaign that
+                          looks broken is send it again. */}
+                      {c.status === 'SCHEDULED' && (
+                        <span className="col-cell-secondary" style={{ display: 'block', marginTop: 4 }} title={c.throttle_reason || ''}>
+                          {c.next_batch_at ? `continues ${fmtDateTime(c.next_batch_at)}` : 'continues automatically'}
+                        </span>
+                      )}
+                      {c.status === 'BUILDING' && (
+                        <span className="col-cell-secondary" style={{ display: 'block', marginTop: 4 }}>
+                          finding recipients…
+                        </span>
+                      )}
                       {looksStalled(c) && (
                         <span
                           className="col-cell-secondary"
