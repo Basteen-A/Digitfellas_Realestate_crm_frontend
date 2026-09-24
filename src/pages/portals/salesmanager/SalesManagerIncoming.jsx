@@ -13,7 +13,7 @@ import { getRoleCode } from '../../../utils/permissions';
 import CalendarPicker from '../../../components/common/CalendarPicker';
 import {
   FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
-  TIMELINE_OPTIONS, isVisitDetailsComplete, pickVisitDetails,
+  TIMELINE_OPTIONS, isVisitDetailsComplete, missingVisitDetailLabels, pickVisitDetails,
 } from '../common/siteVisitFields';
 import {
   ChevronDownIcon,
@@ -287,7 +287,7 @@ const SalesManagerIncoming = ({ onNavigate }) => {
     if (!form.customerRequirement?.trim()) { toast.error('Customer Requirement is required.'); return; }
     if (!form.timeSpent) { toast.error('Time Spent is required.'); return; }
     if (!form.salesHeadUserId) { toast.error('Sales Head selection is required.'); return; }
-    if (!isVisitDetailsComplete(form)) { toast.error('All site visit detail fields are required.'); return; }
+    if (!isVisitDetailsComplete(form)) { toast.error(`Please fill: ${missingVisitDetailLabels(form).join(', ')}`); return; }
 
     setProcessingId(handoff.id);
     try {
@@ -641,6 +641,10 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                               </select>
                             </div>
                             <div>
+                              <label className="qa-drawer-field-label">Profession *</label>
+                              <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.profession || ''} onChange={(e) => updateAcceptForm(handoff.id, { profession: e.target.value })} placeholder="e.g. Software Engineer" maxLength={120} />
+                            </div>
+                            <div>
                               <label className="qa-drawer-field-label">Secondary Contact</label>
                               <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.secondaryContact || ''} onChange={(e) => updateAcceptForm(handoff.id, { secondaryContact: e.target.value })} placeholder="Secondary phone (optional)" />
                             </div>
@@ -674,6 +678,10 @@ const SalesManagerIncoming = ({ onNavigate }) => {
                             <div style={{ gridColumn: '1 / -1' }}>
                               <label className="qa-drawer-field-label">Address *</label>
                               <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={form.address || ''} onChange={(e) => updateAcceptForm(handoff.id, { address: e.target.value })} placeholder="Customer address" />
+                            </div>
+                            <div>
+                              <label className="qa-drawer-field-label">Pincode *</label>
+                              <input className="qa-drawer-field-input" style={{ width: '100%' }} value={form.pincode || ''} onChange={(e) => updateAcceptForm(handoff.id, { pincode: e.target.value.replace(/\D/g, '') })} placeholder="600001" inputMode="numeric" maxLength={10} />
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
                               <label className="qa-drawer-field-label">Specific Concerns *</label>

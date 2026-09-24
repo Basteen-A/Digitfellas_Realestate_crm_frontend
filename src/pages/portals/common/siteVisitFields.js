@@ -45,6 +45,10 @@ export const REQUIRED_VISIT_DETAIL_KEYS = VISIT_DETAIL_KEYS.filter(
 export const isVisitDetailsComplete = (d = {}) =>
   REQUIRED_VISIT_DETAIL_KEYS.every((k) => String(d?.[k] ?? '').trim() !== '');
 
+// Human labels of the required fields still blank - so the error names what's missing.
+export const missingVisitDetailLabels = (d = {}) =>
+  REQUIRED_VISIT_DETAIL_KEYS.filter((k) => String(d?.[k] ?? '').trim() === '').map((k) => VISIT_DETAIL_LABELS[k] || k);
+
 // Pull just the visit-detail keys out of a larger form object for the payload.
 export const pickVisitDetails = (src = {}) =>
   VISIT_DETAIL_KEYS.reduce((acc, k) => { acc[k] = src[k] || undefined; return acc; }, {});

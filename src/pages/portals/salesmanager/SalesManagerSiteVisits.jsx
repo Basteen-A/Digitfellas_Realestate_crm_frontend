@@ -19,7 +19,7 @@ import '../common/LeadWorkspacePage.css';
 import {
   FACING_OPTIONS, PAYMENT_TYPE_OPTIONS, DECISION_MAKER_OPTIONS, AGE_BRACKET_OPTIONS,
   TIMELINE_OPTIONS, EMPTY_VISIT_DETAILS, VISIT_DETAIL_LABELS, VISIT_DETAIL_KEYS,
-  isVisitDetailsComplete, pickVisitDetails, displayVisitDetailValue,
+  isVisitDetailsComplete, missingVisitDetailLabels, pickVisitDetails, displayVisitDetailValue,
   parseVisitDetailsValue, hasVisitDetailsData,
 } from '../common/siteVisitFields';
 import { buildSiteVisitMessage, shareText, whatsappUrl } from '../common/shareTemplates';
@@ -527,7 +527,7 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
 
     if (!createForm.customer_requirement?.trim()) { toast.error('Customer Requirement is required'); return; }
     if (!createForm.time_spent) { toast.error('Time Spent is required'); return; }
-    if (!isVisitDetailsComplete(createForm)) { toast.error('All site visit detail fields are required'); return; }
+    if (!isVisitDetailsComplete(createForm)) { toast.error(`Please fill: ${missingVisitDetailLabels(createForm).join(', ')}`); return; }
     if (selectedAction.needsFollowUp && !createForm.next_follow_up_at) {
       toast.error('Next follow up date is required for selected action');
       return;
@@ -1142,6 +1142,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                         </select>
                       </div>
                       <div>
+                        <label className="qa-drawer-field-label">Profession *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.profession} onChange={(e) => setCreateForm((p) => ({ ...p, profession: e.target.value }))} placeholder="e.g. Software Engineer" maxLength={120} required />
+                      </div>
+                      <div>
                         <label className="qa-drawer-field-label">Secondary Contact</label>
                         <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.secondaryContact} onChange={(e) => setCreateForm((p) => ({ ...p, secondaryContact: e.target.value }))} placeholder="Secondary phone (optional)" />
                       </div>
@@ -1175,6 +1179,10 @@ const SalesManagerSiteVisits = ({ onNavigate }) => {
                       <div style={{ gridColumn: '1 / -1' }}>
                         <label className="qa-drawer-field-label">Address *</label>
                         <textarea className="qa-drawer-field-input" rows={2} style={{ width: '100%' }} value={createForm.address} onChange={(e) => setCreateForm((p) => ({ ...p, address: e.target.value }))} placeholder="Customer address" required />
+                      </div>
+                      <div>
+                        <label className="qa-drawer-field-label">Pincode *</label>
+                        <input className="qa-drawer-field-input" style={{ width: '100%' }} value={createForm.pincode} onChange={(e) => setCreateForm((p) => ({ ...p, pincode: e.target.value.replace(/\D/g, '') }))} placeholder="600001" inputMode="numeric" maxLength={10} required />
                       </div>
                       <div style={{ gridColumn: '1 / -1' }}>
                         <label className="qa-drawer-field-label">Specific Concerns *</label>
