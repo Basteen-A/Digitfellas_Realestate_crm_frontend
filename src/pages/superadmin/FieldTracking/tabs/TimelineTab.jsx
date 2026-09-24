@@ -69,6 +69,13 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Land parcels drawn under the route, so an admin sees whose land a rep
+  // walked. Non-fatal: the route still draws without them.
+  const [parcels, setParcels] = useState([]);
+  useEffect(() => {
+    fieldTrackingApi.listParcels().then((r) => setParcels(r.data || [])).catch(() => {});
+  }, []);
+
   const recalc = async () => {
     setRecalculating(true);
     try {
@@ -182,6 +189,7 @@ const TimelineTab = ({ config, selected, onClearSelection }) => {
               routeSource={data.routeSource || 'RAW'}
               locations={data.locations}
               visits={data.visits || []}
+              parcels={parcels}
               height={460}
             />
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>

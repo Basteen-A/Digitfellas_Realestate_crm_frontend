@@ -198,6 +198,40 @@ const fieldTrackingApi = {
     return data;
   },
 
+  // ── Land parcels (drawn boundaries on the field map) ──
+  getLandAccess: async () => {
+    const { data } = await api.get(`${BASE}/land/access`, noCache());
+    return data;
+  },
+  listParcels: async () => {
+    const { data } = await api.get(`${BASE}/land/parcels`, noCache());
+    return data;
+  },
+  createParcel: async (payload) => {
+    const { data } = await api.post(`${BASE}/land/parcels`, payload);
+    return data;
+  },
+  updateParcel: async (id, payload) => {
+    const { data } = await api.put(`${BASE}/land/parcels/${id}`, payload);
+    return data;
+  },
+  deleteParcel: async (id) => {
+    const { data } = await api.delete(`${BASE}/land/parcels/${id}`);
+    return data;
+  },
+  listParcelEditors: async () => {
+    const { data } = await api.get(`${BASE}/land/editors`, noCache());
+    return data;
+  },
+  grantParcelEditor: async (userId) => {
+    const { data } = await api.post(`${BASE}/land/editors`, { userId });
+    return data;
+  },
+  revokeParcelEditor: async (userId) => {
+    const { data } = await api.delete(`${BASE}/land/editors/${userId}`);
+    return data;
+  },
+
   // ── Admin: manual corrections ──
   adminPunchIn: async (userId, payload = {}) => {
     const { data } = await api.post(`${BASE}/users/${userId}/punch-in`, payload);

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   CalendarDaysIcon, SignalIcon, MapIcon, MapPinIcon, ClockIcon,
   UserGroupIcon, ChartBarIcon, Cog6ToothIcon, SunIcon, UserPlusIcon,
-  Squares2X2Icon, TableCellsIcon, ClipboardDocumentListIcon,
+  Squares2X2Icon, TableCellsIcon, ClipboardDocumentListIcon, Square3Stack3DIcon,
 } from '@heroicons/react/24/outline';
 import fieldTrackingApi from '../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../utils/helpers';
@@ -17,6 +17,7 @@ import PlansTab from './tabs/PlansTab';
 import LiveTab from './tabs/LiveTab';
 import TimelineTab from './tabs/TimelineTab';
 import LocationsTab from './tabs/LocationsTab';
+import LandParcelsTab from './tabs/LandParcelsTab';
 import PoliciesTab from './tabs/PoliciesTab';
 import ConfigTab from './tabs/ConfigTab';
 import HolidaysTab from './tabs/HolidaysTab';
@@ -44,6 +45,7 @@ const TABS = [
   { key: 'plan', label: 'Beat Plan', icon: ClipboardDocumentListIcon, level: 'read' },
   { key: 'reports', label: 'Reports', icon: ChartBarIcon, level: 'read' },
   { key: 'locations', label: 'Locations', icon: MapPinIcon, level: 'read' },
+  { key: 'land', label: 'Land Parcels', icon: Square3Stack3DIcon, level: 'read' },
   { key: 'policies', label: 'Shift Policies', icon: ClockIcon, level: 'read' },
   { key: 'config', label: "Who's Tracked", icon: UserGroupIcon, level: 'read' },
   { key: 'holidays', label: 'Holidays', icon: SunIcon, level: 'read' },
@@ -180,6 +182,7 @@ const FieldTrackingPage = () => {
       {tab === 'visits' ? <VisitsTab config={config} onOpenTimeline={openTimeline} /> : null}
       {tab === 'reports' ? <ReportsTab config={config} /> : null}
       {tab === 'locations' ? <LocationsTab config={config} canWrite={canWrite} canDelete={canDelete} /> : null}
+      {tab === 'land' ? <LandParcelsTab config={config} canWrite={canWrite} /> : null}
       {tab === 'policies' ? <PoliciesTab canWrite={canWrite} canDelete={canDelete} /> : null}
       {tab === 'config' ? <ConfigTab config={config} canWrite={canWrite} /> : null}
       {tab === 'holidays' ? <HolidaysTab config={config} canWrite={canWrite} canDelete={canDelete} /> : null}

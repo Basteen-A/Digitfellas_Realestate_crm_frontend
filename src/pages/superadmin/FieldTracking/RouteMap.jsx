@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import useGoogleMaps, { mapsErrorMessage } from './useGoogleMaps';
 import { EmptyState, Spinner, fmtTime, fmtDuration } from './ui';
+import { drawParcels } from './parcelOverlays';
 
 // ============================================================
 // RouteMap - one person, one day.
@@ -32,6 +33,9 @@ const PIN = {
   visitUnverified: '#dc2626',
 };
 
+// Stable default, so a caller that passes no parcels does not redraw every render.
+const NO_PARCELS = [];
+
 const svgPin = (maps, color, label) => ({
   path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
   fillColor: color,
@@ -54,6 +58,8 @@ const RouteMap = ({
   routeSource = 'RAW',
   locations = [],
   visits = [],
+  // Land parcels, drawn underneath - context only, they do not move the frame.
+  parcels = NO_PARCELS,
   height = 460,
 }) => {
   const { maps, loading, error } = useGoogleMaps(apiKey);
@@ -83,6 +89,9 @@ const RouteMap = ({
 
     const bounds = new maps.LatLngBounds();
     let anything = false;
+
+    // -- Land parcels (no bounds: the day's route decides the frame) --
+    overlaysRef.current.push(...drawParcels(maps, map, parcels, { info: infoRef.current }));
 
     // -- Configured punch locations, as dashed geofence rings --
     locations.forEach((loc) => {
@@ -246,7 +255,7 @@ const RouteMap = ({
     }
 
     return undefined;
-  }, [maps, session, halts, points, route, routeSource, locations, visits]);
+  }, [maps, session, halts, points, route, routeSource, locations, visits, parcels]);
 
   // Detach every overlay on unmount.
   useEffect(() => () => {
