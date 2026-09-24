@@ -29,7 +29,8 @@ const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, (c) => (
  * @param {object} maps       google.maps
  * @param {object} map        the Map
  * @param {Array}  parcels    from GET /field-tracking/land/parcels
- * @param {object} opts       { selectedId, hiddenId, onClick, info (InfoWindow), bounds }
+ * @param {object} opts       { selectedId, hiddenId, onClick, info (InfoWindow), bounds, clickable }
+ *                            clickable:false lets clicks fall through to the map (pin pickers).
  */
 // White names over satellite imagery need a shadow to stay readable.
 const ensureLabelStyle = () => {
@@ -42,7 +43,9 @@ const ensureLabelStyle = () => {
 
 export const drawParcels = (maps, map, parcels = [], opts = {}) => {
   ensureLabelStyle();
-  const { selectedId = null, hiddenId = null, onClick = null, info = null, bounds = null } = opts;
+  const {
+    selectedId = null, hiddenId = null, onClick = null, info = null, bounds = null, clickable = true,
+  } = opts;
   const overlays = [];
 
   parcels.forEach((p) => {
@@ -60,6 +63,7 @@ export const drawParcels = (maps, map, parcels = [], opts = {}) => {
       fillColor: color,
       fillOpacity: on ? 0.32 : 0.18,
       zIndex: on ? 20 : 10,
+      clickable,
     });
 
     const label = new maps.Marker({

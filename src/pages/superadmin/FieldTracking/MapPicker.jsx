@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useGoogleMaps, { mapsErrorMessage } from './useGoogleMaps';
+import useParcelLayer from './useParcelLayer';
 import { EmptyState, inputStyle, Spinner } from './ui';
 
 // ============================================================
@@ -82,6 +83,11 @@ const MapPicker = ({
 
     setReady(true);
   }, [maps, hasPin, latitude, longitude, emit, onChange]);
+
+  // Named land under the pin, so a site location can be dropped on its plot.
+  // Never refits: the pin (or the search) owns the frame here. Not clickable,
+  // so a click inside a plot still drops the pin there.
+  useParcelLayer(maps, mapRef, { ready, clickable: false });
 
   // ── Keep marker + circle in step with the props ──
   useEffect(() => {

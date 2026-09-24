@@ -6,6 +6,7 @@ import {
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
+import useParcelLayer from '../useParcelLayer';
 import {
   th, td, inputStyle, btn, StatCard, statRow, Chip, EmptyState, Spinner,
   LIVE_STATE_STYLE, LiveStateChip, StatusChip, TrackingModeChip,
@@ -123,6 +124,14 @@ const DashboardTab = ({ config, onOpenTimeline }) => {
       }
     }
   }, [maps, data, selected]);
+
+  // Named land underneath the pins - must follow the effect that builds the map.
+  // The map div only mounts after the first load (spinner before), hence ready.
+  useParcelLayer(maps, mapRef, {
+    ready: Boolean(data),
+    hasOwnContent: (data?.rows || []).some((r) => r.latitude != null),
+    fitWhenAlone: true,
+  });
 
   useEffect(() => () => {
     markersRef.current.forEach((m) => m.setMap?.(null));

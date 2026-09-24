@@ -4,6 +4,7 @@ import { ArrowPathIcon, SignalIcon, MapIcon } from '@heroicons/react/24/outline'
 import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
+import useParcelLayer from '../useParcelLayer';
 import {
   th, td, btn, inputStyle, StatCard, statRow, Chip, EmptyState, Spinner,
   fmtTime, fmtDistance,
@@ -98,6 +99,12 @@ const LiveTab = ({ config, onOpenTimeline }) => {
       markersRef.current.push({ setMap: () => maps.event.removeListener(once) });
     }
   }, [maps, data]);
+
+  // Named land underneath the pins - must follow the effect that builds the map.
+  useParcelLayer(maps, mapRef, {
+    hasOwnContent: (data?.rows || []).some((r) => r.latitude != null),
+    fitWhenAlone: true,
+  });
 
   useEffect(() => () => {
     markersRef.current.forEach((m) => m.setMap(null));

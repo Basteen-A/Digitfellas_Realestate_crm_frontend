@@ -5,6 +5,7 @@ import fieldTrackingApi from '../../../../api/fieldTrackingApi';
 import { getErrorMessage } from '../../../../utils/helpers';
 import MapPicker from '../MapPicker';
 import useGoogleMaps, { mapsErrorMessage } from '../useGoogleMaps';
+import useParcelLayer from '../useParcelLayer';
 import {
   th, td, inputStyle, labelStyle, btn, Chip, EmptyState, Spinner,
 } from '../ui';
@@ -132,6 +133,13 @@ const OverviewMap = ({ apiKey, rows, selectedId, onSelect }) => {
       }
     }
   }, [maps, rows, selectedId, onSelect]);
+
+  // Named land, so a geofence can be checked against the plot it guards.
+  // Must follow the effect that builds the map.
+  useParcelLayer(maps, mapRef, {
+    hasOwnContent: rows.some((r) => Number.isFinite(Number(r.latitude))),
+    fitWhenAlone: true,
+  });
 
   useEffect(() => () => {
     shapesRef.current.forEach((x) => x.setMap?.(null));
