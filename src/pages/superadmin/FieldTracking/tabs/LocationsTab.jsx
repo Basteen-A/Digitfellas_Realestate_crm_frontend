@@ -27,6 +27,10 @@ import {
 // you cannot see is a geofence nobody can sanity-check. Every pin is drawn with
 // its real radius circle, so an admin sees the actual punch area rather than
 // guessing what "150 m" covers.
+//
+// Named land is listed here too. Every land parcel owns one punch location
+// (server: landParcelService.syncLocation) - its name and position come from
+// the land, so they are locked here; radius, punch in/out and Active are not.
 // ============================================================
 
 const TYPES = [
@@ -264,11 +268,14 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
 
   // ── Form view ──
   if (form) {
+    const isLand = Boolean(form.land_parcel_id);
+    const lockedStyle = isLand ? { ...inputStyle, opacity: 0.65, cursor: 'not-allowed' } : inputStyle;
     return (
       <form onSubmit={save}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
             {form.id ? 'Edit punch location' : 'New punch location'}
+            {isLand ? <span style={{ marginLeft: 8 }}><Chip bg="rgba(22,163,74,0.12)" fg="#16a34a">LAND</Chip></span> : null}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" style={btn()} onClick={() => setForm(null)}>Cancel</button>
@@ -283,13 +290,16 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
               <div style={labelStyle}>Location name *</div>
               <input
                 required
+                readOnly={isLand}
                 value={form.location_name}
                 onChange={(e) => setForm({ ...form, location_name: e.target.value })}
                 placeholder="e.g. Head Office - Jayanagar"
-                style={inputStyle}
+                style={lockedStyle}
               />
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                This is the name shown on the timeline and in every report.
+                {isLand
+                  ? `Comes from the land "${form.land_parcel_name}". Rename or redraw it on the Land Parcels tab and this location follows.`
+                  : 'This is the name shown on the timeline and in every report.'}
               </div>
             </div>
 
@@ -304,19 +314,19 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
               <div>
                 <div style={labelStyle}>Latitude *</div>
                 <input
-                  required type="number" step="any"
+                  required type="number" step="any" readOnly={isLand}
                   value={form.latitude ?? ''}
                   onChange={(e) => setForm({ ...form, latitude: e.target.value === '' ? null : Number(e.target.value) })}
-                  style={inputStyle}
+                  style={lockedStyle}
                 />
               </div>
               <div>
                 <div style={labelStyle}>Longitude *</div>
                 <input
-                  required type="number" step="any"
+                  required type="number" step="any" readOnly={isLand}
                   value={form.longitude ?? ''}
                   onChange={(e) => setForm({ ...form, longitude: e.target.value === '' ? null : Number(e.target.value) })}
-                  style={inputStyle}
+                  style={lockedStyle}
                 />
               </div>
             </div>
@@ -334,6 +344,7 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                 A user in LOCATIONS mode must be inside this circle to punch. Phone GPS is
                 typically accurate to 10–30 m outdoors and much worse indoors, so anything
                 under 50 m will reject honest punches.
+                {isLand ? ' Set automatically to cover every corner of the land; redrawing the land resets it.' : ''}
               </div>
             </div>
 
@@ -380,8 +391,9 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
 
           {/* Map */}
           <div>
-            <div style={labelStyle}>Pin the location</div>
+            <div style={labelStyle}>{isLand ? 'Centre of the land' : 'Pin the location'}</div>
             <MapPicker
+              readOnly={isLand}
               apiKey={config?.mapsBrowserKey}
               latitude={form.latitude}
               longitude={form.longitude}
@@ -461,7 +473,13 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                     }}
                   >
                     <td style={td}>
-                      <div style={{ fontWeight: 600 }}>{r.location_name}</div>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {r.location_name}
+                        {r.land_parcel_id ? <Chip bg="rgba(22,163,74,0.12)" fg="#16a34a">LAND</Chip> : null}
+                      </div>
+                      {r.land_parcel_id ? (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Named land · {r.land_parcel_name}</div>
+                      ) : null}
                       {r.address ? <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{r.address}</div> : null}
                     </td>
                     <td style={td}><Chip>{TYPES.find((t) => t.value === r.location_type)?.label || r.location_type}</Chip></td>
@@ -490,7 +508,8 @@ const LocationsTab = ({ config, canWrite, canDelete }) => {
                           <PencilSquareIcon style={{ width: 15, height: 15, display: 'inline', verticalAlign: '-3px' }} />
                         </button>
                       ) : null}
-                      {canDelete ? (
+                      {/* Land goes away with its parcel, on the Land Parcels tab. */}
+                      {canDelete && !r.land_parcel_id ? (
                         <button type="button" style={{ ...btn('ghost'), color: '#dc2626' }} onClick={(e) => { e.stopPropagation(); remove(r); }}>
                           <TrashIcon style={{ width: 15, height: 15, display: 'inline', verticalAlign: '-3px' }} />
                         </button>

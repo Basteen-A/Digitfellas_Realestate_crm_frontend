@@ -152,7 +152,7 @@ const LandParcelsTab = ({ config, canWrite }) => {
       const resp = editingId
         ? await fieldTrackingApi.updateParcel(editingId, payload)
         : await fieldTrackingApi.createParcel(payload);
-      toast.success(editingId ? 'Land parcel updated' : 'Land parcel saved');
+      toast.success(editingId ? 'Land parcel updated' : 'Land parcel saved - also added to Locations');
       cancelDrawing();
       await load();
       setSelectedId(resp.data?.id || null);
@@ -167,7 +167,7 @@ const LandParcelsTab = ({ config, canWrite }) => {
     if (!window.confirm(`Delete "${p.name}"? It will disappear from every map.`)) return;
     try {
       await fieldTrackingApi.deleteParcel(p.id);
-      toast.success('Land parcel deleted');
+      toast.success('Land parcel and its location deleted');
       if (selectedId === p.id) setSelectedId(null);
       load();
     } catch (err) {

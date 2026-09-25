@@ -232,10 +232,10 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
               onChange={(v) => setForm({ ...form, tracking_enabled: v })}
             />
           </div>
-          <Field label="Ping every (seconds)" hint="300 s (5 minutes) is the designed cadence. Shorter drains the battery fast and produces more data without a more useful route.">
+          <Field label="Upload every (seconds)" hint="How often the phone sends its recorded route to the server. Never more than 5 minutes (300 s), whatever is set here. Offline, the route is kept on the phone and sent once the signal returns.">
             <input type="number" min={60} max={3600} step={30} value={form.ping_interval_seconds} onChange={(e) => setForm({ ...form, ping_interval_seconds: Number(e.target.value) })} style={inputStyle} />
           </Field>
-          <Field label="…and only after moving (metres)" hint="Both rules apply together: a fix is recorded once the interval has passed AND the phone has moved this far. 25 m is the default. Lower it for a finer route at the cost of battery; 0 removes the floor so the interval alone decides, which is what you want while diagnosing a device that seems to be reporting nothing.">
+          <Field label="Record a point every (metres moved)" hint="The phone records a GPS point each time it moves this far, so the line follows each street. 25 m is the default; 10 m is finer, 50 m saves battery. A phone standing still records nothing. Needs the app build that has this change.">
             {/* ?? 25, so an older policy row loaded before the column existed
                 still renders a controlled input instead of switching the field
                 to uncontrolled halfway through an edit. */}
@@ -410,7 +410,7 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
                     </td>
                     <td style={td}>
                       {r.tracking_enabled
-                        ? <Chip bg="rgba(22,163,74,0.12)" fg="#16a34a">{`ON · ${Math.round(r.ping_interval_seconds / 60)}m`}</Chip>
+                        ? <Chip bg="rgba(22,163,74,0.12)" fg="#16a34a">{`ON · upload ${Math.min(5, Math.round(r.ping_interval_seconds / 60))}m`}</Chip>
                         : <Chip>OFF</Chip>}
                       {/* Silent when the column is absent (pre-migration row) -
                           printing "no distance floor" for a missing value would
@@ -418,8 +418,8 @@ const PoliciesTab = ({ canWrite, canDelete }) => {
                       {r.tracking_enabled && r.ping_distance_meters != null ? (
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                           {Number(r.ping_distance_meters) > 0
-                            ? `after ${Math.round(r.ping_distance_meters)} m moved`
-                            : 'no distance floor'}
+                            ? `a point every ${Math.round(r.ping_distance_meters)} m`
+                            : 'every fix'}
                         </div>
                       ) : null}
                     </td>

@@ -20,6 +20,7 @@ const MapPicker = ({
   radiusM = 150,
   onChange,          // ({ latitude, longitude, address }) => void
   height = 360,
+  readOnly = false,  // show the pin, never move it (a land parcel's location)
 }) => {
   const { maps, loading, error } = useGoogleMaps(apiKey);
   const divRef = useRef(null);
@@ -29,6 +30,9 @@ const MapPicker = ({
   const circleRef = useRef(null);
   const geocoderRef = useRef(null);
   const [ready, setReady] = useState(false);
+  // Read inside listeners bound once at map creation.
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
 
   const hasPin = latitude != null && longitude != null
     && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude));
@@ -62,7 +66,9 @@ const MapPicker = ({
     mapRef.current = map;
     geocoderRef.current = new maps.Geocoder();
 
-    map.addListener('click', (e) => emit(e.latLng.lat(), e.latLng.lng()));
+    map.addListener('click', (e) => {
+      if (!readOnlyRef.current) emit(e.latLng.lat(), e.latLng.lng());
+    });
 
     // Places autocomplete, when the library is available.
     if (maps.places && searchRef.current) {
@@ -107,8 +113,8 @@ const MapPicker = ({
       markerRef.current = new maps.Marker({
         position: pos,
         map: mapRef.current,
-        draggable: true,
-        title: 'Drag to adjust',
+        draggable: !readOnly,
+        title: readOnly ? '' : 'Drag to adjust',
       });
       markerRef.current.addListener('dragend', (e) => emit(e.latLng.lat(), e.latLng.lng()));
     } else {
@@ -132,7 +138,7 @@ const MapPicker = ({
     }
 
     mapRef.current.panTo(pos);
-  }, [maps, hasPin, latitude, longitude, radiusM, emit]);
+  }, [maps, hasPin, latitude, longitude, radiusM, emit, readOnly]);
 
   if (loading) return <Spinner label="Loading Google Maps..." />;
   if (error) {
@@ -148,7 +154,7 @@ const MapPicker = ({
       <input
         ref={searchRef}
         placeholder="Search an address or place, or click the map to drop a pin"
-        style={{ ...inputStyle, marginBottom: 8 }}
+        style={{ ...inputStyle, marginBottom: 8, display: readOnly ? 'none' : undefined }}
       />
       <div
         ref={divRef}
@@ -161,9 +167,13 @@ const MapPicker = ({
         }}
       />
       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-        {hasPin
+        {readOnly && hasPin
+          ? `Centre at ${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)}. The shaded circle is the ${Number(radiusM) || 150} m punch area around the land.`
+          : null}
+        {!readOnly && hasPin
           ? `Pin at ${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)} - drag it to adjust. The shaded circle is the ${Number(radiusM) || 150} m punch area.`
-          : 'Click anywhere on the map to drop the pin.'}
+          : null}
+        {!hasPin ? 'Click anywhere on the map to drop the pin.' : null}
         {ready ? '' : ' '}
       </div>
     </div>
